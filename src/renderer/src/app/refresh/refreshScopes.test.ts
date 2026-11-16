@@ -353,3 +353,17 @@ describe("a code review's page", () => {
     expect(unread(key('diff', { kind: 'branch', branch: '/main/task-12' }))).toBe(false);
   });
 });
+
+describe("the review that stands for a branch", () => {
+  // `branchReviewKey`'s shape: a write on a review or a Refresh reads again the branches shown, in blocks.
+  const ofBranch = key('codeReviews', 'ofBranch', 37);
+
+  it('is read again by a write on any review', () => {
+    expect(isAffectedByCodeReviews(ofBranch)).toBe(true);
+  });
+
+  it("isn't read again by one review page's own refresh, nor by a check-in", () => {
+    expect(isShownByCodeReviewPage(12, { kind: 'branch', branch: '/main/task' })(ofBranch)).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(ofBranch)).toBe(false);
+  });
+});

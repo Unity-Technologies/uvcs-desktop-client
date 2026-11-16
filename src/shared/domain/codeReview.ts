@@ -81,7 +81,7 @@ export interface CodeReviewFilter {
   targetBranch?: string;
   /**
    * Only the reviews of these branches, by object id, at most `BRANCH_REVIEWS_BLOCK`: the branches a view shows,
-   * asked for in blocks (`branchReviewsLoader`).
+   * asked for in blocks (`branchReviewsLoaderOf`).
    */
   targetBranchIds?: readonly number[];
   /** Only reviews created by one of these users, as `QueryFilter.owners`. */

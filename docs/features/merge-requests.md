@@ -348,14 +348,18 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
     Changes. Else the newest merged request, which says the branch is finished work and where it went; never a closed
     one or a plain code review, which say nothing about where the task merges.
 - **Reading the branches' reviews**: only for the branches a view shows, in blocks, as the official client does
-  (`useBranchReview`, `useBranchReviews`, `branchReviewQuery`). The Branches view asks for the rows it draws (the rows
-  in view and the table's overscan); the Branch Explorer for the branches whose headers are in view or within half a
-  view of it (`branchesNearView`, reported by the canvas after each frame, `useBranchesNearView`); a branch's details
-  for its branch. Each branch is a query of its own, kept and rarely read again (`SLOW_CHANGING_QUERY`), null when the
+  (`useBranchReview`, `useBranchReviews`, `branchReviewQuery`), once the view stays put: a scroll or a pan asks for
+  nothing on its way. The Branches view asks for a row once it stays drawn (`useSettled`; the rows in view and the
+  table's overscan); the Branch Explorer for the branches whose headers are in view or within half a view of it, once
+  the view settles (`branchesNearView`, reported by the canvas after each frame and settled by `useBranchesNearView`),
+  and for none while zoomed out past where it draws headers, as no chip shows there; a branch's details for its
+  branch. Each branch is a query of its own, kept and rarely read again (`SLOW_CHANGING_QUERY`), null when the
   branch has no review, so a branch is read once whichever view asks. What is asked in one turn is read together
   (`batchLoader`, one per place): one `cm find review "where (targetid = 37 or targetid = 41 …) and targettype =
   'branch' order by date desc"` (`branchTargetsCondition`, `query()`) per block of `BRANCH_REVIEWS_BLOCK` (50), one
-  block at a time, never several at once. The server matches the ORed `targetid`s in one scan of its reviews, so a
+  block at a time, never several at once, the newest asks first; a branch that left the view before its block is
+  dropped from it (its query's abort signal). A move or a read of a review shows in its branch's chip at once, as in
+  the lists (`withStandingReviewUpdated`). The server matches the ORed `targetid`s in one scan of its reviews, so a
   block costs what one branch does (on a repository of ~6,700 reviews: 1.2 s for 50 or for 1 with `cm` starting,
   about 0.2 s through the shell); `target = 'br:<name>'` ORed was rejected, as the server resolves each name (4.2 s
   for 50). Reading every review once (about 2 s, 540 KB there) was rejected too: it reads what no view shows, and a
