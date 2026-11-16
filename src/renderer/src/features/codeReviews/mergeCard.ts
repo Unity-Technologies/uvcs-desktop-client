@@ -143,7 +143,7 @@ export function conflictsSectionOf(check: ConflictsCheck, destination: string, m
         id: 'conflicts',
         tone: 'failed',
         title: `${counts} with ${into}`,
-        detail: 'Resolve them to merge',
+        detail: files + directories === 1 ? 'Resolve it to merge' : 'Resolve them to merge',
         ...(merge && { action: { kind: 'merge', merge, label: 'Resolve…' } }),
       };
     }
