@@ -2,7 +2,8 @@ import { Archive, CherryIcon, GitMerge, GitPullRequestArrow, Undo2 } from 'lucid
 import { useMemo } from 'react';
 import { spec } from '@shared/domain/specs';
 import { useCommands, type Command } from '../../app/commands/commandStore';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { offersMerges } from '../../components/mergesOffered';
 import { branchWorkedOn } from '../../components/workingObject';
 import { branchLabel } from '../../lib/branchLabels';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -11,14 +12,18 @@ import { pickBranch } from '../branches/BranchPickerDialog';
 import { applyShelve } from '../shelves/shelveOperations';
 import { openMerge } from './mergeOperations';
 
-/** Palette commands to start any kind of merge. */
+/**
+ * Palette commands to start any kind of merge, and to apply a shelve. A partial workspace has only the latter: it
+ * offers no merge (`offersMerges`), and the app menu's merge items do nothing there.
+ */
 export function useMergeCommands(): void {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
   const currentBranch = branchWorkedOn(workspace?.selector);
+  const merges = offersMerges({ place: usePlace(), workspaceKind: workspace?.kind });
 
-  const commands = useMemo<Command[]>(
-    () => [
+  const commands = useMemo<Command[]>(() => {
+    const mergeCommands: Command[] = [
       {
         id: 'merge.fromBranch',
         group: 'Merge',
@@ -53,18 +58,6 @@ export function useMergeCommands(): void {
         },
       },
       {
-        id: 'merge.applyShelve',
-        group: 'Merge',
-        label: 'Apply shelve…',
-        icon: Archive,
-        run: async () => {
-          const answer = await prompt({ title: 'Apply shelve', label: 'Shelve number', confirmLabel: 'Apply' });
-          const shelve = parsePositiveNumber(answer, 'sh:');
-          // Applied at once; only conflicts open the merge view.
-          if (shelve) void applyShelve(workspacePath, shelve, false);
-        },
-      },
-      {
         id: 'merge.subtractive',
         group: 'Merge',
         label: 'Undo the changes of a changeset (subtractive merge)…',
@@ -74,9 +67,21 @@ export function useMergeCommands(): void {
           if (changeset) openMerge({ kind: 'subtractive', sourceSpec: spec.changeset(changeset) });
         },
       },
-    ],
-    [currentBranch, workspacePath],
-  );
+    ];
+    const applyShelveCommand: Command = {
+      id: 'merge.applyShelve',
+      group: 'Merge',
+      label: 'Apply shelve…',
+      icon: Archive,
+      run: async () => {
+        const answer = await prompt({ title: 'Apply shelve', label: 'Shelve number', confirmLabel: 'Apply' });
+        const shelve = parsePositiveNumber(answer, 'sh:');
+        // Applied at once; only conflicts open the merge view.
+        if (shelve) void applyShelve(workspacePath, shelve, false);
+      },
+    };
+    return merges ? [...mergeCommands, applyShelveCommand] : [applyShelveCommand];
+  }, [currentBranch, workspacePath, merges]);
 
   useCommands(commands);
 }
