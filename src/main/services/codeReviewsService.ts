@@ -137,7 +137,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       try {
         const output = request.description?.trim() ? await withTempFile(request.description, create) : await create();
         const created = createdMergeRequestOf(output, false);
-        if (!created) throw new Error(`The merge request was created, but cm printed no id: ${output.trim()}`);
+        if (!created) throw new Error("The server didn't say which merge request it created.");
         return created;
       } catch (error) {
         // A description that failed after the request was made: `cm` printed its id and exited 1. It exists.
