@@ -12,6 +12,7 @@ import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { chooseReviewers, cachedPlaceUser, codeReviewPage, deleteReviews, openReview, setOwnReviewStatus } from './codeReviewOperations';
 import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
+import { reviewNoun } from './mergeRequestState';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
 /** What a review's Copy menu copies; a merge request's link is written as one (`merge-requests/12`). */
@@ -52,7 +53,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
         })),
       ),
     single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
-    single && copySubmenu(single.mergeRequest ? 'Merge request' : 'Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && copySubmenu(reviewNoun(single), codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
 }

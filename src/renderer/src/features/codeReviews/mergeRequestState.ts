@@ -1,24 +1,17 @@
 import { GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, type LucideIcon } from 'lucide-react';
-import type { CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
+import { describeTarget } from './reviewTarget';
 
 /**
  * Each merge request state's glyph, wherever a state shows (`MergeRequestStateIcon`, its badge, the branch chips):
  * each its own shape, so the state never shows by color alone. Its color is the state's token
- * (`--merge-request-<state>`, `mergeRequestStateColors.module.css`).
+ * (`--merge-request-<state>`: `mergeRequestStateColors.module.css`; the Branch Explorer's `graphPalette`).
  */
 export const MERGE_REQUEST_STATE_ICONS: Record<MergeRequestState, LucideIcon> = {
   Draft: GitPullRequestDraft,
   Open: GitPullRequest,
   Merged: GitMerge,
   Closed: GitPullRequestClosed,
-};
-
-/** Each state's color, for an inline style or a canvas: the same tokens the CSS reads. */
-export const MERGE_REQUEST_STATE_COLORS: Record<MergeRequestState, string> = {
-  Draft: 'var(--merge-request-draft)',
-  Open: 'var(--merge-request-open)',
-  Merged: 'var(--merge-request-merged)',
-  Closed: 'var(--merge-request-closed)',
 };
 
 type WithMergeRequest = Pick<CodeReviewSummary, 'mergeRequest'>;
@@ -38,4 +31,17 @@ export function mergeRequestTip({ mergeRequest }: { mergeRequest: NonNullable<Co
 /** A review's source, and where it merges for a merge request: "/main/task → /main". */
 export function describeMerge(source: string, review: WithMergeRequest): string {
   return review.mergeRequest ? `${source} → ${review.mergeRequest.destination}` : source;
+}
+
+/** What a review is called wherever it's named: "Merge request" or "Code review". */
+export function reviewNoun(review: WithMergeRequest): 'Merge request' | 'Code review' {
+  return review.mergeRequest ? 'Merge request' : 'Code review';
+}
+
+/** What a review's Changes show: a merge request's branch into its destination, a branch, or its changes in words. */
+export type ReviewedChanges = { kind: 'merge'; source: string; destination: string } | { kind: 'branch'; branch: string } | { kind: 'text'; text: string };
+
+export function reviewedChangesOf({ target, mergeRequest }: Pick<CodeReview, 'target' | 'mergeRequest'>): ReviewedChanges {
+  if (target.kind !== 'branch') return { kind: 'text', text: describeTarget(target) };
+  return mergeRequest ? { kind: 'merge', source: target.branch, destination: mergeRequest.destination } : { kind: 'branch', branch: target.branch };
 }

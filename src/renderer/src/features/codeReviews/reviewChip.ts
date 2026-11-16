@@ -1,5 +1,6 @@
 import type { CodeReviewStatus, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { commentLineText } from '../../lib/comments/commentText';
+import { reviewNoun } from './mergeRequestState';
 
 /** What a branch's review chip shows (`CodeReviewChip`): the state of a merge request, the review's status, its tooltip. */
 export interface ReviewChip {
@@ -23,7 +24,7 @@ export interface ReviewChip {
 export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): ReviewChip {
   const { mergeRequest, status } = review;
   const title = commentLineText(review.title);
-  const noun = mergeRequest ? 'merge request' : 'code review';
+  const noun = reviewNoun(review).toLowerCase();
   const readyToMerge = mergeRequest?.state === 'Open' && status === 'Reviewed';
   const showsState = mergeRequest !== undefined && !(iconOnly && readyToMerge);
   return {

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { MergeRequestInfo } from '@shared/domain/codeReview';
-import type { CodeReviewTarget } from '@shared/domain/codeReview';
+import type { CodeReviewTarget, MergeRequestInfo } from '@shared/domain/codeReview';
 import { describeMerge, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestTip, reviewedChangesOf, reviewNoun } from './mergeRequestState';
 
 const request = (state: MergeRequestInfo['state'], destination = '/main'): { mergeRequest: MergeRequestInfo } => ({ mergeRequest: { state, destination } });

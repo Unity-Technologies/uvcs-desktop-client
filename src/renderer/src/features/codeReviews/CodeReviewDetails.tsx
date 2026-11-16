@@ -15,7 +15,7 @@ import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
-import { describeMerge } from './mergeRequestState';
+import { describeMerge, reviewedChangesOf, reviewNoun } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { ReviewerStack } from './ReviewerStack';
@@ -25,19 +25,21 @@ import styles from './CodeReviewDetails.module.css';
 export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: MenuEntry[] }) {
   const diffTarget = reviewDiffTarget(review.target);
   const { target, mergeRequest } = review;
+  const noun = reviewNoun(review);
+  const changes = reviewedChangesOf(review);
 
   return (
     <DetailsPanel
       icon={mergeRequest ? <GitPullRequest /> : <MessageSquareCode />}
-      kind={mergeRequest ? 'Merge request' : 'Code review'}
+      kind={noun}
       heading={<DetailsHeading name={<CommentLine comment={review.title} />} />}
       author={{ user: review.owner, date: review.date }}
       meta={[
-        <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what={copiedWhat(mergeRequest ? 'Merge request' : 'Code review', 'number')} />,
-        target.kind === 'branch' && !mergeRequest && <BranchChip key="target" name={target.branch} />,
-        target.kind === 'branch' && mergeRequest && (
+        <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what={copiedWhat(noun, 'number')} />,
+        changes.kind === 'branch' && <BranchChip key="target" name={changes.branch} />,
+        changes.kind === 'merge' && (
           <span key="target" className={styles.merge}>
-            <BranchChip name={target.branch} /> into <BranchChip name={mergeRequest.destination} />
+            <BranchChip name={changes.source} /> into <BranchChip name={changes.destination} />
           </span>
         ),
         target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what={copiedWhat('Changeset', 'spec')} />,
@@ -46,7 +48,10 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       badges={
         <>
           {mergeRequest && <MergeRequestStateBadge state={mergeRequest.state} />}
-          <CodeReviewStatusBadge status={review.status} iconOnly={mergeRequest !== undefined} />
+          {/* Beside a merge request's state, the review's status is its icon, named by its tooltip: the header's room is short. */}
+          <span data-tip={mergeRequest ? review.status : undefined}>
+            <CodeReviewStatusBadge status={review.status} iconOnly={mergeRequest !== undefined} />
+          </span>
         </>
       }
       primaryAction={

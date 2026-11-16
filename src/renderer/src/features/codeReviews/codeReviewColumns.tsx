@@ -10,15 +10,16 @@ import { commentCountsSortValue } from './commentCounts';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { REVIEWERS_COLUMN_WIDTH } from './reviewers';
 import { ReviewerStack } from './ReviewerStack';
-import { describeTarget } from './reviewTarget';
+import { reviewedChangesOf } from './mergeRequestState';
 import { MergeRequestStateIcon } from './MergeRequestStateIcon';
 import { waitingForMe, waitingForMeTip } from './waitingForMe';
 import styles from './codeReviewColumns.module.css';
 
 /**
- * Columns of the Merge requests table, which lists code reviews too: a merge request's state, its number and title, status, who reviews it, its comments and how many are
- * still open, what it reviews (and where a merge request merges it), who wrote it, when (the list's order and its period go by it), and when anyone last did
- * something on it. A review waiting for `user` has a dot before its number (`waitingForMe`).
+ * Columns of the Merge requests table, which lists code reviews too: a merge request's state, its number and title,
+ * status, who reviews it, its comments and how many are still open, what it reviews (and where a merge request merges
+ * it), who wrote it, when (the list's order and its period go by it), and when anyone last did something on it. A
+ * review waiting for `user` has a dot before its number (`waitingForMe`).
  */
 export function codeReviewColumns(user: string | undefined): Column<CodeReview>[] {
   return [
@@ -90,19 +91,19 @@ function WaitingDot({ review, user }: { review: CodeReview; user: string | undef
 
 /** What a review reviews; for a merge request, its branch into its destination, the destination kept when narrow. */
 function ReviewedChanges({ review }: { review: CodeReview }) {
-  const { target, mergeRequest } = review;
-  if (target.kind !== 'branch') return <Highlight text={describeTarget(target)} />;
-  if (!mergeRequest) return <PathLabel path={target.branch} />;
+  const changes = reviewedChangesOf(review);
+  if (changes.kind === 'text') return <Highlight text={changes.text} />;
+  if (changes.kind === 'branch') return <PathLabel path={changes.branch} />;
   return (
-    <span className={styles.merge} data-tip={`Merge ${target.branch} into ${mergeRequest.destination}`}>
+    <span className={styles.merge} data-tip={`Merge ${changes.source} into ${changes.destination}`}>
       <span className={styles.source}>
-        <PathLabel path={target.branch} tooltip={false} fitContent />
+        <PathLabel path={changes.source} tooltip={false} fitContent />
       </span>
       <span className={styles.arrow} aria-label="into">
         →
       </span>
       <span className={styles.destination}>
-        <PathLabel path={mergeRequest.destination} tooltip={false} fitContent />
+        <PathLabel path={changes.destination} tooltip={false} fitContent />
       </span>
     </span>
   );
