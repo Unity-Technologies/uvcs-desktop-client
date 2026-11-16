@@ -10,6 +10,8 @@ import { MergeCalculating } from './MergeCalculating';
 import { MergeCompleted, type MergeCompletion } from './MergeCompleted';
 import { hasMergeOptions, nothingToMergeAction, withoutMergeOptions } from './mergeOptions';
 import { MergeSession } from './MergeSession';
+import { MergeRuleRefused } from './MergeRuleRefused';
+import { mergeRuleRefusal } from './mergeRuleRefusal';
 import { mergeSettled } from './mergeSettled';
 import { useMergePlan } from './useMergePlan';
 
@@ -34,6 +36,16 @@ function MergeOfRequest({ page }: PageProps<'merge'>) {
 
   if (completion) return <MergeCompleted request={request} completion={completion} />;
   if (isLoading) return <MergeCalculating request={request} />;
+  // The server's merge rules refuse a merge into a branch while it's calculated, so its preview says so.
+  const refusal = error ? mergeRuleRefusal(error.message) : undefined;
+  if (refusal) {
+    const retry = (
+      <Button loading={isFetching} onClick={() => void refetch()}>
+        Try again
+      </Button>
+    );
+    return <MergeRuleRefused refusal={refusal} openedFrom={page.task?.mergeRequest} retry={retry} />;
+  }
   if (error || !plan) {
     return (
       <EmptyState

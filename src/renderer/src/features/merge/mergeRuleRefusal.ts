@@ -1,4 +1,6 @@
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { branchLabel } from '../../lib/branchLabels';
+import { isActiveMergeRequest } from '../codeReviews/mergeRequestState';
 
 /**
  * A merge the server's merge rules refused (docs/features/merge-requests.md "Merging"): the source needs an open merge
@@ -26,6 +28,11 @@ export function mergeRuleRefusal(message: string): MergeRuleRefusal | undefined 
     if (match) return { rule, source: match[1]!, destination: match[2]! };
   }
   return undefined;
+}
+
+/** The branch's merge request still to merge (Open or Draft) into `destination`, from the branch's reviews; none before they're read. */
+export function mergeRequestInto(reviewsOfBranch: readonly CodeReviewSummary[] | undefined, destination: string): number | undefined {
+  return reviewsOfBranch?.find((review) => isActiveMergeRequest(review) && review.mergeRequest?.destination === destination)?.id;
 }
 
 /** What the merge page says about a refusal, and the one thing to do about it. */
