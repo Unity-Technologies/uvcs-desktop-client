@@ -71,7 +71,8 @@ version that has them (`isCmVersionAtLeast`; the email subscription, see "Email 
   (`ReviewersDialog`, `pickReviewers`), saved with one command to add and one to remove; it is offered for one review
   at a time, as the picker shows that review's reviewers (adding to several reviews would be a command per review).
   A new review asks the reviewers typed, separated by commas (`typedReviewers`, a group as one), in the command that
-  creates it (`cm codereview <target> <title> --users=a,b --groups=g`, `createReviewArgs`).
+  creates it (`cm codereview <target> <title> --users=a,b --groups=g`, `createReviewArgs`). A merge request asks them
+  the same way, in its own dialog (docs/features/merge-requests.md "Creating one").
 - Finishing a task can mark the user's review as reviewed once merged (docs/features/merge.md, `canMarkReviewed`).
 - `cm codereview -e --status` isn't used: it sets the status of the review's first reviewer, and fails on a review
   with more than one.
