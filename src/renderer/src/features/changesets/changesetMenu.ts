@@ -9,6 +9,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
+import { offersMerges, type MenuPlace } from '../../components/mergesOffered';
 import { menuAction, type MenuHost } from '../../components/menuWords';
 import { toolsSubmenu } from '../../components/tools/toolsMenu';
 import { toolSubject } from '../../components/tools/toolSubjects';
@@ -33,8 +34,7 @@ import {
   switchToChangeset,
 } from './changesetOperations';
 
-export interface ChangesetMenuContext {
-  place: Place;
+export interface ChangesetMenuContext extends MenuPlace {
   /** The workspace's loaded changeset (none on a shelve) and branch, to offer "revert to" only where it makes sense. */
   loadedChangeset?: number | null;
   loadedBranch?: string;
@@ -64,7 +64,7 @@ export function changesetCopyTexts(place: Place, changeset: ChangesetInfo, repos
  * The menu of the selected changesets (one, or two for interval operations), the same wherever changesets show: the
  * Changesets view, a branch diff's list of changesets, the Branch Explorer, Incoming, the top bar, the palette
  * and their details. What needs a workspace (switching, reverting, merging into it) isn't there for a repository
- * explored without one.
+ * explored without one, and no merge is there in a partial workspace (`offersMerges`).
  */
 export function changesetMenu(context: ChangesetMenuContext, selected: ChangesetInfo[], host: MenuHost = {}): MenuEntry[] {
   if (selected.length === 1) return singleChangesetMenu(context, selected[0]!, host);
@@ -79,6 +79,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
   const keys = host.listKeysElsewhere ? {} : { diff: hotkey('listDiff'), copy: hotkey('listCopy'), copyLink: hotkey('copyLink') };
   const canRevertTo = typeof loadedChangeset === 'number' && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
   const branchDiff = branchDiffBase(changeset, context.branchStartOf?.(changeset.branch) ?? null);
+  const merges = offersMerges(context);
 
   return groupedMenu([
     menuAction('diff', () => openChangesetDiff(changeset), { shortcut: keys.diff }),
@@ -86,10 +87,10 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     branchDiff.kind !== 'none' && menuAction('branchDiffUpTo', () => void openBranchDiffUpTo(place, changeset, branchDiff)),
     workspacePath !== null && menuAction('switch', () => void switchToChangeset(workspacePath, changeset), { label: 'Switch to this changeset' }),
     canRevertTo && menuAction('revert', () => revertWorkspaceToChangeset(changeset, loadedChangeset), { label: 'Revert workspace to this changeset…' }),
-    workspacePath !== null && menuAction('merge', () => openMerge({ kind: 'merge', sourceSpec: source })),
-    workspacePath !== null && menuAction('mergeTo', () => void mergeChangesetTo(changeset)),
-    workspacePath !== null && menuAction('cherryPick', () => openMerge({ kind: 'cherryPick', sourceSpec: source }), { label: 'Cherry pick this changeset' }),
-    workspacePath !== null && menuAction('subtractive', () => openMerge({ kind: 'subtractive', sourceSpec: source })),
+    merges && menuAction('merge', () => openMerge({ kind: 'merge', sourceSpec: source })),
+    merges && menuAction('mergeTo', () => void mergeChangesetTo(changeset)),
+    merges && menuAction('cherryPick', () => openMerge({ kind: 'cherryPick', sourceSpec: source }), { label: 'Cherry pick this changeset' }),
+    merges && menuAction('subtractive', () => openMerge({ kind: 'subtractive', sourceSpec: source })),
     menuAction('newBranch', () =>
       void openCreateBranchDialog(place, {
         parentBranch: changeset.branch,
@@ -110,9 +111,9 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
   ]);
 }
 
-/** Two changesets: their diff, with a workspace to merge into cherry picking or subtracting the range, and the tools on both. */
+/** Two changesets: their diff, where merges are offered cherry picking or subtracting the range, and the tools on both. */
 function intervalMenu(context: ChangesetMenuContext, selected: ChangesetInfo[]): MenuEntry[] {
-  const inWorkspace = workspacePathOf(context.place) !== null;
+  const merges = offersMerges(context);
   const [older, newer] = [...selected].sort((a, b) => a.id - b.id) as [ChangesetInfo, ChangesetInfo];
   const range = `${older.id}–${newer.id}`;
   // The interval origin is exclusive; starting at the older changeset's parent includes it.
@@ -120,8 +121,8 @@ function intervalMenu(context: ChangesetMenuContext, selected: ChangesetInfo[]):
 
   return groupedMenu([
     menuAction('diffRange', () => openRangeDiff(older, newer), { label: `Open diff of changesets ${older.id} and ${newer.id}` }),
-    inWorkspace && menuAction('cherryPickRange', () => openMerge({ kind: 'cherryPick', ...interval }), { label: `Cherry pick changesets ${range}` }),
-    inWorkspace && menuAction('subtractiveRange', () => openMerge({ kind: 'subtractive', ...interval }), { label: `Subtractive merge of changesets ${range}` }),
+    merges && menuAction('cherryPickRange', () => openMerge({ kind: 'cherryPick', ...interval }), { label: `Cherry pick changesets ${range}` }),
+    merges && menuAction('subtractiveRange', () => openMerge({ kind: 'subtractive', ...interval }), { label: `Subtractive merge of changesets ${range}` }),
     toolsSubmenu(context.place, selected.map((changeset) => toolSubject.changeset(changeset, context.repository))),
   ]);
 }

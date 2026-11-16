@@ -81,7 +81,7 @@ export function ChangesetsView() {
   useShowInFollowingWindow(focused ? changesetDiffPage(focused) : null);
   useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(place, selected[0]!) : undefined);
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
-  const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
+  const menuContext = { place, workspaceKind: workspace?.kind, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
 
   useCommands(
     useMemo<Command[]>(

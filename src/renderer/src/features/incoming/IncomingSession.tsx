@@ -7,6 +7,7 @@ import { ALL_CHANGES_KEY, ALL_CHANGES_SELECTION, selectedChangesetIds, type Chan
 import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
+import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { rangeLength } from '../../lib/itemRange';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
@@ -107,6 +108,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
   const diffExpanded = useDiffExpanded();
+  const workspaceKind = useWorkspaceInfoOf(workspacePath).data?.kind;
 
   const pendingConflictPaths = useMemo(() => new Set(states.filter((state) => !state.resolution).map((state) => state.file.key)), [states]);
   // A conflicting file's arrows go on past its first or last conflict to the files around it that need merging.
@@ -164,7 +166,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
       else if (resolutions) await updateResolvingConflicts(workspacePath, incoming, resolutions);
     });
 
-  const menuContext = { place: workspacePlace(workspacePath), loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
+  const menuContext = { place: workspacePlace(workspacePath), workspaceKind, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
   const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   useShowInFollowingWindow(showsChangeset && scopedChangeset ? changesetDiffPage(scopedChangeset) : null);
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.

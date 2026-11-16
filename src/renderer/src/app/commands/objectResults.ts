@@ -1,7 +1,7 @@
 import { workspacePlace } from '@shared/domain/place';
 import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
 import type { Place } from '@shared/domain/place';
-import type { WorkspaceSelector } from '@shared/domain/workspace';
+import type { WorkspaceKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
@@ -44,6 +44,8 @@ import { MERGE_REQUEST_STATE_ICONS } from '../../features/codeReviews/mergeReque
 /** What the palette's results need to know about the window's place, and the typed search (empty to list without matching). */
 export interface ResultContext {
   place: Place;
+  /** The workspace's kind, which decides whether the menus offer merges (`offersMerges`). */
+  workspaceKind?: WorkspaceKind;
   term: string;
   currentBranch?: string;
   /**
@@ -165,7 +167,7 @@ export function branchResult(branch: Branch, context: ResultContext, match: Obje
     quality: branch.isHidden && shown.quality !== undefined ? lowered(shown.quality, HIDDEN_BRANCH_PENALTY) : shown.quality,
     isCurrent: branch.name === currentBranch,
     isHidden: branch.isHidden,
-    menu: () => branchMenu(context.place, [branch], currentBranch),
+    menu: () => branchMenu({ place: context.place, workspaceKind: context.workspaceKind, currentBranch }, [branch]),
     run: () => diffBranch(branch),
   };
 }
@@ -177,7 +179,7 @@ export function labelResult(label: Label, context: ResultContext, match: ObjectM
     icon: Tag,
     label: label.name,
     ...matchShown(label.name, label.comment, `cs:${label.changeset} · ${formatRelativeDate(label.date)}`, term, match),
-    menu: () => labelMenu(context.place, [label]),
+    menu: () => labelMenu({ place: context.place, workspaceKind: context.workspaceKind }, [label]),
     run: () => showLabelChanges(label),
   };
 }
@@ -191,7 +193,7 @@ export function changesetResult(changeset: Changeset, context: ResultContext): S
     detail: `cs:${changeset.id} · ${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
     detailMatches: specMatches(`cs:${changeset.id}`, term),
     quality: term ? Math.max(wordMatchQuality(changeset.comment, term), wordMatchQuality(`cs:${changeset.id}`, term)) : undefined,
-    menu: () => changesetMenu({ place: context.place, loadedChangeset, loadedBranch: currentBranch }, [changeset]),
+    menu: () => changesetMenu({ place: context.place, workspaceKind: context.workspaceKind, loadedChangeset, loadedBranch: currentBranch }, [changeset]),
     run: () => openChangesetDiff(changeset),
   };
 }

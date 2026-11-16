@@ -54,6 +54,7 @@ export function BranchesView() {
   const [selection, setSelection] = useViewSelection('branches');
 
   const currentBranch = branchWorkedOn(workspace?.selector);
+  const menuPlace = { place, workspaceKind: workspace?.kind, currentBranch };
   // The tree lists siblings by name: sorted once per read, so typing a filter only filters.
   const listed = useMemo(() => (layout === 'tree' ? sortBranchesByName(branches ?? []) : (branches ?? [])), [layout, branches]);
   const matching = useMemo(() => filterBranches(listed, search, (owner) => matchesPeople(people, me, owner)), [listed, search, people, me]);
@@ -134,9 +135,9 @@ export function BranchesView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={(row) => diffBranch(row.branch)}
-        contextMenu={(selectedRows) => branchMenu(place, selectedRows.map((row) => row.branch), currentBranch)}
+        contextMenu={(selectedRows) => branchMenu(menuPlace, selectedRows.map((row) => row.branch))}
         noun="branch"
-        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(place, [selected], currentBranch)} />}
+        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(menuPlace, [selected])} />}
       />
     </>
   );
