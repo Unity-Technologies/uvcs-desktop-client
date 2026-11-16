@@ -43,9 +43,13 @@ describe('branchesNearView', () => {
     const header = aroundHeaderOf(1);
     // A view of 100 px whose bottom edge is 40 px above the header: in its margin of 50.
     const above = { left: header.left - 50, right: header.left + 50, top: header.top - 140, bottom: header.top - 40 };
-    expect(branchesNearView(layout, above)).toContain(lane.branch.id);
+    expect(branchesNearView(layout, above, true)).toContain(lane.branch.id);
     // 60 px above it: past the margin.
     const farther = { ...above, top: header.top - 160, bottom: header.top - 60 };
-    expect(branchesNearView(layout, farther)).not.toContain(lane.branch.id);
+    expect(branchesNearView(layout, farther, true)).not.toContain(lane.branch.id);
+  });
+
+  it('takes in none while zoomed out past where headers are drawn: no chip shows', () => {
+    expect(branchesNearView(layout, EVERYTHING, false)).toEqual([]);
   });
 });

@@ -25,9 +25,11 @@ const NEAR_MARGIN = 0.5;
 
 /**
  * The branches whose headers are in view or near it (`NEAR_MARGIN`), by id: those whose reviews the Branch Explorer
- * asks for (`useBranchReviews`), so a header's chip is read before it scrolls in, and nothing far from view is.
+ * asks for (`useBranchReviews`), so a header's chip is read before it scrolls in, and nothing far from view is. None
+ * while zoomed out past where headers are drawn (`drawsHeaders`, `DetailLevel.text`): no chip shows there.
  */
-export function branchesNearView(layout: GraphLayout, visible: WorldArea): number[] {
+export function branchesNearView(layout: GraphLayout, visible: WorldArea, drawsHeaders: boolean): number[] {
+  if (!drawsHeaders) return [];
   const marginX = (visible.right - visible.left) * NEAR_MARGIN;
   const marginY = (visible.bottom - visible.top) * NEAR_MARGIN;
   const near = { left: visible.left - marginX, right: visible.right + marginX, top: visible.top - marginY, bottom: visible.bottom + marginY };

@@ -163,7 +163,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       window.devicePixelRatio,
       drawnRef.current,
     );
-    nearViewRef.current?.(branchesNearView(scene.layout, visibleArea({ viewport: view.viewportRef.current, size: sizeRef.current })));
+    const viewport = view.viewportRef.current;
+    const drawsHeaders = detailLevel(viewport.zoom, scene.highlights.options).text;
+    nearViewRef.current?.(branchesNearView(scene.layout, visibleArea({ viewport, size: sizeRef.current }), drawsHeaders));
   }, []);
 
   const scheduleDraw = useCallback(() => {
