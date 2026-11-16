@@ -62,9 +62,11 @@ is another thing: where the review stands, for merge requests and code reviews a
 A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "The review's page"), with where it merges:
 
 - **The headline** (`reviewHeadline`): the state's badge, then the review status's, then "Ana wants to merge
-  /main/task into /main"; "merged … into" once merged, "wanted to merge … into" once closed. Both badges stay: they say
+  /main/task into /main"; "asked to merge … into" once merged (whoever merged it, the Merged badge says it is),
+  "wanted to merge … into" once closed. Both badges stay: they say
   different things (where the request stands, where its review stands), and side by side they read as two, not noise.
-- **The destination** changes in place while Draft or Open (`DestinationPicker`): it reads as the headline's other
+- **The destination** changes in place while Draft or Open and its source branch is named (`DestinationPicker`;
+  `reviewHeadline` decides): it reads as the headline's other
   branch with a small chevron, a quiet tint under the pointer; it opens the branch list (`BranchSearchList`) with the
   source's **Ancestors** first, nearest first, read from the source's name alone (`ancestorsOf`), then **Other
   branches**, newest first, to find by typing (`destinationGroups`), never the source. The branches are read only once

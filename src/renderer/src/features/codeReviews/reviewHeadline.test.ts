@@ -11,8 +11,8 @@ describe('reviewHeadline', () => {
   });
 
   it('says a merge request still to merge wants to merge into a destination that can still change', () => {
-    expect(reviewHeadline(request('Open'))).toEqual({ verb: 'wants to merge', destination: { name: '/main', editable: true } });
-    expect(reviewHeadline(request('Draft'))).toEqual({ verb: 'wants to merge', destination: { name: '/main', editable: true } });
+    expect(reviewHeadline(request('Open'))).toEqual({ verb: 'wants to merge', destination: { name: '/main', editable: true, source: '/main/task' } });
+    expect(reviewHeadline(request('Draft'))).toEqual({ verb: 'wants to merge', destination: { name: '/main', editable: true, source: '/main/task' } });
   });
 
   it('says a merged or closed one asked to merge, its destination settled: the author merged nothing, whoever did', () => {

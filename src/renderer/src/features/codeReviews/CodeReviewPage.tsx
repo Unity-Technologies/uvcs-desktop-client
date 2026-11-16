@@ -197,8 +197,8 @@ function ReviewHeader({ review }: { review: CodeReview }) {
             <span>into</span>
             <span className={styles.targetAndTime}>
               <span className={styles.target}>
-                {headline.destination.editable && review.target.kind === 'branch' ? (
-                  <DestinationPicker review={review} source={review.target.branch} destination={headline.destination.name} />
+                {headline.destination.editable ? (
+                  <DestinationPicker review={review} source={headline.destination.source} destination={headline.destination.name} />
                 ) : (
                   <PathLabel path={headline.destination.name} fitContent />
                 )}

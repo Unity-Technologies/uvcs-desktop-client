@@ -1,25 +1,23 @@
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { CodeReview } from '@shared/domain/codeReview';
 
 /**
  * The review page's second line after its author: "Ana wants a review of /main/task", or for a merge request "Ana
- * wants to merge /main/task into /main", in the past once merged or closed. Its destination changes in place
- * (`DestinationPicker`) only while it is still to merge.
+ * wants to merge /main/task into /main"; "asked to merge" once merged (anyone may have merged it: the state's badge
+ * says it is), "wanted to merge" once closed. Its destination changes in place (`DestinationPicker`) only while it is
+ * still to merge, and only with its source branch named: the picker offers the source's ancestors.
  */
 export interface ReviewHeadline {
   verb: string;
-  destination?: { name: string; editable: boolean };
+  /** Where a merge request merges; `editable` with the source the picker offers the ancestors of. */
+  destination?: { name: string; editable: true; source: string } | { name: string; editable: false };
 }
 
-export function reviewHeadline({ mergeRequest }: Pick<CodeReviewSummary, 'mergeRequest'>): ReviewHeadline {
+export function reviewHeadline({ target, mergeRequest }: Pick<CodeReview, 'target' | 'mergeRequest'>): ReviewHeadline {
   if (!mergeRequest) return { verb: 'wants a review of' };
   const { state, destination: name } = mergeRequest;
-  switch (state) {
-    case 'Draft':
-    case 'Open':
-      return { verb: 'wants to merge', destination: { name, editable: true } };
-    case 'Merged':
-      return { verb: 'merged', destination: { name, editable: false } };
-    case 'Closed':
-      return { verb: 'wanted to merge', destination: { name, editable: false } };
-  }
+  const stillToMerge = state === 'Draft' || state === 'Open';
+  const destination = stillToMerge && target.kind === 'branch' ? { name, editable: true as const, source: target.branch } : { name, editable: false as const };
+  return { verb: VERBS[state], destination };
 }
+
+const VERBS = { Draft: 'wants to merge', Open: 'wants to merge', Merged: 'asked to merge', Closed: 'wanted to merge' } as const;
