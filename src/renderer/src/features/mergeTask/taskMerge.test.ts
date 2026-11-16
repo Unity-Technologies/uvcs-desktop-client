@@ -48,19 +48,21 @@ describe('requestsToRecord', () => {
 });
 
 describe('taskEnding', () => {
-  it("records its merge requests, marks the user's review and hides the branch as picked", () => {
-    expect(taskEnding({ task: picked(true, true), review: review('Under review'), user: 'bob', mergeRequests: [12] })).toEqual({
+  it("carries what to record from, marks the user's review and hides the branch as picked", () => {
+    const reviewsOfBranch = [review('Under review')];
+    expect(taskEnding({ task: { ...picked(true, true), mergeRequest: { id: 12, title: 'Task 001' } }, review: review('Under review'), user: 'bob', reviewsOfBranch })).toEqual({
       taskBranch: '/main/task001',
-      mergeRequests: [12],
+      reviewsOfBranch,
+      openedFrom: { id: 12, title: 'Task 001' },
       review: review('Under review'),
       hideBranch: true,
     });
   });
 
   it("leaves the review alone when not picked, already marked by the user, missing, or when the user isn't a reviewer", () => {
-    expect(taskEnding({ task: picked(false, false), review: review('Rework required'), user: 'bob', mergeRequests: [] }).review).toBeUndefined();
-    expect(taskEnding({ task: picked(true, false), review: review('Reviewed'), user: 'bob', mergeRequests: [] }).review).toBeUndefined();
-    expect(taskEnding({ task: picked(true, false), review: undefined, user: 'bob', mergeRequests: [] }).review).toBeUndefined();
-    expect(taskEnding({ task: picked(true, false), review: review('Under review'), user: 'eva', mergeRequests: [] }).review).toBeUndefined();
+    expect(taskEnding({ task: picked(false, false), review: review('Rework required'), user: 'bob', reviewsOfBranch: [] }).review).toBeUndefined();
+    expect(taskEnding({ task: picked(true, false), review: review('Reviewed'), user: 'bob', reviewsOfBranch: [] }).review).toBeUndefined();
+    expect(taskEnding({ task: picked(true, false), review: undefined, user: 'bob', reviewsOfBranch: [] }).review).toBeUndefined();
+    expect(taskEnding({ task: picked(true, false), review: review('Under review'), user: 'eva', reviewsOfBranch: [] }).review).toBeUndefined();
   });
 });
