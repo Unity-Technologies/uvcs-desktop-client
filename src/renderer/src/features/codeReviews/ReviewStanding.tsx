@@ -2,7 +2,7 @@ import type { MergeRequestSummary } from './mergeRequestSummary';
 import { MergeCardDisc } from './MergeCardDisc';
 import styles from './ReviewStanding.module.css';
 
-/** Where a merge request's review stands, as its merge card says it: the tone's disc, then the title and its detail. */
+/** Where a merge request's review stands, as its merge card says it: the verdict's disc, then the title and its detail. */
 export function ReviewStanding({ standing }: { standing: NonNullable<MergeRequestSummary['review']> }) {
   return (
     <div className={styles.standing}>

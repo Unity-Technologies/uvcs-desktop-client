@@ -1,9 +1,11 @@
-import type { CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
+import type { MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { branchWorkedOn } from '../../components/workingObject';
 import { commentLineText } from '../../lib/comments/commentText';
 import { openItemsLine, type OpenItems } from './mergeCard';
+import { listedVerdictOf } from './listedVerdict';
 import { mergeOfRequest, type MergeInto } from './mergeInto';
+import { VERDICT_WORDS, type MergeVerdict } from './mergeVerdict';
 import { mergeRequestTip, type MergeRequestReview } from './mergeRequestState';
 
 /**
@@ -23,14 +25,11 @@ export interface TopBarRequestChip {
    * (merge-requests.md "Its number").
    */
   stateText: string;
+  /** Whether it can merge, after its pill, as a branch's chip shows it (`listedVerdictOf`): a check, a cross, or none. */
+  verdict?: MergeVerdict;
   /**
-   * The review's glyph after it, while Open and once decided (a check, a cross), as a branch's chip (`reviewChipOf`):
-   * a draft isn't up for review, a merged one is done, and "Open" alone says it waits for its review.
-   */
-  status?: CodeReviewStatus;
-  /**
-   * What a screen reader says it is, as the chip shows it: "Merge request · Open into /main · Reviewed: Jump higher";
-   * no status where the chip shows none ("Merge request · Open into /main: Jump higher" while under review).
+   * What a screen reader says it is, as the chip shows it: "Merge request · Open into /main · Ready to merge: Jump
+   * higher"; no verdict where the chip shows none ("Merge request · Open into /main: Jump higher" while under review).
    */
   label: string;
   card: TopBarRequestCard;
@@ -59,13 +58,13 @@ export function asksForBranchReviews(selector: WorkspaceSelector | null | undefi
 export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems, source?: string): TopBarRequestChip {
   const { state } = review.mergeRequest;
   const isOpen = state === 'Open';
-  const status = isOpen && review.status !== 'Under review' ? review.status : undefined;
-  const shown = ['Merge request', whereItMerges(review.mergeRequest), ...(status ? [status] : [])];
+  const verdict = listedVerdictOf(review);
+  const shown = ['Merge request', whereItMerges(review.mergeRequest), ...(verdict ? [VERDICT_WORDS[verdict]] : [])];
   return {
     reviewId: review.id,
     state,
     stateText: state,
-    ...(status && { status }),
+    ...(verdict && { verdict }),
     label: `${shown.join(' · ')}: ${commentLineText(review.title)}`,
     card: {
       ...(isOpen && open && openLine(open)),

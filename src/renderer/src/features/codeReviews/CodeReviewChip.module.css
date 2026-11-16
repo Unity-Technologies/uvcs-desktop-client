@@ -1,4 +1,4 @@
-/* A merge request's review status beside its state, in a branch's chip: the icon alone, centered on the badge. */
+/* A merge request's verdict beside its state, in a branch's chip, centered on the badge. */
 .status {
   display: inline-flex;
   align-items: center;

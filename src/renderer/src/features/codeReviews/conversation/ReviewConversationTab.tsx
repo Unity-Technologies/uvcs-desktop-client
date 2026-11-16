@@ -158,10 +158,11 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
           ) : (
             <>
               <ReviewDescriptionCard review={review} description={conversation.description} />
-              <ol className={styles.timeline}>{blocks.map(renderBlock)}</ol>
+              {/* Where it stands and what's next, read first after what it is: the history follows. */}
               {review.mergeRequest && (
                 <MergeRequestCard review={review} mergeRequest={review.mergeRequest} open={openItemsIn(open)} mergedChangeset={mergedChangesetOf(conversation.events)} />
               )}
+              <ol className={styles.timeline}>{blocks.map(renderBlock)}</ol>
             </>
           )}
           <div className={styles.newComment}>

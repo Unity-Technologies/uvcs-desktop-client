@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { mergeOfRequest } from './mergeInto';
-import { conflictsSectionOf, mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, openItemsOfConversation, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
+import { conflictsSectionOf, mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, openItemsOfConversation, type MergeCardInput, type MergeCardSection } from './mergeCard';
+import { reviewSectionOf } from './reviewSection';
 import type { ConflictsCheck } from './mergeRequestConflicts';
 
 const reviewer = (name: string, status: CodeReviewStatus): CodeReviewer => ({ name, status });

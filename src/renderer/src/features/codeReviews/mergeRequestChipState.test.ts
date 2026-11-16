@@ -7,7 +7,8 @@ import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf } from './
 import type { MergeRequestReview } from './mergeRequestState';
 
 function request(id: number, state: MergeRequestState, review: Partial<CodeReviewSummary> = {}): MergeRequestReview {
-  return { ...codeReviewSummary({ id, title: `Task ${id}`, targetBranchId: 7, ...review }), mergeRequest: { state, destination: '/main' } };
+  const status = review.status ?? 'Under review';
+  return { ...codeReviewSummary({ id, title: `Task ${id}`, targetBranchId: 7, reviewers: [{ name: 'ana', status }], ...review }), mergeRequest: { state, destination: '/main' } };
 }
 
 describe('asksForBranchReviews', () => {
@@ -33,29 +34,29 @@ describe('asksForBranchReviews', () => {
 describe('mergeRequestChipOf, the chip', () => {
   it('shows the state by its glyph and name, never the number, then the review status while Open', () => {
     const chip = mergeRequestChipOf(request(12, 'Open', { status: 'Reviewed' }));
-    expect(chip).toEqual(expect.objectContaining({ reviewId: 12, state: 'Open', stateText: 'Open', status: 'Reviewed' }));
+    expect(chip).toEqual(expect.objectContaining({ reviewId: 12, state: 'Open', stateText: 'Open', verdict: 'ready' }));
     expect(chip).not.toHaveProperty('number');
   });
 
-  it('shows the review once decided while Open, as a branch chip does', () => {
-    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Rework required' })).status).toBe('Rework required');
-    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Under review' })).status).toBeUndefined();
+  it('shows whether it can merge while Open, as a branch chip does', () => {
+    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Rework required' })).verdict).toBe('blocked');
+    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Under review' })).verdict).toBeUndefined();
   });
 
   it('shows no review status on a draft: it is not up for review yet', () => {
     const chip = mergeRequestChipOf(request(12, 'Draft', { status: 'Under review' }));
     expect(chip).toMatchObject({ state: 'Draft', stateText: 'Draft' });
-    expect(chip.status).toBeUndefined();
+    expect(chip.verdict).toBeUndefined();
   });
 
   it('shows no review status once merged', () => {
     const chip = mergeRequestChipOf(request(12, 'Merged', { status: 'Reviewed' }));
     expect(chip).toMatchObject({ state: 'Merged' });
-    expect(chip.status).toBeUndefined();
+    expect(chip.verdict).toBeUndefined();
   });
 
   it('names what it is and where it stands for a screen reader, by its title', () => {
-    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more', status: 'Reviewed' })).label).toBe('Merge request · Open into /main · Reviewed: Jump higher');
+    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more', status: 'Reviewed' })).label).toBe('Merge request · Open into /main · Ready to merge: Jump higher');
   });
 
   it("says no review status where the chip shows none", () => {

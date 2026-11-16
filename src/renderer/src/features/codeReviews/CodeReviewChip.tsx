@@ -8,7 +8,7 @@ import type { MergeRequestReview } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
 import { MergeRequestSummaryCard } from './MergeRequestSummaryCard';
 import { reviewChipOf, type ReviewChip } from './reviewChip';
-import { ReviewStatusIcon } from './ReviewStatusIcon';
+import { MergeVerdictIcon } from './MergeVerdictIcon';
 import styles from './CodeReviewStatusBadge.module.css';
 import cardStyles from './CodeReviewChip.module.css';
 
@@ -53,14 +53,12 @@ function ChipGlyphs({ chip }: { chip: ReviewChip }) {
   return (
     <>
       {chip.state && <MergeRequestStateBadge state={chip.state} compact iconOnly={!chip.stateText} />}
-      {chip.status &&
-        (chip.statusForm === 'icon' ? (
-          <span className={cardStyles.status}>
-            <ReviewStatusIcon status={chip.status} size={13} />
-          </span>
-        ) : (
-          <CodeReviewStatusBadge status={chip.status} compact iconOnly={!chip.statusText} />
-        ))}
+      {chip.verdict && (
+        <span className={cardStyles.status}>
+          <MergeVerdictIcon verdict={chip.verdict} />
+        </span>
+      )}
+      {chip.status && <CodeReviewStatusBadge status={chip.status} compact iconOnly={!chip.statusText} />}
     </>
   );
 }

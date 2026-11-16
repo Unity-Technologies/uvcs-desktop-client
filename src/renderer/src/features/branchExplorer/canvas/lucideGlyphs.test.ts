@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { MERGE_REQUEST_STATE_ICONS } from '../../codeReviews/mergeRequestState';
 import { REVIEW_STATUS_ICONS } from '../../codeReviews/reviewStatusIcons';
-import { STATE_GLYPHS, STATUS_GLYPHS, type Glyph } from './lucideGlyphs';
+import { Check, X } from 'lucide-react';
+import { STATE_GLYPHS, STATUS_GLYPHS, VERDICT_GLYPHS, type Glyph } from './lucideGlyphs';
 
 /** The shapes of an icon as the app shows it, from its markup, in order. */
 function shapesOf(icon: ComponentType): string[] {
@@ -29,5 +30,10 @@ describe('the canvas glyphs', () => {
 
   it.each(Object.keys(STATUS_GLYPHS) as (keyof typeof STATUS_GLYPHS)[])("draw the %s status's icon as the app shows it", (status) => {
     expect(shapesOfGlyph(STATUS_GLYPHS[status])).toEqual(shapesOf(REVIEW_STATUS_ICONS[status]));
+  });
+
+  it("draw the verdicts' icons as the app shows them", () => {
+    expect(shapesOfGlyph(VERDICT_GLYPHS.ready)).toEqual(shapesOf(Check));
+    expect(shapesOfGlyph(VERDICT_GLYPHS.blocked)).toEqual(shapesOf(X));
   });
 });

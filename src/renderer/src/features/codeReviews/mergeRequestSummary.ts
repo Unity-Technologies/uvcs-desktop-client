@@ -1,6 +1,7 @@
 import type { MergeRequestState } from '@shared/domain/codeReview';
 import { commentLineText } from '../../lib/comments/commentText';
-import { reviewSectionOf, type MergeCardSection } from './mergeCard';
+import type { MergeCardSection } from './mergeCard';
+import { reviewSectionOf } from './reviewSection';
 import type { MergeRequestReview } from './mergeRequestState';
 import { mergeVerbOf } from './reviewHeadline';
 
@@ -43,6 +44,6 @@ function showsReview({ mergeRequest, status }: MergeRequestReview): boolean {
 }
 
 function reviewOf({ reviewers, status }: MergeRequestReview): NonNullable<MergeRequestSummary['review']> {
-  const { tone, title, detail } = reviewSectionOf(reviewers, status);
-  return { tone, title, ...(detail && { detail }) };
+  const section = reviewSectionOf(reviewers, status);
+  return { tone: section.tone, title: section.title, ...(section.detail && { detail: section.detail }) };
 }

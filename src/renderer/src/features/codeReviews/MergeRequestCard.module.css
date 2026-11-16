@@ -1,12 +1,12 @@
 /*
  * One bordered card, its sections stacked with hairlines, then a tinted footer holding its action: the shape of a
- * pull request's merge box. In the conversation's column, after the timeline and before the composer, not sticky: a
- * card pinned to the bottom took the conversation's height in a short window.
+ * pull request's merge box. In the conversation's column, after the description and before the timeline (where it
+ * stands, read before its history), not sticky: a card pinned to the bottom took the conversation's height.
  */
 .card {
   display: flex;
   flex-direction: column;
-  margin: var(--space-4) 0 0;
+  margin: var(--space-4) 0;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);

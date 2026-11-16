@@ -1,6 +1,8 @@
 import type { CodeReviewStatus, CodeReviewSummary, MergeRequestState } from '@shared/domain/codeReview';
 import { commentLineText } from '../../lib/comments/commentText';
+import { listedVerdictOf } from './listedVerdict';
 import { asMergeRequest, type MergeRequestReview } from './mergeRequestState';
+import type { MergeVerdict } from './mergeVerdict';
 
 /** What a branch's review chip shows (`CodeReviewChip`, the Branch Explorer's `drawReviewChip`) and how it's named. */
 export interface ReviewChip {
@@ -8,13 +10,10 @@ export interface ReviewChip {
   state?: MergeRequestState;
   /** Whether the state's name is written beside its glyph ("Open"). */
   stateText: boolean;
-  /** The review status's glyph. */
+  /** A merge request's verdict after its pill (`listedVerdictOf`): whether it can merge, a check or a cross. */
+  verdict?: MergeVerdict;
+  /** A code review's status, its badge. */
   status?: CodeReviewStatus;
-  /**
-   * How the status shows: a badge, its name beside its glyph where `statusText` (a code review's), or the bare icon
-   * after a merge request's state.
-   */
-  statusForm: 'badge' | 'icon';
   /** Whether the status is written beside its glyph ("In review"). */
   statusText: boolean;
   /** What hovering it shows: a merge request's summary card (`MergeRequestSummaryCard`), a code review's tooltip. */
@@ -24,11 +23,11 @@ export interface ReviewChip {
 }
 
 /**
- * A branch's review chip. A merge request names its state ("Open", in its color), then, while Open and once its
- * review is decided, a check (reviewed) or a cross (changes required): at a glance, where it stands and whether it can
- * merge; "Open" alone says it waits for its review. Never its number: the branch already
- * names the work (merge-requests.md "Its number"). A code review shows its status. Narrow (`iconOnly`), the names go
- * and the glyphs stay.
+ * A branch's review chip. A merge request names its state ("Open", in its color), then its verdict, whether it can
+ * merge (`listedVerdictOf`: a check, a cross; none while it waits), as its card's discs say it section by section; what
+ * decides it (the review's icon) shows on hover. Never its number: the branch already names the work
+ * (merge-requests.md "Its number"). A code review shows its status. Narrow (`iconOnly`), the names go and the glyphs
+ * stay.
  */
 export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): ReviewChip {
   const { status } = review;
@@ -39,8 +38,7 @@ export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): Revi
     return {
       state,
       stateText: !iconOnly,
-      status: state === 'Open' && status !== 'Under review' ? status : undefined,
-      statusForm: 'icon',
+      verdict: listedVerdictOf(request),
       statusText: false,
       hover: { kind: 'summary', request },
       label: `Open merge request: ${title}`,
@@ -49,7 +47,6 @@ export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): Revi
   return {
     stateText: false,
     status,
-    statusForm: 'badge',
     statusText: !iconOnly,
     hover: { kind: 'tip', tip: iconOnly ? `${status}: ${title}` : title, tipSub: `${codeReviewLine(review)} · click to open` },
     label: `Open code review ${review.id}: ${title}`,
