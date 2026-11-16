@@ -1,6 +1,8 @@
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import { MENU_WORDS } from '../../components/menuWords';
+import type { ReviewComment } from '@shared/domain/reviewConversation';
+import { openThreads, threadsOf } from './conversation/reviewThreads';
 import { mergeRequestMoves, type MergeRequestMove } from './mergeRequestState';
 
 /**
@@ -108,6 +110,11 @@ export function reviewSectionOf(reviewers: readonly CodeReviewer[], status: Code
 export function openItemsIn(openThreads: readonly { root: { kind: string } }[]): OpenItems {
   const count = (kind: string): number => openThreads.filter((thread) => thread.root.kind === kind).length;
   return { changeRequests: count('changeRequest'), questions: count('question') };
+}
+
+/** What a conversation's comments still have open (`threadsOf`, `openThreads`): the top bar's card, read on its own. */
+export function openItemsOfConversation(comments: readonly ReviewComment[]): OpenItems {
+  return openItemsIn(openThreads(threadsOf(comments)));
 }
 
 /** "3 change requests and 1 question open"; none when nothing is. */
