@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { workspacePlace } from '@shared/domain/place';
-import type { MergeChange, MergeContributors, RequestedMerge } from '@shared/domain/merge';
+import type { MergeChange, MergeContributors, MergeOperation } from '@shared/domain/merge';
 import { EmptyState } from '../../ui/EmptyState';
 import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
@@ -11,7 +11,7 @@ import styles from './MergeChangePreview.module.css';
 
 interface MergeChangePreviewProps {
   workspacePath: string;
-  request: RequestedMerge;
+  request: MergeOperation;
   change: MergeChange;
   contributors: MergeContributors | undefined;
   labels: MergeLabels;

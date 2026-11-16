@@ -1,4 +1,4 @@
-import type { MergePlan, RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import { pluralize } from '../../lib/text';
 import type { ConflictLabels } from './resolve/threeWayMerge';
 
@@ -44,7 +44,7 @@ export const SERVER_ROLES: MergeLabels['roles'] = {
 };
 
 /** How the two sides are named everywhere in the merge: branch names when known. */
-export function mergeLabels(request: RequestedMerge, plan: MergePlan | undefined): MergeLabels {
+export function mergeLabels(request: MergeOperation, plan: MergePlan | undefined): MergeLabels {
   return {
     source: request.sourceSpec.startsWith('cs:') ? plan?.contributors?.source.branch || describeSpec(request.sourceSpec) : describeSpec(request.sourceSpec),
     destination: request.destinationBranch ?? plan?.contributors?.destination.branch ?? 'your workspace',
@@ -60,7 +60,7 @@ export interface MergeTitle {
   destination: string;
 }
 
-export function mergeTitle(request: RequestedMerge, destination: string): MergeTitle {
+export function mergeTitle(request: MergeOperation, destination: string): MergeTitle {
   const source = describeSpec(request.sourceSpec);
   const interval = request.intervalOriginSpec ? `${describeSpec(request.intervalOriginSpec)}…${source}` : source;
   switch (request.kind) {
@@ -76,7 +76,7 @@ export function mergeTitle(request: RequestedMerge, destination: string): MergeT
 }
 
 /** What the page says once the merge ran: "Merge complete", "Shelve applied". */
-export function completionTitle(request: RequestedMerge): string {
+export function completionTitle(request: MergeOperation): string {
   switch (request.kind) {
     case 'merge':
       return request.sourceSpec.startsWith('sh:') ? 'Shelve applied' : 'Merge complete';
@@ -107,7 +107,7 @@ export interface MergeInProgressWords {
   tip: string;
 }
 
-export function mergeInProgressWords(request: RequestedMerge, settled: boolean): MergeInProgressWords {
+export function mergeInProgressWords(request: MergeOperation, settled: boolean): MergeInProgressWords {
   const title = mergeTitle(request, request.destinationBranch ?? 'your workspace');
   const whole = mergeTitleText(title);
   return { label: `${title.verb} ${title.source}`, railLabel: title.verb, tip: settled ? whole : `In progress: ${whole}` };
@@ -121,7 +121,7 @@ export interface MergeQuestion {
 }
 
 /** Before another merge replaces the one in progress. */
-export function replaceMergeQuestion(inProgress: RequestedMerge): MergeQuestion {
+export function replaceMergeQuestion(inProgress: MergeOperation): MergeQuestion {
   const title = mergeTitleText(mergeTitle(inProgress, inProgress.destinationBranch ?? 'your workspace'));
   return {
     title: 'Start another merge?',

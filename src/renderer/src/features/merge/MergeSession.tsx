@@ -1,5 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { MergePlan, RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import { Folder } from 'lucide-react';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
@@ -46,14 +46,14 @@ import { useSelectionFollowsItem } from './useSelectionFollowsItem';
 
 interface MergeSessionProps {
   workspacePath: string;
-  request: RequestedMerge;
+  request: MergeOperation;
   /** The merge before any directory decision: each one applied makes `cm` calculate it again (`useDirectoryDecisions`). */
   initialPlan: MergePlan;
   /** A task branch merged into a branch on the server, which the merge also finishes. */
   task?: TaskMerge;
   onCompleted: (completion: MergeCompletion) => void;
   /** A request with other merge options: the page previews it again (`MergeOptionsMenu`). */
-  onRequestChange: (request: RequestedMerge) => void;
+  onRequestChange: (request: MergeOperation) => void;
 }
 
 const itemKey = (item: MergeItem): string => item.key;

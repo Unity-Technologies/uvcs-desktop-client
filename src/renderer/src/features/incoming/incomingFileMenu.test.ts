@@ -2,7 +2,7 @@ import '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { MergeTool } from '@shared/domain/mergeTools';
-import type { MergePlan, RequestedMerge } from '@shared/domain/merge';
+import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import type { Action, MenuEntry, Submenu } from '../../lib/actions';
 import { mergeProgress } from '../merge/mergeItems';
 import { mergeItemMenu } from '../merge/mergeItemMenu';
@@ -53,7 +53,7 @@ const MERGE_ONLY = new Set(['resolveIn', 'openVersion', 'keepDestination', 'keep
 const mergeOnly = (menu: MenuEntry[]) =>
   menu.flatMap((entry) => (typeof entry === 'object' && 'id' in entry && entry.id && MERGE_ONLY.has(entry.id) ? [[entry.id, (entry as Action | Submenu).label]] : []));
 
-const request: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/task' };
+const request: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/task' };
 const plan = { contributors: { source: { changesetId: 4, branch: '/main' }, destination: { changesetId: 1, branch: '/main' } }, fileConflicts: [] } as unknown as MergePlan;
 const onMergePage = (state: FileConflictState) =>
   mergeItemMenu([{ kind: 'fileConflict', key: `file:${state.file.key}`, path: state.file.path, file: state.file }], {

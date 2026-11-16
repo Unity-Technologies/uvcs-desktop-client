@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, RequestedMerge } from '@shared/domain/merge';
+import type { DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, MergeOperation } from '@shared/domain/merge';
 import { mergePlanOf } from '../cm/mergeOutput';
 import { changedStatus, mergePreviewOutput, treeListing } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmFailure, type FakeCmCommand } from '../cm/testing/fakeCmClient';
@@ -10,7 +10,7 @@ import { DirectoryDecisions } from './directoryDecisions';
 import type { MergeStateFiles } from './mergeStateFiles';
 import { previewMerge } from './previewMerge';
 
-const FROM_FEATURE: RequestedMerge = { kind: 'merge', sourceSpec: 'br:/main/feature' };
+const FROM_FEATURE: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/feature' };
 const WORKSPACE = '/work';
 
 const CONTRIBUTORS = [

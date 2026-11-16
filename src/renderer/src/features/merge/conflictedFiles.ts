@@ -1,5 +1,5 @@
 import type { ContentSource } from '@shared/domain/content';
-import { baseVersionSpec, destinationVersionSpec, hasMergeBase, sourceVersionSpec, type FileConflict, type MergePlan, type RequestedMerge } from '@shared/domain/merge';
+import { baseVersionSpec, destinationVersionSpec, type FileConflict, hasMergeBase, type MergeOperation, type MergePlan, sourceVersionSpec } from '@shared/domain/merge';
 import type { ConflictedFile } from './resolve/useFileConflicts';
 
 /**
@@ -7,7 +7,7 @@ import type { ConflictedFile } from './resolve/useFileConflicts';
  * by its revision, which the main process reads from the workspace's disk where its file has it (a workspace merge's
  * files mostly do), with no `cm cat`.
  */
-export function conflictedFilesOf(plan: MergePlan, request: RequestedMerge): ConflictedFile[] {
+export function conflictedFilesOf(plan: MergePlan, request: MergeOperation): ConflictedFile[] {
   return plan.fileConflicts.map((conflict) => ({
     key: fileConflictKey(conflict),
     path: conflict.path.replace(/^\//, ''),
