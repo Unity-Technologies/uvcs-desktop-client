@@ -140,8 +140,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 - The header, two rows: the title (the pencil edits it in place, `ReviewTitle`; `cm codereview -e --title`, and the
   server notes the rename), at its end the reviewed code to the workspace (a shelve's "Apply to workspace", the one
   Apply its page offers: the shelve's diff below drops its own, `pageApplies`), **Your review**, Refresh and the page's menu
-  (`reviewPageMenu`: a new window, Copy, Delete; what the page shows already has its own control, and deleting stays out
-  of the way); then the status, who wants a review of what and when. The reviewers are beside the conversation, not in
+  (`reviewPageMenu`: a new window, Copy, Delete, and a merge request's moves; what the page shows already has its own
+  control, and deleting stays out of the way); then the status, who wants a review of what and when (a merge request's
+  headline: docs/features/merge-requests.md "The page"). The reviewers are beside the conversation, not in
   the header. In a narrow window the title keeps a readable width (280 px) and the actions wrap to a row of their own
   under it, the switch's words cut first; what's reviewed, the dot and when wrap together (`CodeReviewPage.module.css`).
   Then two tabs (`ui/Tabs`): **Conversation**, with the number of comments, and **Changes**, the reviewed diff. The page names the tab it shows (`PageOf<'codeReview'>.tab`, `openingTab`): the conversation, unless it names a
@@ -204,7 +205,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   text: the description is the newest `[description]` one; the others are events (`ReviewEvent`): review requests
   (`[requested-review-from]a;b`; an older server's `[requested-review-from-<id>]` names no one), a reviewer asked
   again or removed, a status with what its reviewer said (`[status-reviewed]…`), a rename (`[renamed-title]a#->#b`).
-  What this version doesn't read yet (a merge request's statuses) shows its text (`other`).
+  A merge request's notes (its state moves, its destination, its branch hidden) are events too: docs/features/merge-requests.md
+  "The page". A note this version doesn't read is left out of the timeline (`other`, `isShownEvent`), never shown as
+  the server wrote it.
 - It reads under the reviews' area (`useReviewConversation`), so every write on a review reads it and the lists again,
   their counts changing with it (`isAffectedByCodeReviews`), and a focus once stale reads it, as others write on it.
 - The tab (`ReviewConversationTab`) shows, oldest first as a conversation reads: the description (its band in the
