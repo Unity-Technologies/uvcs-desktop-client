@@ -61,6 +61,8 @@ is another thing: where the review stands, for merge requests and code reviews a
 
 A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "The review's page"), with where it merges:
 
+- **Its name** in the breadcrumb and a page window's title is "Merge request 72" once its review is read, "Code review
+  72" until then (`pageTitle`, `usePageTitle`, which follows the page's own read and reads nothing).
 - **The headline** (`reviewHeadline`): the state's badge, then the review status's, then "Ana wants to merge
   /main/task into /main"; "asked to merge … into" once merged (whoever merged it, the Merged badge says it is),
   "wanted to merge … into" once closed. Both badges stay: they say
