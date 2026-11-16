@@ -5,7 +5,7 @@ import { workspacePlace } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
 import { createQueryClient } from '../../app/queryClient';
-import { listedReview, listedReviewIn, showReviewReadInListsIn, withReviewRead } from './listedReview';
+import { listedReview, listedReviewIn, showReviewReadInListsIn, withMergeRequestChanged, withReviewRead } from './listedReview';
 
 const review = (id: number, title: string): CodeReview => ({ ...codeReviewSummary({ id, title, owner: 'ana', date: '2026-10-01' }), target: { kind: 'branch', branch: '/main/task' } });
 
@@ -95,5 +95,24 @@ describe('showReviewReadInListsIn', () => {
 
     expect(client.getQueryData(listKey)).toEqual([review(4, 'listed')]);
     expect(client.getQueryState(listKey)?.isInvalidated).toBe(true);
+  });
+});
+
+describe('withMergeRequestChanged', () => {
+  const request = (id: number) => codeReviewSummary({ id, mergeRequest: { state: 'Open', destination: '/main' } });
+
+  it("changes the listed merge request's state or destination, keeping the other rows as they were", () => {
+    const rows = [request(43), request(44)];
+    const changed = withMergeRequestChanged(rows, 43, { state: 'Closed' }) as typeof rows;
+
+    expect(changed.map((row) => row.mergeRequest)).toEqual([{ state: 'Closed', destination: '/main' }, { state: 'Open', destination: '/main' }]);
+    expect(changed[1]).toBe(rows[1]);
+  });
+
+  it("leaves alone what isn't a list holding it as a merge request", () => {
+    const rows = [request(44), codeReviewSummary({ id: 45 })];
+    expect(withMergeRequestChanged(rows, 43, { state: 'Closed' })).toBe(rows);
+    expect(withMergeRequestChanged(rows, 45, { state: 'Closed' })).toBe(rows);
+    expect(withMergeRequestChanged('read', 43, { state: 'Closed' })).toBe('read');
   });
 });

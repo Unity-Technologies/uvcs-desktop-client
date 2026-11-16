@@ -35,6 +35,16 @@ describe("moving a merge request's state", () => {
     expect(refreshed()).toEqual(['codeReviews']);
   });
 
+  it("shows the move at once in the lists when its page was never opened (the list's row menu)", async () => {
+    queryClient.removeQueries({ queryKey: codeReviewKey(inWs, 47) });
+    queryClient.setQueryData(listKey, [request('Draft', 47), request('Open', 44)]);
+    fakeApi.answer('codeReviews.setMergeRequestState', () => undefined);
+
+    await setMergeRequestState(inWs, request('Draft', 47), { to: 'Open', word: 'readyForReview' });
+
+    expect(listed()?.map((each) => each.mergeRequest?.state)).toEqual(['Open', 'Open']);
+  });
+
   it('says which move failed, and keeps showing the state it had', async () => {
     queryClient.setQueryData(codeReviewKey(inWs, 45), request('Draft', 45));
     fakeApi.answer('codeReviews.setMergeRequestState', () => {
