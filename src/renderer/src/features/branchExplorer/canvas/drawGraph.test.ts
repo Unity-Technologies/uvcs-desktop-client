@@ -28,6 +28,10 @@ interface Placed {
   transform: number[];
 }
 
+// Node has no Path2D: the review chips stroke their glyphs' paths through one (`strokeGlyphOn`); the recording context
+// counts the stroke and needs nothing from the path itself.
+if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class {} as unknown as typeof Path2D;
+
 /** A 2D context that records what is placed where, the transforms, and how often it strokes and fills with each ink. Everything else does nothing. */
 function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][]; inks: Map<unknown, number> } {
   const placed: Placed[] = [];
