@@ -1,23 +1,33 @@
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { usePlaceUser } from '../../app/account/accounts';
-import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { NO_TASK_CHOICES, type FinishingTask, type TaskMerge, type TaskMergeChoices } from './taskMerge';
+import { usePlace } from '../../app/workspace/useWorkspace';
+import { branchReviewsQuery } from '../codeReviews/changeRequests/useChangeRequests';
+import { reviewStandingFor } from '../codeReviews/reviewsByBranch';
+import { NO_TASK_CHOICES, requestsToRecord, type FinishingTask, type TaskMerge, type TaskMergeChoices } from './taskMerge';
 
 interface FinishingTaskState {
   choices: TaskMergeChoices;
   setChoices: (choices: TaskMergeChoices) => void;
   /**
-   * The task with the choices made, and its branch's review, found in the list of reviews the branch chips and the
-   * palette share: no `cm` command of its own once those were read.
+   * The task with the choices made, the review that stands for its branch and the merge requests the merge finishes,
+   * from the branch's reviews: the read Changes makes of the workspace's branch (`branchReviewsQuery`), so a task
+   * finished from Changes finds it read.
    */
   finishing: FinishingTask | undefined;
 }
 
-/** The merge page's task, if it finishes one: what the user picked to do once merged, and the branch's review. */
-export function useFinishingTask(task: TaskMerge | undefined): FinishingTaskState {
+/** The merge page's task, if it finishes one: what the user picked to do once merged, its review and its merge requests. */
+export function useFinishingTask(task: TaskMerge | undefined, destination: string | undefined): FinishingTaskState {
   const [choices, setChoices] = useState(task?.choices ?? NO_TASK_CHOICES);
-  const { data: reviews } = useReviewsByBranch(task !== undefined);
+  const place = usePlace();
+  const { data: reviews } = useQuery({ ...branchReviewsQuery(place, task?.branch.name ?? ''), enabled: task !== undefined });
   const user = usePlaceUser();
-  const finishing = task && { task: { ...task, choices }, review: reviews?.get(task.branch.id), user };
+  const finishing = task && {
+    task: { ...task, choices },
+    review: reviews && reviewStandingFor(reviews),
+    user,
+    mergeRequests: destination ? requestsToRecord(reviews, destination, task.mergeRequest) : [],
+  };
   return { choices, setChoices, finishing };
 }

@@ -10,7 +10,7 @@ describe('defaultMergeComment', () => {
   });
 
   it("quotes a merge request's title over the branch comment", () => {
-    expect(defaultMergeComment({ name: '/main/t1', comment: 'Add the login screen' }, { id: 12, title: 'Add login\nwith SSO' })).toBe('Merge /main/t1: Add login');
+    expect(defaultMergeComment({ name: '/main/t1', comment: 'Add the login screen' }, { title: 'Add login\nwith SSO' })).toBe('Merge /main/t1: Add login');
   });
 });
 

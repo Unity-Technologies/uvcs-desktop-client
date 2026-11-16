@@ -74,8 +74,8 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
       else reset(key);
     }
   };
-  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
-  const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
+  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch, task.mergeRequest) : `Merge from ${labels.source}`));
+  const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task, request.destinationBranch);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const selectedKey = selection.anchor;
   const [merging, setMerging] = useState(false);

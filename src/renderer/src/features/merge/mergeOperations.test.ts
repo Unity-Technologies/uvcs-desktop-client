@@ -160,7 +160,7 @@ describe('completing a merge', () => {
   });
 
   describe('finishing a task', () => {
-    const task: TaskMerge = { branch: { name: '/main/task001', comment: '' }, destination: '/main', choices: { markReviewed: true, hideBranch: true } };
+    const task: TaskMerge = { branch: { name: '/main/task001', comment: '' }, choices: { markReviewed: true, hideBranch: true } };
     const review = codeReviewSummary({ id: 12, title: 'Task 001', owner: 'ana', reviewers: [{ name: 'bob', status: 'Under review' }] });
     const finishTask: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' };
     const writes = () => fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1, 3)]);

@@ -5,29 +5,23 @@ import { mergeRequestMergeOf, requestsToRecord, taskEnding, taskMergeOf, type Ta
 
 const branch = { name: '/main/task001', comment: 'Add the login screen' };
 const review = (status: CodeReviewSummary['status']): CodeReviewSummary => codeReviewSummary({ id: 12, title: 'Task 001', owner: 'ana', reviewers: [{ name: 'bob', status }] });
-const picked = (markReviewed: boolean, hideBranch: boolean): TaskMerge => ({ branch, destination: '/main', choices: { markReviewed, hideBranch } });
+const picked = (markReviewed: boolean, hideBranch: boolean): TaskMerge => ({ branch, choices: { markReviewed, hideBranch } });
 
 describe('taskMergeOf', () => {
-  it('merges the task into its parent, keeping only what finishing it needs, nothing picked yet', () => {
-    expect(taskMergeOf({ ...branch, id: 7, parent: '/main', owner: 'ana', date: '2026-09-01', headChangeset: 40 } as typeof branch & { parent: string })).toEqual({
+  it('keeps only what finishing the task needs, nothing picked yet', () => {
+    expect(taskMergeOf({ ...branch, id: 7, parent: '/main', owner: 'ana', date: '2026-09-01', headChangeset: 40 } as typeof branch)).toEqual({
       branch,
-      destination: '/main',
       choices: { markReviewed: false, hideBranch: false },
     });
-  });
-
-  it('merges it into another branch when one is given', () => {
-    expect(taskMergeOf({ ...branch, parent: '/main/release' }, '/main').destination).toBe('/main');
   });
 });
 
 describe('mergeRequestMergeOf', () => {
-  it("merges a merge request's branch into its destination, naming the request", () => {
-    const request = codeReviewSummary({ id: 12, title: 'Add login', mergeRequest: { state: 'Open', destination: '/main' } });
+  it("merges a merge request's branch, naming the request", () => {
+    const request = { ...codeReviewSummary({ id: 12, title: 'Add login' }), mergeRequest: { state: 'Open', destination: '/main' } } as const;
 
     expect(mergeRequestMergeOf(request, '/main/release/task')).toEqual({
       branch: { name: '/main/release/task', comment: '' },
-      destination: '/main',
       mergeRequest: { id: 12, title: 'Add login' },
       choices: { markReviewed: false, hideBranch: false },
     });
@@ -38,18 +32,18 @@ describe('requestsToRecord', () => {
   const request = (id: number, state: MergeRequestState, destination = '/main') => codeReviewSummary({ id, mergeRequest: { state, destination } });
 
   it('records the Open merge requests of the branch into that destination', () => {
-    expect(requestsToRecord([request(12, 'Open'), request(9, 'Open')], { destination: '/main' })).toEqual([12, 9]);
+    expect(requestsToRecord([request(12, 'Open'), request(9, 'Open')], '/main')).toEqual([12, 9]);
   });
 
   it("leaves drafts, closed and merged ones, another destination's and plain code reviews alone", () => {
     const reviews = [request(1, 'Draft'), request(2, 'Closed'), request(3, 'Merged'), request(4, 'Open', '/main/release'), codeReviewSummary({ id: 5 })];
 
-    expect(requestsToRecord(reviews, { destination: '/main' })).toEqual([]);
+    expect(requestsToRecord(reviews, '/main')).toEqual([]);
   });
 
   it("falls back to the request the merge was opened from while the branch's reviews aren't read", () => {
-    expect(requestsToRecord(undefined, { destination: '/main', mergeRequest: { id: 12, title: 'Add login' } })).toEqual([12]);
-    expect(requestsToRecord(undefined, { destination: '/main' })).toEqual([]);
+    expect(requestsToRecord(undefined, '/main', { id: 12, title: 'Add login' })).toEqual([12]);
+    expect(requestsToRecord(undefined, '/main')).toEqual([]);
   });
 });
 
