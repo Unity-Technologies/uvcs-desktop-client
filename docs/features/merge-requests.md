@@ -170,8 +170,9 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
   one): no reviewer, "Review required" / "At least 1 approving review is required" with **Add reviewers** (the
   reviewers dialog, `chooseReviewers`); "Changes under review" / "1 pending review"; "Changes required" / "2 reviews
   requesting changes"; "Changes reviewed" / "1 approving review". Under it, only when above zero, what's open in the
-  conversation ("2 change requests and 1 question open", `openItemsIn`, `openItemsLine`). Footer **Merge into main…**
-  ("Merging" below); ⋯ Convert to draft, Close merge request.
+  conversation ("2 change requests and 1 question open", `openItemsIn`, `openItemsLine`). Then, in a workspace, its
+  conflicts with the destination ("Conflicts with the destination" below). Footer **Merge into main…** ("Merging"
+  below); ⋯ Convert to draft, Close merge request.
 - **Merged**: "Merged into /main in cs:6" (the chip opens the changeset; without the note, "Merged into /main"), with
   **Hide branch** or **Unhide branch** once the branch's read says which (`setMergedBranchHidden`: it reads the
   branches and the reviews again, as the server may note it); neither for a branch deleted or renamed since. Footer
@@ -179,12 +180,54 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
   hides the workspace's own branch without a word, which would leave the workspace on a branch the lists don't show;
   switching away comes first.
 - **Closed**: "Closed" / "Not merged"; footer **Reopen merge request**.
-- **Ready to merge** is one rule over the sections (`mergeReadiness`: every section passed). The card's Merge is
-  primary when it holds and quiet before, so that what joins the list later holds a merge back the way an unfinished
-  review does. It never blocks a merge: the server's merge rules decide.
-- What the card doesn't have: checks, a build status, a merge queue, a conflicts line. No data source has them yet, so
-  there is no placeholder, type or stub: each joins the list as a section of its own when its data does (read per
-  page, never per row of a list), with no change to the card or its callers.
+- **Ready to merge** is one rule over the sections (`mergeReadiness`: one passed, and every other passed or neutral, a
+  section that says nothing yet). The card's Merge is primary when it holds and quiet before, so that an unfinished
+  review or conflicts hold a merge back. It never blocks a merge: the server's merge rules decide.
+- What the card doesn't have: checks, a build status, a merge queue. No data source has them yet, so there is no
+  placeholder, type or stub: each joins the list as a section of its own when its data does (read per page, never per
+  row of a list), with no change to the card or its callers.
+
+## Conflicts with the destination
+
+An Open request's card says whether its branch merges cleanly into its destination (`conflictsSectionOf`), from the
+merge page's own preview: `cm merge br:<source> --to=br:<destination>` without `--merge`, which changes nothing
+(`MergeApi.conflictCounts`, `countMergeConflicts`). A preview that prints nothing at all (`cm` always names the
+merge's contributors, even with nothing to merge) is no answer, never "no conflicts".
+
+- **Process, not shell.** The card's preview runs in a process of its own (`executeRecords`); the merge page's same
+  preview runs in a pooled `cm shell` (`readMergePlan`). Each is where its wait goes: the card's runs in the background
+  of a page someone is reading, and for the second or so it can take it would hold one of the workspace's two pooled
+  sessions the page's own reads (its conversation, its changes) go through; on the merge page the preview is what the
+  user is waiting for, and a process would only add its start-up (100 to 150 ms).
+
+- **Only when asked.** The preview takes 1.2 to 1.6 s on a big repository (measured on one of ~280k changesets, three
+  runs each on two requests' branches, `cm` starting included), too much to run each time a request's page opens. So
+  the section starts as "Conflicts with main" / "Not checked yet" with a quiet **Check**; running it by itself was
+  rejected for that cost. While it runs: "Checking for conflicts with main…".
+- **What it says.** None: "No conflicts with main" / "Merging can be done automatically" (passed). Some, counted as
+  the merge page groups them (File conflicts, Directory conflicts), with **Resolve…**, which opens the merge page
+  (`openMergeRequestMerge`):
+  - Only files: "3 file conflicts with main" / "Some may merge automatically" (pending). A file changed on both sides
+    may merge automatically on the merge page, which finds out by merging the three revisions' text
+    (`mergedAutomatically`); the preview's records don't say, and reading every file's text for a card was rejected.
+  - Any directory conflict: "3 file conflicts and 1 directory conflict with main" / "Resolve them to merge" (failed):
+    a directory conflict always needs a decision.
+  A check that fails, or a merge with nothing left to merge, shows no section. Conflicts hold Merge back
+  (`mergeReadiness`); Check and Checking say nothing (neutral) and don't.
+- **When it runs** (`conflictsCheckRequest`, `useMergeRequestConflicts`): an Open request of a named branch, in a
+  window with a workspace (the preview runs in one; a repository's window shows no section), its Conversation tab
+  shown (`ViewShownContext`), once asked on that page. **Check** first reads the destination's head again (its branch,
+  `branchQuery`: `cm find branch`, visible and hidden), as a kept head may be behind; then the merge is keyed by both
+  heads, the source's from the changesets the page reads anyway (`useReviewChangesets`), and kept (`IMMUTABLE_QUERY`,
+  `mergeConflictsKey`). So Check answers at once from what's kept when neither head moved, and a check-in that moves
+  either checks again, once, while the page stays asked. Nothing runs on a Draft, Merged or Closed request, nor in a
+  list.
+- **Per visit** (`conflictsCheckOf`): until Check is clicked on this page the section says "Not checked yet", even
+  with an answer or a failure kept from an earlier visit (the branches may have moved). A failure (the preview, or the
+  destination unread or gone) hides the section for that visit only; the next Check runs a failed check again.
+- **Refresh** on the page reads the destination's branch again only for an Open request whose conflicts were checked
+  in the window (`refreshedDestinationOf`, `conflictsCheckedIn`), so a check-in there from another client checks them
+  again; a request never checked costs no branch read.
 
 ## Merging
 

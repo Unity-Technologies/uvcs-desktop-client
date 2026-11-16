@@ -20,6 +20,7 @@ import { mergeOfRequest } from './mergeInto';
 import { mergeCardOf, type MergeCardAction, type MergeCardSection, type MergeCardTone, type OpenItems } from './mergeCard';
 import { setMergedBranchHidden, setMergeRequestState } from './mergeRequestOperations';
 import { MERGE_REQUEST_STATE_ICONS } from './mergeRequestState';
+import { useMergeRequestConflicts } from './useMergeRequestConflicts';
 import stateColors from './mergeRequestStateColors.module.css';
 import styles from './MergeRequestCard.module.css';
 
@@ -41,6 +42,7 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
   const { data: workspace } = useWorkspaceInfo();
   const source = review.target.kind === 'branch' ? review.target.branch : undefined;
   const sourceBranch = useSourceBranch(place, mergeRequest.state === 'Merged' ? source : undefined);
+  const { conflicts, check: checkConflicts } = useMergeRequestConflicts(review, mergeRequest);
   const card = mergeCardOf({
     mergeRequest,
     status: review.status,
@@ -52,6 +54,7 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
     workspaceBranch: branchWorkedOn(workspace?.selector),
     merge: mergeOfRequest(review),
     inWorkspace: place.kind === 'workspace',
+    conflicts,
   });
 
   const run = (action: MergeCardAction): void => {
@@ -64,6 +67,9 @@ export function MergeRequestCard({ review, mergeRequest, open, mergedChangeset }
         return;
       case 'addReviewers':
         void chooseReviewers(place, review);
+        return;
+      case 'checkConflicts':
+        checkConflicts();
         return;
       case 'setBranchHidden':
         void setMergedBranchHidden(place, action.branch, action.hidden);

@@ -166,12 +166,15 @@ const OF_ONE_REVIEW = ['review', 'conversation', 'reviewers', 'subscription'];
  * What a code review's page shows that others can change while it's open (a comment written, a status set, a changeset
  * checked in on its branch): the review, what was said on it, its reviewers and the user's email subscription (someone
  * adding them as a reviewer or mentioning them subscribes them), and, for a branch's review, the
- * branch's files and changesets its Changes tab reads. Not the lists of reviews, nor anything else of the window. A
- * changeset's or shelve's changes never change, and refreshes skip them anyway (`isRefreshable`).
+ * branch's files and changesets its Changes tab reads. For a merge request, its `destination` branch too, whose head
+ * keys the check of its conflicts (`useMergeRequestConflicts`; read only once asked). Not the lists of reviews, nor
+ * anything else of the window. A changeset's or shelve's changes never change, and refreshes skip them anyway
+ * (`isRefreshable`).
  */
-export function isShownByCodeReviewPage(reviewId: number, target: CodeReviewTarget | undefined): (key: QueryKey) => boolean {
+export function isShownByCodeReviewPage(reviewId: number, target: CodeReviewTarget | undefined, destination?: string): (key: QueryKey) => boolean {
   return (key) => {
     if (area(key) === 'codeReviews') return OF_ONE_REVIEW.includes(detail(key) as string) && key[4] === reviewId;
+    if (area(key) === 'branches') return destination !== undefined && detail(key) === 'byName' && key[4] === destination;
     if (target?.kind !== 'branch') return false;
     if (area(key) === 'diff') return isBranchDiffOf(detail(key), target.branch);
     return area(key) === 'changesets' && (detail(key) as QueryFilter | undefined)?.branch === target.branch;
