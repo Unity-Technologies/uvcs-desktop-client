@@ -306,6 +306,24 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
   than none yet (`isNarrowed`).
 
+## Its number
+
+A merge request is named by its title and its branch, never by its number, wherever it shows by a branch or in a list:
+the branch already has a name, and a second id to remember is one too many. So the list's rows, the branch chips, the
+top bar, their cards, the next step in Changes, the new request's dialog and the toasts leave it out. It shows where
+the request itself is the subject: its details panel (to copy), its page's name ("Merge request 72") and its links.
+A plain code review keeps its number everywhere: it has no other name.
+
+## A branch's merge request at a glance
+
+One card says where a merge request stands, wherever it shows by its branch (`MergeRequestSummaryCard`;
+`mergeRequestSummaryOf` decides): the top bar's hover card, the hover card of a branch's chip in the Branches view and
+the Branch Explorer, and the **Merge request** section of a branch's details (both views). It holds the title (a link
+that opens the request, where the card isn't the chip's own hover), "Ana wants to merge into /main" (`mergeVerbOf`:
+"asked to" once merged, "wanted to" once closed), the state's badge and, under a rule, where the review stands in the
+merge card's words (`reviewSectionOf`): while Open, and once merged if anyone reviewed it; never for a draft or a closed
+one. It reads nothing: it is drawn from the review the branch's chip already holds (`reviewOfEachBranch`).
+
 ## Where a branch's merge request shows
 
 - **Which request counts for a branch**: two rules, both in `reviewsByBranch.ts`, both over reviews listed newest
@@ -320,10 +338,12 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
     Changes. Else the newest merged request, which says the branch is finished work and where it went; never a closed
     one or a plain code review, which say nothing about where the task merges.
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
-  leads the review status with the state's glyph. Narrow, it shows the state alone until the request is Open and
-  reviewed, then the thumbs-up alone: at a glance, whether it can merge. The canvas draws the state as a shape of its
-  own per state (a ring, dashed for a draft, a disc once merged, crossed once closed). Their tooltips name it and its
-  destination (`reviewLine`). No new column and no "+N more": the list filtered by the branch shows the others.
+  names a merge request's state ("Open", its glyph and name in its color), then, while Open and once its review is
+  decided, a check (reviewed) or a cross (changes required); "Open" alone says it waits for its review. A code review's
+  chip shows its status. Narrow, the names go and the glyphs stay. The canvas draws the state as a shape of its own per
+  state (a ring, dashed for a draft, a disc once merged, crossed once closed). Hovering a merge request's chip shows its
+  summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`reviewLine`). No new
+  column and no "+N more": the list filtered by the branch shows the others.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
   workspace's branch has a merge request, its state's glyph and name ("Open") and, while Open, the review status's
   icon; never its number ("Its number"). Which one: `currentRequestOf` ("Which request counts for a branch"); a merged

@@ -9,6 +9,17 @@
   transform: translateX(-100%);
 }
 
+/* A merge request's summary (`MergeRequestSummaryCard`), as its chip in the lists shows it. */
+.requestCard {
+  width: 320px;
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
 /*
  * The card that completes a cut caption, laid exactly over it: its border and
  * padding are mirrored in captionCard.ts (CARD_INSET_X). It only fades in: moving would break the "completes in

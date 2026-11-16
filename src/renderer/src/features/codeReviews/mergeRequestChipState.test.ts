@@ -37,8 +37,9 @@ describe('mergeRequestChipOf, the chip', () => {
     expect(chip).not.toHaveProperty('number');
   });
 
-  it.each(['Under review', 'Rework required'] as const)('shows the status %s while Open', (status) => {
-    expect(mergeRequestChipOf(request(12, 'Open', { status })).status).toBe(status);
+  it('shows the review once decided while Open, as a branch chip does', () => {
+    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Rework required' })).status).toBe('Rework required');
+    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Under review' })).status).toBeUndefined();
   });
 
   it('shows no review status on a draft: it is not up for review yet', () => {

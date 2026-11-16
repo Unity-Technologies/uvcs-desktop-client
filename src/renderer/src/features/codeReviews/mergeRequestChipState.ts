@@ -22,7 +22,10 @@ export interface TopBarRequestChip {
    * number: the branch beside it already names the work (merge-requests.md "Its number").
    */
   stateText: string;
-  /** The review status's glyph after it, only while Open: a draft isn't up for review, a merged one is done. */
+  /**
+   * The review's glyph after it, while Open and once decided (a check, a cross), as a branch's chip (`reviewChipOf`):
+   * a draft isn't up for review, a merged one is done, and "Open" alone says it waits for its review.
+   */
   status?: CodeReviewStatus;
   /** Merged: the workspace is still on finished work, said quietly. */
   muted: boolean;
@@ -62,7 +65,7 @@ export function mergeRequestChipOf(review: MergeRequestReview, open?: OpenItems,
     reviewId: review.id,
     state,
     stateText: state,
-    ...(isOpen && { status: review.status }),
+    ...(isOpen && review.status !== 'Under review' && { status: review.status }),
     muted: state === 'Merged',
     label: `${shown.join(' · ')}: ${commentLineText(review.title)}`,
     card: {

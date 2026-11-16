@@ -30,7 +30,7 @@ export function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: Br
   const { branch } = row;
   const shownName = row.depth > 0 ? branch.name.slice(branch.name.lastIndexOf('/') + 1) : branch.name;
   const ref = useRef<HTMLSpanElement>(null);
-  const compact = useCompactChips(ref, shownName, row.depth * INDENT, `${review?.status}:${branch.isHidden}`);
+  const compact = useCompactChips(ref, shownName, row.depth * INDENT, `${review?.mergeRequest?.state}:${review?.status}:${branch.isHidden}`);
 
   return (
     <span ref={ref} className={styles.name} style={{ paddingLeft: row.depth * INDENT }}>

@@ -12,3 +12,21 @@
   font-weight: 500;
   white-space: nowrap;
 }
+
+/* Beside a branch's name, sized as a compact review status badge (`CodeReviewStatusBadge`). */
+.badge[data-compact='true'] {
+  gap: 3px;
+  height: 16px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.badge[data-compact='true'] svg {
+  width: 10px;
+  height: 10px;
+}
+
+.badge[data-icon-only='true'] {
+  padding: 0 4px;
+}
