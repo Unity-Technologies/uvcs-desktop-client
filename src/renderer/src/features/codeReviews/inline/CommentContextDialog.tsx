@@ -11,12 +11,14 @@ import { Button } from '../../../ui/Button';
 import { IconButton } from '../../../ui/IconButton';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
+import type { StatusMark } from '../../../components/ItemStatusMark';
 import { ChipOpenerContext, type ChipOpener } from '../../../components/comments/chipOpener';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
 import { useDiffEntries } from '../../diff/useDiffEntries';
 import { DiffAnnotationsContext } from '../../diff/viewer/diffAnnotations';
+import { DiffFileTitle } from '../../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { STEP_FRAME } from '../../diff/viewer/useStepNavigation';
 import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
@@ -158,7 +160,7 @@ function ThreadDialog(props: ThreadDialogProps) {
     <Dialog
       eyebrow={stepping && <ContextStepper steps={stepping} onStep={onStep} />}
       title={contextTitle(thread)}
-      description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset }) : appliedFilesDescription(thread, files)}
+      description={heading.describesComment ? contextDescription(thread, view, { fileInChangeset: !notInChangeset, movedFrom: state.kind === 'comparison' ? state.comparison.movedFrom : undefined }) : appliedFilesDescription(thread, files)}
       width={DIALOG_WIDTH}
       onClose={onClose}
       // The whole dialog is the diff's (`STEP_FRAME`): ⌥↓ ⌥↑ step through it wherever the focus is in it, the view
@@ -264,6 +266,8 @@ function CloseButton({ onClose }: { onClose: () => void }) {
   );
 }
 
+const MOVED: StatusMark = { tone: 'moved', label: 'Moved' };
+
 export type ViewProps = DialogProps & { thread: LineThread; view: ContextView };
 
 /** One view of the commented file alone: its two versions, the thread under its line, scrolled to it. */
@@ -276,7 +280,16 @@ function ViewDiff(props: ViewProps) {
   const { comparison } = state;
   return (
     <DiffAnnotationsContext.Provider key={props.view} value={annotations}>
-      <FileDiffViewer place={props.place} original={comparison.original} modified={comparison.modified} fileName={comparison.fileName} compareControls={controls} />
+      <FileDiffViewer
+        place={props.place}
+        original={comparison.original}
+        modified={comparison.modified}
+        fileName={comparison.fileName}
+        // A replaced file shown as the move it made says so in its header, as a diff's moved file does.
+        title={comparison.movedFrom !== undefined && <DiffFileTitle status={MOVED} path={comparison.fileName} oldPath={comparison.movedFrom} />}
+        identicalDescription={comparison.identicalText}
+        compareControls={controls}
+      />
     </DiffAnnotationsContext.Provider>
   );
 }
