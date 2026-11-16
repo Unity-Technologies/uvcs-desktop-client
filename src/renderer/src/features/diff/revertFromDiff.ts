@@ -28,13 +28,14 @@ export function olderSideOf(target: DiffTarget): OlderSide | null {
 /**
  * Whether undoing a diff's change to this item makes sense in the workspace: a file whose content the diff changed, in
  * its place or moved too (`cm revert` finds the item by its id, takes its content back and leaves its name, so a move
- * alone has nothing to revert; an added file had no older version, a deleted one none in the workspace), in the
+ * alone has nothing to revert; an added file had no older version, a deleted one none in the workspace, and a replaced
+ * one's older side is another item, `DiffEntry.replaced`), in the
  * workspace's own repository: an xlinked one's changesets aren't the diff's, and the workspace's repository must be
  * known to tell.
  */
 export function canRevertFromDiff(entry: DiffEntry, workspaceRepository: string | undefined): boolean {
   const isFile = entry.itemType !== 'directory' && entry.itemType !== 'xlink';
-  return isFile && changedContent(entry) && workspaceRepository !== undefined && entry.repository === workspaceRepository;
+  return isFile && changedContent(entry) && !entry.replaced && workspaceRepository !== undefined && entry.repository === workspaceRepository;
 }
 
 /**

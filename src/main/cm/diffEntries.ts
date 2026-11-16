@@ -95,8 +95,17 @@ function mergeEntries(first: DiffEntry, second: DiffEntry): DiffEntry {
   const [moved, changed] = [withStatus('moved'), withStatus('changed')];
   if (moved && changed) return { ...moved, baseRevisionId: changed.baseRevisionId, revisionId: changed.revisionId };
   const [deleted, added] = [withStatus('deleted'), withStatus('added')];
-  if (deleted && added) return replacedEntry(deleted, added);
+  if (deleted && added) return sameKind(deleted, added) ? replacedEntry(deleted, added) : added;
   return first;
+}
+
+/**
+ * Whether two items at one path have contents to compare: two files (text or binary), or two folders. A folder replaced
+ * by a file, or anything by an xlink, has none, so the path reads as the added item alone, as before.
+ */
+function sameKind(deleted: DiffEntry, added: DiffEntry): boolean {
+  const kindOf = (entry: DiffEntry) => (entry.itemType === 'binaryFile' ? 'file' : entry.itemType);
+  return kindOf(deleted) === kindOf(added) && added.itemType !== 'xlink';
 }
 
 /** The path changed from the deleted item's last revision to the added one's: two items, so it's marked `replaced`. */
