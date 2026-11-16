@@ -96,10 +96,13 @@ Each has its glyph and its color wherever it shows (`MERGE_REQUEST_STATE_ICONS`,
 `styles/tokens.css`, both themes): a pull request's glyph, dashed for a draft, a merge once merged, crossed once
 closed. The glyph differs by state, so color never tells it alone, and a tooltip names it with its destination
 (`mergeRequestTip`: "Open merge request into /main"). Wherever a state is named it is one look: a pill of its color
-with its glyph and name (`MergeRequestStateBadge`; compact by a branch's name and in the top bar), followed, while
-Open and once decided, by the review's icon alone (a thumbs-up, a flag: `REVIEW_STATUS_ICONS`). The page, the lists'
-chips, the top bar, the summary card and the Branch Explorer's canvas, which strokes the same icons
-(`lucideGlyphs`, `strokeGlyphOn`, `reviewChipLayout`), all show it so. A list row and the palette lead with the glyph
+with its glyph and name (`MergeRequestStateBadge`; compact by a branch's name and in the top bar). By a branch's
+name and in the top bar it is followed by its **verdict**, whether it can merge (`listedVerdictOf`, `MergeVerdictIcon`):
+a check (ready), a cross (not ready), or nothing while it waits (a review under way), the same verdict the merge
+card's discs give section by section (`verdictOfSections`, which `mergeReadiness` follows). What decides it shows a
+level down: the summary card and the page name each section. Lists know the review only, so it decides the verdict there; checks join as they get data read
+with the list. The page, the lists' chips, the top bar, the summary card and the Branch Explorer's canvas, which
+strokes the same icons (`lucideGlyphs`, `strokeGlyphOn`, `reviewChipLayout`), all show it so. A list row and the palette lead with the glyph
 alone, in a column of their own. The **review status** (Under review, Reviewed, Rework required)
 is another thing: where the review stands, for merge requests and code reviews alike, with its own icons
 (code-reviews.md). A merge request **still to merge** is Open or Draft (`isActiveMergeRequest`).
@@ -184,9 +187,10 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
 - **An ordered list of sections** (`MergeCardSection`: an id, a tone, a title, a detail, optional rows, an optional
   action at its right), then one footer action and a ⋯ menu (`MergeCard`). Each section leads with a disc: the
   Reviewed color's check (`passed`), the Rework color's cross (`failed`), a quiet dot (`pending`, `neutral`); for
-  a section that is the state itself, the state's glyph in its color. The disc is the verdict, whether the section
-  holds the merge back; the review's detail leads with the review status's icon ("👍 1 approving review",
-  `MergeCardSection.status`, `ReviewDetailLine`), the icon the branch's chip shows, so the two read as one. With no footer the ⋯ ends the last section,
+  a section that is the state itself, the state's glyph in its color. The disc is the section's verdict, whether it
+  holds the merge back; its title and detail say why in words. The review statuses' own icons (a thumbs-up, a flag)
+  stay where reviewers are listed (the side rail, the details' Reviewers, the timeline): there each says who asked
+  what, where in a section it would only restate its title. With no footer the ⋯ ends the last section,
   rather than a footer holding only it.
 - **Draft**: "Draft" / "Not ready to review or merge yet"; footer **Ready for review** (primary); ⋯ Close merge request.
 - **Open**: the review section (`reviewSectionOf`, from the reviewers the review was read with, a group counting as
@@ -373,15 +377,13 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   bound by date would leave older branches unread. A Refresh or a write on a review reads again the branches still
   shown, in blocks. Scrolling back to branches read costs nothing.
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
-  names a merge request's state in its pill ("Open"), then, while Open and once its review is decided, the review's
-  icon (reviewed, changes required); "Open" alone says it waits for its review. A code review's chip shows its
+  names a merge request's state in its pill ("Open"), then its verdict (a check, a cross; none while it waits). A code review's chip shows its
   status's pill. Narrow, the names go and the glyphs stay. The canvas draws the very same pill and icons. Hovering a merge request's chip shows its
   summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`codeReviewLine`);
   `reviewChipOf` decides which (`hover`). No new
   column and no "+N more": the list filtered by the branch shows the others.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
-  workspace's branch has a merge request, its state's compact pill ("Open") and, while Open and once decided, the
-  review's icon, as by every branch; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
+  workspace's branch has a merge request, its state's compact pill ("Open") and its verdict, as by every branch; never its number ("Its number"). Which one: `currentRequestOf` ("Which request
   counts for a branch"); a merged one says Merged, telling the user they're still on finished work. Below 820px the
   state's name goes and the glyphs stay, before the branch pill gives up any room. A click opens it.
   - **Hovering** shows a card: the request's summary (`MergeRequestSummaryCard`, "A branch's merge request at a
@@ -390,8 +392,8 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
     workspace's branch as the source; `mergeRequestChipOf` decides). No Open button: the title is the link, and the
     card never offers the quiet button the merge card does, as it only says where things stand. The card opens on
     hover only, so a keyboard doesn't reach it: Enter on the chip opens the page, which shows all of it. A screen
-    reader hears what the chip shows ("Merge request · Open into /main · Under review: Dash"), no status where it shows
-    none.
+    reader hears what the chip shows ("Merge request · Open into /main · Ready to merge: Dash"), no verdict where it
+    shows none.
   - **The cost**: the branch's reviews are one `cm find review where target = 'br:<branch>'` (`branchReviewsQuery`),
     the read Changes makes for the change requests a check-in applies, so the two share it. Asked once the
     workspace's branch is known and the first screen is in (the pending changes read, or failed: the sidebar's count

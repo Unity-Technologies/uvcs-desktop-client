@@ -19,7 +19,6 @@ import { chooseReviewers } from './codeReviewOperations';
 import { mergeOfRequest } from './mergeInto';
 import { mergeCardOf, type MergeCardAction, type MergeCardSection, type OpenItems } from './mergeCard';
 import { MergeCardDisc } from './MergeCardDisc';
-import { ReviewDetailLine } from './ReviewDetailLine';
 import { setMergedBranchHidden, setMergeRequestState } from './mergeRequestOperations';
 import { useMergeRequestConflicts } from './useMergeRequestConflicts';
 import styles from './MergeRequestCard.module.css';
@@ -125,7 +124,7 @@ function CardSection({ section, onAction, trailing }: { section: MergeCardSectio
             </>
           )}
         </p>
-        {section.detail && <ReviewDetailLine className={styles.detail} detail={section.detail} status={section.status} />}
+        {section.detail && <p className={styles.detail}>{section.detail}</p>}
         {section.rows?.map((row) => (
           <p key={row} className={styles.detail}>
             {row}

@@ -15,7 +15,7 @@ import type { MergeRequestReview } from './mergeRequestState';
 import { MergeRequestStateBadge } from './MergeRequestStateBadge';
 import { MergeRequestSummaryCard } from './MergeRequestSummaryCard';
 import { currentRequestOf } from './reviewsByBranch';
-import { ReviewStatusIcon } from './ReviewStatusIcon';
+import { MergeVerdictIcon } from './MergeVerdictIcon';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import styles from './MergeRequestChip.module.css';
 import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
@@ -58,7 +58,7 @@ function MergeRequestSegment({ request, source }: { request: MergeRequestReview;
       <Popover.Trigger asChild>
         <button type="button" className={styles.chip} aria-label={chip.label} {...card.hoverProps} onClick={openIt}>
           <MergeRequestStateBadge state={chip.state} compact nameHidesWhenNarrow />
-          {chip.status && <ReviewStatusIcon status={chip.status} size={13} />}
+          {chip.verdict && <MergeVerdictIcon verdict={chip.verdict} />}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
