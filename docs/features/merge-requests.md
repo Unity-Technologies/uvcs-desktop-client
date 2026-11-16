@@ -174,5 +174,23 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   reviewed, then the thumbs-up alone: at a glance, whether it can merge. The canvas draws the state as a shape of its
   own per state (a ring, dashed for a draft, a disc once merged, crossed once closed). Their tooltips name it and its
   destination (`reviewLine`). No new column and no "+N more": the list filtered by the branch shows the others.
+- **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
+  workspace's branch has a merge request, its state's glyph, "#12" and, while Open, the review status's icon. Which
+  one (`topBarRequestOf`): the newest still to merge; else the newest merged one, muted, which tells the user they're
+  still on finished work; never a closed one or a plain code review. Below 820px the number goes and the glyphs stay,
+  before the branch pill gives up any room. A click opens it.
+  - **Hovering** shows a card (`mergeRequestChipOf` decides every line and action; the component maps them): the
+    title and number; "Open · into /main" ("Merged into /main"); while Open, where the review stands in the merge
+    card's words (`reviewSectionOf`) with the reviewers' stack (none while nobody reviews it), and what's still open
+    ("2 change requests and 1 question open", `openItemsLine`); then its actions, **Open** today: an action joins as
+    one more `MergeRequestChipAction` entry.
+  - **The cost**: the branch's reviews are one `cm find review where target = 'br:<branch>'` (`branchReviewsQuery`),
+    the read Changes makes for the change requests a check-in applies, so the two share it. Asked once the
+    workspace's branch is known, never on a changeset, label or shelve (`asksForBranchReviews`); rarely read again
+    (`SLOW_CHANGING_QUERY`: a focus reads nothing), again on a write on a review, a check-in, an update or a switch.
+    The query is keyed by the workspace's branch (`keyedByWorkspaceInfo('selector')`), so a switch, in the app or in a
+    terminal, reads the new branch's reviews once. The conversation, for what's still open, is read only as the card
+    shows an Open request the server counts something open on (`cardReadsOpenItems`), under the key the page and the
+    check-in read it by. Nothing polls. A repository's window has no branch, so no chip.
 - **The palette's** `cr:` rows show the state's glyph and "→ /main" (`codeReviewResult`, `codeReviewResultDetail`).
 - **Links** to a merge request are written `…/merge-requests/12` (docs/features/deep-links.md); both words open either.
