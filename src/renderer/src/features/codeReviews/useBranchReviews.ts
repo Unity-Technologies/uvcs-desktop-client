@@ -49,6 +49,9 @@ export function useBranchReviews(branchIds: readonly number[]): ReadonlyMap<numb
   return useQueries({ queries: branchIds.map((branchId) => branchReviewQuery(place, branchId)), combine });
 }
 
+/** How long the loader gathers asks before it reads them: a few frames. */
+const GATHER_MS = 50;
+
 const loaders = new Map<string, ReturnType<typeof newLoader>>();
 
 /** One loader per place, so that the branches asked in one turn, from any view of the window, share their reads. */
@@ -65,6 +68,9 @@ function branchReviewsLoaderOf(place: Place) {
 function newLoader(place: Place) {
   return batchLoader<number, CodeReviewSummary | null>({
     maxBatch: BRANCH_REVIEWS_BLOCK,
+    // A view's rows and headers settle a frame or two apart (the table's first rows are drawn before the rest): one
+    // window gathers them, so a screen is one read.
+    schedule: (flush) => setTimeout(flush, GATHER_MS),
     read: async (branchIds) => standingReviewsOf(branchIds, await api.codeReviews.listSummaries(place, { targetBranchIds: branchIds })),
   });
 }
