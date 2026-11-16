@@ -90,6 +90,15 @@ describe('reading diff entries', () => {
     expect(diffEntriesIn(deleted + added)).toEqual([replaced]);
   });
 
+  it('reads a path given to an item of another kind as it was read before, the added item: its older side would be no content', () => {
+    // A folder deleted and a file added at its path, and the other way round: nothing to compare between the two.
+    const folderGone = formatOutput(['D', '"/src/Score"', '""', '-1', '40', 'D', GAME]) + formatOutput(['A', '"/src/Score"', '""', '-1', '41', 'F', GAME]);
+    const fileGone = formatOutput(['A', '"/src/Score"', '""', '-1', '41', 'D', GAME]) + formatOutput(['D', '"/src/Score"', '""', '-1', '40', 'F', GAME]);
+
+    expect(diffEntriesIn(folderGone)).toEqual([{ status: 'added', path: 'src/Score', oldPath: undefined, itemType: 'file', baseRevisionId: -1, revisionId: 41, repository: 'game@local' }]);
+    expect(diffEntriesIn(fileGone)).toEqual([{ status: 'added', path: 'src/Score', oldPath: undefined, itemType: 'directory', baseRevisionId: -1, revisionId: 41, repository: 'game@local' }]);
+  });
+
   it('reads an item whose file permissions alone changed as the same revision on both sides, with its permissions', () => {
     // `cm` gives a change without a content change no base revision: `baserevid` is -1, as for an added item.
     const [entry] = diffEntriesIn(formatOutput(['C', '"/tools/build.sh"', '""', '-1', '41', 'F', GAME, '"-rw-r--r--"', '"-rwxr-xr-x"']));
