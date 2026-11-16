@@ -350,7 +350,8 @@ its glyph and title too.
 One card says where a merge request stands, wherever it shows by its branch (`MergeRequestSummaryCard`;
 `mergeRequestSummaryOf` decides): the top bar's hover card, the hover card of a branch's chip in the Branches view and
 the Branch Explorer, and the **Merge request** section of a branch's details (both views). It holds the title (a link
-that opens the request; plain text only in the Branch Explorer's tooltip, which the pointer can't enter), "Ana wants to merge into /main" (`mergeVerbOf`:
+that opens the request, in every one of them: the Branch Explorer's stays where it opened for the pointer to move
+in, `pointerCardStays`), "Ana wants to merge into /main" (`mergeVerbOf`:
 "asked to" once merged, "wanted to" once closed), the state's badge and, under a rule, where the review stands in the
 merge card's words (`reviewSectionOf`): while Open, and once merged if the review was decided (reviewed, or changes
 required: it merged whatever the review said); never for a draft or a closed one. One frame and width wherever it

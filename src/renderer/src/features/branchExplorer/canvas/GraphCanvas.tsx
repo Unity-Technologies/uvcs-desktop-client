@@ -17,7 +17,7 @@ import { branchesNearView } from './headersInView';
 import type { RuleColors } from '../model/ruleColors';
 import { withBranchColors, withRuleColors } from './graphPalette';
 import { createGraphCanvasHandle, type GraphCanvasHandle } from './graphCanvasHandle';
-import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
+import { hitTest, hoverCardFor, hoverCardKey, pointerCardStays, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, CAPTION_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
 import { wheelGoesTo } from './wheelTarget';
 import { graphExtent } from './laneShape';
@@ -332,7 +332,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     clippedTip.hide();
     if (!subject) return hoverCard.requestClose();
     const anchor = anchorFor(subject);
-    hoverCard.show({ key: hoverCardKey(subject.target), target: subject.target, anchor, ...point }, anchor === null);
+    hoverCard.show({ key: hoverCardKey(subject.target), target: subject.target, anchor, ...point }, anchor === null && !pointerCardStays(subject.target));
   };
 
   const onDoubleClick = (event: React.MouseEvent): void => {

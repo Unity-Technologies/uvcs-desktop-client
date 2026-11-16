@@ -8,7 +8,7 @@ import styles from './MergeRequestSummaryCard.module.css';
 
 interface MergeRequestSummaryCardProps {
   request: MergeRequestReview;
-  /** Makes the title a link that opens the request; the Branch Explorer's tooltip, which the pointer can't enter, leaves it as text. */
+  /** Makes the title a link that opens the request, as every card of a branch's request has it. */
   onOpen?: () => void;
   /** Its own frame (`.framed`), where it stands alone: a branch chip's hover card, the Branch Explorer's tooltip. */
   framed?: boolean;

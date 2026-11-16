@@ -15,6 +15,7 @@ import type { GraphPalette } from './graphPalette';
 import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
 import { codeReviewLine, reviewChipOf } from '../../codeReviews/reviewChip';
+import { openReview } from '../../codeReviews/codeReviewOperations';
 import { MergeRequestSummaryCard } from '../../codeReviews/MergeRequestSummaryCard';
 
 /**
@@ -100,8 +101,9 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
   const hover = target.kind === 'codeReview' ? reviewChipOf(target.review, false).hover : undefined;
   if (hover?.kind === 'summary') {
     return (
-      <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
-        <MergeRequestSummaryCard request={hover.request} framed />
+      // The pointer can move into it (`pointerCardStays`, `CAPTION_CARD_ATTRIBUTE`): its title opens the request, as in the lists.
+      <div className={styles.tooltip} data-flip={flip} data-enterable style={{ left: flip ? x - 14 : x + 14, top: y + 14 }} {...{ [CAPTION_CARD_ATTRIBUTE]: true }}>
+        <MergeRequestSummaryCard request={hover.request} framed onOpen={() => openReview(hover.request)} />
       </div>
     );
   }
