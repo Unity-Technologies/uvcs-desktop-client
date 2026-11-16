@@ -2,7 +2,7 @@ import { CircleDot, GitPullRequest, RotateCcw } from 'lucide-react';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { Checkbox } from '../../ui/Checkbox';
 import { openReview } from '../codeReviews/codeReviewOperations';
-import { canMarkReviewed } from './mergeTaskSummary';
+import { canMarkReviewed, mergeRequestName } from './mergeTaskSummary';
 import type { TaskMergeChoices, TaskMergeRequest } from './taskMerge';
 import styles from './TaskMergeOptions.module.css';
 
@@ -39,7 +39,7 @@ export function TaskMergeOptions({ mergeRequest, review, user, choices, onChange
 
 /** "Merge request 12 · Add login", which opens it: the merge finishes it. */
 function MergeRequestLink({ request }: { request: TaskMergeRequest }) {
-  const name = `Merge request ${request.id} · ${request.title}`;
+  const name = mergeRequestName(request);
   return (
     <button type="button" className={styles.request} data-tip="Open the merge request" onClick={() => openReview(request)}>
       <GitPullRequest size={13} aria-hidden />

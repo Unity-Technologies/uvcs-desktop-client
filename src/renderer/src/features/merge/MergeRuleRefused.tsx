@@ -7,7 +7,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { branchReviewsQuery } from '../codeReviews/changeRequests/useChangeRequests';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import type { TaskMergeRequest } from '../mergeTask/taskMerge';
-import { mergeRequestInto, mergeRuleNotice, type MergeRuleRefusal } from './mergeRuleRefusal';
+import { mergeRuleNotice, needsBranchReviews, type MergeRuleRefusal } from './mergeRuleRefusal';
 
 interface MergeRuleRefusedProps {
   refusal: MergeRuleRefusal;
@@ -18,15 +18,13 @@ interface MergeRuleRefusedProps {
 }
 
 /**
- * The merge page when the server's merge rules refuse the merge: the rule in a plain sentence, and the way forward.
- * Only a review rule looks for the branch's merge request, and only when the merge wasn't opened from it: the branch's
- * reviews, the read Changes makes.
+ * The merge page when the server's merge rules refuse the merge: the rule in a plain sentence, and the way forward
+ * (`mergeRuleNotice`). The branch's reviews, the read Changes makes, only when `needsBranchReviews`.
  */
 export function MergeRuleRefused({ refusal, openedFrom, retry }: MergeRuleRefusedProps) {
   const place = usePlace();
-  const looksForRequest = refusal.rule === 'needsReview' && openedFrom === undefined;
-  const { data: reviewsOfBranch } = useQuery({ ...branchReviewsQuery(place, refusal.source), enabled: looksForRequest });
-  const notice = mergeRuleNotice(refusal, openedFrom?.id ?? mergeRequestInto(reviewsOfBranch, refusal.destination));
+  const { data: reviewsOfBranch } = useQuery({ ...branchReviewsQuery(place, refusal.source), enabled: needsBranchReviews(refusal, openedFrom) });
+  const notice = mergeRuleNotice(refusal, openedFrom, reviewsOfBranch);
   const { action } = notice;
 
   return (

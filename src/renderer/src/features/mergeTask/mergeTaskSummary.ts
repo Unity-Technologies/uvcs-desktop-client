@@ -12,6 +12,11 @@ export function defaultMergeComment(branch: Pick<Branch, 'name' | 'comment'>, me
   return summary ? `Merge ${branch.name}: ${summary}` : `Merge ${branch.name}`;
 }
 
+/** "Merge request 12 · Add login": how the merge page names the merge request it merges. */
+export function mergeRequestName(request: { id: number; title: string }): string {
+  return `Merge request ${request.id} · ${firstLine(request.title)}`;
+}
+
 /**
  * Whether the merge can also mark the branch's review as reviewed by `user`: there is one, they are one of its
  * reviewers (only reviewers give a status), and they haven't marked it yet.

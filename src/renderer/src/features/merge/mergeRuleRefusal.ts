@@ -1,6 +1,7 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { branchLabel } from '../../lib/branchLabels';
 import { isActiveMergeRequest } from '../codeReviews/mergeRequestState';
+import type { TaskMergeRequest } from '../mergeTask/taskMerge';
 
 /**
  * A merge the server's merge rules refused (docs/features/merge-requests.md "Merging"): the source needs an open merge
@@ -42,12 +43,25 @@ export interface MergeRuleNotice {
 }
 
 /**
- * The refusal in a plain sentence, with its way forward: a request to review needs the merge request opened, when the
- * branch has one into that destination (`mergeRequestId`).
+ * Whether the refused page reads the branch's reviews: only for a review rule, to find the merge request to open, and
+ * only when the merge wasn't opened from it.
  */
-export function mergeRuleNotice({ rule, destination }: MergeRuleRefusal, mergeRequestId: number | undefined): MergeRuleNotice {
+export function needsBranchReviews({ rule }: MergeRuleRefusal, openedFrom: TaskMergeRequest | undefined): boolean {
+  return rule === 'needsReview' && openedFrom === undefined;
+}
+
+/**
+ * The refusal in a plain sentence, with its way forward: a request to review needs the merge request opened, the one
+ * the merge was opened from, else the branch's into that destination (`mergeRequestInto`), once its reviews are read.
+ */
+export function mergeRuleNotice(
+  { rule, destination }: MergeRuleRefusal,
+  openedFrom: TaskMergeRequest | undefined,
+  reviewsOfBranch: readonly CodeReviewSummary[] | undefined,
+): MergeRuleNotice {
   const into = branchLabel(destination);
   if (rule === 'needsMergeRequest') return { title: `This server merges into ${into} only branches with an open merge request` };
+  const mergeRequestId = openedFrom?.id ?? mergeRequestInto(reviewsOfBranch, destination);
   return {
     title: `This server merges into ${into} only reviewed branches`,
     ...(mergeRequestId !== undefined && { action: { kind: 'openMergeRequest', reviewId: mergeRequestId, label: 'Open merge request' } }),
