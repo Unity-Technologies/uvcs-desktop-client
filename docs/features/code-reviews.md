@@ -364,7 +364,8 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
   of its reviews with something open (`{unresolvedissues}` above zero, `reviewsToRead`; a branch has one, rarely two),
   under the very key its page reads it by (`reviewConversationQuery`), so the page and the check-in find each other's
   read. A review that couldn't be read hides none of the others' requests. A branch with no review, or none open,
-  costs the one find. Open is what the conversation says (`threadsOf`'s state: not applied, no discarding reply). Read
+  costs the one find, which the top bar's merge request chip shares (merge-requests.md "Where a branch's merge
+  request shows"). Open is what the conversation says (`threadsOf`'s state: not applied, no discarding reply). Read
   again only on an event: the branch switched (another key), a write on a review (`isAffectedByCodeReviews`), a
   check-in, an update or a switch (`isAffectedByCheckinOrUpdate`: what came in may have applied some); never on a
   focus (`SLOW_CHANGING_QUERY`). It isn't checked again right before a check-in: that would add a find to every

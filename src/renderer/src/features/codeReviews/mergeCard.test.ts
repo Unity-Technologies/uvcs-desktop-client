@@ -2,7 +2,8 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer, CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
-import { mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
+import type { ReviewComment } from '@shared/domain/reviewConversation';
+import { mergeCardOf, mergeReadiness, openItemsIn, openItemsLine, openItemsOfConversation, reviewSectionOf, type MergeCardInput, type MergeCardSection } from './mergeCard';
 
 const reviewer = (name: string, status: CodeReviewStatus): CodeReviewer => ({ name, status });
 
@@ -74,6 +75,15 @@ describe('openItemsIn', () => {
   it('counts the change requests and the questions still open among the open threads', () => {
     expect(openItemsIn([thread('changeRequest'), thread('question'), thread('changeRequest')])).toEqual({ changeRequests: 2, questions: 1 });
     expect(openItemsIn([])).toEqual({ changeRequests: 0, questions: 0 });
+  });
+});
+
+describe('openItemsOfConversation', () => {
+  const comment = (id: number, fields: Partial<ReviewComment>): ReviewComment => ({ id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:0${id}:00+01:00`, text: `Comment ${id}`, kind: 'general', anchor: { kind: 'review' }, ...fields });
+
+  it('counts what is still open: an applied change request is not, an unanswered question is', () => {
+    const comments = [comment(1, { kind: 'changeRequest', appliedInChangeset: 4 }), comment(2, { kind: 'question' }), comment(3, { kind: 'general' })];
+    expect(openItemsOfConversation(comments)).toEqual({ changeRequests: 0, questions: 1 });
   });
 });
 

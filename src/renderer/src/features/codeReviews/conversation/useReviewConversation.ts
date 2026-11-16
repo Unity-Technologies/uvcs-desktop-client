@@ -16,7 +16,8 @@ export function useReviewConversation(reviewId: number, reading: ConversationRea
 
 /**
  * How a review's conversation is read, one query per review: the page, what reads it before the page shows it (a link
- * to a comment) and the change requests a check-in can apply (`useBranchChangeRequests`) share each other's read.
+ * to a comment), the change requests a check-in can apply (`useBranchChangeRequests`) and what the top bar's merge
+ * request card says is still open (`cardReadsOpenItems`) share each other's read.
  */
 export function reviewConversationQuery(place: Place, reviewId: number) {
   return { queryKey: conversationKey(place, reviewId), queryFn: () => api.reviewComments.conversation(place, reviewId) };

@@ -1,4 +1,5 @@
-/* The branch pill and the incoming segment read as one split control: shared borders, outer corners only. */
+/* The branch pill and its segments (its merge request, what's incoming) read as one split control: shared borders,
+   outer corners only. */
 .branchControls {
   display: flex;
   flex: 0 1 auto;

@@ -955,7 +955,8 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
    (`useConnectionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
    avatars when rows show them, the menu bar (built by the first window opening, then once per burst of window
-   changes: `appMenuInstaller`).
+   changes: `appMenuInstaller`), the top bar's merge request (one `cm find review` of the workspace's branch, asked
+   once the pending changes are read: `asksForBranchReviews`).
 
 Reopening the last workspace on an M4 Max (Electron 44), started as the Dock does, warm, median of 14 runs, in ms
 after the process starts, interleaved with a build from before the compile cache, the reads before `app.whenReady`,
