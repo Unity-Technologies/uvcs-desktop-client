@@ -76,10 +76,13 @@ export function nextRepositoryFileSearch(search: RepositoryFileSearch, event: Re
   }
 }
 
-/** What the search shows while `query` is typed, of the tree called `branch`. */
+/**
+ * What the search shows while `query` is typed, of the tree called `branch`. Folders come before files, as in the tree
+ * beside it (`sortItems`); each keeps the order the search ranked it in (`BestPaths`).
+ */
 export function repositoryFileSearchView(search: RepositoryFileSearch, query: string, branch: string): RepositoryFileSearchView {
   const results = resultsOf(search);
-  const paths = results?.paths ?? [];
+  const paths = foldersFirst(results?.paths ?? []);
   return {
     rows: paths.map((found) => ({ path: found.path, itemType: found.isDirectory ? 'directory' : 'file', matches: fuzzyMatchPositions(found.path, query) })),
     loading: search.kind === 'searching' && paths.length === 0,
@@ -98,6 +101,10 @@ export function repositoryFileSearchKey(key: string, highlighted: number, view: 
   const effect = goToFileKey(key, Math.min(highlighted, Math.max(0, count - 1)), count);
   if (effect?.kind === 'pick') return { kind: 'pick', path: view.rows[effect.index]!.path };
   return effect;
+}
+
+function foldersFirst(paths: FoundPath[]): FoundPath[] {
+  return [...paths.filter((found) => found.isDirectory), ...paths.filter((found) => !found.isDirectory)];
 }
 
 function resultsOf(search: RepositoryFileSearch): FoundFor | null {
