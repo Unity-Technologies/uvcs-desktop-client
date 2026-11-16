@@ -8,7 +8,7 @@ import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 import { codeReviewKey } from './codeReviewKey';
 import { listedReviewIn, showReviewReadInListsIn } from './listedReview';
-import { latestReviewByBranch } from './reviewsByBranch';
+import { reviewOfEachBranch } from './reviewsByBranch';
 
 /** `enabled` false reads nothing, only what the list already read (the sidebar's count, `useWaitingForMeBadge`). */
 export function useCodeReviews(filter: CodeReviewFilter, { enabled = true }: { enabled?: boolean } = {}) {
@@ -69,7 +69,7 @@ export function reviewNumberedKey(place: Place, id: number): readonly unknown[] 
  */
 export function useReviewsByBranch(enabled = true) {
   const place = usePlace();
-  return useQuery({ ...reviewSummariesQuery(place), select: latestReviewByBranch, enabled });
+  return useQuery({ ...reviewSummariesQuery(place), select: reviewOfEachBranch, enabled });
 }
 
 /**
