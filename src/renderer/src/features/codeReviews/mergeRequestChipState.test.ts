@@ -31,9 +31,10 @@ describe('asksForBranchReviews', () => {
 });
 
 describe('mergeRequestChipOf, the chip', () => {
-  it('shows the state and the number, then the review status while Open', () => {
+  it('shows the state by its glyph and name, never the number, then the review status while Open', () => {
     const chip = mergeRequestChipOf(request(12, 'Open', { status: 'Reviewed' }));
-    expect(chip).toMatchObject({ reviewId: 12, state: 'Open', number: '#12', status: 'Reviewed', muted: false });
+    expect(chip).toEqual(expect.objectContaining({ reviewId: 12, state: 'Open', stateText: 'Open', status: 'Reviewed', muted: false }));
+    expect(chip).not.toHaveProperty('number');
   });
 
   it.each(['Under review', 'Rework required'] as const)('shows the status %s while Open', (status) => {
@@ -42,7 +43,7 @@ describe('mergeRequestChipOf, the chip', () => {
 
   it('shows no review status on a draft: it is not up for review yet', () => {
     const chip = mergeRequestChipOf(request(12, 'Draft', { status: 'Under review' }));
-    expect(chip).toMatchObject({ state: 'Draft', number: '#12', muted: false });
+    expect(chip).toMatchObject({ state: 'Draft', stateText: 'Draft', muted: false });
     expect(chip.status).toBeUndefined();
   });
 
@@ -52,83 +53,39 @@ describe('mergeRequestChipOf, the chip', () => {
     expect(chip.status).toBeUndefined();
   });
 
-  it('names what it is and where it stands for a screen reader', () => {
-    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more' })).label).toBe('Merge request 12 · Open into /main · Under review: Jump higher');
+  it('names what it is and where it stands for a screen reader, by its title', () => {
+    expect(mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more' })).label).toBe('Merge request · Open into /main · Under review: Jump higher');
   });
 
   it("says no review status where the chip shows none", () => {
-    expect(mergeRequestChipOf(request(12, 'Draft', { title: 'Jump higher' })).label).toBe('Merge request 12 · Draft into /main: Jump higher');
-    expect(mergeRequestChipOf(request(12, 'Merged', { title: 'Jump higher' })).label).toBe('Merge request 12 · Merged into /main: Jump higher');
+    expect(mergeRequestChipOf(request(12, 'Draft', { title: 'Jump higher' })).label).toBe('Merge request · Draft into /main: Jump higher');
+    expect(mergeRequestChipOf(request(12, 'Merged', { title: 'Jump higher' })).label).toBe('Merge request · Merged into /main: Jump higher');
   });
 });
 
 describe('mergeRequestChipOf, the hover card', () => {
-  const ana = { name: 'ana', status: 'Reviewed' as const };
-  const bob = { name: 'bob', status: 'Under review' as const };
-
-  it('has the title on one line and where it merges', () => {
-    const { card } = mergeRequestChipOf(request(12, 'Open', { title: 'Jump higher\nand more' }));
-    expect(card.title).toBe('Jump higher');
-    expect(card.where).toBe('Open · into /main');
-  });
-
-  it('says where the review stands while Open, from its reviewers, with them', () => {
-    const { card } = mergeRequestChipOf(request(12, 'Open', { status: 'Under review', reviewers: [ana, bob] }));
-    expect(card.review).toEqual({ status: 'Under review', title: 'Changes under review', detail: '1 pending review' });
-    expect(card.showsReviewers).toBe(true);
-  });
-
-  it('says a review is required when nobody reviews it, with no empty stack under it', () => {
-    const { card } = mergeRequestChipOf(request(12, 'Open', { reviewers: [] }));
-    expect(card.review).toEqual({ status: 'Under review', title: 'Review required', detail: 'At least 1 approving review is required' });
-    expect(card.showsReviewers).toBe(false);
-  });
-
-  it('says it is reviewed once everyone approved', () => {
-    expect(mergeRequestChipOf(request(12, 'Open', { status: 'Reviewed', reviewers: [ana] })).card.review).toEqual({ status: 'Reviewed', title: 'Changes reviewed', detail: '1 approving review' });
-  });
-
   it('counts the change requests and questions open, only when any', () => {
     expect(mergeRequestChipOf(request(12, 'Open'), { changeRequests: 3, questions: 1 }).card.openItems).toBe('3 change requests and 1 question open');
     expect(mergeRequestChipOf(request(12, 'Open'), { changeRequests: 0, questions: 0 }).card.openItems).toBeUndefined();
     expect(mergeRequestChipOf(request(12, 'Open')).card.openItems).toBeUndefined();
   });
 
-  it('shows a draft as not ready, with its reviewers and no review status', () => {
-    const { card } = mergeRequestChipOf(request(12, 'Draft', { reviewers: [bob] }), { changeRequests: 2, questions: 0 });
-    expect(card.where).toBe('Draft · into /main');
-    expect(card.review).toBeUndefined();
-    expect(card.showsReviewers).toBe(true);
-    expect(card.openItems).toBeUndefined();
+  it.each(['Draft', 'Merged'] as const)('counts nothing open on a %s one', (state) => {
+    expect(mergeRequestChipOf(request(12, state), { changeRequests: 2, questions: 0 }).card.openItems).toBeUndefined();
   });
 
-  it('shows nothing of the reviewers of a draft nobody reviews yet', () => {
-    expect(mergeRequestChipOf(request(12, 'Draft', { reviewers: [] })).card.showsReviewers).toBe(false);
+  it.each(['Draft', 'Open', 'Merged'] as const)('offers no button on a %s one not reviewed: its title opens it', (state) => {
+    expect(mergeRequestChipOf(request(12, state), undefined, '/main/task').card.actions).toEqual([]);
   });
 
-  it('shows a merged one as merged into its destination, nothing more', () => {
-    const { card } = mergeRequestChipOf(request(12, 'Merged', { reviewers: [ana] }), { changeRequests: 1, questions: 0 });
-    expect(card.where).toBe('Merged into /main');
-    expect(card.review).toBeUndefined();
-    expect(card.showsReviewers).toBe(false);
-    expect(card.openItems).toBeUndefined();
-  });
-
-  it.each(['Draft', 'Open', 'Merged'] as const)('offers Open on a %s one not reviewed', (state) => {
-    expect(mergeRequestChipOf(request(12, state), undefined, '/main/task').card.actions).toEqual([{ kind: 'open', label: 'Open', primary: true }]);
-  });
-
-  it('offers Merge into its destination first once an Open one is reviewed, Open beside it', () => {
+  it('offers Merge into its destination once an Open one is reviewed', () => {
     const { card } = mergeRequestChipOf(request(12, 'Open', { status: 'Reviewed' }), undefined, '/main/task');
-    expect(card.actions.map(({ kind, label, primary }) => ({ kind, label, primary }))).toEqual([
-      { kind: 'merge', label: 'Merge into main…', primary: true },
-      { kind: 'open', label: 'Open', primary: false },
-    ]);
+    expect(card.actions.map(({ kind, label, primary }) => ({ kind, label, primary }))).toEqual([{ kind: 'merge', label: 'Merge into main…', primary: true }]);
     expect(card.actions[0]).toMatchObject({ merge: { source: '/main/task', request: { id: 12 } } });
   });
 
   it("offers no Merge on a reviewed request that isn't Open", () => {
-    expect(mergeRequestChipOf(request(12, 'Merged', { status: 'Reviewed' }), undefined, '/main/task').card.actions.map((action) => action.kind)).toEqual(['open']);
+    expect(mergeRequestChipOf(request(12, 'Merged', { status: 'Reviewed' }), undefined, '/main/task').card.actions).toEqual([]);
   });
 });
 

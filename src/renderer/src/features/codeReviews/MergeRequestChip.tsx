@@ -12,8 +12,8 @@ import { reviewConversationQuery } from './conversation/useReviewConversation';
 import { openItemsOfConversation } from './mergeCard';
 import { asksForBranchReviews, cardReadsOpenItems, mergeRequestChipOf, type TopBarRequestAction } from './mergeRequestChipState';
 import { MERGE_REQUEST_STATE_ICONS, type MergeRequestReview } from './mergeRequestState';
+import { MergeRequestSummaryCard } from './MergeRequestSummaryCard';
 import { currentRequestOf } from './reviewsByBranch';
-import { ReviewerStack } from './ReviewerStack';
 import { ReviewStatusIcon } from './ReviewStatusIcon';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import stateColors from './mergeRequestStateColors.module.css';
@@ -21,8 +21,8 @@ import styles from './MergeRequestChip.module.css';
 import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
 /**
- * A segment of the branch pill when the workspace's branch has a merge request (`currentRequestOf`): its state, its
- * number and, while Open, its review's status. Hovering shows where it stands; a click opens it. The branch's reviews
+ * A segment of the branch pill when the workspace's branch has a merge request (`currentRequestOf`): its state and,
+ * while Open, its review's status. Hovering shows where it stands; a click opens it. The branch's reviews
  * are one `cm find review` (`branchReviewsQuery`), the read Changes makes for the change requests a check-in applies,
  * asked once the first screen is in (the pending changes, which the sidebar's count reads in any view).
  */
@@ -50,15 +50,8 @@ function MergeRequestSegment({ request, source }: { request: MergeRequestReview;
     openReview(request);
   };
   const run = (action: TopBarRequestAction): void => {
-    switch (action.kind) {
-      case 'open':
-        openIt();
-        return;
-      case 'merge':
-        card.close();
-        openMergeRequestMerge(action.merge.request, action.merge.source);
-        return;
-    }
+    card.close();
+    openMergeRequestMerge(action.merge.request, action.merge.source);
   };
 
   return (
@@ -68,46 +61,26 @@ function MergeRequestSegment({ request, source }: { request: MergeRequestReview;
           <span className={`${styles.state} ${stateColors.stateColor}`} data-state={chip.state} aria-hidden>
             <StateIcon size={14} />
           </span>
-          <span className={styles.number}>{chip.number}</span>
+          <span className={styles.stateText}>{chip.stateText}</span>
           {chip.status && <ReviewStatusIcon status={chip.status} size={13} />}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className={styles.card} align="start" sideOffset={6} {...card.hoverProps} onOpenAutoFocus={(event) => event.preventDefault()} onCloseAutoFocus={(event) => event.preventDefault()}>
-          <header className={styles.header}>
-            <span className={`${styles.state} ${stateColors.stateColor}`} data-state={chip.state} aria-hidden>
-              <StateIcon size={15} />
-            </span>
-            <span className={styles.title}>{chip.card.title}</span>
-            <span className={styles.cardNumber}>{chip.number}</span>
-          </header>
-          <p className={styles.where}>{chip.card.where}</p>
-          {(chip.card.review || chip.card.showsReviewers) && (
-            <div className={styles.review}>
-              {chip.card.review && (
-                <span className={styles.reviewText}>
-                  <ReviewStatusIcon status={chip.card.review.status} size={13} />
-                  <span className={styles.reviewLines}>
-                    <span>{chip.card.review.title}</span>
-                    {chip.card.review.detail && <span className={styles.detail}>{chip.card.review.detail}</span>}
-                  </span>
-                </span>
-              )}
-              {chip.card.showsReviewers && (
-                <span className={styles.reviewers}>
-                  <ReviewerStack reviewers={request.reviewers} />
-                </span>
-              )}
-            </div>
+          <div className={styles.summary}>
+            <MergeRequestSummaryCard request={request} onOpen={openIt}>
+              {chip.card.openItems && <p className={styles.openItems}>{chip.card.openItems}</p>}
+            </MergeRequestSummaryCard>
+          </div>
+          {chip.card.actions.length > 0 && (
+            <footer className={styles.footer}>
+              {chip.card.actions.map((action) => (
+                <Button key={action.kind} size="small" variant={action.primary ? 'primary' : 'secondary'} onClick={() => run(action)}>
+                  {action.label}
+                </Button>
+              ))}
+            </footer>
           )}
-          {chip.card.openItems && <p className={styles.openItems}>{chip.card.openItems}</p>}
-          <footer className={styles.footer}>
-            {chip.card.actions.map((action) => (
-              <Button key={action.kind} size="small" variant={action.primary ? 'primary' : 'secondary'} onClick={() => run(action)}>
-                {action.label}
-              </Button>
-            ))}
-          </footer>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

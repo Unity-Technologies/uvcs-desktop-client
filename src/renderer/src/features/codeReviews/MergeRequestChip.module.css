@@ -14,15 +14,14 @@
   color: var(--merge-request-color);
 }
 
-.number {
+.stateText {
   font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
 }
 
-/* Narrow, the glyphs say enough: the number goes before the branch pill gives up its room (below about 800px, with
-   the incoming segment beside it). */
+/* Narrow, the glyphs say enough: the state's name goes before the branch pill gives up its room (below about 800px,
+   with the incoming segment beside it). */
 @media (max-width: 820px) {
-  .number {
+  .stateText {
     display: none;
   }
 }
@@ -35,80 +34,15 @@
   width: 340px;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--space-3) var(--space-3) 2px;
+/* The summary (`MergeRequestSummaryCard`), then what's open, then the actions. */
+.summary {
+  padding: var(--space-3);
 }
 
-.title {
-  overflow: hidden;
-  font-weight: var(--weight-semibold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cardNumber {
-  flex: none;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Under the title, in line with it past the glyph. */
-.where {
-  margin: 0;
-  padding: 0 var(--space-3) var(--space-2) calc(var(--space-3) + 21px);
-  color: var(--text-tertiary);
-  font-size: var(--text-sm);
-}
-
-.review {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-top: 1px solid var(--border-subtle);
-  font-size: var(--text-sm);
-}
-
-.reviewText {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  min-width: 0;
-}
-
-/* The status glyph sits on the first line's middle. */
-.reviewText > :first-child {
-  margin-top: 2px;
-}
-
-.reviewLines {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  line-height: 1.35;
-}
-
-.detail {
-  color: var(--text-tertiary);
-}
-
-.reviewers {
-  display: flex;
-  flex: none;
-  max-width: 50%;
-  margin-left: auto;
-}
-
-/* Under the review's lines, the card's whole width past the status glyph. */
+/* Under the review's lines, past its disc. */
 .openItems {
-  margin: -2px 0 0;
-  padding: 0 var(--space-3) var(--space-2) calc(var(--space-3) + 19px);
+  margin: 2px 0 0 calc(22px + var(--space-2));
   color: var(--text-secondary);
-  font-size: var(--text-sm);
 }
 
 .footer {

@@ -325,18 +325,18 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   own per state (a ring, dashed for a draft, a disc once merged, crossed once closed). Their tooltips name it and its
   destination (`reviewLine`). No new column and no "+N more": the list filtered by the branch shows the others.
 - **The top bar** (`MergeRequestChip`, a segment of the branch pill before the incoming one, sized as it): when the
-  workspace's branch has a merge request, its state's glyph, "#12" and, while Open, the review status's icon. Which
-  one: `currentRequestOf` ("Which request counts for a branch"); a merged one shows muted, telling the user they're
-  still on finished work. Below 820px the number goes and the glyphs stay,
-  before the branch pill gives up any room. A click opens it.
-  - **Hovering** shows a card (`mergeRequestChipOf` decides every line and action; the component maps them): the
-    title and number; "Open · into /main" ("Merged into /main"); while Open, where the review stands in the merge
-    card's words (`reviewSectionOf`) with the reviewers' stack (none while nobody reviews it), and what's still open
-    ("2 change requests and 1 question open", `openItemsLine`); then its actions (`TopBarRequestAction`): **Open**,
-    and, first, **Merge into main…** once an Open one is reviewed (`mergeOfRequest` with the workspace's branch as the
-    source; the card never offers the quiet button the merge card does, as it only says where things stand). The card opens on hover only, so a keyboard doesn't reach it: Enter on the
-    chip opens the page, which shows all of it. A screen reader hears what the chip shows ("Merge request 12 · Open
-    into /main · Under review: Dash"), no status where it shows none.
+  workspace's branch has a merge request, its state's glyph and name ("Open") and, while Open, the review status's
+  icon; never its number ("Its number"). Which one: `currentRequestOf` ("Which request counts for a branch"); a merged
+  one shows muted, telling the user they're still on finished work. Below 820px the state's name goes and the glyphs
+  stay, before the branch pill gives up any room. A click opens it.
+  - **Hovering** shows a card: the request's summary (`MergeRequestSummaryCard`, "A branch's merge request at a
+    glance"), its title a link that opens it; then, while Open, what's still open ("2 change requests and 1 question
+    open", `openItemsLine`); then **Merge into main…** once an Open one is reviewed (`mergeOfRequest` with the
+    workspace's branch as the source; `mergeRequestChipOf` decides). No Open button: the title is the link, and the
+    card never offers the quiet button the merge card does, as it only says where things stand. The card opens on
+    hover only, so a keyboard doesn't reach it: Enter on the chip opens the page, which shows all of it. A screen
+    reader hears what the chip shows ("Merge request · Open into /main · Under review: Dash"), no status where it shows
+    none.
   - **The cost**: the branch's reviews are one `cm find review where target = 'br:<branch>'` (`branchReviewsQuery`),
     the read Changes makes for the change requests a check-in applies, so the two share it. Asked once the
     workspace's branch is known and the first screen is in (the pending changes read, or failed: the sidebar's count
