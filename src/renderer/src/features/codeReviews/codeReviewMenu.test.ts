@@ -162,6 +162,39 @@ describe("a merge request's moves", () => {
   });
 });
 
+describe('merging a merge request', () => {
+  const onTask = { kind: 'branch', branch: '/main/release/task' } as const;
+  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', target: CodeReviewTarget | undefined = onTask) =>
+    codeReviewSummary({ id: 12, title: 'Add login', target, mergeRequest: { state, destination: '/main' } });
+  const mergeEntry = (menu: MenuEntry[]) => actions(menu).find((entry) => entry.id === 'mergeInto');
+
+  it('offers Merge into its destination for an open one, in the row menu and the page menu alike', () => {
+    for (const menu of [codeReviewMenu(workspacePlace(ws), [request('Open')]), reviewPageMenu(workspacePlace(ws), request('Open'))]) {
+      expect(mergeEntry(menu)?.label).toBe('Merge into main…');
+    }
+  });
+
+  it("offers it for no other state, no code review, several rows, a branch whose name isn't read, nor a window with no workspace", () => {
+    for (const state of ['Draft', 'Merged', 'Closed'] as const) expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request(state)]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [summary]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request('Open'), { ...request('Open'), id: 13 }]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(workspacePlace(ws), [request('Open', undefined)]))).toBeUndefined();
+    expect(mergeEntry(codeReviewMenu(repositoryPlace('game@local'), [request('Open')]))).toBeUndefined();
+  });
+
+  it("opens the merge page for its branch into the request's destination, naming the request", () => {
+    mergeEntry(codeReviewMenu(workspacePlace(ws), [request('Open')]))!.run();
+
+    expect(whereTheWindowIs().pages).toEqual([
+      {
+        kind: 'merge',
+        request: { kind: 'merge', sourceSpec: 'br:/main/release/task', destinationBranch: '/main' },
+        task: { branch: { name: '/main/release/task', comment: '' }, mergeRequest: { id: 12, title: 'Add login' }, choices: { markReviewed: false, hideBranch: false } },
+      },
+    ]);
+  });
+});
+
 describe("a review's Copy menu", () => {
   it("copies a merge request's link as a merge request's, and a code review's as a code review's", () => {
     const place = repositoryPlace('game@local');
