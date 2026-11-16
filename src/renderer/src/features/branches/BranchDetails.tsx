@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
 import type { BranchInfo } from '@shared/domain/branch';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { cmVersionQuery } from '../../app/startup/useCmAvailability';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
@@ -20,6 +19,7 @@ import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { asMergeRequest } from '../codeReviews/mergeRequestState';
+import { useBranchReview } from '../codeReviews/useBranchReviews';
 import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard';
 import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
@@ -33,15 +33,14 @@ interface BranchDetailsProps {
   links?: ObjectLinks;
   /** What the view knows about how it relates to the rest, e.g. its changesets in the graph. */
   relations?: Property[];
-  /** The review that stands for the branch (`reviewOfEachBranch`), from the view's chips: a merge request gets a section. */
-  review?: CodeReviewSummary;
 }
 
-export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [], review }: BranchDetailsProps) {
+export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const place = usePlace();
   const { data: cmVersion } = useQuery(cmVersionQuery);
-  const request = asMergeRequest(review);
+  // The review its chip shows, read with the branches in view (`useBranchReview`): a merge request gets a section.
+  const request = asMergeRequest(useBranchReview(branch.id) ?? undefined);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
   const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
 

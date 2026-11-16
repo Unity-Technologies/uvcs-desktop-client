@@ -25,7 +25,6 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BranchDetails } from './BranchDetails';
 import { branchHeadOrigin } from './branchHeadOrigin';
 import { branchColumns } from './branchColumns';
@@ -75,8 +74,7 @@ export function BranchesView() {
     else if (workspace) void newBranchFromWorkspace(workspace);
   };
 
-  const { data: reviews } = useReviewsByBranch(branches !== undefined);
-  const columns = useMemo(() => branchColumns(layout, currentBranch, toggleCollapsed, reviews), [layout, currentBranch, toggleCollapsed, reviews]);
+  const columns = useMemo(() => branchColumns(layout, currentBranch, toggleCollapsed), [layout, currentBranch, toggleCollapsed]);
 
   return (
     <>
@@ -138,7 +136,7 @@ export function BranchesView() {
         onActivate={(row) => diffBranch(row.branch)}
         contextMenu={(selectedRows) => branchMenu(place, selectedRows.map((row) => row.branch), currentBranch)}
         noun="branch"
-        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(place, [selected], currentBranch)} review={reviews?.get(selected.id)} />}
+        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(place, [selected], currentBranch)} />}
       />
     </>
   );

@@ -1,4 +1,3 @@
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { MousePointerClick } from 'lucide-react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { ObjectLinks } from '../../../components/objectLinks';
@@ -27,15 +26,13 @@ interface GraphDetailsProps {
   menuFor: (target: GraphTarget) => MenuEntry[];
   goToChangeset: (id: number) => void;
   selectBranch: (name: string) => void;
-  /** The review that stands for each branch, by branch id, as the headers' chips show them. */
-  reviews: ReadonlyMap<number, CodeReviewSummary>;
 }
 
 /**
  * The Branch Explorer's details: the selected label, changeset, pending changes or branch, read as every view reads
  * them, their links leading around the graph.
  */
-export function GraphDetails({ selection, several, layout, pendingChangeCount, menuFor, goToChangeset, selectBranch, reviews }: GraphDetailsProps) {
+export function GraphDetails({ selection, several, layout, pendingChangeCount, menuFor, goToChangeset, selectBranch }: GraphDetailsProps) {
   const place = usePlace();
   const repository = usePlaceRepository() ?? '';
   const label = selectedLabel(layout, selection, repository);
@@ -57,7 +54,7 @@ export function GraphDetails({ selection, several, layout, pendingChangeCount, m
   }
   if (pending) return <PendingDetails pending={pending} count={pendingChangeCount} links={links} />;
   if (lane) {
-    return <GraphBranchDetails key={lane.branch.name} lane={lane} layout={layout} menu={menuFor({ kind: 'branch', lane })} links={links} review={reviews.get(lane.branch.id)} />;
+    return <GraphBranchDetails key={lane.branch.name} lane={lane} layout={layout} menu={menuFor({ kind: 'branch', lane })} links={links} />;
   }
   return <NoSelection noun="changeset or branch" />;
 }

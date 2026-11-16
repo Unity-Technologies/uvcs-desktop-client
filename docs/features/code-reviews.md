@@ -138,8 +138,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   looks through each row's number, title, target and people (`reviewFilterTexts`), then finds any review in the range,
   and "No matching merge requests" hints a longer one. A large repository (about 6,600 reviews) reads all of them, Any
   time, in one `cm find` of about 1.5 MB, under a second; their branches are named from the names of every branch, read at
-  most once (`BranchNamesCache`). The palette and the branch chips read only the newest `NEWEST_CODE_REVIEWS`
-  (`reviewSummariesQuery`). The palette finds an older review by its title (`cm find review … like`) or its number,
+  most once (`BranchNamesCache`). The palette reads only the newest `NEWEST_CODE_REVIEWS` (`reviewSummariesQuery`);
+  the branch chips read the reviews of the branches shown, in blocks (merge-requests.md "Reading the branches'
+  reviews"). The palette finds an older review by its title (`cm find review … like`) or its number,
   typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; ARCHITECTURE.md "Prefixes").
 
 ## The review's page

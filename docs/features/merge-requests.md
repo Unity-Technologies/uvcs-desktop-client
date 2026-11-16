@@ -342,12 +342,25 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
   they answer different questions:
   - **The review that stands for a branch** (`reviewOfEachBranch`, `reviewStandingFor`), for any branch in a list:
     the Branches view's and the Branch Explorer's chips, finishing a task. Else the newest review of any kind, plain
-    or closed too: the chip shows where the branch's latest review stands. It chooses among the newest
-    `NEWEST_CODE_REVIEWS` the chips read (code-reviews.md "The list"): a request older than those doesn't stand for
-    its branch.
+    or closed too: the chip shows where the branch's latest review stands. It chooses among all of the branch's
+    reviews ("Reading the branches' reviews").
   - **The request current on the workspace's branch** (`currentRequestOf`), for the top bar and the next step in
     Changes. Else the newest merged request, which says the branch is finished work and where it went; never a closed
     one or a plain code review, which say nothing about where the task merges.
+- **Reading the branches' reviews**: only for the branches a view shows, in blocks, as the official client does
+  (`useBranchReview`, `useBranchReviews`, `branchReviewQuery`). The Branches view asks for the rows it draws (the rows
+  in view and the table's overscan); the Branch Explorer for the branches whose headers are in view or within half a
+  view of it (`branchesNearView`, reported by the canvas after each frame, `useBranchesNearView`); a branch's details
+  for its branch. Each branch is a query of its own, kept and rarely read again (`SLOW_CHANGING_QUERY`), null when the
+  branch has no review, so a branch is read once whichever view asks. What is asked in one turn is read together
+  (`batchLoader`, one per place): one `cm find review "where (targetid = 37 or targetid = 41 …) and targettype =
+  'branch' order by date desc"` (`branchTargetsCondition`, `query()`) per block of `BRANCH_REVIEWS_BLOCK` (50), one
+  block at a time, never several at once. The server matches the ORed `targetid`s in one scan of its reviews, so a
+  block costs what one branch does (on a repository of ~6,700 reviews: 1.2 s for 50 or for 1 with `cm` starting,
+  about 0.2 s through the shell); `target = 'br:<name>'` ORed was rejected, as the server resolves each name (4.2 s
+  for 50). Reading every review once (about 2 s, 540 KB there) was rejected too: it reads what no view shows, and a
+  bound by date would leave older branches unread. A Refresh or a write on a review reads again the branches still
+  shown, in blocks. Scrolling back to branches read costs nothing.
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
   names a merge request's state ("Open", its glyph and name in its color), then, while Open and once its review is
   decided, a check (reviewed) or a cross (changes required); "Open" alone says it waits for its review. A code review's

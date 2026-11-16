@@ -12,7 +12,8 @@ import { GraphTimeline, type GraphTimelineHandle } from '../timeline/GraphTimeli
 import { captionMetrics, captionOnScreen } from './captionCard';
 import { detailLevel, type DrawnTargets, type GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
-import { drawGraph } from './drawGraph';
+import { drawGraph, visibleArea } from './drawGraph';
+import { branchesNearView } from './headersInView';
 import type { RuleColors } from '../model/ruleColors';
 import { withBranchColors, withRuleColors } from './graphPalette';
 import { createGraphCanvasHandle, type GraphCanvasHandle } from './graphCanvasHandle';
@@ -65,6 +66,8 @@ interface GraphCanvasProps {
   contextMenu: (target: GraphTarget | null) => MenuEntry[];
   /** The Timeline over the graph, while shown (`GraphTimeline`), with what only it shows. */
   timeline: TimelineInputs | null;
+  /** After each frame, the branches whose headers are in view or near it (`branchesNearView`): those to read reviews for. */
+  onBranchesNearView?: (branchIds: readonly number[]) => void;
   /** Floating controls drawn over the canvas. */
   children?: ReactNode;
 }
@@ -94,10 +97,12 @@ interface ShownHoverCard {
 const DOUBLE_CLICK_ZOOM = 1.4;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
-  { layout, highlights, ruleColors, onSelect, onActivate, contextMenu, timeline, children },
+  { layout, highlights, ruleColors, onSelect, onActivate, contextMenu, timeline, onBranchesNearView, children },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const nearViewRef = useRef(onBranchesNearView);
+  nearViewRef.current = onBranchesNearView;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sizeRef = useRef<Size>({ width: 0, height: 0 });
   const frameRef = useRef(0);
@@ -158,6 +163,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       window.devicePixelRatio,
       drawnRef.current,
     );
+    nearViewRef.current?.(branchesNearView(scene.layout, visibleArea({ viewport: view.viewportRef.current, size: sizeRef.current })));
   }, []);
 
   const scheduleDraw = useCallback(() => {
