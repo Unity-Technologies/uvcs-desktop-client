@@ -139,8 +139,21 @@ describe('mergeRequestChipOf, the hover card', () => {
     expect(card.openItems).toBeUndefined();
   });
 
-  it.each(['Draft', 'Open', 'Merged'] as const)('offers Open on a %s one', (state) => {
-    expect(mergeRequestChipOf(request(12, state)).card.actions).toEqual([{ kind: 'open', label: 'Open', primary: true }]);
+  it.each(['Draft', 'Open', 'Merged'] as const)('offers Open on a %s one not reviewed', (state) => {
+    expect(mergeRequestChipOf(request(12, state), undefined, '/main/task').card.actions).toEqual([{ kind: 'open', label: 'Open', primary: true }]);
+  });
+
+  it('offers Merge into its destination first once an Open one is reviewed, Open beside it', () => {
+    const { card } = mergeRequestChipOf(request(12, 'Open', { status: 'Reviewed' }), undefined, '/main/task');
+    expect(card.actions.map(({ kind, label, primary }) => ({ kind, label, primary }))).toEqual([
+      { kind: 'merge', label: 'Merge into main…', primary: true },
+      { kind: 'open', label: 'Open', primary: false },
+    ]);
+    expect(card.actions[0]).toMatchObject({ merge: { source: '/main/task', request: { id: 12 } } });
+  });
+
+  it("offers no Merge on a reviewed request that isn't Open", () => {
+    expect(mergeRequestChipOf(request(12, 'Merged', { status: 'Reviewed' }), undefined, '/main/task').card.actions.map((action) => action.kind)).toEqual(['open']);
   });
 });
 
