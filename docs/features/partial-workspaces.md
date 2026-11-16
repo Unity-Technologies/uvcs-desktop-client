@@ -134,6 +134,17 @@ The toast says the whole branch is on disk and what happened to the changes (`wh
 the kind it read and tells every window the kind changed (`downloadWholeBranchOf`, `workspaceKindChanged`), also when
 the switch failed: `cm` may have converted the workspace before failing.
 
+## No merges
+
+A partial workspace offers no merge anywhere (`offersMerges`, `components/mergesOffered.ts`): not in the branch,
+changeset and label menus (merge, Merge to…, cherry pick, subtractive, their ranges; `menuGrammar.test.ts` builds them
+for a partial workspace), the palette's commands (`useMergeCommands`, which keeps Apply shelve, since shelves work
+there), M in the Branch Explorer, nor the task suggestion in Changes (`taskSuggestionOf`, which then asks the server
+nothing). `cm` refuses to merge into a partial workspace; a merge on the server (`cm merge --to`, finishing a task)
+would run, since it never touches the workspace, but merging is work on the whole branch: Download the whole
+branch… makes the workspace standard first. While the kind isn't known yet, merges are offered, as most workspaces
+are standard. The app menu's Merge items stay enabled there and do nothing, as their command isn't registered.
+
 ## Staying partial
 
 Every update the app runs on a partial workspace is `cm partial update --dontmerge`, chosen by the workspace's kind
