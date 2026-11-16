@@ -56,8 +56,9 @@ shows the item in the tree and clears the query: Files asks its reveal (`request
 the tree on it (`browseOpening`, the tree remounted by `reveals`). ⌘P (Ctrl+P off Mac), ⌘F (Ctrl+F), `/` in the tree
 (`filesGoToFile`) and the palette's "Go to file…" bring the keyboard to the field, greyed until the changeset to search
 is known. Results list folders before files, as the tree does, each in the order the search ranked them
-(`repositoryFileSearchView`). Enter picks only results that answer what is typed (`repositoryFileSearchKey`). Files searches the head of the branch it shows, Browse
-repository the changeset it shows. Choose what to download searches the same way (docs/features/partial-workspaces.md).
+(`repositoryFileSearchView`). Enter picks only results that answer what is typed (`repositoryFileSearchKey`). Files
+searches the head of the branch it shows, Browse repository the changeset it shows. Choose what to download searches
+the same way (docs/features/partial-workspaces.md).
 
 `cm` filters no tree by name, so the changeset's whole tree is listed once (`RepositoryPathSearch`), on the first
 keystroke (`listsTreeNow`, `prepareRepositoryPaths`): a tree the user only browses never costs the server that
