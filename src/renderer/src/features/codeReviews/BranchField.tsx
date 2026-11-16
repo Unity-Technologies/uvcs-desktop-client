@@ -1,14 +1,14 @@
 import { ChevronDown, GitBranch } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { PathLabel } from '../../components/PathLabel';
 import { classNames } from '../../lib/classNames';
 import fieldStyles from '../../ui/Field.module.css';
 import { Popover } from '../../ui/Popover';
 import { FieldFrame } from '../../ui/TextField';
-import { BranchSearchList } from '../branches/BranchSearchList';
-import { branchesRead, type BranchGroup } from '../branches/branchSearchRows';
-import { useBranches } from '../branches/useBranches';
+import { usePlace } from '../../app/workspace/useWorkspace';
+import { BranchChoiceList } from '../branches/BranchChoiceList';
+import type { BranchGroup } from '../branches/branchSearchRows';
 import styles from './BranchField.module.css';
 
 interface BranchFieldProps {
@@ -25,10 +25,10 @@ interface BranchFieldProps {
 
 /**
  * A dialog's branch, boxed as its other fields: it shows the branch picked and opens the branch list
- * (`BranchSearchList`) to pick another. The branches are read only once it opens, the read the branch switcher shares:
- * a big repository holds thousands, and showing one needs none.
+ * (`BranchChoiceList`) to pick another, the branches read only once it opens.
  */
 export function BranchField({ label, value, placeholder, groupsOf, searchPlaceholder, onPick }: BranchFieldProps) {
+  const place = usePlace();
   const id = useId();
   const [open, setOpen] = useState(false);
   return (
@@ -45,8 +45,9 @@ export function BranchField({ label, value, placeholder, groupsOf, searchPlaceho
           </button>
         }
       >
-        <BranchList
-          value={value}
+        <BranchChoiceList
+          place={place}
+          current={value}
           groupsOf={groupsOf}
           placeholder={searchPlaceholder}
           onPick={(branch) => {
@@ -57,10 +58,4 @@ export function BranchField({ label, value, placeholder, groupsOf, searchPlaceho
       </Popover>
     </FieldFrame>
   );
-}
-
-function BranchList({ value, groupsOf, placeholder, onPick }: { value: string | undefined; groupsOf: (branches: Branch[]) => BranchGroup[]; placeholder: string; onPick: (branch: Branch) => void }) {
-  const branchesQuery = useBranches();
-  const groups = useMemo(() => groupsOf(branchesQuery.data ?? []), [groupsOf, branchesQuery.data]);
-  return <BranchSearchList groups={groups} currentBranch={value} read={branchesRead(branchesQuery)} placeholder={placeholder} onPick={onPick} />;
 }

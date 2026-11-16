@@ -1,14 +1,12 @@
 import { ChevronDown } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { Popover } from '../../ui/Popover';
 import { Spinner } from '../../ui/Spinner';
-import { BranchSearchList } from '../branches/BranchSearchList';
-import { branchesRead } from '../branches/branchSearchRows';
-import { useBranches } from '../branches/useBranches';
+import { BranchChoiceList } from '../branches/BranchChoiceList';
 import { destinationGroups } from './destinationChoices';
 import { setMergeRequestDestination } from './mergeRequestOperations';
 import styles from './DestinationPicker.module.css';
@@ -29,6 +27,7 @@ export function DestinationPicker({ review, source, destination }: DestinationPi
   const place = usePlace();
   const [open, setOpen] = useState(false);
   const [changingTo, setChangingTo] = useState<string>();
+  const destinationChoices = useCallback((branches: Branch[]) => destinationGroups(branches, source), [source]);
 
   const pick = async (branch: Branch): Promise<void> => {
     setOpen(false);
@@ -53,13 +52,7 @@ export function DestinationPicker({ review, source, destination }: DestinationPi
         </button>
       }
     >
-      <DestinationList source={source} destination={destination} onPick={(branch) => void pick(branch)} />
+      <BranchChoiceList place={place} groupsOf={destinationChoices} current={destination} placeholder="Merge into…" onPick={(branch) => void pick(branch)} />
     </Popover>
   );
-}
-
-function DestinationList({ source, destination, onPick }: { source: string; destination: string; onPick: (branch: Branch) => void }) {
-  const branchesQuery = useBranches();
-  const groups = useMemo(() => destinationGroups(branchesQuery.data ?? [], source), [branchesQuery.data, source]);
-  return <BranchSearchList groups={groups} currentBranch={destination} read={branchesRead(branchesQuery)} placeholder="Merge into…" onPick={onPick} />;
 }
