@@ -191,8 +191,14 @@ and what's next. `mergeCardOf` decides every line, label and action; the compone
 
 An Open request's card says whether its branch merges cleanly into its destination (`conflictsSectionOf`), from the
 merge page's own preview: `cm merge br:<source> --to=br:<destination>` without `--merge`, which changes nothing
-(`MergeApi.conflictCounts`, `countMergeConflicts`). It runs in a process of its own (`executeRecords`), never a pooled
-`cm shell`.
+(`MergeApi.conflictCounts`, `countMergeConflicts`). A preview that prints nothing at all (`cm` always names the
+merge's contributors, even with nothing to merge) is no answer, never "no conflicts".
+
+- **Process, not shell.** The card's preview runs in a process of its own (`executeRecords`); the merge page's same
+  preview runs in a pooled `cm shell` (`readMergePlan`). Each is where its wait goes: the card's runs in the background
+  of a page someone is reading, and for the second or so it can take it would hold one of the workspace's two pooled
+  sessions the page's own reads (its conversation, its changes) go through; on the merge page the preview is what the
+  user is waiting for, and a process would only add its start-up (100 to 150 ms).
 
 - **Only when asked.** The preview takes 1.2 to 1.6 s on a big repository (measured on one of ~280k changesets, three
   runs each on two requests' branches, `cm` starting included), too much to run each time a request's page opens. So
