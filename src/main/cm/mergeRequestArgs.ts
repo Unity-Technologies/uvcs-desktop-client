@@ -16,3 +16,12 @@ export function mergeRequestStateArgs(reviewId: number, state: MergeRequestState
 export function mergeRequestDestinationArgs(reviewId: number, branch: string, at: CmPlace): string[] {
   return ['mergerequest', 'edit', String(reviewId), `--destination=${at.spec(`br:${branch}`)}`, ...at.repositoryOption];
 }
+
+/**
+ * `cm mergerequest edit --mergerequeststatus=Merged --mergechangeset`: the request merged, in the changeset the app's
+ * own merge made. A server with merge requests switched on records it by itself on that check-in, one with them off
+ * never does; setting it again changes nothing and adds no note, so the app always records it (merge-requests.md "Merging").
+ */
+export function recordMergedArgs(reviewId: number, changesetId: number, at: CmPlace): string[] {
+  return ['mergerequest', 'edit', String(reviewId), '--mergerequeststatus=Merged', `--mergechangeset=${at.spec(`cs:${changesetId}`)}`, ...at.repositoryOption];
+}

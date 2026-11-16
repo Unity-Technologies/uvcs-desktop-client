@@ -43,4 +43,9 @@ export interface CodeReviewsApi {
   setMergeRequestState(place: Place, reviewId: number, state: MergeRequestState): Promise<void>;
   /** Makes `branch` (`/main/release`) the branch a merge request merges into; the server notes the change. */
   setMergeRequestDestination(place: Place, reviewId: number, branch: string): Promise<void>;
+  /**
+   * Records a merge request Merged in changeset `changesetId`, after the app merged it: the server notes it in its
+   * conversation, once (a request already Merged stays as it is).
+   */
+  recordMerged(place: Place, reviewId: number, changesetId: number): Promise<void>;
 }
