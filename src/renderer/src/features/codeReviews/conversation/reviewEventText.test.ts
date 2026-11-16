@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { MergeRequestState } from '@shared/domain/codeReview';
 import type { ReviewEvent } from '@shared/domain/reviewConversation';
 import { isShownEvent, reviewerChangesText, reviewEventRow } from './reviewEventText';
 
@@ -42,6 +43,40 @@ describe('an event its author made on themselves', () => {
   });
 });
 
+describe("a merge request's events", () => {
+  const move = (from: MergeRequestState, to: MergeRequestState, changesetId?: number) =>
+    reviewEventRow({ kind: 'mergeRequestState', from, to, ...(changesetId !== undefined && { changesetId }) }, { destination: '/main' });
+
+  it('says what each move of its state means, in the glyph of the state it moved to', () => {
+    expect(move('Draft', 'Open')).toEqual({ icon: 'Open', text: 'marked this as ready for review' });
+    expect(move('Open', 'Draft')).toEqual({ icon: 'Draft', text: 'converted this to a draft' });
+    expect(move('Open', 'Closed')).toEqual({ icon: 'Closed', text: 'closed this' });
+    expect(move('Draft', 'Closed')).toEqual({ icon: 'Closed', text: 'closed this' });
+    expect(move('Closed', 'Open')).toEqual({ icon: 'Open', text: 'reopened this' });
+    expect(move('Merged', 'Open')).toEqual({ icon: 'Open', text: 'reopened this' });
+  });
+
+  it('says where it was merged, and the changeset when the note names it', () => {
+    expect(move('Open', 'Merged', 6)).toEqual({ icon: 'Merged', text: 'merged this into /main in', changeset: 6 });
+    expect(move('Open', 'Merged')).toEqual({ icon: 'Merged', text: 'merged this into /main' });
+    expect(reviewEventRow({ kind: 'mergeRequestState', from: 'Open', to: 'Merged' }).text).toBe('merged this');
+  });
+
+  it('names the destination it changed from and to, or only says it changed when a branch is no longer known', () => {
+    expect(reviewEventRow({ kind: 'destinationChanged', from: { id: 4, name: '/main/release' }, to: { id: 19, name: '/main' } })).toEqual({
+      icon: 'destinationChanged',
+      text: 'changed the destination from /main/release to /main',
+    });
+    expect(reviewEventRow({ kind: 'destinationChanged', from: { id: 4 }, to: { id: 19, name: '/main' } }).text).toBe('changed the destination to /main');
+    expect(reviewEventRow({ kind: 'destinationChanged', from: { id: 4 }, to: { id: 19 } }).text).toBe('changed the destination');
+  });
+
+  it('says the branch was hidden or shown again', () => {
+    expect(reviewEventRow({ kind: 'branchHidden', branch: { id: 26, name: '/main/task1' } })).toEqual({ icon: 'branchHidden', text: 'hid the branch' });
+    expect(reviewEventRow({ kind: 'branchUnhidden', branch: { id: 26 } })).toEqual({ icon: 'branchUnhidden', text: 'unhid the branch' });
+  });
+});
+
 describe('reviewerChangesText', () => {
   it('names everyone who changed the reviewers once, and how many times they did', () => {
     const events = [{ author: 'ana@acme.com' }, { author: 'bob.smith' }, { author: 'Ana@acme.com' }];
@@ -53,7 +88,7 @@ describe('isShownEvent', () => {
   const at = { id: 1, author: 'ana', date: '' };
 
   it("leaves out what this version doesn't read, so the server's own text never shows", () => {
-    expect(isShownEvent({ ...at, kind: 'other', text: '[mergerequest-status-draft-to-open]' } as ReviewEvent)).toBe(false);
+    expect(isShownEvent({ ...at, kind: 'other', text: '[approved-by-the-robot]' } as ReviewEvent)).toBe(false);
     expect(isShownEvent({ ...at, kind: 'titleChanged', from: 'a', to: 'b' })).toBe(true);
   });
 });

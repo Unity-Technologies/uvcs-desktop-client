@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget, MergeRequestInfo } from '@shared/domain/codeReview';
-import { describeMerge, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestTip, reviewedChangesOf, reviewNoun } from './mergeRequestState';
+import { describeMerge, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewNoun } from './mergeRequestState';
 
 const request = (state: MergeRequestInfo['state'], destination = '/main'): { mergeRequest: MergeRequestInfo } => ({ mergeRequest: { state, destination } });
 
@@ -20,6 +20,21 @@ describe('merge request state', () => {
       'Merged into /main',
       'Closed merge request into /main',
     ]);
+  });
+
+  it('offers the moves each state can take, in their words, and none once merged', () => {
+    const moves = (state: MergeRequestInfo['state']) => mergeRequestMoves(state).map(({ to, word }) => `${word} → ${to}`);
+
+    expect(moves('Draft')).toEqual(['readyForReview → Open', 'closeMergeRequest → Closed']);
+    expect(moves('Open')).toEqual(['convertToDraft → Draft', 'closeMergeRequest → Closed']);
+    expect(moves('Closed')).toEqual(['reopenMergeRequest → Open']);
+    expect(moves('Merged')).toEqual([]);
+  });
+
+  it('names what failed for each move', () => {
+    expect(mergeRequestMoves('Draft').map(moveFailureTitle)).toEqual(["Couldn't mark the merge request ready for review", "Couldn't close the merge request"]);
+    expect(mergeRequestMoves('Open').map(moveFailureTitle)).toEqual(["Couldn't convert the merge request to a draft", "Couldn't close the merge request"]);
+    expect(mergeRequestMoves('Closed').map(moveFailureTitle)).toEqual(["Couldn't reopen the merge request"]);
   });
 
   it('describes a merge as its source into its destination', () => {
