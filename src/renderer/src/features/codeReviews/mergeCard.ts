@@ -103,6 +103,12 @@ export function reviewSectionOf(reviewers: readonly CodeReviewer[], status: Code
   }
 }
 
+/** How many of the conversation's open threads (`openThreads`) are change requests, and how many questions. */
+export function openItemsIn(openThreads: readonly { root: { kind: string } }[]): OpenItems {
+  const count = (kind: string): number => openThreads.filter((thread) => thread.root.kind === kind).length;
+  return { changeRequests: count('changeRequest'), questions: count('question') };
+}
+
 /** "3 change requests and 1 question open"; none when nothing is. */
 export function openItemsLine({ changeRequests, questions }: OpenItems): string | undefined {
   const parts = [changeRequests > 0 && counted(changeRequests, 'change request'), questions > 0 && counted(questions, 'question')].filter(Boolean);
