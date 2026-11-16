@@ -353,6 +353,34 @@ describe('code review writes', () => {
   });
 });
 
+// `cm mergerequest` only for what `cm codereview` can't change: a merge request's state and destination.
+describe('merge request writes', () => {
+  it("moves a merge request's state with one quick command, which prints nothing", async () => {
+    const { service, commands } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.setMergeRequestState(IN_WORKSPACE, 43, 'Closed');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['mergerequest', 'edit', '43', '--mergerequeststatus=Closed'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('changes its destination with one quick command', async () => {
+    const { service, commands } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.setMergeRequestDestination(IN_WORKSPACE, 43, '/main/release');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['mergerequest', 'edit', '43', '--destination=br:/main/release'] }]);
+  });
+
+  it('names the repository outside a workspace', async () => {
+    const { service, lines } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.setMergeRequestState(repositoryPlace('game@local'), 43, 'Open');
+    await service.setMergeRequestDestination(repositoryPlace('game@local'), 43, '/main');
+
+    expect(lines()).toEqual(['mergerequest edit 43 --mergerequeststatus=Open --repository=game@local', 'mergerequest edit 43 --destination=br:/main@game@local --repository=game@local']);
+  });
+});
+
 describe('code reviews of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
 

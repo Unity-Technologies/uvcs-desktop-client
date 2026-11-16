@@ -40,6 +40,10 @@ describe('cmOutputKind', () => {
     expect(cmOutputKind(['codereview', 'cs:12', 'Jump', '--format={id}'])).toBe('operation');
   });
 
+  it("reads a merge request's edit, which prints nothing, as an operation", () => {
+    expect(cmOutputKind(['mergerequest', 'edit', '43', '--mergerequeststatus=Closed'])).toBe('operation');
+  });
+
   it("reads a merge's machine-readable preview as a list, and a merge as an operation", () => {
     expect(cmOutputKind(['merge', 'br:/main/task', '--machinereadable', '--printcontributors'])).toBe('list');
     expect(cmOutputKind(['merge', 'br:/main/task', '--merge', '--machinereadable'])).toBe('operation');
