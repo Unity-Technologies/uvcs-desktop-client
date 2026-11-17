@@ -44,6 +44,9 @@ function scrollToLineIn(diff: FakePierreLayout, lineNumber: number): number {
   const container = {
     querySelector: (selector: string) => (selector === 'diffs-container' ? fileContainer : null),
     clientHeight: diff.viewHeight,
+    get scrollHeight() {
+      return diff.maxScroll() + diff.viewHeight;
+    },
     get scrollTop() {
       return diff.scrollTop;
     },

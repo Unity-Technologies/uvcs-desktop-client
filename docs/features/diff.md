@@ -698,8 +698,8 @@ deep-links.md "Where links are copied"; `useLineTools` wires them into `TextDiff
 newer side (`linkedLinesOf`). A workspace file's diff picks lines to discard them instead (`useBlockDiscard`).
 
 A page opened on a file's lines (`focusPath` with `focusLines`, a link's) opens that file scrolled to them, a third of
-the way down, and selected (`scrollToLine`, from where Pierre lays the line out, rendered or not); its unchanged lines
-show unfolded, as a link may name one (`collapseUnchanged` off for that file). Once: selecting another file drops them
+the way down, and selected (`scrollToLine`, from where Pierre lays the line out, rendered or not, placed again until
+it stands still as the rows around it render: `placementStep`); its unchanged lines show unfolded, as a link may name one (`collapseUnchanged` off for that file). Once: selecting another file drops them
 (`linkFocusOn`), so coming back leaves the file where the user was. Changes takes them from outside
 (`requestLineFocus`, `useRequestedLineFocus`): the pending change's diff scrolls to them and shows them as Pierre's
 selection until lines are picked to discard, Pierre echoing them back picking nothing (`useLinePick`'s `marked`).
