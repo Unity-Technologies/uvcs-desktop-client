@@ -1,6 +1,6 @@
 import { FileDiff, MessageSquare, MoreHorizontal } from 'lucide-react';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { placeKey } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -42,13 +42,14 @@ import { reviewChipPage } from './reviewChipPage';
 import { useReviewChangesets } from './rounds/useReviewChangesets';
 import styles from './CodeReviewPage.module.css';
 
-const TABS_ID = 'code-review';
 
 /**
  * A code review: what's reviewed, by whom, and its status, then its two tabs: its conversation (what was said on it) and its
  * changes. The page names the tab it shows (`openingTab`); picking another shows the page with it, in place.
  */
 export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
+  // Its own per page: two views kept mounted may show review pages, whose tabs' ids would clash (`KeptView`).
+  const tabsId = useId();
   const { data: review, isLoading, error } = useCodeReview(page.reviewId);
   const diffExpanded = useDiffExpanded();
   const tab = openingTab(page);
@@ -77,7 +78,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
           <div className={styles.tabs}>
             <Tabs<ReviewTab>
               label={reviewNoun(review)}
-              idPrefix={TABS_ID}
+              idPrefix={tabsId}
               value={tab}
               // A tab picked shows it as it is: what a link or a click on a thread went to stays behind.
               onChange={(value) => navigation.replacePage({ ...page, tab: value, focusThread: undefined, focusReply: undefined, focusChangeset: undefined, focusChangesets: undefined })}
@@ -90,14 +91,14 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
         </Stowable>
         {/* Each tab shown so far stays mounted, the other hidden: going back to it finds it as it was left (`mountedTabs`). */}
         {mounted.includes('conversation') && (
-          <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'conversation')} aria-labelledby={tabId(TABS_ID, 'conversation')} hidden={!reviewTabShown(page, 'conversation')}>
+          <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(tabsId, 'conversation')} aria-labelledby={tabId(tabsId, 'conversation')} hidden={!reviewTabShown(page, 'conversation')}>
             <ViewShownContext.Provider value={reviewTabShown(page, 'conversation')}>
               <ReviewConversationTab review={review} focusThread={conversationFocus(page)} focusReply={conversationReplyFocus(page)} onPickedInOpen={() => forgetFocus(page)} />
             </ViewShownContext.Provider>
           </div>
         )}
         {mounted.includes('changes') && (
-          <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(TABS_ID, 'changes')} aria-labelledby={tabId(TABS_ID, 'changes')} hidden={!reviewTabShown(page, 'changes')}>
+          <div className={styles.tabPanel} role="tabpanel" id={tabPanelId(tabsId, 'changes')} aria-labelledby={tabId(tabsId, 'changes')} hidden={!reviewTabShown(page, 'changes')}>
             {diffTarget ? (
               <ViewShownContext.Provider value={reviewTabShown(page, 'changes')}>
                 <ReviewChangesTab review={review} page={page} diffTarget={diffTarget} />
