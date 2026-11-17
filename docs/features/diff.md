@@ -494,9 +494,13 @@ the count is always there and the label doesn't appear under the user's first cl
 current: no changes to step through (the diff itself says so: identical, binary, an image) or a link's lines before the
 first move. An arrow whose press leaves the file says so before it's pressed: a double chevron (`ChevronsDown`,
 `NavigatorArrow.leavesFile`) and a tip naming the file it goes to ("Next file: GameManager.cs", `FileSteps.neighbor`),
-past the last change, before the first, and on a file with none to step through. The file a step lands in lights its
+past the last change, before the first, and on a file with none to step through. Beside a list, every tip also says
+which file of it is shown ("· file 2 of 9", `FileSteps.position`); the label doesn't, as "1 of 27 · file 1 of 9" read
+as too much for the header. The file a step lands in lights its
 title for a moment, as the change moved to lights (`arrivedByStep`, `SteppedDiffFrame`'s `useArrivals`); a file picked
-in the list doesn't. A count with no position ("12 changes", "– of 12") and "No changes" are left out on purpose: several forms of
+in the list doesn't. A selection with no diff in a list view (a folder, a status group, several files, none) shows under the
+same header, its arrows in the same place going on to the files around the row selected (`StepsAroundEmptyState`,
+`adjacentKey`'s `rowOrder`), so ↓ never finds them gone; it has no Expand button, with nothing to expand. A count with no position ("12 changes", "– of 12") and "No changes" are left out on purpose: several forms of
 one label read as noise, and the room they needed, reserved, left "1 of 1" floating in a gap. It grows leftward, in tabular figures; then the Expand button and
 the view's controls. What they show is `changeNavigatorView`, decided by the view, never by the file shown: beside a
 list of files always (disabled at its ends rather than gone); with no list, on every diff a `FileDiffViewer` draws

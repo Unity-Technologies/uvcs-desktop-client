@@ -14,6 +14,8 @@ export interface FileSteps {
   canStep: (direction: 1 | -1) => boolean;
   /** The path of that file, which a step would select (the arrows name it); none past the ends. */
   neighbor: (direction: 1 | -1) => string | null;
+  /** Where the file shown stands among the list's files ("file 2 of 9" in the arrows' tips); none on another row. */
+  position: { index: number; count: number } | null;
   /**
    * Selects that file, its diff to open at its first or last change; its path, or none past the ends or where the list
    * didn't select it at once (unsaved edits asked about, or kept).
@@ -133,6 +135,7 @@ export function fileSteps(
 ): FileSteps {
   return {
     canStep: (direction) => adjacentKey(keys, current, direction, list.rowOrder) !== null,
+    position: current !== null && keys.includes(current) ? { index: keys.indexOf(current), count: keys.length } : null,
     neighbor: (direction) => {
       const key = adjacentKey(keys, current, direction, list.rowOrder);
       return key === null ? null : list.pathOf(key);

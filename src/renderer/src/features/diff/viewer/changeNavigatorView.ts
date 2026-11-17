@@ -1,4 +1,4 @@
-import { fileNameOf } from '../../../lib/text';
+import { fileNameOf, formatCount } from '../../../lib/text';
 import { positionLabel } from './changeNavigation';
 
 /**
@@ -38,6 +38,8 @@ export interface NavigatorFacts {
   hostSteps: boolean;
   /** The paths of the files before and after the one shown in the list beside it (`FileSteps.neighbor`): the tips name them. */
   neighbors?: { previous: string | null; next: string | null };
+  /** Where the file shown stands in that list (`FileSteps.position`): the tips say it, the label stays short. */
+  filePosition?: { index: number; count: number } | null;
 }
 
 export interface NavigatorArrow {
@@ -67,18 +69,19 @@ export function changeNavigatorView(facts: NavigatorFacts): NavigatorView | null
   const inFile = hasSteps ? ` · ${facts.count} in this file` : '';
   // With nothing to step through and no files to go on to, the arrows name the changes they'd step through.
   const namesFiles = facts.besideFiles && !hasSteps;
+  const inList = facts.filePosition ? ` · file ${formatCount(facts.filePosition.index + 1)} of ${formatCount(facts.filePosition.count)}` : '';
   return {
     label: hasSteps ? positionLabel(facts) : '',
     previous: arrowOf(facts.previous, namesFiles, {
-      step: `Previous ${facts.noun}${inFile}`,
-      fileStep: fileTip('Previous', facts.neighbors?.previous, `Previous file's last ${facts.noun}`),
-      file: fileTip('Previous', facts.neighbors?.previous, 'Previous file'),
+      step: `Previous ${facts.noun}${inFile}${inList}`,
+      fileStep: fileTip('Previous', facts.neighbors?.previous, `Previous file's last ${facts.noun}`) + inList,
+      file: fileTip('Previous', facts.neighbors?.previous, 'Previous file') + inList,
       queued: `Previous ${facts.noun}`,
     }),
     next: arrowOf(facts.next, namesFiles, {
-      step: `Next ${facts.noun}${inFile}`,
-      fileStep: fileTip('Next', facts.neighbors?.next, `Next file's first ${facts.noun}`),
-      file: fileTip('Next', facts.neighbors?.next, 'Next file'),
+      step: `Next ${facts.noun}${inFile}${inList}`,
+      fileStep: fileTip('Next', facts.neighbors?.next, `Next file's first ${facts.noun}`) + inList,
+      file: fileTip('Next', facts.neighbors?.next, 'Next file') + inList,
       queued: `Next ${facts.noun}`,
     }),
   };

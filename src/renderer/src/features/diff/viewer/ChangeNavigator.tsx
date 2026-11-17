@@ -34,7 +34,7 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
   const files = useContext(FileStepsContext);
   const { noun, shortcuts, count, current } = navigation;
   const neighbors = files ? { previous: files.neighbor(-1), next: files.neighbor(1) } : undefined;
-  const view = changeNavigatorView({ stepsOwn, count, current, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles: files !== null, hostSteps, neighbors });
+  const view = changeNavigatorView({ stepsOwn, count, current, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles: files !== null, hostSteps, neighbors, filePosition: files?.position });
   if (!view) return null;
   // A click leaves the arrow focused with no ring (`settleClickFocus`), Enter or Space as Chromium decides.
   const step = (event: MouseEvent<HTMLButtonElement>, direction: 1 | -1): void => {
