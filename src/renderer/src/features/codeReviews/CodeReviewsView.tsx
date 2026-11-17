@@ -21,13 +21,13 @@ import { newMergeRequestCommand } from './useMergeRequestCommands';
 import { GitPullRequestPlus } from '../../components/GitPullRequestPlus';
 import { SplitButton } from '../../ui/SplitButton';
 import { useSelectCreated } from './useSelectCreated';
+import { useCodeReviewsListFilter } from './useCodeReviewsListFilter';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
 import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
-import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
-import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { matchesPeople } from '../../lib/peopleFilter';
 import { longerRangeHint } from '../../lib/longerRangeHint';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
@@ -40,7 +40,7 @@ import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { waitingCount } from './waitingForMe';
-import { codeReviewsQuery, isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, showsStateChip, stateUnderKind, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, showsStateChip, stateUnderKind, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { ToggleChip } from '../../ui/ToggleChip';
 
 const ownerOf = (review: CodeReview): string => review.owner;
@@ -69,10 +69,8 @@ export function CodeReviewsView() {
   // Code reviews alone have no state: the State chip hides and its state is left out (`stateUnderKind`).
   const mergeRequestState = stateUnderKind(kind, filters.mergeRequestState);
   const me = usePlaceUser();
-  const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
-  const queriedReviewers = useDebouncedValue(reviewers, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, mergeRequestState, reviewers: queriedReviewers }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(useCodeReviewsListFilter());
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
   const reviewerNames = useMemo(() => (reviews ?? []).flatMap((review) => review.reviewers.map((reviewer) => reviewer.name)), [reviews]);
   const offeredReviewers = usePeopleSeen('codeReviewReviewers', reviewerNames, itself);
