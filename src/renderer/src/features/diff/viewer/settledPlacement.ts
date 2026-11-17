@@ -3,6 +3,8 @@
  * Pierre lays out the rows a scroll brings in a frame or more after it, at their real heights (a wrapped line, taller
  * than estimated), which moves what was just placed. So it's placed again on each frame until it stands in its place
  * on `SETTLED_FRAMES` frames in a row; placed a fixed number of times, a line below wrapped lines stood screens lower.
+ * `scrollToAnnotationRow` follows the same rule with its own count, 3: a comment's row grows itself as its card
+ * renders, where a line's row doesn't.
  */
 export interface SettledPlacement {
   /** Frames in a row it stood in its place. */
