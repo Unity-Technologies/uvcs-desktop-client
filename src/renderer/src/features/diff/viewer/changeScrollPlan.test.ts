@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHANGE_SCROLL_START, changeScrollStep, type ChangeScrollFrame, type ChangeScrollStep } from './changeScrollPlan';
-import type { ChangeScroll } from './changeView';
+import { CHANGE_SCROLL_START, changeScrollStep, type ChangeScroll, type ChangeScrollFrame, type ChangeScrollStep } from './changeScrollPlan';
 import { everyOtherLine, FAKE_ROW_HEIGHT, FakePierreLayout } from './fakePierreLayout';
 
 const VIEW_HEIGHT = 600;
