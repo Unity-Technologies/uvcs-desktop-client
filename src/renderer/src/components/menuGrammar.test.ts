@@ -1,5 +1,6 @@
 import { fakeApi } from '../testing/fakeWindow';
 import { commentMenu } from '../features/codeReviews/conversation/commentMenu';
+import { statusCommentMenu } from '../features/codeReviews/conversation/statusCommentMenu';
 import { reviewCommentCopyTexts } from '../features/codeReviews/conversation/commentLink';
 import { threadsOf } from '../features/codeReviews/conversation/reviewThreads';
 import { codeReviewSummary } from '../testing/codeReviewSummary';
@@ -316,6 +317,9 @@ const COMMENT_MENUS: Record<string, () => MenuEntry[]> = {
     commentMenu(reviewComment, threadsOf([reviewComment])[0]!, 'jane@example.com', { edit: () => {}, remove: () => {}, copyTexts: reviewCommentCopyTexts(workspacePlace(ws), 41, reviewComment) }),
   openChangeRequest: () => commentMenu(changeRequest, threadsOf([changeRequest])[0]!, 'jane@example.com', commentActions(changeRequest)),
   appliedChangeRequest: () => commentMenu(appliedChangeRequest, threadsOf([appliedChangeRequest])[0]!, 'jane@example.com', commentActions(appliedChangeRequest)),
+  /** A status change's, its reviewer's (`statusCommentMenu`). */
+  statusComment: () =>
+    statusCommentMenu({ id: 2, author: 'jane@example.com', date: '', kind: 'statusChanged', status: 'Reviewed', comment: 'LGTM', guid: 's2' }, 'jane@example.com', { edit: () => {} }),
 };
 const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS, ...COMMENT_MENUS };
 const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };

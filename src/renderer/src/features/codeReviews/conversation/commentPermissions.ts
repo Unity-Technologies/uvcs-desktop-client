@@ -1,4 +1,4 @@
-import type { ReviewComment } from '@shared/domain/reviewConversation';
+import type { ReviewComment, ReviewEvent } from '@shared/domain/reviewConversation';
 import { hasReplies, type ReviewThread } from './reviewThreads';
 import { sameUser } from '../../../lib/userName';
 
@@ -8,6 +8,14 @@ import { sameUser } from '../../../lib/userName';
 /** Only its author edits a comment. */
 export function canEditComment(comment: ReviewComment, user: string | undefined): boolean {
   return isAuthor(comment, user);
+}
+
+/**
+ * Only the reviewer who gave a status edits what they said with it, said or not yet, as the official client allows. Nobody
+ * deletes it: the status would go with it.
+ */
+export function canEditStatusComment(event: ReviewEvent, user: string | undefined): boolean {
+  return event.kind === 'statusChanged' && isAuthor(event, user);
 }
 
 /**
@@ -23,6 +31,6 @@ export function canDiscard(thread: ReviewThread, user: string | undefined): bool
   return thread.state.kind === 'open' && thread.root.kind === 'changeRequest' && user !== undefined && !isAuthor(thread.root, user);
 }
 
-function isAuthor(comment: ReviewComment, user: string | undefined): boolean {
+function isAuthor(comment: Pick<ReviewComment, 'author'>, user: string | undefined): boolean {
   return user !== undefined && sameUser(comment.author, user);
 }
