@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Builds a repository with a task branch per merge request case (docs/features/merge-requests.md): no request; a
 # draft; open with no reviewers; open under review; open in rework with two change requests and a question open; open
-# and reviewed, merging cleanly; open and reviewed, conflicting with /main; closed; merged (merged on the server with
-# `cm merge --to`, then recorded Merged, as the app does where the server doesn't); merged, its branch hidden since;
-# one closed and one open request of the same branch; a nested branch, /main/release/task-nested, into /main/release;
-# a request whose destination was changed from /main/release to /main. And plain code reviews: of a branch, of a
-# changeset and of a shelve. The workspace ends on /main.
+# and reviewed, merging cleanly; reworked, then reviewed, with changesets checked in after the review (each status names
+# its changeset); open and reviewed, conflicting with /main; closed; merged (merged on the server with `cm merge --to`,
+# then recorded Merged, as the app does where the server doesn't); merged, its branch hidden since; one closed and one
+# open request of the same branch; a nested branch, /main/release/task-nested, into /main/release; a request whose
+# destination was changed from /main/release to /main. And plain code reviews: of a branch, of a changeset and of a
+# shelve. The workspace ends on /main.
 # Usage: scripts/sandboxes/merge-requests.sh [repo-name [workspace-folder]]   → repo merge-requests@local, workspace /tmp/uvcs-merge-requests
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -82,6 +83,19 @@ cm cr review "$REWORK" --rework-required -c="Two changes first." >/dev/null
 task /main/task-reviewed Assets/Scripts/Slide.cs "public class Slide { }" "Slide"
 REVIEWED=$(request /main/task-reviewed /main "Slide" --users=me)
 cm cr review "$REVIEWED" --reviewed -c="Ready." >/dev/null
+
+# Two rounds, each status at the changeset the branch was on then: rework at the first, a fix, reviewed at the fix,
+# then two changesets checked in after the review (the conversation names each status's changeset).
+task /main/task-reworked Assets/Scripts/WallRun.cs "public class WallRun { float speed = 8; }" "Wall run"
+REWORKED=$(request /main/task-reworked /main "Wall run" --users=me)
+cm cr review "$REWORKED" --rework-required -c="Make the speed a constant." >/dev/null
+w Assets/Scripts/WallRun.cs "public class WallRun { const float Speed = 8; }"
+checkin "Wall run: the speed is a constant"
+cm cr review "$REWORKED" --reviewed -c="LGTM" >/dev/null
+w Assets/Scripts/WallRun.cs "public sealed class WallRun { const float Speed = 8; }"
+checkin "Wall run: seal the class"
+w Assets/Scripts/WallRunTests.cs "public class WallRunTests { }"
+checkin "Wall run: tests"
 
 task /main/task-conflict README.md "# Merge requests, from the task" "Explain the task in the README"
 CONFLICT=$(request /main/task-conflict /main "Explain the task" --users=me)

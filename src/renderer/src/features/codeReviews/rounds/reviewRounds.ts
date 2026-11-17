@@ -59,9 +59,8 @@ export function checkpointOf(events: readonly ReviewEvent[], user: string | unde
   const { whose, statuses } = roundStatusesOf(events, user);
   const last = statuses.at(-1);
   if (whose !== 'own' || !last) return undefined;
-  const at = Date.parse(last.date);
-  const changeset = changesets?.find((candidate) => Date.parse(candidate.date) <= at);
-  return { date: last.date, status: last.status, ...(changeset && { changesetId: changeset.id }) };
+  const changesetId = changesetAt(last.date, changesets);
+  return { date: last.date, status: last.status, ...(changesetId !== undefined && { changesetId }) };
 }
 
 /**
@@ -72,9 +71,33 @@ export function reviewedUpToOf(events: readonly ReviewEvent[], user: string | un
   const { whose, statuses } = roundStatusesOf(events, user);
   const last = statuses.at(-1);
   if (!last) return undefined;
-  const at = Date.parse(last.date);
-  const changeset = changesets?.find((candidate) => Date.parse(candidate.date) <= at);
-  return { date: last.date, ...(changeset && { changesetId: changeset.id }), ...(whose === 'everyone' && { by: last.reviewer }) };
+  const changesetId = changesetAt(last.date, changesets);
+  return { date: last.date, ...(changesetId !== undefined && { changesetId }), ...(whose === 'everyone' && { by: last.reviewer }) };
+}
+
+/**
+ * The changeset each Reviewed or Rework required was given at, by its event's id: what a reviewer once wrote by hand
+ * with their status ("LGTM, cs 281866"). Inferred from when it was given (`changesetAt`); Under review, a request rather
+ * than a review, has none, nor a status given before the branch's first changeset.
+ */
+export function statusChangesetsOf(events: readonly ReviewEvent[], changesets: readonly Changeset[] | undefined): Map<number, number> {
+  return new Map(
+    events.flatMap((event) => {
+      if (event.kind !== 'statusChanged' || event.status === 'Under review') return [];
+      const changesetId = changesetAt(event.date, changesets);
+      return changesetId === undefined ? [] : [[event.id, changesetId] as const];
+    }),
+  );
+}
+
+/**
+ * The newest changeset on the branch at a moment: what a status given then covers. None before the branch's first
+ * changeset, or for a review of a changeset or a shelve. `changesets` newest first, as the page reads them; dates
+ * compare as instants, across time zones.
+ */
+export function changesetAt(date: string, changesets: readonly Changeset[] | undefined): number | undefined {
+  const at = Date.parse(date);
+  return changesets?.find((changeset) => Date.parse(changeset.date) <= at)?.id;
 }
 
 /**
@@ -146,6 +169,8 @@ export interface ReviewRound {
   date: string;
   /** What the reviewer said with the status that closed it. */
   comment: string;
+  /** The changeset the status was given at (`changesetAt`); none before the branch's first, or with no branch. */
+  changesetId?: number;
   applied: number;
   discarded: number;
   answered: number;
@@ -172,6 +197,8 @@ export interface ConversationInput {
   reviewDate: string;
   /** How the page first laid the conversation out, kept while it's open; none lays it out afresh. */
   layout?: ConversationLayout;
+  /** The changeset each status was given at (`statusChangesetsOf`), from the branch's own list; none names none. */
+  statusChangesets?: ReadonlyMap<number, number>;
 }
 
 /**
@@ -211,7 +238,7 @@ export function conversationBlocksOf(input: ConversationInput): ConversationBloc
 
 /** The conversation's blocks, and where each item was placed in them. */
 function laidOut(input: ConversationInput): { placed: Placed[]; blocks: ConversationBlock[] } {
-  const { conversation, user, changesets, layout } = input;
+  const { conversation, user, changesets, layout, statusChangesets } = input;
   const { whose, statuses } = roundStatusesOf(conversation.events, user);
   const checkpoint = checkpointOf(conversation.events, user, changesets);
   const placed = placedItems(input, checkpoint);
@@ -227,7 +254,7 @@ function laidOut(input: ConversationInput): { placed: Placed[]; blocks: Conversa
     const startedIn = threads.filter((thread) => Date.parse(thread.root.date) > start && Date.parse(thread.root.date) <= end);
     // A round closed since the page laid the conversation out held what was on screen: it stays unfolded.
     const keptFolds = layout && (layout.roundsFold.get(closing.eventId) ?? false);
-    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn, keptFolds), entries: entriesOf(inRound, false) });
+    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, statusChangesets?.get(closing.eventId), startedIn, keptFolds), entries: entriesOf(inRound, false) });
   });
   const rest = placed.slice(next);
   const since = whose === 'own' && rest.length > 0;
@@ -281,10 +308,23 @@ function batchedCheckins(placed: readonly Placed[]): Placed[] {
 }
 
 /** A round's line; `keptFolds`, how it started in the page's first layout, over what it holds now. */
-function roundOf(number: number, closing: ClosingStatus, threads: readonly ReviewThread[], keptFolds: boolean | undefined): ReviewRound {
+function roundOf(number: number, closing: ClosingStatus, changesetId: number | undefined, threads: readonly ReviewThread[], keptFolds: boolean | undefined): ReviewRound {
   const count = (kind: ReviewThread['state']['kind']): number => threads.filter((thread) => thread.state.kind === kind).length;
   const open = count('open');
-  return { number, eventId: closing.eventId, reviewer: closing.reviewer, status: closing.status, date: closing.date, comment: closing.comment, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: keptFolds ?? open === 0 };
+  return {
+    number,
+    eventId: closing.eventId,
+    reviewer: closing.reviewer,
+    status: closing.status,
+    date: closing.date,
+    comment: closing.comment,
+    ...(changesetId !== undefined && { changesetId }),
+    applied: count('applied'),
+    discarded: count('discarded'),
+    answered: count('answered'),
+    open,
+    folds: keptFolds ?? open === 0,
+  };
 }
 
 /**

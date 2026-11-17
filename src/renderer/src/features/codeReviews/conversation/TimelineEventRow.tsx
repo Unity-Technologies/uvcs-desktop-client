@@ -28,8 +28,8 @@ const ICONS: Record<ReviewEventIcon, LucideIcon> = {
 };
 
 /**
- * A quiet line for what the server noted: who did what, when; a status change with what its reviewer said under it, a
- * merge with its changeset as a chip.
+ * A quiet line for what the server noted: who did what, when; a status change with the changeset it was given at and
+ * what its reviewer said under it, a merge with its changeset, each changeset named as words of the sentence.
  */
 export function TimelineEventRow({ event, context }: { event: ShownEvent; context?: ReviewEventContext }) {
   const row = reviewEventRow(event, context);
@@ -44,8 +44,13 @@ export function TimelineEventRow({ event, context }: { event: ShownEvent; contex
           <Avatar user={event.author} size={18} />
           <span className={styles.author}>{displayName(event.author)}</span> {row.text}
           {row.changeset !== undefined && (
+            // One piece when the line wraps: the changeset and the dot that parts its number from the time's
+            // ("at 10 · 5 minutes ago", never "at 10 5 minutes ago").
             <span className={styles.eventChangeset}>
-              <ReferenceChip reference={{ kind: 'changeset', id: row.changeset }} source={`cs:${row.changeset}`} compact />
+              <ReferenceChip reference={{ kind: 'changeset', id: row.changeset }} source={`cs:${row.changeset}`} plain />
+              <span className={styles.eventSeparator} aria-hidden>
+                ·
+              </span>
             </span>
           )}{' '}
           <RelativeTime date={event.date} />

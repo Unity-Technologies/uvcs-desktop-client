@@ -59,15 +59,15 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
     seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since', steps }) : undefined;
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
   // A branch's changesets place its check-ins and say where each reviewer left off (`conversationBlocksOf`).
-  const { changesets, checkpoint, settled: changesetsSettled } = useReviewCheckpoint(review);
+  const { changesets, checkpoint, statusChangesets, settled: changesetsSettled } = useReviewCheckpoint(review);
   // "See the changes": what was checked in since the user's last review, selected together in Changes as one diff.
   const newSpan = newChangesetsSpan(changesets, checkpoint);
   // Laid out once while the page is open: what the user (or a refresh) changes updates the cards in place, never moves
   // a thread or folds a round (`useConversationLayout`).
   const layout = useConversationLayout(review, user);
   const blocks = useMemo(
-    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date, layout }) : []),
-    [conversation, user, changesets, review.date, layout],
+    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date, layout, statusChangesets }) : []),
+    [conversation, user, changesets, review.date, layout, statusChangesets],
   );
   // "How it was applied" steps through the threads where this page shows them, not where a fresh layout would.
   const steps = useMemo(() => stepGroupsOf(blocks), [blocks]);
@@ -108,7 +108,7 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
     if (opensAtSince(blocks, focusThread) && sinceLine) placeInView(sinceLine, 'auto');
   }, [placed, openedAtSince, blocks, focusThread]);
 
-  const eventContext = { destination: review.mergeRequest?.destination };
+  const eventContext = { destination: review.mergeRequest?.destination, statusChangesets };
   const renderEntry = (entry: ConversationEntry) => (
     <li key={entryKey(entry)}>
       {entry.kind === 'event' && <TimelineEventRow event={entry.event} context={eventContext} />}

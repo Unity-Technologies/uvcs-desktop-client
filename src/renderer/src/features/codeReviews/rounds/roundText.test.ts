@@ -15,27 +15,49 @@ function changeset(id: number): Changeset {
 
 describe('roundText', () => {
   it("names the round, whose status closed it, and what it settled, the user's own as 'you'", () => {
-    expect(roundText(round({ applied: 5, answered: 2 }), 'VIO', 2)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you · 5 requests applied, 2 questions answered' });
+    expect(roundText(round({ applied: 5, answered: 2 }), 'VIO', 2, false)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you', counts: ' · 5 requests applied, 2 questions answered', label: 'Round 1 · Rework required by you · 5 requests applied, 2 questions answered', dotBeforeTime: false });
   });
 
   it("names another reviewer by the name shown, and every count it has", () => {
-    expect(roundText(round({ number: 2, reviewer: 'ana.diaz@unity3d.com', status: 'Reviewed', applied: 1, discarded: 1, answered: 1 }), 'dani', 2)).toEqual({
+    expect(roundText(round({ number: 2, reviewer: 'ana.diaz@unity3d.com', status: 'Reviewed', applied: 1, discarded: 1, answered: 1 }), 'dani', 2, false)).toEqual({
       bold: 'Round 2',
-      rest: ' · Reviewed by Ana Diaz · 1 request applied, 1 discarded, 1 question answered',
+      rest: ' · Reviewed by Ana Diaz',
+      counts: ' · 1 request applied, 1 discarded, 1 question answered',
+      label: 'Round 2 · Reviewed by Ana Diaz · 1 request applied, 1 discarded, 1 question answered',
+      dotBeforeTime: false,
     });
   });
 
   it('says nothing was asked when the round held no request or question', () => {
-    expect(roundText(round(), 'vio', 2)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you' });
+    expect(roundText(round(), 'vio', 2, false)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you', counts: '', label: 'Round 1 · Rework required by you', dotBeforeTime: false });
   });
 
   it("leaves a review's only round unnamed: its line starts at what closed it, bold", () => {
-    expect(roundText(round({ status: 'Reviewed', applied: 1 }), 'dani', 1)).toEqual({ bold: 'Reviewed', rest: ' by Vio · 1 request applied' });
-    expect(roundText(round(), 'vio', 1)).toEqual({ bold: 'Rework required', rest: ' by you' });
+    expect(roundText(round({ status: 'Reviewed', applied: 1 }), 'dani', 1, false)).toEqual({ bold: 'Reviewed', rest: ' by Vio', counts: ' · 1 request applied', label: 'Reviewed by Vio · 1 request applied', dotBeforeTime: false });
+    expect(roundText(round(), 'vio', 1, false)).toEqual({ bold: 'Rework required', rest: ' by you', counts: '', label: 'Rework required by you', dotBeforeTime: false });
   });
 
   it('counts what is still open in a round that does not fold', () => {
-    expect(roundText(round({ applied: 1, open: 2, folds: false }), 'vio', 2)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you · 1 request applied, 2 open' });
+    expect(roundText(round({ applied: 1, open: 2, folds: false }), 'vio', 2, false)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you', counts: ' · 1 request applied, 2 open', label: 'Round 1 · Rework required by you · 1 request applied, 2 open', dotBeforeTime: false });
+  });
+
+  it('names the changeset the status was given at while folded, where a reviewer wrote it by hand: "Reviewed by Vio at 14"', () => {
+    expect(roundText(round({ status: 'Reviewed', changesetId: 14, applied: 1 }), 'dani', 1, false)).toEqual({ bold: 'Reviewed', rest: ' by Vio at', changeset: 14, counts: ' · 1 request applied', label: 'Reviewed by Vio at 14 · 1 request applied', dotBeforeTime: false });
+    expect(roundText(round({ changesetId: 14 }), 'vio', 2, false)).toEqual({ bold: 'Round 1', rest: ' · Rework required by you at', changeset: 14, counts: '', label: 'Round 1 · Rework required by you at 14', dotBeforeTime: true });
+  });
+
+  it('parts a changeset that ends the line from the time with a dot: "at 14 · 5 minutes ago", never "at 14 5 minutes ago"', () => {
+    expect(roundText(round({ changesetId: 14 }), 'vio', 2, false).dotBeforeTime).toBe(true);
+    expect(roundText(round({ changesetId: 14, applied: 1 }), 'vio', 2, false).dotBeforeTime).toBe(false);
+    expect(roundText(round({ changesetId: 14 }), 'vio', 2, true).dotBeforeTime).toBe(false);
+  });
+
+  it("leaves the changeset to the status's own event once unfolded, so it shows once", () => {
+    expect(roundText(round({ status: 'Reviewed', changesetId: 14 }), 'dani', 1, true)).toEqual({ bold: 'Reviewed', rest: ' by Vio', counts: '', label: 'Reviewed by Vio', dotBeforeTime: false });
+  });
+
+  it('names none for a status given before the branch had a changeset, or on a review of a changeset or a shelve', () => {
+    expect(roundText(round({ status: 'Reviewed' }), 'dani', 1, false)).toEqual({ bold: 'Reviewed', rest: ' by Vio', counts: '', label: 'Reviewed by Vio', dotBeforeTime: false });
   });
 });
 

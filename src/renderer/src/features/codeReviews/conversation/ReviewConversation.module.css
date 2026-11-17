@@ -491,6 +491,18 @@ button.pill:hover {
 /* The changeset a merge request was merged in, after the sentence that names it. */
 .eventChangeset {
   display: inline-flex;
+  align-items: baseline;
+  /* A word space each side of its dot (`.eventSeparator`), and after "at" or "in": not the line's gap, so it reads as
+     one sentence. */
+  gap: 3px;
+  margin-inline: -3px;
+  white-space: nowrap;
+}
+
+/* A dot between a changeset and the time, its spaces a word's, as the line's " · " elsewhere, not the line's gap. */
+.eventSeparator {
+  flex: none;
+  color: var(--text-tertiary);
 }
 
 .eventBody {

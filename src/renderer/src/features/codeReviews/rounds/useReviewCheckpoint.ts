@@ -4,7 +4,7 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { useReviewConversation } from '../conversation/useReviewConversation';
 import { changesetIdsOf, threadsOf } from '../conversation/reviewThreads';
-import { checkpointOf, conversationBlocksOf, newThreadIds, reviewedUpToOf, stepGroupsOf, type ReviewCheckpoint, type StepGroup } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, newThreadIds, reviewedUpToOf, statusChangesetsOf, stepGroupsOf, type ReviewCheckpoint, type StepGroup } from './reviewRounds';
 import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
 import { useReviewChangesets } from './useReviewChangesets';
 
@@ -20,6 +20,8 @@ export interface ReviewCheckpointState {
   reviewedUpTo: ReviewedUpTo | undefined;
   /** What "How it was applied" steps through (`stepGroupsOf`): the threads settled in each round, and since. */
   stepGroups: readonly StepGroup[] | undefined;
+  /** The changeset each status was given at (`statusChangesetsOf`), from the branch's own changesets only. */
+  statusChangesets: ReadonlyMap<number, number>;
   /** Once what decides the checkpoint is read (or failed): before it, none doesn't yet mean there is none. */
   settled: boolean;
 }
@@ -27,7 +29,7 @@ export interface ReviewCheckpointState {
 export function useReviewCheckpoint(review: CodeReview): ReviewCheckpointState {
   const user = usePlaceUser();
   const { data: conversation, isPending } = useReviewConversation(review.id);
-  const { changesets, settled } = useReviewChangesets(review);
+  const { changesets, own, settled } = useReviewChangesets(review);
   return useMemo(() => {
     // Placed against changesets still being read, the checkpoint would name none and every changeset would look new.
     const checkpoint = conversation && settled ? checkpointOf(conversation.events, user, changesets) : undefined;
@@ -35,6 +37,8 @@ export function useReviewCheckpoint(review: CodeReview): ReviewCheckpointState {
     const newIds = checkpoint && newThreadIds(threads, checkpoint, user, changesets);
     const stepGroups = conversation && settled ? stepGroupsOf(conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date })) : undefined;
     const reviewedUpTo = conversation && settled ? reviewedUpToOf(conversation.events, user, changesets) : undefined;
-    return { checkpoint, reviewedUpTo, newIds, stepGroups, changesets, settled: settled && !isPending };
-  }, [conversation, isPending, settled, user, changesets, review.date]);
+    // Named only from the branch's own list: another review's, kept on screen meanwhile, holds another branch's numbers.
+    const statusChangesets = statusChangesetsOf(conversation?.events ?? [], own);
+    return { checkpoint, reviewedUpTo, newIds, stepGroups, changesets, statusChangesets, settled: settled && !isPending };
+  }, [conversation, isPending, settled, user, changesets, own, review.date]);
 }
