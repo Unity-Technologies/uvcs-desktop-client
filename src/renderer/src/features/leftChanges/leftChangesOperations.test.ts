@@ -4,11 +4,15 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { LeftChanges, RestoreResult } from '@shared/domain/switchWithChanges';
+import type { WorkspaceInfo } from '@shared/domain/workspace';
+import { queryClient } from '../../app/queryClient';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { discardLeftChanges, restoreLeftChanges } from './leftChangesOperations';
 
 const ws = '/ws';
+const PARTIAL_WORKSPACE: WorkspaceInfo = { name: 'ws', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 5, kind: 'partial' };
 const confirmTitles = () => askedDialogs().map((dialog) => dialog.title);
 
 const left = (shelveId: number, reason: LeftChanges['reason'] = 'switch'): LeftChanges => ({
@@ -70,6 +74,22 @@ describe('restoreLeftChanges', () => {
 
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:12' } }]);
     expect(shownToasts()).toEqual([]);
+  });
+
+  it('says where the shelve can merge when a partial workspace, which takes no merge, conflicts with it', async () => {
+    queryClient.setQueryData(workspaceInfoQuery(ws).queryKey, PARTIAL_WORKSPACE);
+    restoreAnswers({ kind: 'conflicts', shelveId: 12 });
+
+    await restoreLeftChanges(ws, left(12));
+
+    expect(whereTheWindowIs().pages).toEqual([]);
+    expect(shownToasts()).toEqual([
+      {
+        kind: 'info',
+        title: 'Your changes weren’t restored',
+        detail: 'They need a merge, which a partial workspace can’t take. They’re safe in shelve 12: apply it in a standard workspace.',
+      },
+    ]);
   });
 
   it('reports a failed restore and goes nowhere', async () => {
