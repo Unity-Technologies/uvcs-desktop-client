@@ -313,7 +313,12 @@ while the bars show it leaves room for them under its last line: scrolled to the
 them, and the view's scroll padding keeps the caret typing past the bottom clear of them too. Every text diff, and the whole-file editor, renders only the
 lines in view (Pierre's `Virtualizer` on the diff's scrolling element): what's drawn again (a line added, a typing
 pause's word marks, a theme switch) costs those lines, not the file's. With every line of a 190 KB file shown, the
-typing pause's redraw took 0.45 s before; it's now under a frame. A file's language comes from its path
+typing pause's redraw took 0.45 s before; it's now under a frame. Pierre lays out lines it hasn't rendered from an
+estimate, one row each, and renders the rows a scroll brings in a frame or more later, at their real heights: a wrapped
+line is taller. So whatever is scrolled into a place (a change stepped to, a link's line, a comment's row) is placed
+again on each frame until it stands still there (`placementStep`; `scrollToAnnotationRow` counts its own frames), never
+a fixed number of times, which left a change or a line screens away in a wrapped file. Its tests run it over
+`FakePierreLayout`, which lays a diff out that way. A file's language comes from its path
 (`lib/syntaxLanguage`, for diffs, annotations and merges alike): its whole name first (Dockerfile, Cargo.lock,
 .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
 projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
