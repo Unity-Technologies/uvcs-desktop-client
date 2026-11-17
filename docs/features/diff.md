@@ -73,9 +73,10 @@ The list is as tall as its rows up to six (`MOST_ROWS`, `changesetRowsHeight`), 
 files keep their room. The line under it is a splitter (`ResizeHandle` on its bottom edge): dragged, the rows take that
 height instead, from two rows (`CHANGESET_ROWS_MIN_HEIGHT`) up to half the window (`changesetRowsMaxHeight`), so the
 files keep the rest; never taller than the rows there are, so a short list leaves no gap. One height for every list of
-changesets (a branch's diff, a review, Incoming), remembered across pages and sessions
-(`useChangesetListHeightStore`); a double-click on the splitter gives the list its own height back. Each changeset is one line of 28 px, as a commit picker lists
-them: a small avatar, the comment's first line (the rest of the width) and a short age in a fixed column ("now", "12m",
+changesets (a branch's diff, a review, Incoming), remembered across pages and sessions (`useChangesetListHeightStore`):
+a short list dragged where nothing moves keeps it (`changesetRowsDragged`). A double-click on the splitter gives the
+list its own height back. Each changeset is one line of 28 px, as a commit picker lists them: a small avatar, the
+comment's first line (the rest of the width) and a short age in a fixed column ("now", "12m",
 "3h", "2d", "Oct 14": `formatShortAge`); its tooltip says the rest (`changesetRowTip`: the comment's first line, who,
 the full date, cs:N). Why not History's two-line `RecordRow`: the list sits above the files, and two lines and a big
 avatar per changeset left room for few. Why no number on the row: on every one it said little and took the comment's
