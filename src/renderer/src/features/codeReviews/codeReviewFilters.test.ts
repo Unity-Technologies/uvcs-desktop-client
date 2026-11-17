@@ -24,13 +24,11 @@ describe('what Merge requests asks the server for', () => {
     expect(compactFilter(codeReviewsQuery({ ...ASKED, reviewers: { mine: false, others: ['zoe'] } }, today))).toEqual(compactFilter(codeReviewsQuery(ASKED, today)));
   });
 
-  it('reads every date under Waiting for me: a review waiting for the user for months still waits', () => {
-    expect(codeReviewsQuery({ ...ASKED, waitingForMe: true }, today).sinceDate).toBeUndefined();
-  });
-
-  it("asks for the user's reviews of any date under Opened by me, who else is picked kept as picked", () => {
-    expect(compactFilter(codeReviewsQuery({ ...ASKED, openedByMe: true }, today))).toEqual({ owners: ['me'] });
-    expect(codeReviewsQuery({ ...ASKED, openedByMe: true, people: { mine: false, others: ['zoe'] } }, today).owners).toEqual(['zoe']);
+  it('asks the same under Waiting for me and Opened by me: they keep the reviews read, so their counts are what pressing them shows', () => {
+    const asked = compactFilter(codeReviewsQuery(ASKED, today));
+    expect(compactFilter(codeReviewsQuery({ ...ASKED, waitingForMe: true }, today))).toEqual(asked);
+    expect(compactFilter(codeReviewsQuery({ ...ASKED, openedByMe: true }, today))).toEqual(asked);
+    expect(compactFilter(codeReviewsQuery({ ...ASKED, waitingForMe: true, openedByMe: true }, today))).toEqual(asked);
   });
 
   it('puts who created them, the assignment and the status into the query', () => {
