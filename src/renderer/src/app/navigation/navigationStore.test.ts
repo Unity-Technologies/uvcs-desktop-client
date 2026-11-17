@@ -186,6 +186,21 @@ describe('returning to a view', () => {
     expect(useNavigation.getState()).toMatchObject({ view: 'branches', pages: [], kept: NO_KEPT_VIEWS });
   });
 
+  it('keeps the pages of the view left when the same place opens again while unsaved edits are asked about', async () => {
+    let answer = (_canLeave: boolean): void => {};
+    liftGuard = guardLeaving(() => new Promise<boolean>((resolve) => (answer = resolve)));
+    navigation.openPage(history);
+    navigation.returnToView('branches');
+    useSession.getState().openWorkspace('/ws');
+    answer(true);
+    await settleBeforeLeaving();
+    // Settled: the edits saved, nothing guards the way out any more.
+    liftGuard();
+    navigation.returnToView('changes');
+
+    expect(useNavigation.getState().pages).toEqual([history]);
+  });
+
   it('forgets where the views were left when another place opens, not when the same one opens again from home', () => {
     navigation.openPage(history);
     navigation.returnToView('branches');
