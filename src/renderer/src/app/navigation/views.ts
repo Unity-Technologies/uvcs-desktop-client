@@ -49,6 +49,21 @@ export function viewCommandId(view: ViewId): string {
 }
 
 /**
+ * What a page window sends its workspace window to show a view's list (`navigation.goToView` there: a link, Show in
+ * Locks), apart from the view's own command, which returns to the view as the user left it (`returnToView`). No
+ * command of its own, so the palette never lists it: `runMenuCommand` reads it (`viewOfListCommand`).
+ */
+export function viewListCommandId(view: ViewId): string {
+  return `${viewCommandId(view)}.list`;
+}
+
+/** The view whose list `commandId` asks for (`viewListCommandId`); null for any other command. */
+export function viewOfListCommand(commandId: string): ViewId | null {
+  const view = /^goto\.(\w+)\.list$/.exec(commandId)?.[1];
+  return view !== undefined && isViewId(view) ? view : null;
+}
+
+/**
  * Whether the place shows the page: every page but the merge page, a workspace's (it merges into the workspace's
  * files), which a repository explored without one never offers; one reaching it anyway says why, never fails.
  */

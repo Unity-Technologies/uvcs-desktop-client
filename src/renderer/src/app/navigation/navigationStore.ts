@@ -11,7 +11,7 @@ import { NO_KEPT_VIEWS, switchedViews, type KeptViews, type ViewSwitch } from '.
 import { isSameMerge, mergeAfterLeaving, mergeAwaiting, pagesWithoutMerge, showsMerge, type MergeInProgress } from './mergeInProgress';
 import { movesWithinTop } from './pageMoves';
 import type { Page, PageOf } from './pages';
-import { viewCommandId, type ViewId } from './views';
+import { viewCommandId, viewListCommandId, type ViewId } from './views';
 
 interface NavigationStore {
   view: ViewId;
@@ -80,7 +80,9 @@ export const useNavigation = create<NavigationStore>((set, get) => ({
  */
 function switchView(view: ViewId, shows: ViewSwitch['shows']): void {
   const { pages } = useNavigation.getState();
-  if (routed({ kind: 'goToView' }, pages) === 'workspaceWindow') return void api.windows.showWorkspaceWindow(viewCommandId(view));
+  if (routed({ kind: 'goToView' }, pages) === 'workspaceWindow') {
+    return void api.windows.showWorkspaceWindow(shows === 'list' ? viewListCommandId(view) : viewCommandId(view));
+  }
   const leave = (): void =>
     useNavigation.setState((state) => ({
       ...(view !== state.view && { view }),

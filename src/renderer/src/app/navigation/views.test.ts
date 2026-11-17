@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
-import { firstViewOf, showsPage, showsView, VIEW_IDS } from './views';
+import { firstViewOf, showsPage, showsView, VIEW_IDS, viewCommandId, viewListCommandId, viewOfListCommand } from './views';
 
 const inWorkspace = workspacePlace('/wk/game');
 const inRepository = repositoryPlace('game@local');
@@ -27,5 +27,17 @@ describe('the pages of a place', () => {
     expect(showsPage(inRepository, { kind: 'history' })).toBe(true);
     expect(showsPage(inRepository, { kind: 'merge' })).toBe(false);
     expect(showsPage(inWorkspace, { kind: 'merge' })).toBe(true);
+  });
+});
+
+describe("what a page window asks its workspace window for a view", () => {
+  it("tells the view's list apart from the view as the user left it", () => {
+    expect(viewOfListCommand(viewListCommandId('locks'))).toBe('locks');
+    expect(viewOfListCommand(viewCommandId('locks'))).toBeNull();
+  });
+
+  it('is no view for any other command, or a view that no longer exists', () => {
+    expect(viewOfListCommand('changes.checkin')).toBeNull();
+    expect(viewOfListCommand('goto.nowhere.list')).toBeNull();
   });
 });
