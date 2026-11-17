@@ -7,6 +7,7 @@ import type { PageOf } from '../../app/navigation/pages';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByLabels } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
+import type { MenuPlace } from '../../components/mergesOffered';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
@@ -74,18 +75,23 @@ export function saveLabelComment(place: Place, label: Label, comment: string): P
 }
 
 /**
- * A new label from the Labels view: on what the workspace has loaded, or, with no workspace (nothing loaded), on a
- * changeset the user picks first.
+ * A new label from the Labels view: on what the workspace has loaded, or, where nothing is loaded as one changeset (a
+ * repository with no workspace, a partial workspace, which `cm` refuses to label), on a changeset the user picks first.
  */
-export async function newLabel(place: Place): Promise<void> {
-  if (place.kind === 'workspace') return openCreateLabelDialog(place);
+export async function newLabel(where: MenuPlace): Promise<void> {
+  if (labelsWorkspaceChangeset(where)) return openCreateLabelDialog(where.place);
   const changesetId = await pickChangeset({ title: 'Label a changeset' });
-  if (changesetId !== undefined) openCreateLabelDialog(place, changesetId);
+  if (changesetId !== undefined) openCreateLabelDialog(where.place, changesetId);
 }
 
-/** What the Labels view's empty state offers to label: the workspace's changeset, or any one with no workspace. */
-export function newLabelActionLabel(place: Place): string {
-  return place.kind === 'workspace' ? 'Label your workspace changeset' : 'Label a changeset';
+/** What the Labels view's empty state offers to label: the workspace's changeset, or any one picked (`newLabel`). */
+export function newLabelActionLabel(where: MenuPlace): string {
+  return labelsWorkspaceChangeset(where) ? 'Label your workspace changeset' : 'Label a changeset';
+}
+
+/** A partial workspace has loaded no one changeset (`cm` reports none), so it has none to label. */
+function labelsWorkspaceChangeset({ place, workspaceKind }: MenuPlace): boolean {
+  return place.kind === 'workspace' && workspaceKind !== 'partial';
 }
 
 export async function deleteLabels(place: Place, labels: Label[]): Promise<void> {

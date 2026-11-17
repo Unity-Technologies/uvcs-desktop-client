@@ -5,7 +5,7 @@ import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { usePlace } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { ObjectName } from '../../components/ObjectName';
@@ -55,6 +55,7 @@ const COLUMNS: Column<Label>[] = [
 
 export function LabelsView() {
   const place = usePlace();
+  const menuPlace = { place, workspaceKind: useWorkspaceInfo().data?.kind };
   const filters = useLabelsViewStore();
   const { text: search, people, since, update } = filters;
   const me = usePlaceUser();
@@ -83,7 +84,7 @@ export function LabelsView() {
         actions={
           <>
             <ViewRefreshButton fetching={isFetching} />
-            <Button variant="primary" icon={<TagPlus size={14} />} onClick={() => void newLabel(place)}>
+            <Button variant="primary" icon={<TagPlus size={14} />} onClick={() => void newLabel(menuPlace)}>
               New label
             </Button>
           </>
@@ -110,7 +111,7 @@ export function LabelsView() {
               icon={<Tag size={22} />}
               title="No labels"
               description="Labels mark important changesets, like releases."
-              action={<Button onClick={() => void newLabel(place)}>{newLabelActionLabel(place)}</Button>}
+              action={<Button onClick={() => void newLabel(menuPlace)}>{newLabelActionLabel(menuPlace)}</Button>}
             />
           )
         }
@@ -121,9 +122,9 @@ export function LabelsView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={(label) => showLabelChanges(label)}
-        contextMenu={(selectedLabels) => labelMenu(place, selectedLabels)}
+        contextMenu={(selectedLabels) => labelMenu(menuPlace, selectedLabels)}
         noun="label"
-        details={selected && <LabelDetails key={selected.name} place={place} label={selected} menu={labelMenu(place, [selected])} />}
+        details={selected && <LabelDetails key={selected.name} place={place} label={selected} menu={labelMenu(menuPlace, [selected])} />}
       />
     </>
   );

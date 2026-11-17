@@ -32,8 +32,8 @@ beforeEach(() => {
 
 describe('opening permissions from the menus', () => {
   it("opens a branch's, a label's and an attribute's, in their repository, with the owner their list read", () => {
-    entry(branchMenu(workspacePlace(ws), [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }], '/main'), 'permissions')!.run();
-    entry(labelMenu(workspacePlace(ws), [{ name: 'v1', changeset: 3, branch: '/main', comment: '', owner: 'bob', date: '', repository: 'other@acme@cloud' }]), 'permissions')!.run();
+    entry(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }]), 'permissions')!.run();
+    entry(labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [{ name: 'v1', changeset: 3, branch: '/main', comment: '', owner: 'bob', date: '', repository: 'other@acme@cloud' }]), 'permissions')!.run();
     entry(attributeTypeMenu(workspacePlace(ws), [{ id: 1, name: 'status', comment: '', owner: '', date: '', repository: '' }]), 'permissions')!.run();
 
     expect(opened).toEqual([
@@ -80,7 +80,7 @@ describe('opening permissions from the menus', () => {
 
   it("opens a repository's own permissions with no workspace, its repository known from the start", () => {
     openOwnRepositoryPermissions(repositoryPlace('game@local'), 'paths');
-    entry(branchMenu(repositoryPlace('game@local'), [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }], undefined), 'permissions')!.run();
+    entry(branchMenu({ place: repositoryPlace('game@local'), workspaceKind: undefined, currentBranch: undefined }, [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }]), 'permissions')!.run();
 
     expect(opened).toEqual([
       { target: { kind: 'path', server: 'local', repository: 'game@local', name: '/' }, place: repositoryPlace('game@local') },

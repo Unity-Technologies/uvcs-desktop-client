@@ -84,6 +84,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
   const start = branchStartOfChangesets(branch, changesets);
   const menuContext = {
     place,
+    workspaceKind: workspace?.kind,
     loadedChangeset: workspace?.loadedChangeset,
     loadedBranch: branchWorkedOn(workspace?.selector),
     branchStartOf: (name: string) => (name === branch ? start : null),

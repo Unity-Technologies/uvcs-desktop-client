@@ -26,7 +26,7 @@ const changeset = (comment: string): Changeset => ({ id: 12, comment, guid: 'c',
 const shelve = (comment: string): Shelve => ({ id: 4, comment, guid: 's', owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
 
 function contextFor(term: string, changes: PendingChange[] = []): ResultContext {
-  return { place: workspacePlace('/ws'), term, currentBranch: '/main', loadedChangeset: 1, changelists: [], changeAt: (path) => changes.find((candidate) => candidate.path === path) };
+  return { place: workspacePlace('/ws'), workspaceKind: undefined, term, currentBranch: '/main', loadedChangeset: 1, changelists: [], changeAt: (path) => changes.find((candidate) => candidate.path === path) };
 }
 
 function actionIn(menu: MenuEntry[], id: string): Action | undefined {

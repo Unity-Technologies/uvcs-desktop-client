@@ -26,15 +26,17 @@ const LOADING: MenuEntry[] = [{ id: 'loading', label: 'Loading…', disabled: tr
  */
 export function workingObjectMenu(workspace: WorkspaceInfo, object: WorkingObject | undefined): MenuEntry[] {
   const currentBranch = branchWorkedOn(workspace.selector);
+  const place = workspacePlace(workspace.path);
+  const workspaceKind = workspace.kind;
   switch (object?.kind) {
     case 'branch':
-      return branchMenu(workspacePlace(workspace.path), [object.branch], currentBranch);
+      return branchMenu({ place, workspaceKind, currentBranch }, [object.branch]);
     case 'changeset':
-      return changesetMenu({ place: workspacePlace(workspace.path), loadedChangeset: workspace.loadedChangeset, loadedBranch: object.changeset.branch }, [object.changeset]);
+      return changesetMenu({ place, workspaceKind, loadedChangeset: workspace.loadedChangeset, loadedBranch: object.changeset.branch }, [object.changeset]);
     case 'label':
-      return labelMenu(workspacePlace(workspace.path), [object.label]);
+      return labelMenu({ place, workspaceKind }, [object.label]);
     case 'shelve':
-      return shelveMenu(workspacePlace(workspace.path), [object.shelve], { mine: false });
+      return shelveMenu(place, [object.shelve], { mine: false });
     default:
       return LOADING;
   }

@@ -7,6 +7,7 @@ import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { usePlaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { offersMerges } from '../../components/mergesOffered';
 import { branchWorkedOn } from '../../components/workingObject';
 import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
 import { pluralize } from '../../lib/text';
@@ -240,6 +241,7 @@ export function BranchExplorerView() {
   const menuFor = (target: GraphTarget | null) =>
     graphMenu(target, {
       place,
+      workspaceKind: workspace?.kind,
       layout: layout!,
       currentBranch: currentBranch ?? undefined,
       loadedChangeset: workspace?.loadedChangeset,
@@ -269,7 +271,7 @@ export function BranchExplorerView() {
       select: setSelection,
       homeChangeset,
       repository,
-      inWorkspace: place.kind === 'workspace',
+      mergesOffered: offersMerges({ place, workspaceKind: workspace?.kind }),
       canvas: canvasRef,
       goHome,
       find,

@@ -134,6 +134,31 @@ The toast says the whole branch is on disk and what happened to the changes (`wh
 the kind it read and tells every window the kind changed (`downloadWholeBranchOf`, `workspaceKindChanged`), also when
 the switch failed: `cm` may have converted the workspace before failing.
 
+## Merges
+
+`cm` refuses to merge into a partial workspace, so it offers no merge into the workspace (`offersMerges`,
+`components/mergesOffered.ts`): no merge, cherry pick or subtractive merge, nor their ranges, in the branch, changeset
+and label menus; no Merge from branch…, Cherry pick changeset… or Undo the changes of a changeset… in the palette
+(`mergeCommandsOffered`); no M in the Branch Explorer. Download the whole branch… makes the workspace standard first.
+A merge on the server never touches the workspace, so it stays offered (`offersServerMerges`): Merge to… on a branch,
+a changeset or a label, Merge current branch into another branch…, finishing a task and the task's next step in
+Changes, though a task's merge page doesn't offer resolving its conflicts in the workspace
+(`offersResolvingInWorkspace`). Apply shelve stays too, as `cm partial shelveset apply` (shelves-and-switching.md "A partial workspace"): a
+shelve that needs a merge, applied or restored from left changes, stays shelved, and a toast says to apply it in a
+standard workspace instead of opening the merge page (`workspaceTakesMerges`). `menuGrammar.test.ts` builds the menus
+for a partial workspace. While the kind isn't known yet, every merge is offered, as most workspaces are standard. The app menu's Merge from Branch… stays enabled
+there and does nothing, as its command isn't registered.
+
+## Other operations it refuses
+
+A partial workspace has loaded no one changeset (`cm` reports none), so New label in Labels asks which changeset to
+label first, as a repository with no workspace does (`newLabel`, `labelsWorkspaceChangeset`): `cm` refuses to label the
+workspace's own. Files offers no New xlink… (`newXlinkDirectoryOf`): `cm partial checkin` refuses a new xlink,
+whatever it points to, even downloaded first, and `cm checkin` refuses a partial workspace; an xlink already checked
+in, and downloaded, is edited and checked in there as anywhere. It downloads an xlink whole, as a file, when Choose
+what to download… picks it, so Files offers no Load its files on an xlink there (`unloadedXlinkOf`). A switch to a changeset, a label or a shelve stays offered and
+says to download the whole branch first ("Making a partial workspace standard").
+
 ## Staying partial
 
 Every update the app runs on a partial workspace is `cm partial update --dontmerge`, chosen by the workspace's kind

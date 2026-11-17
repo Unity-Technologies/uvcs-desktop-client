@@ -19,7 +19,7 @@ describe('keyboardMergeSource', () => {
     expect(keyboardMergeSource(null, true)).toBeNull();
   });
 
-  it('merges nothing in a repository explored without a workspace: there is none to merge into', () => {
+  it('merges nothing where no merge is offered: a repository explored without a workspace, a partial workspace', () => {
     expect(keyboardMergeSource({ kind: 'changeset', id: 7 }, false)).toBeNull();
     expect(keyboardMergeSource({ kind: 'branch', name: '/main/task' }, false)).toBeNull();
   });
@@ -39,7 +39,7 @@ function keyboardOn(selection: GraphSelection, selected: (GraphSelection | null)
     select: (next) => selected.push(next),
     homeChangeset: 6,
     repository: 'game@local',
-    inWorkspace: true,
+    mergesOffered: true,
     canvas: { current: null },
     goHome: () => {},
     find: () => {},

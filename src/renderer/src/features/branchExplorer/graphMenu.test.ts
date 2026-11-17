@@ -21,6 +21,7 @@ function entryWithId(entries: MenuEntry[], id: string): MenuEntry | undefined {
 function contextWith(selections: GraphSelections) {
   return {
     place: workspacePlace('/work/game'),
+    workspaceKind: undefined,
     layout,
     currentBranch: '/main',
     loadedChangeset: 6,

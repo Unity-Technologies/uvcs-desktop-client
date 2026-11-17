@@ -127,6 +127,7 @@ const pendingLocks = new Map([['src/a.ts', { mine: false, owner: 'ana', workspac
 const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, { ...graphBranch('/main/task', '/main', 5), id: branch.id }] });
 const graphContext = {
   place: workspacePlace(ws),
+  workspaceKind: undefined,
   layout,
   currentBranch: '/main',
   loadedChangeset: 6,
@@ -138,7 +139,7 @@ const graphContext = {
   positions: { pins: [], setPins: () => {} },
 };
 const lane = layout.lanesByBranch.get('/main/a')!;
-const resultContext: ResultContext = { place: workspacePlace(ws), term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
+const resultContext: ResultContext = { place: workspacePlace(ws), workspaceKind: undefined, term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
 
 const mergeVersion = { kind: 'spec', spec: 'itemid:7#cs:11@game@local' } as const;
 const mergeConflictState = { file: { key: '7@game@local', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } as FileConflictState;
@@ -188,13 +189,13 @@ const deletedChange: PendingChange = { path: 'src/Player.cs', kinds: ['locallyDe
 const privateChange: PendingChange = { ...deletedChange, path: 'src/Hero.cs', kinds: ['private'] };
 
 const MENUS: Record<string, () => MenuEntry[]> = {
-  branch: () => branchMenu(workspacePlace(ws), [branch], '/main'),
-  currentBranch: () => branchMenu(workspacePlace(ws), [branch], branch.name),
-  branches: () => branchMenu(workspacePlace(ws), [branch, { ...branch, name: '/main/other', isHidden: true }], '/main'),
-  changeset: () => changesetMenu({ place: workspacePlace(ws), loadedChangeset: 6, loadedBranch: '/main/a' }, [changeset]),
-  changesetInterval: () => changesetMenu({ place: workspacePlace(ws) }, [changeset, { ...changeset, id: 2 }]),
-  label: () => labelMenu(workspacePlace(ws), [label]),
-  labelPair: () => labelMenu(workspacePlace(ws), [label, { ...label, name: 'v2' }]),
+  branch: () => branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [branch]),
+  currentBranch: () => branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: branch.name }, [branch]),
+  branches: () => branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [branch, { ...branch, name: '/main/other', isHidden: true }]),
+  changeset: () => changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws), loadedChangeset: 6, loadedBranch: '/main/a' }, [changeset]),
+  changesetInterval: () => changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [changeset, { ...changeset, id: 2 }]),
+  label: () => labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label]),
+  labelPair: () => labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label, { ...label, name: 'v2' }]),
   shelve: () => shelveMenu(workspacePlace(ws), [shelve]),
   othersShelve: () => shelveMenu(workspacePlace(ws), [shelve], { mine: false }),
   leftShelve: () => shelveMenu(workspacePlace(ws), [shelve], { left: true }),
@@ -261,12 +262,12 @@ const MENUS: Record<string, () => MenuEntry[]> = {
  */
 const onRepository = repositoryPlace(repository);
 const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
-  repositoryBranch: () => branchMenu(onRepository, [branch], undefined),
-  repositoryBranches: () => branchMenu(onRepository, [branch, { ...branch, name: '/main/other', isHidden: true }], undefined),
-  repositoryChangeset: () => changesetMenu({ place: onRepository }, [changeset]),
-  repositoryChangesetInterval: () => changesetMenu({ place: onRepository }, [changeset, { ...changeset, id: 2 }]),
-  repositoryLabel: () => labelMenu(onRepository, [label]),
-  repositoryLabelPair: () => labelMenu(onRepository, [label, { ...label, name: 'v2' }]),
+  repositoryBranch: () => branchMenu({ place: onRepository, workspaceKind: undefined, currentBranch: undefined }, [branch]),
+  repositoryBranches: () => branchMenu({ place: onRepository, workspaceKind: undefined, currentBranch: undefined }, [branch, { ...branch, name: '/main/other', isHidden: true }]),
+  repositoryChangeset: () => changesetMenu({ workspaceKind: undefined, place: onRepository }, [changeset]),
+  repositoryChangesetInterval: () => changesetMenu({ workspaceKind: undefined, place: onRepository }, [changeset, { ...changeset, id: 2 }]),
+  repositoryLabel: () => labelMenu({ place: onRepository, workspaceKind: undefined }, [label]),
+  repositoryLabelPair: () => labelMenu({ place: onRepository, workspaceKind: undefined }, [label, { ...label, name: 'v2' }]),
   repositoryAttributeType: () => attributeTypeMenu(onRepository, [{ name: 'status', comment: '' } as never]),
   repositoryCodeReview: () => codeReviewMenu(onRepository, [branchReview]),
   repositoryCodeReviews: () => codeReviewMenu(onRepository, [review, changesetReview]),
@@ -282,6 +283,24 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryGraphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, { ...graphContext, place: onRepository, currentBranch: undefined, loadedChangeset: undefined }),
   repositoryGraphBranch: () => graphMenu({ kind: 'branch', lane }, { ...graphContext, place: onRepository, currentBranch: undefined, loadedChangeset: undefined }),
   repositoryGraphLabel: () => graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, { ...graphContext, place: onRepository }),
+};
+
+/**
+ * The object menus a partial workspace shows: no merge into the workspace (`offersMerges`), only the merges on the
+ * server (`offersServerMerges`), and every other rule of the grammar holds (they join `MENUS`' checks below).
+ */
+const partialContext = { place: workspacePlace(ws), workspaceKind: 'partial' } as const;
+const PARTIAL_MENUS: Record<string, () => MenuEntry[]> = {
+  partialBranch: () => branchMenu({ ...partialContext, currentBranch: '/main' }, [branch]),
+  partialChangeset: () => changesetMenu({ ...partialContext, loadedChangeset: 6, loadedBranch: '/main/a' }, [changeset]),
+  partialChangesetInterval: () => changesetMenu(partialContext, [changeset, { ...changeset, id: 2 }]),
+  partialLabel: () => labelMenu(partialContext, [label]),
+  partialGraphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, { ...graphContext, workspaceKind: 'partial' }),
+  partialGraphBranch: () => graphMenu({ kind: 'branch', lane }, { ...graphContext, workspaceKind: 'partial' }),
+  partialGraphLabel: () => graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, { ...graphContext, workspaceKind: 'partial' }),
+  partialPaletteBranch: () => branchResult({ ...branch, name: '/main/a', parent: '/main' }, { ...resultContext, workspaceKind: 'partial' }).menu!(),
+  partialPaletteChangeset: () => changesetResult(changeset, { ...resultContext, workspaceKind: 'partial' }).menu!(),
+  partialPaletteLabel: () => labelResult(label, { ...resultContext, workspaceKind: 'partial' }).menu!(),
 };
 
 /**
@@ -322,7 +341,7 @@ const COMMENT_MENUS: Record<string, () => MenuEntry[]> = {
     statusCommentMenu({ id: 2, author: 'jane@example.com', date: '', kind: 'statusChanged', status: 'Reviewed', comment: 'LGTM', guid: 's2' }, 'jane@example.com', { edit: () => {} }),
 };
 const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS, ...COMMENT_MENUS };
-const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };
+const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...PARTIAL_MENUS, ...CODE_MENUS };
 
 const wordOf = (entry: Action | Submenu): MenuWord | undefined => (entry.id ? (MENU_WORDS as Record<string, MenuWord>)[entry.id] : undefined);
 const topEntries = (menu: MenuEntry[]): (Action | Submenu)[] => menu.filter((entry): entry is Action | Submenu => entry !== SEPARATOR);
@@ -346,6 +365,38 @@ describe('menus without a workspace', () => {
 
   it('offers in a workspace what a repository leaves out, so the list names what each needs', () => {
     expect(ids(MENUS.branch!())).toEqual(expect.arrayContaining(['switch', 'merge', 'mergeTo', 'cherryPick']));
+  });
+});
+
+describe('menus of a partial workspace', () => {
+  /** What never touches the workspace, so a partial one offers it: Merge to…, finishing a task. */
+  const SERVER_MERGES = ['mergeTask', 'mergeTo'];
+  const merges = (menu: MenuEntry[]): string[] => topEntries(menu).filter((entry) => groupOf(entry) === 'merge').map((entry) => entry.id ?? '');
+
+  it.each(Object.entries(PARTIAL_MENUS))('%s: offers no merge into the workspace, only merges on the server', (_name, build) => {
+    expect(merges(build()).filter((id) => !SERVER_MERGES.includes(id))).toEqual([]);
+  });
+
+  it('offers the merges on the server, as a standard workspace does', () => {
+    expect(merges(PARTIAL_MENUS.partialBranch!())).toEqual(['mergeTask', 'mergeTo']);
+    expect(merges(PARTIAL_MENUS.partialChangeset!())).toEqual(['mergeTo']);
+    expect(merges(PARTIAL_MENUS.partialChangesetInterval!())).toEqual([]);
+    expect(merges(PARTIAL_MENUS.partialLabel!())).toEqual(['mergeTo']);
+    expect(merges(PARTIAL_MENUS.partialPaletteBranch!())).toEqual(merges(PARTIAL_MENUS.partialBranch!()));
+  });
+
+  it('offers in a standard workspace the merges a partial one leaves out', () => {
+    expect(merges(MENUS.branch!())).toEqual(['merge', 'mergeTask', 'mergeTo', 'cherryPick']);
+    expect(merges(MENUS.changeset!())).toEqual(['merge', 'mergeTo', 'cherryPick', 'subtractive']);
+    expect(merges(MENUS.changesetInterval!())).toEqual(['cherryPickRange', 'subtractiveRange']);
+    expect(merges(MENUS.label!())).toEqual(['merge', 'mergeTo']);
+  });
+
+  it("keeps everything else a workspace's menus offer", () => {
+    const withoutMerges = (menu: MenuEntry[]): string[] => topEntries(menu).filter((entry) => groupOf(entry) !== 'merge').map((entry) => entry.id ?? '');
+    expect(withoutMerges(PARTIAL_MENUS.partialBranch!())).toEqual(withoutMerges(MENUS.branch!()));
+    expect(withoutMerges(PARTIAL_MENUS.partialChangeset!())).toEqual(withoutMerges(MENUS.changeset!()));
+    expect(withoutMerges(PARTIAL_MENUS.partialLabel!())).toEqual(withoutMerges(MENUS.label!()));
   });
 });
 
@@ -488,8 +539,8 @@ describe('the branch diff up to a changeset', () => {
   });
 
   it("isn't on /main in a list, the root branch, told by its name; a top-level branch made from a changeset has it", () => {
-    expect(offered(changesetMenu({ place: workspacePlace(ws) }, [{ ...changeset, branch: '/main' }]))).not.toContain('Open branch diff up to this changeset');
-    expect(offered(changesetMenu({ place: workspacePlace(ws) }, [{ ...changeset, branch: '/release' }]))).toContain('Open branch diff up to this changeset');
+    expect(offered(changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [{ ...changeset, branch: '/main' }]))).not.toContain('Open branch diff up to this changeset');
+    expect(offered(changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [{ ...changeset, branch: '/release' }]))).toContain('Open branch diff up to this changeset');
   });
 });
 
@@ -523,12 +574,12 @@ describe('new merge requests and code reviews of a branch', () => {
 
   it('offers a merge request above a code review on a branch that can merge somewhere', () => {
     expect(creating(MENUS.branch!())).toEqual(['New branch from here…', 'New merge request…', 'New code review…']);
-    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/release', parent: '/main' }], '/main'))).toContain('New merge request…');
+    expect(creating(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [{ ...branch, name: '/release', parent: '/main' }]))).toContain('New merge request…');
     expect(creating(REPOSITORY_MENUS.repositoryBranch!())).toContain('New merge request…');
   });
 
   it("offers only a code review on a top-level branch, which has nowhere to merge, and on several", () => {
-    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/main', parent: '' }], '/main/task'))).toEqual(['New branch from here…', 'New code review…']);
+    expect(creating(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main/task' }, [{ ...branch, name: '/main', parent: '' }]))).toEqual(['New branch from here…', 'New code review…']);
     expect(creating(MENUS.branches!())).toEqual([]);
   });
 });
@@ -552,9 +603,9 @@ describe('one menu per object, the same everywhere', () => {
   const graphChangeset = { ...changeset, id: 5, branch: '/main/a', parent: 4, comment: 'Finish feature', guid: undefined };
 
   it('a branch reads the same in the Branches view, the switcher, the top bar, the palette and the Branch Explorer', () => {
-    const common = branchMenu(workspacePlace(ws), [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }], '/main');
+    const common = branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }]);
     const inGraph = withoutAction(common, 'showInBranchExplorer');
-    expectOnlyAdds(branchMenu(workspacePlace(ws), [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }], '/main'), common);
+    expectOnlyAdds(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }]), common);
     expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'branch', name: '/main' } }, { kind: 'branch', branch: { ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' } }), common);
     expectOnlyAdds(branchResult({ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }, resultContext).menu!(), common);
     const graph = graphMenu({ kind: 'branch', lane }, graphContext);
@@ -563,7 +614,7 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it('a changeset reads the same in the Changesets view, Incoming, the top bar, the palette and the Branch Explorer', () => {
-    const context = { place: workspacePlace(ws), loadedChangeset: 6, loadedBranch: '/main' };
+    const context = { place: workspacePlace(ws), workspaceKind: undefined, loadedChangeset: 6, loadedBranch: '/main' };
     const common = changesetMenu(context, [changeset]);
     expectOnlyAdds(changesetResult(changeset, resultContext).menu!(), common);
     expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'changeset', name: '5' }, loadedChangeset: 5 }, { kind: 'changeset', changeset }), changesetMenu({ ...context, loadedChangeset: 5 }, [changeset]));
@@ -573,11 +624,11 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it('a label reads the same in the Labels view, the top bar, the palette and the Branch Explorer', () => {
-    const common = labelMenu(workspacePlace(ws), [label]);
+    const common = labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label]);
     expectOnlyAdds(labelResult(label, resultContext).menu!(), common);
     expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'label', name: 'v1' } }, { kind: 'label', label }), common);
     const graph = graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, graphContext);
-    expectOnlyAdds(graph, withoutAction(labelMenu(workspacePlace(ws), [{ ...label, comment: '' }]), 'showInBranchExplorer'));
+    expectOnlyAdds(graph, withoutAction(labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [{ ...label, comment: '' }]), 'showInBranchExplorer'));
   });
 
   it('a shelve reads the same in the Shelves view, Changes, its diff, the top bar and the palette', () => {
@@ -616,9 +667,9 @@ describe('Copy', () => {
   };
 
   it('copies a branch as its name, spec, full spec and comment, the name with ⌘C', async () => {
-    expect(copyEntries(branchMenu(workspacePlace(ws), [branch], '/main'))[0]!.shortcut).toBe('mod+c');
-    expect(copyEntries(branchMenu(workspacePlace(ws), [branch], '/main')).find((entry) => entry.id === 'copy.link')!.shortcut).toBe('mod+shift+c');
-    expect(await copiedBy(branchMenu(workspacePlace(ws), [branch], '/main'))).toEqual([
+    expect(copyEntries(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [branch]))[0]!.shortcut).toBe('mod+c');
+    expect(copyEntries(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [branch])).find((entry) => entry.id === 'copy.link')!.shortcut).toBe('mod+shift+c');
+    expect(await copiedBy(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [branch]))).toEqual([
       'Branch name: /main/task',
       'Branch link: uvcs://local/repos/game/branches/main/task',
       'Branch spec: br:/main/task',
@@ -628,7 +679,7 @@ describe('Copy', () => {
   });
 
   it('copies a changeset as its number, spec, full spec, comment and GUID', async () => {
-    expect(await copiedBy(changesetMenu({ place: workspacePlace(ws) }, [changeset]))).toEqual([
+    expect(await copiedBy(changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [changeset]))).toEqual([
       'Changeset number: 5',
       'Changeset link: uvcs://local/repos/game/changesets/5',
       'Changeset spec: cs:5',
@@ -639,7 +690,7 @@ describe('Copy', () => {
   });
 
   it('copies a label as its name, spec, full spec and comment', async () => {
-    expect(await copiedBy(labelMenu(workspacePlace(ws), [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
+    expect(await copiedBy(labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
   });
 
   it.each(['reviewComment', 'openChangeRequest', 'appliedChangeRequest'])("copies a review's comment as its text and its link, which opens the review at it: %s", async (menu) => {
@@ -687,12 +738,12 @@ describe('Copy', () => {
   });
 
   it('leaves out what an object has no text for, like an empty comment', () => {
-    expect(copyEntries(branchMenu(workspacePlace(ws), [{ ...branch, comment: '' }], '/main')).map((entry) => entry.label)).toEqual(['Name', 'Link', 'Spec', 'Full spec']);
+    expect(copyEntries(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [{ ...branch, comment: '' }])).map((entry) => entry.label)).toEqual(['Name', 'Link', 'Spec', 'Full spec']);
   });
 
   it('shows what each entry copies next to it', () => {
     // A link is too long to read beside its label, as a comment is.
-    expect(copyEntries(labelMenu(workspacePlace(ws), [label])).map((entry) => entry.detail)).toEqual(['v1', undefined, 'lb:v1', 'lb:v1@game@local', undefined]);
+    expect(copyEntries(labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label])).map((entry) => entry.detail)).toEqual(['v1', undefined, 'lb:v1', 'lb:v1@game@local', undefined]);
   });
 });
 
@@ -711,9 +762,9 @@ describe('shelves', () => {
 describe('the top bar', () => {
   it("offers what the workspace is on with that object's own menu", () => {
     const onBranch = { ...workspace, selector: { kind: 'branch' as const, name: branch.name } };
-    expect(reading(workingObjectMenu(onBranch, { kind: 'branch', branch }))).toEqual(reading(branchMenu(workspacePlace(ws), [branch], branch.name)));
+    expect(reading(workingObjectMenu(onBranch, { kind: 'branch', branch }))).toEqual(reading(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: branch.name }, [branch])));
     const onLabel = { ...workspace, selector: { kind: 'label' as const, name: 'v1' } };
-    expect(reading(workingObjectMenu(onLabel, { kind: 'label', label }))).toEqual(reading(labelMenu(workspacePlace(ws), [label])));
+    expect(reading(workingObjectMenu(onLabel, { kind: 'label', label }))).toEqual(reading(labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label])));
   });
 
   it('says it is loading until what the workspace is on is read', () => {
@@ -784,11 +835,11 @@ describe("a changeset's menu", () => {
     );
 
   it('names the list keys on what they do in a list that binds them', () => {
-    expect(shortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset]))).toEqual({ diff: 'mod+d', 'copy.number': 'mod+c', 'copy.link': 'mod+shift+c' });
+    expect(shortcuts(changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [changeset]))).toEqual({ diff: 'mod+d', 'copy.number': 'mod+c', 'copy.link': 'mod+shift+c' });
   });
 
   it("names no shortcut where the list keys reach something else, as in a branch diff's list of changesets", () => {
-    const menu = changesetMenu({ place: workspacePlace(ws) }, [changeset], { listKeysElsewhere: true });
+    const menu = changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [changeset], { listKeysElsewhere: true });
 
     expect(shortcuts(menu)).toEqual({});
     expect(menu.some((entry) => isSubmenu(entry) && entry.entries.some((copy) => typeof copy === 'object' && 'id' in copy && copy.id === 'copy.link'))).toBe(true);
