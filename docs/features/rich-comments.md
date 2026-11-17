@@ -246,7 +246,8 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   would step over it: `verticalMoveInto`, Shift extending the selection). Tables are the only block drawn in place
   of their source: rules and fences show as typed. An image is its chip. A field without the focus draws everything. Whether it has the focus is read from the root its
   DOM is in (`editorRootOf`), not the shadow root a slot shows it through (a thread under a line of the diff), where
-  the field never had it and typed text landed out of place.
+  the field never had it and typed text landed out of place. A long comment is parsed in steps after it opens (its first 3,000 characters at once): what's drawn from the
+  parse (the live marks, the tables, the code's colors) is drawn again as the parse goes further (`parsedFurther`).
 - **References are the comments' chips** (`ReferenceChip`, with their summary as a shown comment has it, as soon as
   the window read it: a list, or the number looked up as typed; compact on one line, the summary in its card), for
   every kind a comment reads (`findReferences`). The chip the caret reaches, by an arrow or typing it, shows as its
