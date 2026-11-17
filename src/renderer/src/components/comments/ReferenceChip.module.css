@@ -27,19 +27,26 @@
   box-shadow: var(--focus-ring-visible);
 }
 
-/* In a sentence (`plain`): the object reads as words of it, in its font and weight, colored as a link and underlined
-   under the pointer; no fill, which in a line of the timeline read as a badge and drew the eye from the verdict. */
+/* In a sentence (`plain`): the object reads as words of it, in its font, weight and color; under the pointer it shows
+   it's a link, in the accent and underlined. No fill and no accent at rest: in a line of the timeline either read as a
+   badge and drew the eye from the verdict. */
 .plain {
   display: inline-flex;
   align-items: baseline;
-  gap: 3px;
+  /* The icon's own box already holds a pixel either side of its stroke: icon and name read as one word. */
+  gap: 1px;
   max-width: 100%;
   border-radius: var(--radius-sm);
-  color: var(--accent-text);
+  color: inherit;
   text-decoration: none;
   white-space: nowrap;
   vertical-align: baseline;
   cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.plain:hover {
+  color: var(--accent-text);
 }
 
 .plain:hover .label {
