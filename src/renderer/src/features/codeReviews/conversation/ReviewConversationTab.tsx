@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useNewValuesEffect } from '../../../lib/useNewValuesEffect';
 import { placeId } from '@shared/domain/place';
 import { mergedChangesetOf } from '@shared/domain/reviewConversation';
 import { commentDraftKey } from '../../../components/DetailsHeading';
@@ -90,9 +91,9 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   const scrollerRef = useRef<HTMLDivElement>(null);
   const elementById = (id: string): HTMLElement | null | undefined => scrollerRef.current?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
 
-  // Brought into view once read, after its card unfolds.
+  // Brought into view once read, after its card unfolds; not again as the view shows again.
   const read = conversation !== undefined;
-  useEffect(() => {
+  useNewValuesEffect(() => {
     const element = pick && elementById(pickedElementId(pick));
     if (read && pick && element) placeInView(element, pickedBehaviorOf(pick));
   }, [read, pick]);

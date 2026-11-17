@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, ChevronUp, X } from 'lucide-react';
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useNewValuesLayoutEffect } from '../../../lib/useNewValuesEffect';
+import { useRef, type ReactNode, type RefObject } from 'react';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { listScrollTop } from '../../../lib/scrollPlacement';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -231,8 +232,9 @@ function SearchRow({ search, onChange, kindCounts }: SearchRowProps) {
  * comment no longer the current one. Drawn without a ring (`focusVisible`), it keeps a keyboard user's place in the list.
  */
 function useFollowedCard(listRef: RefObject<HTMLElement | null>, focusSeq: number | undefined, order: CommentsOrder): void {
-  // Before the paint: the ring the key drew on the card left never shows.
-  useLayoutEffect(() => {
+  // Before the paint: the ring the key drew on the card left never shows. For a new place only: not again as the view
+  // shows again, which would pull the list back from where the user scrolled it.
+  useNewValuesLayoutEffect(() => {
     const list = listRef.current;
     if (!list || focusSeq === undefined) return;
     const card = list.querySelector('[data-current]');
