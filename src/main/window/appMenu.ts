@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { windowChrome } from '@shared/windowChrome';
+import { appLog } from '../diagnostics/appLog';
 import { sendEventTo } from '../ipc/sendEvent';
 import { coalesced } from '../system/coalesced';
 import { BUG_REPORT_URL, DOCUMENTATION_URL, FEATURE_REQUEST_URL } from './appInfo';
@@ -63,6 +64,8 @@ function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
     newWindow: () => windows.open(),
     openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
     reportIssue: () => void shell.openExternal(BUG_REPORT_URL),
+    // The file selected in its folder, its earlier files beside it.
+    showLogFiles: () => shell.showItemInFolder(appLog.file),
     requestFeature: () => void shell.openExternal(FEATURE_REQUEST_URL),
     showAboutPanel: () => app.showAboutPanel(),
     checkForUpdates: () => void updates.check(),
