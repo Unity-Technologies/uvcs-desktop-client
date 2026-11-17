@@ -89,7 +89,7 @@ function switchView(view: ViewId, shows: ViewSwitch['shows']): void {
   const leave = (): void =>
     useNavigation.setState((state) => ({
       ...(view !== state.view && { view }),
-      ...(useSession.getState().place === askedIn
+      ...(isSamePlace(useSession.getState().place, askedIn)
         ? switchedViews(state.kept, { from: state.view, pages: pagesWithoutMerge(state.merge, state.pages), to: view, shows })
         : { pages: [] }),
       merge: mergeAfterLeaving(state.merge, state.pages),
@@ -122,10 +122,15 @@ useSession.subscribe(({ workspacePath }) => {
 // visits of one place keeps them, as it keeps the place's view and pages.
 let keptFor: Place | null = null;
 useSession.subscribe(({ place }) => {
-  if (!place || (keptFor && samePlace(keptFor, place))) return;
+  if (!place || isSamePlace(keptFor, place)) return;
   keptFor = place;
   useNavigation.setState({ kept: NO_KEPT_VIEWS });
 });
+
+/** Whether `a` and `b` are one place, by what they are (`samePlace`): opening a place builds it anew. */
+function isSamePlace(a: Place | null, b: Place | null): boolean {
+  return a === null || b === null ? a === b : samePlace(a, b);
+}
 
 /** Where a navigation goes: in a page window, as `routeInPageWindow` says; in a workspace window, always here. */
 function routed(request: NavigationRequest, pages: readonly Page[]): ReturnType<typeof routeInPageWindow> {
