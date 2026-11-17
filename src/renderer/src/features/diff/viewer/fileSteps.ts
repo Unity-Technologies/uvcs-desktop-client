@@ -185,6 +185,15 @@ export function settlingOnOf(selected: { path: string } | undefined, diffed: { p
   return selected !== undefined && selected !== diffed ? selected.path : null;
 }
 
+/**
+ * Whether the file now shown (`path`, where `previous` was) was reached by a step from the file beside it, not picked
+ * nor shown again: the step to it is still on its way (`FileSteps.steppingTo`). Its header says so for a moment
+ * (`SteppedDiffFrame`), as ↓ past a file's last change lands in another file.
+ */
+export function arrivedByStep(previous: string | null, path: string, steppingTo: string | null): boolean {
+  return previous !== path && steppingTo === path;
+}
+
 /** A list's selection made at once, nothing to ask first: the step it's for is told (`FileStepsOptions.select`). */
 export function selectNow(selected: () => void, select: () => void): void {
   selected();
