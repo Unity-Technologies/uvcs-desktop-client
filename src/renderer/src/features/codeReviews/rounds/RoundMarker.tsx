@@ -34,7 +34,7 @@ export function RoundMarker({
   onToggle: () => void;
 }) {
   const Mark = REVIEW_STATUS_ICONS[round.status];
-  const { bold, rest, changeset, counts } = roundText(round, user, roundCount, open);
+  const { bold, rest, changeset, counts, label, dotBeforeTime } = roundText(round, user, roundCount, open);
   const comment = roundLineComment(round, open);
   return (
     <div className={conversation.event} data-icon={round.status}>
@@ -42,10 +42,11 @@ export function RoundMarker({
         <Mark size={14} aria-hidden />
       </span>
       <div className={conversation.eventBody}>
-        {/* The whole line folds the round: its button lies over it, under the changeset, a link of its own (a link can't
-            sit inside a button). The button carries the line's words; the words drawn are for the eye. */}
-        <div className={styles.roundLine}>
-          <button type="button" className={styles.roundToggle} aria-expanded={open} aria-label={`${bold}${rest}${changeset !== undefined ? ` ${changeset}` : ''}${counts}`} onClick={onToggle} />
+        {/* The whole line folds the round: its button lies over it, under the changeset and the time, which have their
+            own card and tooltip (a link can't sit inside a button). The button carries the line's words; the words
+            drawn are for the eye, and say themselves whole in the line's tooltip when cut off. */}
+        <div className={styles.roundLine} data-tip={label} data-tip-overflow="">
+          <button type="button" className={styles.roundToggle} aria-expanded={open} aria-label={label} onClick={onToggle} />
           <span className={styles.roundText} aria-hidden>
             <b>{bold}</b>
             {rest}
@@ -60,9 +61,8 @@ export function RoundMarker({
               {counts}
             </span>
           )}
-          {/* After a changeset, its number and the time's would read as one ("9 5 minutes ago"): a dot between. */}
-          {changeset !== undefined && !counts && (
-            <span className={conversation.eventSeparator} aria-hidden>
+          {dotBeforeTime && (
+            <span className={`${conversation.eventSeparator} ${styles.roundSeparator}`} aria-hidden>
               ·
             </span>
           )}

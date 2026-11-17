@@ -65,7 +65,15 @@
   margin-left: -3px;
 }
 
+/* The dot between the changeset and the time (`dotBeforeTime`): the line's gap less a word space each side. */
+.roundSeparator {
+  margin-inline: -3px;
+}
+
 .roundLine time {
+  /* Above the fold button, as the changeset: the time's tooltip gives its date. */
+  position: relative;
+  z-index: 1;
   flex: none;
   color: var(--text-tertiary);
 }
