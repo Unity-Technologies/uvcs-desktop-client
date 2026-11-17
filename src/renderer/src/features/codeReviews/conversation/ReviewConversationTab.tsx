@@ -14,7 +14,6 @@ import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard } from './ReviewThreadCard';
 import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
 import { openItemsOf, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
-import { placeInView } from '../../../lib/scrollPlacement';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
 import { openItemsIn } from '../mergeCard';
@@ -29,6 +28,7 @@ import { conversationBlocksOf, roundCountOf, roundHolding, stepGroupsOf, type Co
 import { useConversationLayout } from '../rounds/useConversationLayout';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
+import { placeInView } from '../../../lib/scrollPlacement';
 import { newChangesetsSpan } from '../../diff/branchChangesetRows';
 import { useReviewCheckpoint } from '../rounds/useReviewCheckpoint';
 import styles from './ReviewConversation.module.css';

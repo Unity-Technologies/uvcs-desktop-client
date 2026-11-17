@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { focusScrollTop, listScrollTop } from './scrollPlacement';
+import { focusScrollTop, listScrollTop, placedScrollTop } from './scrollPlacement';
 
-// A pane 600 px tall over 20 px lines: a third of the way down is 200 px.
+// A pane 600 px tall over 20 px lines: a third of the way down is 200 px (the comments panel and the diff keep a third).
 const PANE = 600;
 const LINE = 20;
 const LONG = 100_000;
@@ -21,14 +21,6 @@ describe('focusScrollTop', () => {
     expect(focusScrollTop({ top: 5000, bottom: 6000, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: LONG })).toBe(5000 - 3 * LINE);
   });
 
-  it('puts an element brought alone a third down, with nothing above it kept', () => {
-    expect(focusScrollTop({ top: 5000, bottom: 5040, contextAbove: 0, viewHeight: PANE, contentHeight: LONG })).toBe(5000 - PANE / 3);
-  });
-
-  it('shows the top of an element taller than the viewport when nothing is kept above it', () => {
-    expect(focusScrollTop({ top: 5000, bottom: 6500, contextAbove: 0, viewHeight: PANE, contentHeight: LONG })).toBe(5000);
-  });
-
   it('leaves a line near the top of the file at the top', () => {
     expect(focusScrollTop({ top: 60, bottom: 260, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: LONG })).toBe(0);
   });
@@ -36,6 +28,24 @@ describe('focusScrollTop', () => {
   it('stops at the end of a line near the end of the file, and never scrolls a short one', () => {
     expect(focusScrollTop({ top: 9800, bottom: 9990, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: 10_000 })).toBe(10_000 - PANE);
     expect(focusScrollTop({ top: 300, bottom: 500, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: 520 })).toBe(0);
+  });
+});
+
+describe('placedScrollTop', () => {
+  it('puts an element a quarter down the viewport, on screen or not', () => {
+    expect(placedScrollTop(2000, PANE, LONG)).toBe(2000 - PANE / 4);
+    expect(placedScrollTop(400, PANE, LONG)).toBe(400 - PANE / 4);
+  });
+
+  it('puts the top of a card taller than two-thirds of the viewport a quarter down too, not bottom-aligned', () => {
+    // A card taller than the viewport: its top, not its end, is what a reader needs.
+    expect(placedScrollTop(5000, PANE, LONG)).toBe(5000 - PANE / 4);
+  });
+
+  it('never scrolls above the top, or past the end of the content', () => {
+    expect(placedScrollTop(120, PANE, LONG)).toBe(0);
+    expect(placedScrollTop(9900, PANE, 10_000)).toBe(10_000 - PANE);
+    expect(placedScrollTop(300, PANE, 520)).toBe(0);
   });
 });
 

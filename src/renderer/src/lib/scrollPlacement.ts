@@ -35,20 +35,29 @@ export function listScrollTop(card: Placed, view: { scrollTop: number; height: n
 }
 
 /**
- * Brings an element into view the way every navigation to a thing does (a thread, a comment, a section): its top a third
- * down the viewport, so it reads with what follows it, even when it was already on screen. Only the scroll range's ends
- * stop it short. An element taller than the viewport shows its top. `behavior` is `smooth` for a glide, `auto` at once.
+ * Where to scroll so an element's top sits a quarter down the viewport, whatever its height: it reads with what follows
+ * it, even when it was already on screen. Only the scroll range's ends stop it short, so an element taller than the
+ * viewport shows its top. (`focusScrollTop` bottom-aligns a tall card, which is right for a comment in its context,
+ * not for navigating to a thread.)
+ */
+const PLACED_FROM_TOP = 4;
+
+export function placedScrollTop(elementTop: number, viewHeight: number, contentHeight: number): number {
+  return Math.min(Math.max(elementTop - viewHeight / PLACED_FROM_TOP, 0), Math.max(contentHeight - viewHeight, 0));
+}
+
+/**
+ * Brings an element into view the way every navigation to a thing does (a thread, a comment): its top a quarter down the
+ * viewport (`placedScrollTop`). `behavior` is `smooth` for a glide, `auto` at once.
  */
 export function placeInView(element: HTMLElement, behavior: ScrollBehavior): void {
   const container = scrollingParentOf(element);
   const isDocument = container === document.scrollingElement;
-  const containerTop = isDocument ? 0 : container.getBoundingClientRect().top;
-  const box = element.getBoundingClientRect();
-  const top = box.top - containerTop + container.scrollTop;
+  // The content's top: the container's border sits outside its scrolled content (`clientTop`).
+  const contentTop = isDocument ? 0 : container.getBoundingClientRect().top + container.clientTop;
+  const top = element.getBoundingClientRect().top - contentTop + container.scrollTop;
   const viewHeight = isDocument ? window.innerHeight : container.clientHeight;
-  // Nothing above it is kept: `contextAbove` 0 puts the element's top, not the lines before it, a third down.
-  const scrollTop = focusScrollTop({ top, bottom: top + box.height, contextAbove: 0, viewHeight, contentHeight: container.scrollHeight });
-  container.scrollTo({ top: scrollTop, behavior });
+  container.scrollTo({ top: placedScrollTop(top, viewHeight, container.scrollHeight), behavior });
 }
 
 /** The nearest ancestor that scrolls its content, or the document when none does. */
