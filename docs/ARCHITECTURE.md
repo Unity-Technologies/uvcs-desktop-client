@@ -87,7 +87,7 @@ you touch:
      (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
      is never stopped for its size.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
-   (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
+   (see Renderer: Command log), and written to the log file ("The log file"); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
    logged: it's no failure. One that gave up waiting is logged (its signal aborted with a `TimeoutError`:
    `gaveUpWaiting`), as every read with a timeout is: a chip's read on another server, the repositories listed once
@@ -618,7 +618,8 @@ when it's one the user already works with (one of their profiles, `serverReads`)
 on hover or keyboard focus, in a process of its own (`remoteObjectQuery`, docs/features/rich-comments.md "What a chip
 reads"). A server the user doesn't use is never contacted, as `cm` would sign in there with their own credentials,
 and a comment never makes the app contact another server by being shown.
-There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
+There is no telemetry, analytics or crash reporting: the log file stays on the device until the user attaches it to a
+bug report ("The log file"). `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
 
@@ -669,6 +670,33 @@ dialog never shows.
   (`errorCopyTextOf`).
 - `unexpectedErrors.test.ts` checks that the handlers are main's first import, installed in one place, and that every
   timer of `CmShellSession` goes through `guarded`.
+
+## The log file
+
+What a user sends with a bug report: the windows' command logs end with the session, so main keeps one log file in the
+OS's logs folder for the app (`app.getPath('logs')`: `~/Library/Logs/<app>` on macOS, `logs` in the user data folder on
+Windows and Linux), `uvcs-desktop.log` (`appLog`, `main/diagnostics/`). Help ▸ Show Log Files shows it in the file
+manager (`showLogFiles`), and the bug report form asks for it (`.github/ISSUE_TEMPLATE/bug_report.yml`, `log-file`).
+It never leaves the device by itself.
+
+- **What it holds**, one timed record each (`logRecord`: local time and offset from UTC, as `cm`'s own log, so the two
+  read side by side; later lines indented): the launch (app version, OS, architecture, Electron: `startedText`), the
+  `cm` that answered (`cmFoundText`, written by `system.cmVersion`, which already runs `cm version`: no command of its
+  own), every command-log entry (`commandText`: its line, folder and time; how a failure ended, `entryEnding`, and the
+  output the command log kept), errors nothing caught in main (`handleUnexpectedErrors`) and in a window
+  (`system.logUnexpectedError`, once per message as the toast; a render error with its components, `renderError`),
+  pages and processes that ended unexpectedly and windows that stop responding (`logAppHealth`), and failed updates.
+- **What it doesn't**: levels, categories or tracing. A new record is an event a bug report needs, written with
+  `DiagnosticWriter.write`; anything that repeats per item, frame or keystroke stays out.
+- **Secrets**: every record goes through `textForLog` ("Secrets"); the command lines are already hidden as the command
+  log shows them.
+- **Never in the way**: records wait in memory while one append runs, and go together in the next (`DiagnosticLog`);
+  a failure loses them quietly, and the log never logs its own failures nor throws at its caller.
+- **Size**: past 5 MB the file becomes `uvcs-desktop.1.log`, that one `.2.log`, and the oldest is dropped
+  (`rotationRenames`): at most 15 MB.
+- **No crash dumps**: Electron's `crashReporter` stays off. A minidump holds the process's memory, where a password or
+  a token can be, and reading one needs symbols and tools no user has; the log's `render-process-gone` and
+  `child-process-gone` records tell that a process crashed and why.
 
 ## Own config
 
@@ -1210,8 +1238,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
   or Quit (Linux), Help with Check for Updates and About, and `&` marks each item's Alt letter. The menus hold what
   a person looks for there: windows and workspaces (File), the branch work (Branch: switch, new, merges), the palette,
-  the command log and the sidebar (View), the documentation, the shortcuts and reporting an issue (Help); what the
-  screen already offers in place (updating the workspace: the incoming chip) stays out.
+  the command log and the sidebar (View), the documentation, the shortcuts, reporting an issue and the log files to
+  attach to it (Help); what the screen already offers in place (updating the workspace: the incoming chip) stays out.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened

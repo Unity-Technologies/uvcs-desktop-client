@@ -44,7 +44,7 @@ const NODE_LOG_FILES: LogFiles = {
 };
 
 /**
- * The app's log file, for a user to send with a bug report (ARCHITECTURE.md "Errors", "The log file"). Each `write` is
+ * The app's log file, for a user to send with a bug report (ARCHITECTURE.md "The log file"). Each `write` is
  * a record, its secrets hidden (`textForLog`) and its time added (`logRecord`). Writing never blocks the caller nor
  * throws back at it: records wait in memory while the file is written, and go in one append when it's done. A file
  * that can't be written loses those records quietly; the log never writes about its own failures.
