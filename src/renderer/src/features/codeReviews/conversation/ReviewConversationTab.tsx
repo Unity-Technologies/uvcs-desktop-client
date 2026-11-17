@@ -24,7 +24,7 @@ import { useReviewConversation } from './useReviewConversation';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CheckinsRow } from '../rounds/CheckinsRow';
 import { RoundMarker } from '../rounds/RoundMarker';
-import { conversationBlocksOf, roundCountOf, roundHolding, stepGroupsOf, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
+import { conversationBlocksOf, roundCountOf, roundHolding, statusChangesetsOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
 import { useConversationLayout } from '../rounds/useConversationLayout';
 import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
@@ -102,7 +102,8 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
     if (opensAtSince(blocks, focusThread) && sinceLine) placeInView(sinceLine, 'auto');
   }, [placed, openedAtSince, blocks, focusThread]);
 
-  const eventContext = { destination: review.mergeRequest?.destination };
+  const statusChangesets = useMemo(() => statusChangesetsOf(conversation?.events ?? [], changesets), [conversation, changesets]);
+  const eventContext = { destination: review.mergeRequest?.destination, statusChangesets };
   const renderEntry = (entry: ConversationEntry) => (
     <li key={entryKey(entry)}>
       {entry.kind === 'event' && <TimelineEventRow event={entry.event} context={eventContext} />}

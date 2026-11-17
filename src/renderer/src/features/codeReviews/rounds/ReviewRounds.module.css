@@ -1,41 +1,68 @@
 /* Review rounds in the conversation: a round's line, the "New since your last review" line, and check-ins. Quiet: a round
    reads as one line of the timeline, never a card. */
 
-/* A round's line, as an event's (`.eventLine`): what the round was, when, and its fold; the whole line folds it. */
+/* A round's line, as an event's (`.eventLine`): what the round was, the changeset its status was given at while folded,
+   when, and its fold. The whole line folds it, through its button laid over it (`.roundToggle`); the changeset, a link
+   of its own, sits above the button. As wide as its words, so the rest of the row stays a row. */
 .roundLine {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
   min-height: 24px;
-  padding: 0;
-  border: none;
   border-radius: var(--radius-sm);
-  background: none;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  text-align: start;
+  cursor: pointer;
 }
 
 .roundLine:hover {
   color: var(--text-primary);
 }
 
-.roundLine:focus-visible {
+.roundToggle {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  border-radius: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.roundToggle:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring-visible);
 }
 
-.roundText {
+.roundText,
+.roundCounts {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* What the round settled gives way before who closed it: the verdict reads first. Its leading space falls at the
+   start of its box, so the line's gap is the space before its dot. */
+.roundCounts {
+  flex-shrink: 4;
+}
+
 .roundText b {
   color: var(--text-primary);
   font-weight: 600;
+}
+
+.roundChangeset {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  /* A word space after "at", not the line's gap: it reads as one sentence. */
+  margin-left: -3px;
 }
 
 .roundLine time {
@@ -49,7 +76,7 @@
   transition: transform var(--duration-fast) var(--ease-out);
 }
 
-.roundLine[aria-expanded='true'] .chevron,
+.roundToggle[aria-expanded='true'] ~ .chevron,
 .checkinsToggle[aria-expanded='true'] .chevron {
   transform: rotate(90deg);
 }
