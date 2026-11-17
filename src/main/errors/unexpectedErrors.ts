@@ -8,18 +8,26 @@ import { textForLog } from '../cm/hideSecrets';
  * its own, Electron no longer shows its native "A JavaScript error occurred in the main process" dialog, and Node no
  * longer ends the process on a rejection.
  *
- * Each error is logged with its stack, and reported to the user (`report`: the windows' own UI) once per message, so
- * an error that repeats doesn't pile up messages. The app keeps running: the parts that can fail this way end
+ * Each error is logged with its stack (`log`: the console), and reported to the user (`report`: the windows' own UI)
+ * and recorded in the log file (`record`) once per message, so an error that repeats doesn't pile up messages. The app keeps running: the parts that can fail this way end
  * themselves cleanly first (`CmShellSession.guarded` starts its process over), and what is left holds no state that a
  * restart would save (ARCHITECTURE.md "Errors").
  */
-export function handleUnexpectedErrors(process: EventEmitter, report: (error: UnexpectedError) => void, log: (text: string) => void = console.error): void {
+export function handleUnexpectedErrors(
+  process: EventEmitter,
+  report: (error: UnexpectedError) => void,
+  log: (text: string) => void = console.error,
+  record: (text: string) => void = () => undefined,
+): void {
   const reported = new Set<string>();
   const handle = (kind: string) => (error: unknown) => {
     const unexpected = describeUnexpectedError(error);
-    log(`Unexpected error (${kind}): ${unexpected.details}`);
+    const text = `Unexpected error (${kind}): ${unexpected.details}`;
+    log(text);
     if (reported.has(unexpected.message)) return;
     reported.add(unexpected.message);
+    // The log file takes it once, as the user is told: one that repeats would rotate away what led to it.
+    record(text);
     try {
       report(unexpected);
     } catch (failure) {
