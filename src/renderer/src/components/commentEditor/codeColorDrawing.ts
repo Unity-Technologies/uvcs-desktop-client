@@ -48,7 +48,7 @@ function marksIn(marks: readonly TokenMark[], block: FencedCode): TokenMark[] {
 export interface EditorChange {
   docChanged: boolean;
   viewportChanged: boolean;
-  /** More of the text was parsed: an editor parses a long comment in steps after it opens, finding more blocks. */
+  /** More of the text was parsed (`parsedFurther`): an editor parses a long comment in steps after it opens, finding more blocks. */
   parsed: boolean;
   colorsArrived: boolean;
   themeChanged: boolean;
