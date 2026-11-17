@@ -1,3 +1,4 @@
+import { syntaxTree } from '@codemirror/language';
 import { Facet, StateEffect, type Extension } from '@codemirror/state';
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewUpdate } from '@codemirror/view';
 import { fencedCodeIn, tokenMarks, type FencedCode, type TokenMark } from './codeHighlight';
@@ -47,6 +48,7 @@ export const codeColors: Extension = ViewPlugin.fromClass(
       const redrawn = colorsRedrawn({
         docChanged: update.docChanged,
         viewportChanged: update.viewportChanged,
+        parsed: syntaxTree(update.startState) !== syntaxTree(update.state),
         colorsArrived: update.transactions.some((transaction) => transaction.effects.some((effect) => effect.is(colorsArrived))),
         themeChanged: update.startState.facet(codeTheme) !== update.state.facet(codeTheme),
         commentedFileChanged: update.startState.facet(commentedFileLanguage) !== update.state.facet(commentedFileLanguage),
