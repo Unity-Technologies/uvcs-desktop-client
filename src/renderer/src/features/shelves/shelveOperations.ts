@@ -8,6 +8,7 @@ import { viewChangesAction } from '../../app/navigation/viewChangesAction';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelveApplied, isAffectedByShelveComment, isAffectedByShelveDeletion, isAffectedByShelvingAway } from '../../app/refresh/refreshScopes';
 import { askForComment } from '../../components/EditCommentDialog';
+import { workspaceTakesMerges } from '../../components/workspaceTakesMerges';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
@@ -17,7 +18,8 @@ import { appliedShelveMessage, setAsideComment } from './shelveMessages';
 /**
  * Applies a shelve to the workspace as a merge from it, never with `cm shelveset apply` (it would open the external
  * merge tool on conflicts), and deletes it after if asked ("Apply and delete", restoring). Shelves that conflict open
- * the merge view instead. `cm` merges only into a workspace without pending changes: it offers to shelve them first.
+ * the merge view instead, but in a partial workspace, which takes no merge, they're left to apply in a standard one
+ * (`workspaceTakesMerges`). `cm` merges only into a workspace without pending changes: it offers to shelve them first.
  * Resolves to whether the shelve was applied.
  */
 export async function applyShelve(workspacePath: string, shelveId: number, deleteShelve: boolean): Promise<boolean> {
@@ -34,6 +36,10 @@ export async function applyShelve(workspacePath: string, shelveId: number, delet
     case 'applied':
       return true;
     case 'conflicts':
+      if (!workspaceTakesMerges(workspacePath)) {
+        toast.info(`Shelve ${shelveId} wasn’t applied`, 'It needs a merge, which a partial workspace can’t take: apply it in a standard workspace.');
+        return false;
+      }
       navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec: spec.shelve(shelveId), ...(deleteShelve && { deleteShelve }) } });
       return false;
     case 'pendingChanges':

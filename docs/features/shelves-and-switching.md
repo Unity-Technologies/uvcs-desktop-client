@@ -66,7 +66,8 @@ workspace merge, so a shelve comes back with `cm partial shelveset apply` (`appl
 and waits for the merge tool on a conflict: it runs only on a workspace with no pending changes whose loaded items
 are the revisions the shelve started from (`countEntriesNeedingMerge`). Otherwise the changes stay on the shelve,
 and a switch's toast says to merge it in a standard workspace instead of offering the merge page (`mergesHere` on
-`bringPending`), which refuses a partial workspace (`conflictRepositories`).
+`bringPending`), which refuses a partial workspace (`conflictRepositories`); so do Apply shelve and restoring left
+changes (`workspaceTakesMerges`).
 
 `cm status` reports changeset -1 for a partial workspace, whatever it's on (`WorkspaceStatus.partial`), and the
 app reads what it has loaded from the selector (`loadedChangesetOf`; any other number below zero stays unexpected

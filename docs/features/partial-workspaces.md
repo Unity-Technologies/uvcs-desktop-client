@@ -142,8 +142,10 @@ and label menus; no Merge from branch…, Cherry pick changeset… or Undo the c
 (`mergeCommandsOffered`); no M in the Branch Explorer. Download the whole branch… makes the workspace standard first.
 A merge on the server never touches the workspace, so it stays offered (`offersServerMerges`): Merge to… on a branch,
 a changeset or a label, Merge current branch into another branch…, finishing a task and the task's next step in
-Changes. Apply shelve stays too. `menuGrammar.test.ts` builds the menus for a partial workspace. While the kind isn't
-known yet, every merge is offered, as most workspaces are standard. The app menu's Merge from Branch… stays enabled
+Changes. Apply shelve stays too, as `cm partial shelveset apply` (shelves-and-switching.md "A partial workspace"): a
+shelve that needs a merge, applied or restored from left changes, stays shelved, and a toast says to apply it in a
+standard workspace instead of opening the merge page (`workspaceTakesMerges`). `menuGrammar.test.ts` builds the menus
+for a partial workspace. While the kind isn't known yet, every merge is offered, as most workspaces are standard. The app menu's Merge from Branch… stays enabled
 there and does nothing, as its command isn't registered.
 
 ## Other operations it refuses
