@@ -3,7 +3,7 @@ import { app } from 'electron';
 import { DiagnosticLog } from './DiagnosticLog';
 
 /** The log's file name in the OS's logs folder for the app (`app.getPath('logs')`), which Help ▸ Show Log Files opens. */
-export const LOG_FILE_NAME = 'uvcs-desktop.log';
+const LOG_FILE_NAME = 'uvcs-desktop.log';
 
 /** 5 MB a file, three files: days of a busy user's commands, and never more than 15 MB on their disk. */
 const LOG_FILE_BYTES = 5 * 1024 * 1024;

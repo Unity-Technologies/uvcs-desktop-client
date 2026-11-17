@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
@@ -64,8 +66,7 @@ function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile:
     newWindow: () => windows.open(),
     openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
     reportIssue: () => void shell.openExternal(BUG_REPORT_URL),
-    // The file selected in its folder, its earlier files beside it.
-    showLogFiles: () => shell.showItemInFolder(logFile),
+    showLogFiles: () => showLogFiles(logFile),
     requestFeature: () => void shell.openExternal(FEATURE_REQUEST_URL),
     showAboutPanel: () => app.showAboutPanel(),
     checkForUpdates: () => void updates.check(),
@@ -99,4 +100,13 @@ export function popUpAppMenu(window: BrowserWindow, position: { x: number; y: nu
 
 function menuItems(menu: Menu): Electron.MenuItem[] {
   return menu.items.flatMap((item) => [item, ...(item.submenu ? menuItems(item.submenu) : [])]);
+}
+
+/**
+ * The log file selected in its folder, its earlier files beside it; the folder alone while the log has no file (it
+ * couldn't be written), where the OS's own selection would show nothing.
+ */
+function showLogFiles(logFile: string): void {
+  if (existsSync(logFile)) shell.showItemInFolder(logFile);
+  else void shell.openPath(dirname(logFile));
 }
