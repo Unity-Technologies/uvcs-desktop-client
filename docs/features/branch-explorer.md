@@ -198,6 +198,22 @@ Several selected keep only what the graph still shows once it is laid out again 
 just hidden or deleted leaves the selection. The details panel and screen readers say how many are selected (`severalSelected`) instead of one
 object's details.
 
+### More actions button
+
+A right-click on a graph doesn't announce itself, so the branch under the pointer, the selected branch and the
+selected changeset show a "More actions" button (⋯) that opens the same menu the right-click opens on them, under the
+button (`actionsButton.ts`, `drawActionsButtons`). A click on it selects what it belongs to as the right-click does,
+so several selected keep their menu for all of them. A branch's button sits just past its header card, pinned with it
+when the band's start is scrolled away (`branchActionsCenter`); a changeset's sits beside it on its branch's line,
+clear of its selection halo and short of the next column (`changesetActionsCenter`). It is drawn on the canvas with
+the header cards, at zooms where they show, and hit before anything under it; for the right-click and the double-click
+it is part of what it belongs to (`hitTest`'s `buttons`). Its tooltip names it.
+
+Only those three show one: a button on every branch would crowd a graph of thousands, and changesets are too small
+and too many for one on every hover. The button is drawn rather than an HTML button laid over the canvas, as the code
+review chip is, so it moves with every pan and zoom frame with the card it belongs to; the keyboard already reaches the
+same menu with the menu key (Shift+F10).
+
 ## Pending changes
 
 While the workspace has changes under version control (private files alone
