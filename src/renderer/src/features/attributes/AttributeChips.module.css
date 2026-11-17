@@ -5,20 +5,6 @@
   min-width: 0;
 }
 
-.loading {
-  width: 120px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  background: var(--bg-active);
-  animation: var(--keyframes-pulse) 1.2s ease-in-out infinite alternate;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loading {
-    animation: none;
-  }
-}
-
 .chips {
   display: flex;
   flex-wrap: wrap;

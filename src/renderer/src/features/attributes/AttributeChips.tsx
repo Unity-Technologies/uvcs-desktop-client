@@ -1,77 +1,26 @@
-import { Plus } from 'lucide-react';
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { useState } from 'react';
 import type { AttributeValue } from '@shared/domain/attribute';
 import { Markdown } from '../../components/Markdown';
 import { Button } from '../../ui/Button';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { AttributeChip } from './AttributeChip';
 import { AttributeTextEditor } from './AttributeTextEditor';
-import { attributeEditorFor, attributesSectionOf, hasAttributesToShow } from './attributeValues';
+import { attributeEditorFor } from './attributeValues';
 import { AttributeValueEditor } from './AttributeValueEditor';
 import { useAttributeSuggestions } from './useAttributes';
-import { useAttributeEditing, type AttributeEditing } from './useAttributeEditing';
+import type { AttributeEditing } from './useAttributeEditing';
 import styles from './AttributeChips.module.css';
 
 /** Chips shown before "+N" folds the rest away. */
 const MAX_CHIPS = 4;
 
-/**
- * The attribute values of a branch, changeset or label as compact chips (`status: resolved`), edited in place:
- * click a chip (or its pencil) to edit, its cross to remove, "Add attribute…" after them for a new one. A details
- * panel shows them in its Attributes section instead (`AttributesDetailsSection`), its Add in the section's title.
- */
-export function AttributeChips({ objectSpec }: { objectSpec: string }) {
-  const editing = useAttributeEditing(objectSpec);
-  const { values, types, rows } = editing;
-
-  if (!values) return <div className={styles.loading} aria-busy="true" aria-label="Loading attributes" />;
-  if (!hasAttributesToShow(rows, types ?? [])) return null;
-
-  const { addable } = attributesSectionOf(values, types, editing.adding);
-  return (
-    <AttributeChipList
-      editing={editing}
-      add={
-        addable.length > 0 && (
-          <AddAttributeMenu attributes={addable} onAdd={editing.add}>
-            <button className={styles.add}>
-              <Plus size={12} />
-              Add attribute…
-            </button>
-          </AddAttributeMenu>
-        )
-      }
-    />
-  );
-}
-
-interface AddAttributeMenuProps {
-  attributes: string[];
-  onAdd: (attribute: string) => void;
-  /** Which edge of the button the menu lines up with: its start after the chips, its end at a section title's right. */
-  align?: 'start' | 'end';
-  children: ReactElement;
-}
-
-/** The menu of attributes to add, behind the button it's given. */
-export function AddAttributeMenu({ attributes, onAdd, align = 'start', children }: AddAttributeMenuProps) {
-  return (
-    <ActionDropdownMenu align={align} entries={attributes.map((name) => ({ id: name, label: name, run: () => onAdd(name) }))}>
-      {children}
-    </ActionDropdownMenu>
-  );
-}
-
 interface AttributeChipListProps {
   editing: AttributeEditing;
-  /** After the chips, e.g. "Add attribute…". */
-  add?: ReactNode;
   /** In a details section's card, whose tint the value opened under the chips stands out from. */
   inCard?: boolean;
 }
 
-/** The chips of `editing`'s rows, "+N" for those folded away, `add` after them, and under them the value opened. */
-export function AttributeChipList({ editing, add, inCard = false }: AttributeChipListProps) {
+/** The chips of `editing`'s rows, "+N" for those folded away, and under them the value opened. */
+export function AttributeChipList({ editing, inCard = false }: AttributeChipListProps) {
   const [showAll, setShowAll] = useState(false);
   const { rows, opened, adding } = editing;
 
@@ -96,7 +45,6 @@ export function AttributeChipList({ editing, add, inCard = false }: AttributeChi
             +{hidden}
           </button>
         )}
-        {add}
       </div>
       {opened && openedRow && (
         <div className={styles.opened}>
