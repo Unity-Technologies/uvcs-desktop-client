@@ -84,7 +84,7 @@ export function LabelsView() {
         actions={
           <>
             <ViewRefreshButton fetching={isFetching} />
-            <Button variant="primary" icon={<TagPlus size={14} />} onClick={() => void newLabel(place)}>
+            <Button variant="primary" icon={<TagPlus size={14} />} onClick={() => void newLabel(menuPlace)}>
               New label
             </Button>
           </>
@@ -111,7 +111,7 @@ export function LabelsView() {
               icon={<Tag size={22} />}
               title="No labels"
               description="Labels mark important changesets, like releases."
-              action={<Button onClick={() => void newLabel(place)}>{newLabelActionLabel(place)}</Button>}
+              action={<Button onClick={() => void newLabel(menuPlace)}>{newLabelActionLabel(menuPlace)}</Button>}
             />
           )
         }
