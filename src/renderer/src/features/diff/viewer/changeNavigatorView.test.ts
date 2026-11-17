@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeNavigatorView, type NavigatorFacts } from './changeNavigatorView';
+import { changeNavigatorView, heldLabel, type NavigatorFacts } from './changeNavigatorView';
 
 /** A text diff with 12 changes beside a list of files, none current yet: the first move goes to its first. */
 const textBeforeStepping: NavigatorFacts = { stepsOwn: true, count: 12, current: null, noun: 'change', previous: 'file', next: 'step', besideFiles: true, hostSteps: true };
@@ -139,5 +139,20 @@ describe('changeNavigatorView', () => {
       previous: { tip: "Previous file's last conflict", enabled: true },
       next: { tip: 'Next conflict · 3 in this file', enabled: true },
     });
+  });
+});
+
+describe('heldLabel', () => {
+  const view = (label: string, waiting: boolean) => ({ label, waiting });
+
+  it('keeps the count shown while the next file is read, and takes the new one once it is', () => {
+    expect(heldLabel('3 of 3', view('', true))).toBe('3 of 3');
+    expect(heldLabel('3 of 3', view('1 of 5', false))).toBe('1 of 5');
+  });
+
+  it("never brings back a count from two files ago: a file with none in between shows none while the next is read", () => {
+    const afterImage = heldLabel('3 of 3', view('', false));
+    expect(afterImage).toBe('');
+    expect(heldLabel(afterImage, view('', true))).toBe('');
   });
 });
