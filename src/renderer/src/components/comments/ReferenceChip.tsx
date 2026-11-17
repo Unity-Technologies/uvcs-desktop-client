@@ -65,6 +65,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
           label={chip.label}
           title={chip.title}
           repository={chip.repository}
+          file={chip.file}
           target={chip.target}
         />
       );
@@ -79,12 +80,12 @@ function PlaceIssueChip({ reference, source, compact, interactive }: { reference
 
 type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & ReferenceChipProps & { placeRepository: string | undefined };
 
-function ObjectChip({ reference, placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
+function ObjectChip({ reference, placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, file, target }: ObjectChipProps) {
   const place = usePlace();
   const remote = useRemoteObject(reference, placeRepository);
   const cached = useCachedObject(cachedAs) ?? remote.found;
   const summary = cached && summaryOf(cached);
-  const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate, remote.unread), [title, repository, cached, remote.unread]);
+  const card = useMemo(() => chipCard({ title, repository, file }, cached && cachedRecordOf(cached), cardDate, remote.unread), [title, repository, file, cached, remote.unread]);
   const Icon = CHIP_ICONS[icon];
   // The page it's on opens it first when it has a place for it (a review's Changes, `ChipOpenerContext`).
   const pageOpens = useContext(ChipOpenerContext);

@@ -9,9 +9,12 @@
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
 
+/* A name with no place to break (a branch's single long segment, a long file name) breaks anywhere rather than run past
+   the card, here, in the body and in the meta. A path breaks between its folders first (`SlashBreakingText`). */
 .title {
   font-weight: 600;
   font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 
 .body {
@@ -22,9 +25,9 @@
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
-/* A name with no place to break (a branch's single long segment) breaks anywhere rather than run past the card. */
 .meta {
   margin-top: 4px;
   color: var(--text-tertiary);

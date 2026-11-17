@@ -52,6 +52,7 @@ describe('chipContent', () => {
       icon: 'file',
       label: 'Player.cs',
       title: '/src/Player.cs at changeset 12',
+      file: { name: 'Player.cs', folder: '/src', at: 'Changeset 12' },
       target: { object: { kind: 'changeset', id: 12 }, page: { kind: 'diffFile', path: '/src/Player.cs' } },
     });
   });
@@ -65,7 +66,8 @@ describe('chipContent', () => {
       repository: 'game',
       target: { repository: 'game@acme@unity', object: { kind: 'branch', name: '/main/task' } },
     });
-    expect(chipOf('uvcs://acme@unity/repos/game/changesets/12/-/files/src/a.cs')).toMatchObject({ icon: 'file', label: 'a.cs', title: '/src/a.cs in changeset 12' });
+    expect(chipOf('uvcs://acme@unity/repos/game/changesets/12/-/files/src/a.cs')).toMatchObject({ icon: 'file', label: 'a.cs', title: '/src/a.cs in changeset 12', file: { name: 'a.cs', folder: '/src', at: 'Changeset 12' } });
+    expect(chipOf('uvcs://acme@unity/repos/game/-/files/a.cs')).toMatchObject({ icon: 'file', label: 'a.cs', title: '/a.cs', file: { name: 'a.cs', folder: '/' } });
     expect(chipOf('uvcs://acme@unity/repos/game/-/changesets')).toMatchObject({ icon: 'link', label: 'game' });
     expect(chipOf('uvcs://acme@unity/repos/game/code-reviews/311/-/comments/5702')).toMatchObject({ icon: 'codeReview', label: '311', title: 'A comment in code review 311' });
     expect(chipOf('uvcs://acme@unity/repos/game/merge-requests/12')).toMatchObject({ icon: 'codeReview', label: '12', title: 'Merge request 12' });
@@ -125,6 +127,16 @@ describe('chipCard', () => {
       title: 'Changeset 4',
       meta: ['In art on attacker.example.com:8087, not a server you use'],
     });
+  });
+
+  it('shows a file by its name, its folder on a line of its own, then which version and where', () => {
+    const file = { name: 'Store.cs', folder: '/src/client/datastore', at: 'Branch /main' };
+    expect(chipCard({ title: '/src/client/datastore/Store.cs at branch /main', file }, { comment: 'The branch' }, ago)).toEqual({
+      title: 'Store.cs',
+      folder: '/src/client/datastore',
+      meta: ['Branch /main'],
+    });
+    expect(chipCard({ title: '/a.cs', repository: 'art', file: { name: 'a.cs', folder: '/' } }, undefined, ago)).toEqual({ title: 'a.cs', folder: '/', meta: ['In art'] });
   });
 
   it('leaves out what an object read has no word for', () => {
