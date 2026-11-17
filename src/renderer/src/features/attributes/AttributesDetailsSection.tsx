@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { DetailsSection } from '../../ui/DetailsSection';
+import { DetailsEmpty, DetailsSection, DetailsSkeleton } from '../../ui/DetailsSection';
 import { AddAttributeMenu, AttributeChipList } from './AttributeChips';
 import { attributesSectionOf } from './attributeValues';
 import { useAttributeEditing } from './useAttributeEditing';
@@ -14,7 +14,8 @@ interface AttributesDetailsSectionProps {
 
 /**
  * An object's attributes in a details panel, as every panel shows them (docs/ARCHITECTURE.md "List and details"): a
- * titled section with Add at its right, its chips in a card, and no card when it has none (`attributesSectionOf`).
+ * titled section with Add always at its right, and a card under it: a placeholder while the values are read, the chips,
+ * or "No attributes" (`attributesSectionOf`).
  */
 export function AttributesDetailsSection({ objectSpec, title = 'Attributes' }: AttributesDetailsSectionProps) {
   // Keyed by the object, so another one starts with nothing opened or being added.
@@ -36,6 +37,8 @@ function AttributesSectionOf({ objectSpec, title }: Required<AttributesDetailsSe
   );
   return (
     <DetailsSection title={title} action={add}>
+      {section.body === 'reading' && <DetailsSkeleton rows={1} />}
+      {section.body === 'none' && <DetailsEmpty>No attributes</DetailsEmpty>}
       {section.body === 'chips' && <AttributeChipList editing={editing} inCard />}
     </DetailsSection>
   );

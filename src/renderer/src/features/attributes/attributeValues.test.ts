@@ -130,19 +130,19 @@ describe('hasAttributesToShow', () => {
 describe('attributesSectionOf', () => {
   const types = [{ name: 'status' }, { name: 'releasenotes' }];
 
-  it('shows the title alone while the values are read, with nothing to add yet', () => {
+  it('shows a placeholder while the values are read, with nothing to add yet', () => {
     expect(attributesSectionOf(undefined, types, null)).toEqual({ body: 'reading', addable: [] });
   });
 
-  it('shows the title and its Add, without a card, when the object has no value', () => {
+  it('says there are none, offering every attribute, when the object has no value', () => {
     expect(attributesSectionOf([], types, null)).toEqual({ body: 'none', addable: ['status', 'releasenotes'] });
   });
 
-  it('shows the chips in a card, offering only the attributes the object has no value for', () => {
+  it('shows the chips, offering only the attributes the object has no value for', () => {
     expect(attributesSectionOf([{ name: 'status', value: 'RESOLVED' }], types, null)).toEqual({ body: 'chips', addable: ['releasenotes'] });
   });
 
-  it('shows the card for the attribute being added, and offers no other until it is saved or dropped', () => {
+  it('shows the chip of the attribute being added, and offers no other until it is saved or dropped', () => {
     expect(attributesSectionOf([], types, 'status')).toEqual({ body: 'chips', addable: [] });
   });
 

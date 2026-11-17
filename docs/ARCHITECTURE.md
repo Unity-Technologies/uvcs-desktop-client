@@ -1314,8 +1314,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   is and nothing more: everything else is a titled section under it (`DetailsSection`, a caps title over a tinted
   card, a small control such as Add at the title's right), what the object relates to or how it stands first (Merge
   request, Review, Reviewers, In progress), then its attributes (`AttributesDetailsSection`: "Attributes", or "Branch
-  attributes" on a review; the chips in the card, Add in the title, and no card while it has none, so an empty section
-  stays one line, `attributesSectionOf`; never chips in the header, `detailsPanelsShowAttributesInSection.test.ts`). A
+  attributes" on a review; Add always at the title's right, the card holding the chips or "No attributes",
+  `attributesSectionOf`; never chips in the header, `detailsPanelsShowAttributesInSection.test.ts`). A
   panel that is mostly properties (a lock, a folder, the workspace) shows them in a "Details" section instead of behind
   More details. Then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch, label and shelve

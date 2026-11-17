@@ -133,9 +133,9 @@ export function hasAttributesToShow(values: readonly unknown[] | undefined, type
 
 /**
  * What an object's Attributes section in a details panel shows (`AttributesDetailsSection`): `hidden` when there's
- * nothing to show or add (`hasAttributesToShow`); `reading`, its title alone, until the values are read; `none`, its
- * title and Add without a card, when the object has no value, so an empty section stays one line; `chips`, the values
- * in a card, the one being added among them.
+ * nothing to show or add (`hasAttributesToShow`); `reading`, a placeholder, until the values are read; `none`, "No
+ * attributes", when the object has no value; `chips`, the values, the one being added among them. Each is the card
+ * under its title, so the section keeps its shape and its Add stays at the title's right whatever it holds.
  */
 export interface AttributesSection {
   body: 'hidden' | 'reading' | 'none' | 'chips';
