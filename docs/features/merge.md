@@ -486,7 +486,8 @@ Its conflicts are resolved on the page, on the server, as any merge's. The heade
 in the workspace instead" (`ResolveInWorkspaceMenu`, `workspaceResolutions`): "Merge <parent> into <task> first"
 (switches to the task when needed; resolve, check in, and merge the task again, clean) or "Merge on <parent> in this
 workspace" (switches to the parent when needed; checking in finishes the task). Labels name the branches as briefly as
-tells them apart, the tooltips in full. The changeset a moved destination left is only merged on the parent.
+tells them apart, the tooltips in full. The changeset a moved destination left is only merged on the parent. A partial
+workspace, which takes no merge, isn't offered the workspace way (`offersResolvingInWorkspace`).
 
 ### The next step, in Changes
 
