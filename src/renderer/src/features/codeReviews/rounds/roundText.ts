@@ -10,7 +10,18 @@ import { roundName, type CheckinsEntry, type ReviewRound } from './reviewRounds'
  * required by you · 5 requests applied, 2 questions answered". A review's only round has no name (`roundName`): its
  * line starts at what closed it, bold, so it still reads as the round's heading: "**Reviewed** by you · 1 request applied".
  */
-export function roundText(round: ReviewRound, user: string | undefined, roundCount: number): { bold: string; rest: string } {
+/**
+ * A round's line in words: what's bold, what follows it, the changeset its status was given at when the line names it,
+ * then what it settled. "**Reviewed** by Vio at ⟨cs 14⟩ · 1 request applied".
+ */
+export interface RoundLineText {
+  bold: string;
+  rest: string;
+  changeset?: number;
+  counts: string;
+}
+
+export function roundText(round: ReviewRound, user: string | undefined, roundCount: number, open: boolean): RoundLineText {
   const who = user !== undefined && sameUser(round.reviewer, user) ? 'you' : displayName(round.reviewer);
   const settled = [
     round.applied > 0 && `${pluralize(round.applied, 'request')} applied`,
@@ -19,8 +30,12 @@ export function roundText(round: ReviewRound, user: string | undefined, roundCou
     round.open > 0 && `${round.open} open`,
   ].filter((part): part is string => typeof part === 'string');
   const counts = settled.length > 0 ? ` · ${settled.join(', ')}` : '';
+  // Folded, the line names the changeset; unfolded, the status's own event at the round's end does (`reviewEventRow`).
+  const changeset = open ? undefined : round.changesetId;
+  const by = `${round.status} by ${who}${changeset !== undefined ? ' at' : ''}`;
   const name = roundName(round.number, roundCount);
-  return name === undefined ? { bold: round.status, rest: ` by ${who}${counts}` } : { bold: name, rest: ` · ${round.status} by ${who}${counts}` };
+  const words = name === undefined ? { bold: round.status, rest: by.slice(round.status.length) } : { bold: name, rest: ` · ${by}` };
+  return { ...words, ...(changeset !== undefined && { changeset }), counts };
 }
 
 /**

@@ -25,24 +25,31 @@ export interface ReviewEventRow {
   comment?: string;
   /** A merge request's move: the state it moved to, whose color its icon takes (`--merge-request-<state>`). */
   state?: MergeRequestState;
-  /** The changeset a merge request was merged in, named after the text as a chip ("merged this into /main in cs:6"). */
+  /**
+   * The changeset named after the text: the one a merge request was merged in ("merged this into /main in cs:6"), the
+   * one a Reviewed or Rework required was given at ("marked it Reviewed at cs:14").
+   */
   changeset?: number;
 }
 
-/** What an event's text needs from the review it's on: where a merge request merges. */
+/** What an event's text needs from the review it's on: where a merge request merges, what each status covers. */
 export interface ReviewEventContext {
   destination?: string;
+  /** The changeset each Reviewed or Rework required was given at, by its event's id (`statusChangesetsOf`). */
+  statusChangesets?: ReadonlyMap<number, number>;
 }
 
 /** A change the timeline shows, and who made it when known: what they did to themselves reads so. */
-type ShownChange = Exclude<ReviewEventChange, { kind: 'other' }> & { author?: string };
+type ShownChange = Exclude<ReviewEventChange, { kind: 'other' }> & { author?: string; id?: number };
 
 /** An event the timeline shows; none for one this version doesn't read (`other`), which `timelineOf` leaves out. */
 export function reviewEventRow(change: ShownChange, context: ReviewEventContext = {}): ReviewEventRow {
   const text = reviewEventText(change, context);
   switch (change.kind) {
-    case 'statusChanged':
-      return { icon: change.status, text, ...(change.comment.trim() && { comment: change.comment }) };
+    case 'statusChanged': {
+      const changeset = change.id === undefined ? undefined : context.statusChangesets?.get(change.id);
+      return { icon: change.status, ...(changeset !== undefined ? { text: `${text} at`, changeset } : { text }), ...(change.comment.trim() && { comment: change.comment }) };
+    }
     case 'titleChanged':
       return { icon: 'renamed', text };
     case 'mergeRequestState':

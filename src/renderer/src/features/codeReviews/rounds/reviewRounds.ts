@@ -76,6 +76,21 @@ export function reviewedUpToOf(events: readonly ReviewEvent[], user: string | un
 }
 
 /**
+ * The changeset each Reviewed or Rework required was given at, by its event's id: what a reviewer once wrote by hand
+ * with their status ("LGTM, cs 281866"). Inferred from when it was given (`changesetAt`); Under review, a request rather
+ * than a review, has none, nor a status given before the branch's first changeset.
+ */
+export function statusChangesetsOf(events: readonly ReviewEvent[], changesets: readonly Changeset[] | undefined): Map<number, number> {
+  return new Map(
+    events.flatMap((event) => {
+      if (event.kind !== 'statusChanged' || event.status === 'Under review') return [];
+      const changesetId = changesetAt(event.date, changesets);
+      return changesetId === undefined ? [] : [[event.id, changesetId] as const];
+    }),
+  );
+}
+
+/**
  * The newest changeset on the branch at a moment: what a status given then covers. None before the branch's first
  * changeset, or for a review of a changeset or a shelve. `changesets` newest first, as the page reads them; dates
  * compare as instants, across time zones.
@@ -154,6 +169,8 @@ export interface ReviewRound {
   date: string;
   /** What the reviewer said with the status that closed it. */
   comment: string;
+  /** The changeset the status was given at (`changesetAt`); none before the branch's first, or with no branch. */
+  changesetId?: number;
   applied: number;
   discarded: number;
   answered: number;
@@ -235,7 +252,7 @@ function laidOut(input: ConversationInput): { placed: Placed[]; blocks: Conversa
     const startedIn = threads.filter((thread) => Date.parse(thread.root.date) > start && Date.parse(thread.root.date) <= end);
     // A round closed since the page laid the conversation out held what was on screen: it stays unfolded.
     const keptFolds = layout && (layout.roundsFold.get(closing.eventId) ?? false);
-    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, startedIn, keptFolds), entries: entriesOf(inRound, false) });
+    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, changesetAt(closing.date, changesets), startedIn, keptFolds), entries: entriesOf(inRound, false) });
   });
   const rest = placed.slice(next);
   const since = whose === 'own' && rest.length > 0;
@@ -289,10 +306,19 @@ function batchedCheckins(placed: readonly Placed[]): Placed[] {
 }
 
 /** A round's line; `keptFolds`, how it started in the page's first layout, over what it holds now. */
-function roundOf(number: number, closing: ClosingStatus, threads: readonly ReviewThread[], keptFolds: boolean | undefined): ReviewRound {
+function roundOf(number: number, closing: ClosingStatus, changesetId: number | undefined, threads: readonly ReviewThread[], keptFolds: boolean | undefined): ReviewRound {
   const count = (kind: ReviewThread['state']['kind']): number => threads.filter((thread) => thread.state.kind === kind).length;
   const open = count('open');
-  return { number, eventId: closing.eventId, reviewer: closing.reviewer, status: closing.status, date: closing.date, comment: closing.comment, applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: keptFolds ?? open === 0 };
+  return {
+    number,
+    eventId: closing.eventId,
+    reviewer: closing.reviewer,
+    status: closing.status,
+    date: closing.date,
+    comment: closing.comment,
+    ...(changesetId !== undefined && { changesetId }),
+    applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: keptFolds ?? open === 0 
+  };
 }
 
 /**
