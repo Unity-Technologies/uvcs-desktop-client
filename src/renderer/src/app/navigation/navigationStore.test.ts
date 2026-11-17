@@ -4,6 +4,7 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { useSession } from '../workspace/sessionStore';
+import { NO_KEPT_VIEWS } from './keptViews';
 import { guardLeaving, settleBeforeLeaving } from './leaveGuard';
 import { navigation, useNavigation } from './navigationStore';
 import type { Page, PageOf } from './pages';
@@ -25,7 +26,7 @@ function guardWith(canLeave: boolean): { asked: number } {
 
 beforeEach(() => {
   useSession.getState().openWorkspace('/ws');
-  useNavigation.setState({ view: 'changes', pages: [], merge: null });
+  useNavigation.setState({ view: 'changes', pages: [], merge: null, kept: NO_KEPT_VIEWS });
 });
 afterEach(() => liftGuard());
 
@@ -116,6 +117,79 @@ describe('navigation', () => {
   });
 });
 
+describe('returning to a view', () => {
+  const review: Page = { kind: 'codeReview', reviewId: 41, tab: 'changes', focusChangeset: 120 };
+
+  it('shows it as the user left it, its pages over it', () => {
+    navigation.goToView('codeReviews');
+    navigation.openPage(review);
+    navigation.returnToView('branchExplorer');
+
+    expect(useNavigation.getState()).toMatchObject({ view: 'branchExplorer', pages: [] });
+
+    navigation.returnToView('codeReviews');
+
+    expect(useNavigation.getState()).toMatchObject({ view: 'codeReviews', pages: [review] });
+  });
+
+  it('keeps the pages of a view left by a link or a button, which shows another view\'s list', () => {
+    navigation.goToView('codeReviews');
+    navigation.openPage(review);
+    navigation.goToView('changes');
+    navigation.returnToView('codeReviews');
+
+    expect(useNavigation.getState().pages).toEqual([review]);
+  });
+
+  it("shows the view's list when a link or a button goes to it, closing the pages it was left with", () => {
+    navigation.goToView('codeReviews');
+    navigation.openPage(review);
+    navigation.returnToView('branchExplorer');
+    navigation.goToView('codeReviews');
+
+    expect(useNavigation.getState().pages).toEqual([]);
+
+    navigation.returnToView('branchExplorer');
+    navigation.returnToView('codeReviews');
+
+    expect(useNavigation.getState().pages).toEqual([]);
+  });
+
+  it('goes back to the list of the view shown, without asking', () => {
+    const guard = guardWith(false);
+    navigation.openPage(history);
+    navigation.returnToView('changes');
+
+    expect(useNavigation.getState().pages).toEqual([]);
+    expect(guard.asked).toBe(0);
+  });
+
+  it('settles unsaved edits before leaving, and stays when the user cancels', async () => {
+    navigation.openPage(history);
+    guardWith(false);
+    navigation.returnToView('branches');
+    await settleBeforeLeaving();
+
+    expect(useNavigation.getState()).toMatchObject({ view: 'changes', pages: [history], kept: NO_KEPT_VIEWS });
+  });
+
+  it('forgets where the views were left when another place opens, not when the same one opens again from home', () => {
+    navigation.openPage(history);
+    navigation.returnToView('branches');
+    useSession.getState().goHome();
+    useSession.getState().openWorkspace('/ws');
+    navigation.returnToView('changes');
+
+    expect(useNavigation.getState().pages).toEqual([history]);
+
+    navigation.returnToView('branches');
+    useSession.getState().openWorkspace('/other');
+    navigation.returnToView('changes');
+
+    expect(useNavigation.getState().pages).toEqual([]);
+  });
+});
+
 describe('a merge in progress', () => {
   const merge = (sourceSpec: string): PageOf<'merge'> => ({ kind: 'merge', request: { kind: 'merge', sourceSpec } });
   const fromTask = merge('br:/main/task');
@@ -135,6 +209,16 @@ describe('a merge in progress', () => {
     navigation.returnToMerge();
 
     expect(useNavigation.getState()).toMatchObject({ view: 'branches', pages: [fromTask], merge: { id } });
+  });
+
+  it('is kept with no view: the view left keeps only the pages under it', async () => {
+    navigation.openPage(browse);
+    await openMerge(fromTask);
+    navigation.openPage(history);
+    navigation.returnToView('branches');
+    navigation.returnToView('changes');
+
+    expect(useNavigation.getState()).toMatchObject({ pages: [browse], merge: { page: fromTask } });
   });
 
   it('is set aside when going back from it, and shown again when going back to it from a page about it', async () => {
