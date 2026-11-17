@@ -134,16 +134,17 @@ The toast says the whole branch is on disk and what happened to the changes (`wh
 the kind it read and tells every window the kind changed (`downloadWholeBranchOf`, `workspaceKindChanged`), also when
 the switch failed: `cm` may have converted the workspace before failing.
 
-## No merges
+## Merges
 
-A partial workspace offers no merge anywhere (`offersMerges`, `components/mergesOffered.ts`): not in the branch,
-changeset and label menus (merge, Merge to…, cherry pick, subtractive, their ranges; `menuGrammar.test.ts` builds them
-for a partial workspace), the palette's commands (`useMergeCommands`, which keeps Apply shelve, since shelves work
-there), M in the Branch Explorer, nor the task suggestion in Changes (`taskSuggestionOf`, which then asks the server
-nothing). `cm` refuses to merge into a partial workspace; a merge on the server (`cm merge --to`, finishing a task)
-would run, since it never touches the workspace, but merging is work on the whole branch: Download the whole
-branch… makes the workspace standard first. While the kind isn't known yet, merges are offered, as most workspaces
-are standard. The app menu's Merge items stay enabled there and do nothing, as their command isn't registered.
+`cm` refuses to merge into a partial workspace, so it offers no merge into the workspace (`offersMerges`,
+`components/mergesOffered.ts`): no merge, cherry pick or subtractive merge, nor their ranges, in the branch, changeset
+and label menus; no Merge from branch…, Cherry pick changeset… or Undo the changes of a changeset… in the palette
+(`mergeCommandsOffered`); no M in the Branch Explorer. Download the whole branch… makes the workspace standard first.
+A merge on the server never touches the workspace, so it stays offered (`offersServerMerges`): Merge to… on a branch,
+a changeset or a label, Merge current branch into another branch…, finishing a task and the task's next step in
+Changes. Apply shelve stays too. `menuGrammar.test.ts` builds the menus for a partial workspace. While the kind isn't
+known yet, every merge is offered, as most workspaces are standard. The app menu's Merge from Branch… stays enabled
+there and does nothing, as its command isn't registered.
 
 ## Staying partial
 
