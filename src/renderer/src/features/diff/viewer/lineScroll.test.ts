@@ -24,6 +24,11 @@ describe('scrollToLine, frame by frame, in a diff laid out as Pierre does', () =
     expect(scrollToLineIn(diff, 187)).toBe(A_THIRD);
   });
 
+  it('leaves the view where the user scrolls it while the line settles into place', () => {
+    const diff = new FakePierreLayout({ lines: 800, wrapped: everyOtherLine(800), viewHeight: VIEW_HEIGHT });
+    expect(scrollToLineIn(diff, 187, { userScrollsAt: 1 })).toBeLessThan(A_THIRD - 400);
+  });
+
   it('brings a line near the end of a wrapped diff as far up as the end of the content lets it', () => {
     const diff = new FakePierreLayout({ lines: 800, wrapped: everyOtherLine(800), viewHeight: VIEW_HEIGHT });
     scrollToLineIn(diff, 795);
@@ -33,27 +38,16 @@ describe('scrollToLine, frame by frame, in a diff laid out as Pierre does', () =
 
 /**
  * Runs `scrollToLine` on a scrolling element and a virtualizer standing for `diff`, frame by frame (its
- * `requestAnimationFrame`s), Pierre rendering what each frame scrolled to. Returns where the line stands below the top
- * of the view once it stopped and Pierre rendered what it scrolled to.
+ * `requestAnimationFrame`s), Pierre rendering what each frame scrolled to; the user turns the wheel 500 px down on the
+ * frame `userScrollsAt`, if given. Returns where the line stands below the top of the view once it stopped and Pierre
+ * rendered what it scrolled to.
  */
-function scrollToLineIn(diff: FakePierreLayout, lineNumber: number): number {
+function scrollToLineIn(diff: FakePierreLayout, lineNumber: number, { userScrollsAt }: { userScrollsAt?: number } = {}): number {
   const frames: FrameRequestCallback[] = [];
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback));
   vi.stubGlobal('cancelAnimationFrame', () => undefined);
   const fileContainer = {} as Element;
-  const container = {
-    querySelector: (selector: string) => (selector === 'diffs-container' ? fileContainer : null),
-    clientHeight: diff.viewHeight,
-    get scrollHeight() {
-      return diff.maxScroll() + diff.viewHeight;
-    },
-    get scrollTop() {
-      return diff.scrollTop;
-    },
-    set scrollTop(top: number) {
-      diff.scrollTo(top);
-    },
-  } as unknown as HTMLElement;
+  const container = scrollingElementOf(diff, fileContainer);
   const internals: VirtualizerInternals = {
     observers: new Map([[fileContainer, { top: 0, getLinePosition: (line: number) => ({ top: diff.lineTop(line), height: diff.lineHeight(line) }) }]]),
   };
@@ -63,10 +57,24 @@ function scrollToLineIn(diff: FakePierreLayout, lineNumber: number): number {
   diff.endFrame();
   for (let frame = 0; frame < 60 && frames.length > 0; frame++) {
     diff.startFrame();
+    if (frame === userScrollsAt) {
+      container.dispatchEvent(new Event('wheel'));
+      diff.scrollTo(diff.scrollTop + 500);
+    }
     frames.splice(0).forEach((callback) => callback(frame));
     diff.endFrame();
   }
   diff.startFrame();
   diff.endFrame();
   return diff.lineTop(lineNumber) - diff.scrollTop;
+}
+
+/** A scrolling element standing for `diff`, holding its file's container, that takes events as an element does. */
+function scrollingElementOf(diff: FakePierreLayout, fileContainer: Element): HTMLElement {
+  return Object.defineProperties(new EventTarget(), {
+    querySelector: { value: (selector: string) => (selector === 'diffs-container' ? fileContainer : null) },
+    clientHeight: { value: diff.viewHeight },
+    scrollHeight: { get: () => diff.maxScroll() + diff.viewHeight },
+    scrollTop: { get: () => diff.scrollTop, set: (top: number) => diff.scrollTo(top) },
+  }) as unknown as HTMLElement;
 }
