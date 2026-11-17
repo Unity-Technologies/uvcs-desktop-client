@@ -1,8 +1,7 @@
-import { useState, type ReactElement } from 'react';
+import { useState } from 'react';
 import type { AttributeValue } from '@shared/domain/attribute';
 import { Markdown } from '../../components/Markdown';
 import { Button } from '../../ui/Button';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { AttributeChip } from './AttributeChip';
 import { AttributeTextEditor } from './AttributeTextEditor';
 import { attributeEditorFor } from './attributeValues';
@@ -13,23 +12,6 @@ import styles from './AttributeChips.module.css';
 
 /** Chips shown before "+N" folds the rest away. */
 const MAX_CHIPS = 4;
-
-interface AddAttributeMenuProps {
-  attributes: string[];
-  onAdd: (attribute: string) => void;
-  /** Which edge of the button the menu lines up with: its end at a section title's right (`AddAttributeButton`). */
-  align?: 'start' | 'end';
-  children: ReactElement;
-}
-
-/** The menu of attributes to add, behind the button it's given. */
-export function AddAttributeMenu({ attributes, onAdd, align = 'start', children }: AddAttributeMenuProps) {
-  return (
-    <ActionDropdownMenu align={align} entries={attributes.map((name) => ({ id: name, label: name, run: () => onAdd(name) }))}>
-      {children}
-    </ActionDropdownMenu>
-  );
-}
 
 interface AttributeChipListProps {
   editing: AttributeEditing;
