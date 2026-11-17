@@ -1,4 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useNewValuesEffect } from '../../lib/useNewValuesEffect';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { focusAs, ringsOnClickFocus } from '../../lib/focusRing';
@@ -7,7 +8,7 @@ import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../
 import { isModPressed } from '../../lib/shortcuts';
 import { focusedKeyOf, selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
-import { anchorRevealStep } from './anchorReveal';
+import { anchorChangedWhileHidden, anchorRevealStep } from './anchorReveal';
 import type { Column } from './column';
 import { DataTableHeader } from './DataTableHeader';
 import { DataTableRow } from './DataTableRow';
@@ -127,11 +128,21 @@ export function DataTable<Row>({
     return true;
   };
 
-  // Only when the requested row changes (or appears), not on every re-render of the rows.
-  useEffect(() => void reveal(revealKey ?? null), [revealKey, orderedKeys.length]);
+  // Only when the requested row changes (or appears), not on every re-render of the rows, nor as the view shows again.
+  useNewValuesEffect(() => void reveal(revealKey ?? null), [revealKey, orderedKeys.length]);
 
-  // A selection kept from an earlier visit shows once its row is in.
+  // A selection kept from an earlier visit shows once its row is in; so does one made while the view was hidden, kept
+  // mounted (`anchorChangedWhileHidden`), as the view shows again and runs its effects: this one first.
   const revealedAnchor = useRef(false);
+  const anchorNow = useRef(selection.anchor);
+  anchorNow.current = selection.anchor;
+  const anchorWhenHidden = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (anchorChangedWhileHidden(anchorWhenHidden.current, anchorNow.current)) revealedAnchor.current = false;
+    return () => {
+      anchorWhenHidden.current = anchorNow.current;
+    };
+  }, []);
   useEffect(() => {
     const step = anchorRevealStep(orderedKeys.length, revealedAnchor.current);
     if (step === 'forget') revealedAnchor.current = false;

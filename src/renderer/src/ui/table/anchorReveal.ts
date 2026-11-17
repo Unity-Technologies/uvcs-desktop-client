@@ -6,3 +6,12 @@ export function anchorRevealStep(rowCount: number, revealed: boolean): 'forget' 
   if (rowCount === 0) return 'forget';
   return revealed ? 'none' : 'reveal';
 }
+
+/**
+ * Whether the selection changed while the table was hidden, kept mounted with its view (`KeptView`): Show in Locks
+ * selects a lock in a Locks view not shown. It shows as the view shows again, as a selection kept from an earlier
+ * visit does. `hiddenWith` is the anchor the table was hidden with; undefined before it ever was.
+ */
+export function anchorChangedWhileHidden(hiddenWith: string | null | undefined, anchor: string | null): boolean {
+  return hiddenWith !== undefined && hiddenWith !== anchor;
+}
