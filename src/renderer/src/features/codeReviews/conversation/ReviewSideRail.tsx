@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { FileDiff } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { navigation } from '../../../app/navigation/navigationStore';
@@ -23,12 +24,14 @@ interface ReviewSideRailProps {
  * whether the user gets its emails, and the reviewed branch's attributes (`reviewDetailsSections`).
  */
 export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
+  // Its own per page: a review may show in two views kept mounted (`KeptView`).
+  const titleId = useId();
   const { branchAttributes } = reviewDetailsSections(review);
   return (
     <aside className={styles.rail}>
       <ReviewersSection review={review} />
-      <section className={styles.railSection} aria-labelledby="review-open">
-        <h2 id="review-open" className={styles.railTitle}>
+      <section className={styles.railSection} aria-labelledby={titleId}>
+        <h2 id={titleId} className={styles.railTitle}>
           Open <span className={styles.railCount}>{open.length}</span>
         </h2>
         {open.length === 0 && <p className={styles.railEmpty}>Nothing left to answer</p>}

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { DetailsSkeleton } from '../../../ui/DetailsSection';
 import { AddAttributeButton } from '../../attributes/AddAttributeButton';
 import { AttributeChipList } from '../../attributes/AttributeChips';
@@ -16,12 +17,14 @@ export function BranchAttributesSection({ branchSpec }: { branchSpec: string }) 
 }
 
 function BranchAttributesOf({ branchSpec }: { branchSpec: string }) {
+  // Its own per page: a review may show in two views kept mounted (`KeptView`).
+  const titleId = useId();
   const { editing, section } = useAttributesSection(branchSpec);
   if (section.body === 'hidden') return null;
   return (
-    <section className={styles.railSection} aria-labelledby="review-branch-attributes">
+    <section className={styles.railSection} aria-labelledby={titleId}>
       <div className={styles.railHeading}>
-        <h2 id="review-branch-attributes" className={styles.railTitle}>
+        <h2 id={titleId} className={styles.railTitle}>
           Branch attributes
         </h2>
         <AddAttributeButton attributes={section.addable} onAdd={editing.add} />
