@@ -10,7 +10,7 @@ import { PropertyList } from '../../ui/PropertyList';
 import { appInfoQuery } from '../about/appInfoQuery';
 import { commandEnding } from '../shell/commandEnding';
 import { cmVersionQuery } from '../startup/useCmAvailability';
-import { useCopiedFeedback } from '../useCopiedFeedback';
+import { useCopiedFeedback } from '../../ui/useCopiedFeedback';
 import styles from './ErrorDialog.module.css';
 import { errorIssueUrl } from './errorIssueUrl';
 import { errorReport } from './errorReport';

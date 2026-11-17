@@ -1,5 +1,5 @@
 import { Check, Copy, TerminalSquare } from 'lucide-react';
-import { useCopiedFeedback } from '../useCopiedFeedback';
+import { useCopiedFeedback } from '../../ui/useCopiedFeedback';
 import styles from './CopyableCommand.module.css';
 
 /** A terminal command to run, with a note above it and a copy button. */
