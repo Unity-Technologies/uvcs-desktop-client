@@ -3,7 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { checkpointOf, conversationBlocksOf, conversationLayoutOf, reviewedUpToOf, newThreadIds, roundCountOf, roundHolding, roundName, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
+import { checkpointOf, conversationBlocksOf, statusChangesetsOf, conversationLayoutOf, reviewedUpToOf, newThreadIds, roundCountOf, roundHolding, roundName, roundStatusesOf, stepGroupsOf, type ConversationBlock, type ConversationEntry } from './reviewRounds';
 
 // Dates as `cm find` prints them with `--dateformat=o`: a round trip, its offset the server's.
 const at = (day: number, hour: number, offset = '+01:00'): string => `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00${offset}`;
@@ -123,6 +123,25 @@ describe('checkpointOf', () => {
   it("is a reviewer group member's own, as the server notes the status under their name", () => {
     // A member of a group setting a status is added as a user: the event names the user, never the group.
     expect(checkpointOf([status(3, 'borja', 'Reviewed', at(7, 10))], 'borja', [])?.date).toBe(at(7, 10));
+  });
+});
+
+describe('statusChangesetsOf', () => {
+  it('names the newest changeset on the branch when each Reviewed or Rework required was given, by its event', () => {
+    const events = [status(3, 'vio', 'Rework required', at(7, 10)), status(5, 'ana', 'Reviewed', at(8, 12)), status(9, 'vio', 'Reviewed', at(9, 16))];
+    const branch = changesets([12, at(7, 9)], [14, at(9, 15)], [15, at(10, 9)]);
+
+    expect(statusChangesetsOf(events, branch)).toEqual(new Map([[3, 12], [5, 12], [9, 14]]));
+  });
+
+  it('leaves out Under review, a request rather than a review, and a status given before the branch had a changeset', () => {
+    const events = [status(2, 'vio', 'Rework required', at(7, 8)), status(4, 'vio', 'Under review', at(9, 10))];
+
+    expect(statusChangesetsOf(events, changesets([12, at(7, 9)]))).toEqual(new Map());
+  });
+
+  it('names none on a review of a changeset or a shelve, which has no branch to read', () => {
+    expect(statusChangesetsOf([status(3, 'vio', 'Reviewed', at(7, 10))], undefined)).toEqual(new Map());
   });
 });
 
@@ -261,6 +280,14 @@ describe('stepGroupsOf', () => {
 });
 
 describe('conversationBlocksOf', () => {
+  it("names on each round the changeset its status was given at", () => {
+    const events = [status(3, 'vio', 'Rework required', at(7, 10)), status(9, 'vio', 'Reviewed', at(9, 16))];
+    const branch = changesets([12, at(7, 9)], [14, at(9, 15)], [15, at(10, 9)]);
+    const blocks = conversationBlocksOf({ conversation: conversation([], events), user: 'vio', changesets: branch, reviewDate: at(7, 8) });
+
+    expect(blocks.flatMap((block) => (block.kind === 'round' ? [block.round.changesetId] : []))).toEqual([12, 14]);
+  });
+
   it('folds nothing and draws no line on a first review', () => {
     const blocks = conversationBlocksOf({ conversation: conversation([request(1, at(8, 10))], []), user: 'vio', changesets: undefined, reviewDate: at(7, 9) });
 

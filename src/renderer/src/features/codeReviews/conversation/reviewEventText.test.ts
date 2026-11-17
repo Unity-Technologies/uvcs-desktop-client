@@ -19,6 +19,17 @@ describe('reviewEventRow', () => {
     expect(reviewEventRow({ kind: 'statusChanged', status: 'Under review', comment: ' \n', guid: 'g' })).toEqual({ icon: 'Under review', text: 'marked it Under review' });
   });
 
+  it('names the changeset a Reviewed or Rework required was given at, as a reviewer once wrote it by hand', () => {
+    const context = { statusChangesets: new Map([[7, 14], [8, 15]]) };
+    expect(reviewEventRow({ id: 7, kind: 'statusChanged', status: 'Reviewed', comment: 'LGTM', guid: 'g' }, context)).toEqual({ icon: 'Reviewed', text: 'marked it Reviewed at', changeset: 14, comment: 'LGTM' });
+    expect(reviewEventRow({ id: 8, kind: 'statusChanged', status: 'Rework required', comment: '', guid: 'g' }, context)).toEqual({ icon: 'Rework required', text: 'asked for rework at', changeset: 15 });
+  });
+
+  it('names none for a status the branch had no changeset for yet, or on a review of a changeset or a shelve', () => {
+    expect(reviewEventRow({ id: 9, kind: 'statusChanged', status: 'Reviewed', comment: '', guid: 'g' }, { statusChangesets: new Map([[7, 14]]) })).toEqual({ icon: 'Reviewed', text: 'marked it Reviewed' });
+    expect(reviewEventRow({ id: 7, kind: 'statusChanged', status: 'Reviewed', comment: '', guid: 'g' })).toEqual({ icon: 'Reviewed', text: 'marked it Reviewed' });
+  });
+
   it('says who was asked again or removed, and what a title was renamed from and to', () => {
     expect(reviewEventRow({ kind: 'reviewRequestedAgain', reviewer: 'bob.smith' })).toEqual({ icon: 'reviewRequestedAgain', text: 'asked Bob Smith to review it again' });
     expect(reviewEventRow({ kind: 'reviewRequestedAgain', reviewer: '' }).text).toBe('asked for a review again');
