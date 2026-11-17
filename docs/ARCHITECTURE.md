@@ -1076,7 +1076,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
   its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
   canvas, as disposing one loses its WebGL context for good; `useModelScene` builds its scene in the effect, not in a
-  memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
+  memo. The same holds for a view kept mounted (`KeptView`): its `Activity` runs every clean-up as it hides and the
+  effects again as it shows, and detaches its refs meanwhile, so an element a ref puts in state for what's drawn into
+  it is kept with `useKeptElement` (`elementsKeptWhileHidden.test.ts`). The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
   development build too (scripts/e2e/README.md). An effect returns a clean-up or nothing: an arrow that returns what
   a DOM call gives can hand React a promise (`scrollIntoView` returns one in the Chromium the app runs), which crashes
   the window as the effect runs again (`effectsReturnCleanUps.test.ts`).
@@ -1132,8 +1134,23 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     navigation stays while on the home screen), as do Back (⌘[, Alt+←) and the mouse's back button. It shows only
     while `cm` lists that workspace (`workspaceToReturnTo`, from the list the home screen reads anyway).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
-  Another view closes the pages, and Back the top one, except a merge in progress, which only steps aside (merge.md
-  "A merge in progress"): it stays mounted, its keys quiet while it doesn't show (`PageShownContext`).
+  Back closes the top page, except a merge in progress, which only steps aside (merge.md "A merge in progress"): it
+  stays mounted, its keys quiet while it doesn't show (`PageShownContext`).
+  - **Views keep their place**: each view keeps the pages it was left with (`KeptViews`, `switchedViews`). The
+    sidebar, ⌘1… and the palette's Go to return to a view as it was left (`navigation.returnToView`), and to its list
+    when it is the view shown. Every other way into a view (a link, "View changes", "Show in Locks", a toast) shows its
+    list, closing the pages it was left with (`navigation.goToView`): it goes there to show something in the list.
+    Leaving a view still settles unsaved edits first (`afterLeaving`), so a view set aside never holds any. A merge in
+    progress belongs to no view: a view keeps only the pages under it. Another place opening forgets them all; the
+    home screen between two visits of one place doesn't.
+  - **The latest views stay mounted**: the view shown and the last ones shown, up to `MOUNTED_VIEWS` (3), are mounted
+    with their top page, each in an `Activity` (`PlaceLayout`, `KeptView`), in the sidebar's order so none moves.
+    Hidden, a view keeps its DOM and React state (a list's scroll and filter, a review's tab, its picked thread, what
+    was typed) while its effects stop: no shortcut, watcher or query observer runs, so it asks `cm` nothing. Shown
+    again, it reads what went stale as a view mounted anew would, and nothing else. A view past them unmounts and
+    comes back from its pages alone. What's kept hidden is in the DOM: code looks elements up within itself, never by
+    a document-wide id (a review's conversation, `elementById`), and checks what shows (`checkVisibility`, as
+    `focusMain` does).
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
   (`leftChangesSummary`, in the "Welcome back" banner's words).

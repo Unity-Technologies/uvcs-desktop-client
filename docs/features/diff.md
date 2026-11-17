@@ -364,7 +364,7 @@ an unchanged empty line (`caretLineCss`): Pierre shows it as added after a chang
 ## Leaving unsaved edits
 
 `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
-(`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
+(`selectAfterLeaving`), another view (`goToView`, `returnToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
 away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has
 focus) or reloading asks the same (`guardUnloading`): the page holds its `beforeunload` back, the main process brings
 its window forward and sends `leaveRequested` (`main/window/leaveRequests`), and once the edits are saved or dropped

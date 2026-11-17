@@ -412,7 +412,9 @@ on top of it (a file's history from its list) only set it aside. Its page stays 
 merge's id), so everything decided, edited or read comes back as it was, and a run of a merge tool goes on while it's
 away; its shortcuts and Back wait until it shows again (`usePageShown`). The sidebar holds the way back above the views
 (`MergeInProgressItem`: "Merge /main/task", a dot, "In progress: Merge /main/task into your workspace" in its tooltip,
-`mergeInProgressWords`), which shows the merge again over the view shown (`returnToMerge`).
+`mergeInProgressWords`), which shows the merge again over the view shown (`returnToMerge`), closing the pages that
+view showed. It belongs to no view: the view it was opened over keeps only the pages under it when the user goes to
+another view (ARCHITECTURE.md "Views keep their place").
 
 - Only Close merge (the page's ✕, `CloseMergeButton`, `closeMergeAsked`, confirmed) drops it. Completing it, or the
   page finding nothing it can do (nothing to merge, pending changes in the way), settles it (`mergeSettled`,
