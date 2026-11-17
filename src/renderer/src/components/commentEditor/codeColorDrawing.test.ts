@@ -73,7 +73,7 @@ describe('codeColorsAfter', () => {
 });
 
 describe('colorsRedrawn', () => {
-  const still = { docChanged: false, viewportChanged: false, colorsArrived: false, themeChanged: false, commentedFileChanged: false };
+  const still = { docChanged: false, viewportChanged: false, parsed: false, colorsArrived: false, themeChanged: false, commentedFileChanged: false };
 
   it('draws the colors anew, plain until the new ones arrive, in another theme', () => {
     expect(colorsRedrawn({ ...still, themeChanged: true, docChanged: true })).toBe('anew');
@@ -89,6 +89,11 @@ describe('colorsRedrawn', () => {
     expect(colorsRedrawn({ ...still, docChanged: true })).toBe('kept');
     expect(colorsRedrawn({ ...still, viewportChanged: true })).toBe('kept');
     expect(colorsRedrawn({ ...still, colorsArrived: true })).toBe('kept');
+  });
+
+  // A long comment is parsed past its first 3,000 characters after it opens: the code blocks found then get colored.
+  it('draws them again, keeping those drawn, as more of the comment is parsed', () => {
+    expect(colorsRedrawn({ ...still, parsed: true })).toBe('kept');
   });
 
   it('leaves them as they are otherwise (a caret moved)', () => {
