@@ -186,3 +186,15 @@ export function changesetRowsHeight(places: number | undefined, most: number, dr
   const tallest = dragged ?? placesHeight(most);
   return places === undefined || places === 0 ? tallest : Math.min(placesHeight(places), tallest);
 }
+
+/**
+ * The height to remember as the user drags the splitter to `result`. Every list shares it, so a list shorter than it
+ * (Incoming's three changesets) keeps it while the drag stays at or past its rows, where nothing on screen moves: only
+ * a drag that makes the list shorter than its rows is the user's new height.
+ */
+export function changesetRowsDragged(result: number, places: number | undefined, most: number, dragged: number | null): number | null {
+  if (places === undefined || places === 0) return result;
+  const rows = placesHeight(places);
+  const tallest = dragged ?? placesHeight(most);
+  return rows < tallest && result >= rows ? dragged : result;
+}
