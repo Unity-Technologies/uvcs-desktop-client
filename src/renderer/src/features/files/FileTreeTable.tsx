@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react';
+import type { RowReveal } from '../../ui/table/rowReveal';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { MenuEntry } from '../../lib/actions';
 import type { SelectionState } from '../../lib/selection';
@@ -53,7 +54,8 @@ interface FileTreeTableProps {
   lockOf?: (item: TreeItem) => PendingLock | undefined;
   /** Marks directories that contain pending changes. */
   hasChangesInside?: (directory: string) => boolean;
-  revealPath?: string | null;
+  /** The file asked to be scrolled to, each time it is (`RowReveal`). */
+  reveal?: RowReveal;
   /** Items cut to move elsewhere, shown ghosted. */
   isCut?: (item: TreeItem) => boolean;
   /** "/" in the tree: Go to file. */
@@ -71,7 +73,7 @@ export function FileTreeTable({
   statusOf,
   lockOf,
   hasChangesInside,
-  revealPath,
+  reveal,
   isCut,
   onGoToFile,
 }: FileTreeTableProps) {
@@ -124,7 +126,8 @@ export function FileTreeTable({
       onActivate={(row) => (row.item.itemType === 'directory' ? onToggleDirectory(row.item.path) : onOpenFile(row.item))}
       contextMenu={(selected) => contextMenu(selected.map((row) => row.item))}
       onRowKeyDown={onRowKeyDown}
-      revealKey={revealPath}
+      revealKey={reveal?.key}
+      revealAsked={reveal?.asked}
       rowHeight={28}
     />
   );

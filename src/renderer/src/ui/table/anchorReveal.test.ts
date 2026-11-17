@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { anchorChangedWhileHidden, anchorRevealStep } from './anchorReveal';
+import { singleSelection } from '../../lib/selection';
+import { anchorRevealStep, selectionSetWhileHidden } from './anchorReveal';
 
 describe('anchorRevealStep', () => {
   it('shows the selection once its rows are in, until it has', () => {
@@ -13,14 +14,19 @@ describe('anchorRevealStep', () => {
   });
 });
 
-describe('anchorChangedWhileHidden', () => {
-  it('is the selection made while the view was hidden: Show in Locks into the Locks view kept mounted', () => {
-    expect(anchorChangedWhileHidden('lock:a.png', 'lock:b.png')).toBe(true);
-    expect(anchorChangedWhileHidden(null, 'lock:b.png')).toBe(true);
+describe('selectionSetWhileHidden', () => {
+  const left = singleSelection('lock:a.png');
+
+  it('is a selection made while the view was hidden: Show in Locks into the Locks view kept mounted', () => {
+    expect(selectionSetWhileHidden(left, singleSelection('lock:b.png'))).toBe(true);
   });
 
-  it("is nothing when the view shows again as it was left, or was never hidden", () => {
-    expect(anchorChangedWhileHidden('lock:a.png', 'lock:a.png')).toBe(false);
-    expect(anchorChangedWhileHidden(undefined, 'lock:a.png')).toBe(false);
+  it('is one made for the row already selected too, after the user scrolled it away', () => {
+    expect(selectionSetWhileHidden(left, singleSelection('lock:a.png'))).toBe(true);
+  });
+
+  it('is nothing when the view shows again as it was left, or was never hidden', () => {
+    expect(selectionSetWhileHidden(left, left)).toBe(false);
+    expect(selectionSetWhileHidden(undefined, left)).toBe(false);
   });
 });

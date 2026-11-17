@@ -1,4 +1,5 @@
 import { FilePlus, FolderDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
+import { NO_ROW_REVEAL, revealAsked, type RowReveal } from '../../ui/table/rowReveal';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
@@ -57,7 +58,7 @@ export function FilesView() {
   const { toggle, expand } = useExpandedDirectoriesStore();
   const { data: pendingChanges, dataUpdatedAt: pendingChangesUpdatedAt } = usePendingChanges();
   const [selection, setSelection] = useViewSelection('files');
-  const [revealPath, setRevealPath] = useState<string | null>(null);
+  const [reveal, setReveal] = useState<RowReveal>(NO_ROW_REVEAL);
   const diffExpanded = useDiffExpanded();
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => directoryListingQuery(workspacePath, directory), expanded);
@@ -78,7 +79,7 @@ export function FilesView() {
     const { path, selected = [path] } = revealRequest;
     expand(workspacePath, ancestorsOf(path));
     setSelection({ selected: new Set(selected), anchor: path });
-    setRevealPath(path);
+    setReveal((previous) => revealAsked(previous, path));
     useFilesViewStore.getState().revealed(revealRequest);
   }, [revealRequest, expand, workspacePath]);
 
@@ -95,7 +96,7 @@ export function FilesView() {
 
   const selectFolder = (path: string): void => {
     selectAfterLeaving(selection, singleSelection(path), setSelection);
-    setRevealPath(path);
+    setReveal((previous) => revealAsked(previous, path));
   };
 
   const createInSelection = (kind: 'file' | 'directory'): void => void createItem(workspacePath, targetDirectoryFor(focused), kind);
@@ -154,7 +155,7 @@ export function FilesView() {
               statusOf={(item) => itemStatus(item, pendingIndex)}
               lockOf={(item) => locks.get(item.path)}
               hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
-              revealPath={revealPath}
+              reveal={reveal}
               isCut={(item) => cutPaths.has(item.path)}
               onGoToFile={() => openGoToFile()}
             />
