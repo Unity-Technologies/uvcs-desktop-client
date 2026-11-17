@@ -2,9 +2,12 @@ import { workspacePlace } from '@shared/domain/place';
 import type { TreeItem, XlinkTarget } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { runOperation, runRead, runVoidAction } from '../../app/operations/runOperation';
+import { queryClient } from '../../app/queryClient';
 import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import { listedItems } from '../files/directoryListing';
 import { useFilesViewStore } from '../files/filesViewStore';
+import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
 import { createdXlinkMessage, loadedXlinkMessage } from './createdXlinkMessage';
 import { openXlinkDialog } from './XlinkDialog';
 import { checkinCommentOf, newXlinkOf, xlinkEditOf, type XlinkDialogTarget } from './xlinkDraft';
@@ -24,7 +27,12 @@ export function createXlink(workspacePath: string, directory: string): void {
       kind: 'update',
       cancellable: false,
       run: (operationId) => api.xlinks.create(workspacePath, xlink, checkinCommentOf(directory, draft), operationId),
-      success: (result) => createdXlinkMessage(xlink.path, result, () => void loadXlinkFiles(workspacePath, xlink.path)),
+      success: (result) =>
+        createdXlinkMessage(xlink.path, result, {
+          workspaceKind: queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey)?.kind,
+          loadAgain: () => void loadXlinkFiles(workspacePath, xlink.path),
+          chooseDownloads: () => openChooseDownloads(workspacePath, xlink.path),
+        }),
       affects: isAffectedByCheckinOrUpdate,
     });
     if (created) useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), xlink.path);
