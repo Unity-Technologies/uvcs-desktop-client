@@ -173,6 +173,19 @@ describe('returning to a view', () => {
     expect(useNavigation.getState()).toMatchObject({ view: 'changes', pages: [history], kept: NO_KEPT_VIEWS });
   });
 
+  it("keeps nothing of a place that another one replaced while unsaved edits were asked about", async () => {
+    // Opening another workspace goes to its Changes and opens it at once; the answer comes once it shows.
+    let answer = (_canLeave: boolean): void => {};
+    liftGuard = guardLeaving(() => new Promise<boolean>((resolve) => (answer = resolve)));
+    navigation.openPage(history);
+    navigation.goToView('branches');
+    useSession.getState().openWorkspace('/other');
+    answer(true);
+    await settleBeforeLeaving();
+
+    expect(useNavigation.getState()).toMatchObject({ view: 'branches', pages: [], kept: NO_KEPT_VIEWS });
+  });
+
   it('forgets where the views were left when another place opens, not when the same one opens again from home', () => {
     navigation.openPage(history);
     navigation.returnToView('branches');
