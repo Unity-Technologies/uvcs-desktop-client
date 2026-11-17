@@ -180,9 +180,10 @@ update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
   Contents read and write), never through a person's token: each job mints a token for the run with
   `actions/create-github-app-token`, limited to the one repository and permission it needs, from the App's Client ID
   (the `RELEASE_APP_CLIENT_ID` variable) and private key (the `RELEASE_APP_PRIVATE_KEY` secret), which both
-  repositories keep in a `release` environment open only to runs from main. A token lasts an hour and a Sign run
-  can take longer (one took 72 minutes), so the `sign` job waits in rounds of at most 50 minutes, each with a new
-  token (`.github/actions/watch-signing-run`), up to 150 minutes. Rotating the key means generating a new one in the
+  repositories keep in a `release` environment open only to runs from main. A Sign run takes about 8 minutes: each of
+  its jobs has a time limit about twice its slowest run (`timeout-minutes`), and the `sign` job waits 30 minutes at
+  most (`SIGNING_LIMIT_MINUTES`), then cancels the run, so it can't upload to the draft later, and fails. A stuck run
+  (a notarization waiting through an Apple outage) fails a release in minutes, not hours. Rotating the key means generating a new one in the
   App's Credentials, setting `RELEASE_APP_PRIVATE_KEY` in both repositories, then deleting the old key. Unity's
   signing certificates are in Azure Key Vault, which accepts only Unity's networks, and Unity's runners that reach it
   may serve only private repositories (SSDLC), which this one isn't. The Sign workflow builds this repository's tag
