@@ -22,6 +22,11 @@ interface ReferenceChipProps {
   /** In a row: the object alone, no summary beside it (its tooltip still has it). */
   compact?: boolean;
   /**
+   * In a sentence that names it (a review's timeline: "marked it Reviewed at 281866"): the object's icon and name in
+   * the sentence's own font, as a link reads, with no fill and no summary; its card and its click as any chip's.
+   */
+  plain?: boolean;
+  /**
    * False inside something clicked as a whole (a button, a picker's option): the chip reads the same but is no link,
    * so the click is the row's.
    */
@@ -29,7 +34,7 @@ interface ReferenceChipProps {
 }
 
 /** A changeset, branch, person or emoji a comment names, as `chipContent` says it shows; a click opens an object. */
-export const ReferenceChip = memo(function ReferenceChip({ reference, source, compact = false, interactive = true }: ReferenceChipProps) {
+export const ReferenceChip = memo(function ReferenceChip({ reference, source, compact = false, plain = false, interactive = true }: ReferenceChipProps) {
   const placeRepository = usePlaceRepository();
   const chip = useMemo(() => chipContent(reference, placeRepository), [reference, placeRepository]);
   switch (chip.kind) {
@@ -60,6 +65,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
           cachedAs={chip.cachedAs}
           source={source}
           compact={compact}
+          plain={plain}
           interactive={interactive}
           icon={chip.icon}
           label={chip.label}
@@ -80,7 +86,7 @@ function PlaceIssueChip({ reference, source, compact, interactive }: { reference
 
 type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & ReferenceChipProps & { placeRepository: string | undefined };
 
-function ObjectChip({ reference, placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, file, target }: ObjectChipProps) {
+function ObjectChip({ reference, placeRepository, cachedAs, source, compact, plain, interactive, icon, label, title, repository, file, target }: ObjectChipProps) {
   const place = usePlace();
   const remote = useRemoteObject(reference, placeRepository);
   const cached = useCachedObject(cachedAs) ?? remote.found;
@@ -98,13 +104,13 @@ function ObjectChip({ reference, placeRepository, cachedAs, source, compact, int
     void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };
   // An empty `data-tip`: the app's tooltip of the row or cell around it gives way to the chip's card (`findTip`).
-  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '' };
+  const shown = { className: plain ? styles.plain : styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '' };
   const content = (
     <>
       <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
       <span className={styles.label}>{label}</span>
       {repository && <span className={styles.repository}>{repository}</span>}
-      {!compact && summary && <span className={styles.summary}>{summary}</span>}
+      {!compact && !plain && summary && <span className={styles.summary}>{summary}</span>}
     </>
   );
   if (!interactive) {
@@ -117,7 +123,7 @@ function ObjectChip({ reference, placeRepository, cachedAs, source, compact, int
   return (
     <ChipHoverCard card={card} onOpenChange={remote.cardOpen}>
       {/* In a row or a title the row's keys reach the object; only a full comment's chips are tab stops. */}
-      <a href="#" {...shown} aria-label={chipName(title, compact ? undefined : summary || undefined)} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
+      <a href="#" {...shown} aria-label={chipName(title, compact || plain ? undefined : summary || undefined)} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
         {content}
       </a>
     </ChipHoverCard>

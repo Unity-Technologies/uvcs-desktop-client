@@ -27,6 +27,31 @@
   box-shadow: var(--focus-ring-visible);
 }
 
+/* In a sentence (`plain`): the object reads as words of it, in its font and weight, colored as a link and underlined
+   under the pointer; no fill, which in a line of the timeline read as a badge and drew the eye from the verdict. */
+.plain {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  color: var(--accent-text);
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+
+.plain:hover .label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.plain:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
 .icon {
   flex: none;
   align-self: center;
