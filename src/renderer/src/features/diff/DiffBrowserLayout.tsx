@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
 import { SplitPane } from '../../ui/SplitPane';
 import { Stowable } from '../../ui/Stowable';
+import { useKeptElement } from '../../lib/useKeptElement';
 import styles from './DiffBrowserLayout.module.css';
 
 /** Where a `DiffBrowser` draws its list of files and its diff. */
@@ -35,8 +36,8 @@ interface DiffBrowserLayoutProps {
 export const FILES_WIDTH = 340;
 
 export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable = true }: DiffBrowserLayoutProps) {
-  const [files, setFiles] = useState<HTMLElement | null>(null);
-  const [diff, setDiff] = useState<HTMLElement | null>(null);
+  const [files, setFiles] = useKeptElement<HTMLElement>();
+  const [diff, setDiff] = useKeptElement<HTMLElement>();
   const diffExpanded = useDiffExpanded() && expandable;
   const filesSlot = <div ref={setFiles} className={styles.slot} />;
   const diffSlot = <div ref={setDiff} className={styles.slot} />;
