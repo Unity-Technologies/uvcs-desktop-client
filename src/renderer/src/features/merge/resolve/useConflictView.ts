@@ -18,24 +18,21 @@ export function useConflictView(viewRef: RefObject<StepView | null>, surfaceRef:
   useShadowStyle(surfaceRef, flash.css);
   const place = useRef(new ConflictPlace());
 
+  // Scrolls to the conflict at `index`, lit for a moment when moved to, not when the view opens at it.
+  const moveTo = (index: number, light: boolean): void => {
+    const surface = surfaceRef.current;
+    const first = actionRows(surface)[index];
+    if (!surface || !first) return;
+    place.current.moved();
+    const rows = conflictRowsFrom(first);
+    scrollToRows(surface, first, rows, light);
+    if (light) flash.light(conflictLinesSelector(rows.flatMap((row) => (row instanceof HTMLElement && row.dataset.lineIndex ? [row.dataset.lineIndex] : []))));
+  };
+
   useImperativeHandle(viewRef, () => ({
     isShown: () => actionRows(surfaceRef.current).length > 0,
-    reveal: (index) => {
-      const surface = surfaceRef.current;
-      const first = actionRows(surface)[index];
-      if (!surface || !first) return;
-      place.current.moved();
-      const rows = conflictRowsFrom(first);
-      scrollToRows(surface, first, rows, true);
-      flash.light(conflictLinesSelector(rows.flatMap((row) => (row instanceof HTMLElement && row.dataset.lineIndex ? [row.dataset.lineIndex] : []))));
-    },
-    show: (index) => {
-      const surface = surfaceRef.current;
-      const first = actionRows(surface)[index];
-      if (!surface || !first) return;
-      place.current.moved();
-      scrollToRows(surface, first, conflictRowsFrom(first), false);
-    },
+    reveal: (index) => moveTo(index, true),
+    show: (index) => moveTo(index, false),
     countAbove: () =>
       place.current.above(() => {
         const surface = surfaceRef.current;
