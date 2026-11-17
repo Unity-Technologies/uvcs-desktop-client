@@ -30,6 +30,9 @@ const item = (path: string, itemType: 'file' | 'directory' = 'file', repository 
 const chooseDownloadsIn = (menu: MenuEntry[]) =>
   menu.find((candidate): candidate is Action => typeof candidate === 'object' && 'id' in candidate && candidate.id === 'chooseDownloads');
 
+const entryIn = (menu: MenuEntry[], id: string) =>
+  menu.find((candidate): candidate is Action => typeof candidate === 'object' && 'id' in candidate && candidate.id === id);
+
 const menuOf = (items: TreeItem[], pending = new PendingChangesIndex([])) => fileMenu(ws, items, pending);
 
 const seed = (workspace: Partial<WorkspaceInfo>) => queryClient.setQueryData(queryKeys.inWorkspace(ws, 'info'), { ...standard, ...workspace });
@@ -77,5 +80,21 @@ describe('fileMenu: Choose what to download', () => {
   ] as [string, Partial<WorkspaceInfo>][])('is not offered on %s', (_, workspace) => {
     seed(workspace);
     expect(chooseDownloadsIn(menuOf([item('src/main.c')]))).toBeUndefined();
+  });
+});
+
+describe('fileMenu: xlinks in a partial workspace', () => {
+  const xlink = { writable: true, path: '/', changeset: 12, repository: 'lib', server: 'local' };
+
+  it('offers no New xlink…, which it couldn’t check in; a standard workspace does', () => {
+    seed({ kind: 'partial' });
+    expect(entryIn(menuOf([item('src', 'directory')]), 'newXlink')).toBeUndefined();
+    seed({ kind: 'standard' });
+    expect(entryIn(menuOf([item('src', 'directory')]), 'newXlink')).toBeDefined();
+  });
+
+  it('keeps Edit xlink… on an xlink', () => {
+    seed({ kind: 'partial' });
+    expect(entryIn(menuOf([{ ...item('lib', 'directory'), xlink }]), 'editXlink')).toBeDefined();
   });
 });
