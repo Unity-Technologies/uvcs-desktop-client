@@ -137,7 +137,7 @@ export interface SelectionHighlights {
   selectedChangeset: number | null;
   selectedBranch: string | null;
   /** The lead's label, when the lead is a label: its changeset is `selectedChangeset`, its menu the label's. */
-  selectedLabel: string | null;
+  leadLabel: string | null;
   selectedPending: boolean;
   /** Every changeset selected, the lead's included; labels select theirs. */
   selectedChangesets: ReadonlySet<number>;
@@ -149,7 +149,7 @@ export function selectionHighlights(selections: GraphSelections): SelectionHighl
   return {
     selectedChangeset: lead?.kind === 'changeset' ? lead.id : null,
     selectedBranch: lead?.kind === 'branch' ? lead.name : null,
-    selectedLabel: lead?.kind === 'changeset' ? (lead.label ?? null) : null,
+    leadLabel: lead?.kind === 'changeset' ? (lead.label ?? null) : null,
     selectedPending: lead?.kind === 'pending',
     selectedChangesets: new Set(selections.flatMap((selection) => (selection.kind === 'changeset' ? [selection.id] : []))),
     selectedBranches: new Set(selections.flatMap((selection) => (selection.kind === 'branch' ? [selection.name] : []))),

@@ -39,8 +39,8 @@ export function branchesWithActions({ hoveredBranch, selectedBranch }: Pick<Grap
  * one on every hover; selecting one is how the user says it is the one they are looking at. A selected label leads
  * with its changeset, but its menu is the label's: its changeset shows none, which would open the changeset's instead.
  */
-export function changesetWithActions({ selectedChangeset, selectedLabel }: Pick<GraphScene, 'selectedChangeset' | 'selectedLabel'>): number | null {
-  return selectedLabel === null ? selectedChangeset : null;
+export function changesetWithActions({ selectedChangeset, leadLabel }: Pick<GraphScene, 'selectedChangeset' | 'leadLabel'>): number | null {
+  return leadLabel === null ? selectedChangeset : null;
 }
 
 /** Where a branch's button goes: just past the right end of its header card, centered on it, pinned with it. */
@@ -49,15 +49,14 @@ export function branchActionsCenter(card: Box): Point {
 }
 
 /**
- * Where the pointer finds a branch's button: the button, and the gap between it and the card down to the card's
- * bottom, where the band starts. Moving from the card or the band onto the button never crosses empty space, which
- * would leave the branch, and its button with it, before the pointer gets there.
+ * Where the pointer finds a branch's button: the button, and the gap between it and the card, as tall as the card,
+ * whose bottom sits on the band. Moving from anywhere on the card's edge or from the band onto the button never
+ * crosses empty space, which would leave the branch, and its button with it, before the pointer gets there. The card
+ * is never shorter than the button, so the box holds all of it.
  */
 export function branchActionsHitBox(card: Box): Box {
-  const center = branchActionsCenter(card);
   const left = card.x + card.width;
-  const top = center.y - ACTIONS_BUTTON_RADIUS;
-  return { x: left, y: top, width: center.x + ACTIONS_BUTTON_RADIUS - left, height: Math.max(center.y + ACTIONS_BUTTON_RADIUS, card.y + card.height) - top };
+  return { x: left, y: card.y, width: branchActionsCenter(card).x + ACTIONS_BUTTON_RADIUS - left, height: card.height };
 }
 
 /** Where the pointer finds a changeset's button: the button itself. */
@@ -86,7 +85,8 @@ export function actionsMenuPoint(center: Point): Point {
  */
 export function actionsButtonCenter(subject: ActionsSubject, layout: GraphLayout, drawn: Pick<DrawnTargets, 'branchHeaders'>): Point | null {
   if (subject.kind === 'branch') {
-    const card = drawn.branchHeaders.find((lane) => lane === subject.lane);
+    // By name: a lane laid out again between the frame and the click is the same branch.
+    const card = drawn.branchHeaders.find((lane) => lane.branch.name === subject.lane.branch.name);
     return card && branchActionsCenter(card);
   }
   const point = nodePoint(layout, subject.id);

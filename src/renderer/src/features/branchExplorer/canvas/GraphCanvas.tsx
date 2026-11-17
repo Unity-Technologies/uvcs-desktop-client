@@ -43,7 +43,7 @@ export type GraphHighlights = Pick<
   GraphScene,
   | 'selectedChangeset'
   | 'selectedBranch'
-  | 'selectedLabel'
+  | 'leadLabel'
   | 'selectedPending'
   | 'selectedChangesets'
   | 'selectedBranches'

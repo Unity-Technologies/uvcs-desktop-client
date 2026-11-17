@@ -206,9 +206,9 @@ button (`actionsButton.ts`, `drawActionsButtons`). A click on it selects what it
 so several selected keep their menu for all of them (`clickOutcome`); the menu opens as the menu key opens it
 (`openContextMenuAt`). A selected label leads with its changeset but shows no button, which would open the
 changeset's menu instead of the label's (`changesetWithActions`). A branch's button sits just past its header card,
-pinned with it when the band's start is scrolled away (`branchActionsCenter`); the pointer finds it from the card's
-edge down to the band (`branchActionsHitBox`), so moving onto it never crosses empty space and loses the branch on
-the way. A changeset's sits beside it on its branch's line, clear of its selection halo and short of the next column
+pinned with it when the band's start is scrolled away (`branchActionsCenter`); the pointer finds it all along the
+card's edge, down to the band (`branchActionsHitBox`), so moving onto it never crosses empty space and loses the
+branch on the way. A changeset's sits beside it on its branch's line, clear of its selection halo and short of the next column
 (`changesetActionsCenter`). It is drawn on the canvas with the header cards, at zooms where they show, and hit before
 anything under it; for the right-click it is part of what it belongs to (`hitTest`'s `buttons`), and a double-click on
 it does nothing (`doubleClickOutcome`). Its tooltip names it.

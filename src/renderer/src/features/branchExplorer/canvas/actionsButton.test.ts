@@ -29,12 +29,12 @@ describe('which objects show a "More actions" button', () => {
   });
 
   it('shows one for the selected changeset only', () => {
-    expect(changesetWithActions({ selectedChangeset: 4, selectedLabel: null })).toBe(4);
-    expect(changesetWithActions({ selectedChangeset: null, selectedLabel: null })).toBeNull();
+    expect(changesetWithActions({ selectedChangeset: 4, leadLabel: null })).toBe(4);
+    expect(changesetWithActions({ selectedChangeset: null, leadLabel: null })).toBeNull();
   });
 
   it('shows none for a selected label: a button there would open its changeset\'s menu, not the label\'s', () => {
-    expect(changesetWithActions({ selectedChangeset: 4, selectedLabel: 'v1' })).toBeNull();
+    expect(changesetWithActions({ selectedChangeset: 4, leadLabel: 'v1' })).toBeNull();
   });
 });
 
@@ -47,13 +47,15 @@ describe('where a "More actions" button goes', () => {
     expect(center.x - ACTIONS_BUTTON_RADIUS).toBeGreaterThan(card.x + card.width);
   });
 
-  it('is found by the pointer from the card\'s edge to the card\'s bottom, so moving onto it never leaves the branch', () => {
-    const center = branchActionsCenter(card);
-    const box = branchActionsHitBox(card);
-    expect(box.x).toBe(card.x + card.width);
-    expect(box.x + box.width).toBe(center.x + ACTIONS_BUTTON_RADIUS);
-    expect(box.y).toBe(center.y - ACTIONS_BUTTON_RADIUS);
-    expect(box.y + box.height).toBe(Math.max(center.y + ACTIONS_BUTTON_RADIUS, card.y + card.height));
+  it('is found by the pointer all along the card\'s edge, so moving onto it never leaves the branch', () => {
+    for (const height of [22, 36]) {
+      const oneCard = { ...card, height };
+      const center = branchActionsCenter(oneCard);
+      const box = branchActionsHitBox(oneCard);
+      expect(box).toEqual({ x: oneCard.x + oneCard.width, y: oneCard.y, width: center.x + ACTIONS_BUTTON_RADIUS - (oneCard.x + oneCard.width), height });
+      expect(box.y).toBeLessThanOrEqual(center.y - ACTIONS_BUTTON_RADIUS);
+      expect(box.y + box.height).toBeGreaterThanOrEqual(center.y + ACTIONS_BUTTON_RADIUS);
+    }
   });
 
   it('sits beside a changeset, clear of its selection halo and of the next column', () => {

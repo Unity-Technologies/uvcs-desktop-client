@@ -2,6 +2,7 @@ import {
   ACTIONS_BUTTON_RADIUS,
   actionsButtonCenter,
   actionsKey,
+  branchActionsCenter,
   branchActionsHitBox,
   branchesWithActions,
   changesetActionsHitBox,
@@ -27,9 +28,7 @@ export function drawActionsButtons(draw: DrawContext): void {
   for (const name of branchesWithActions(scene)) {
     const card = drawn.branchHeaders.find((lane) => lane.branch.name === name);
     if (!card) continue;
-    const subject: ActionsSubject = { kind: 'branch', lane: card.item };
-    const center = actionsButtonCenter(subject, scene.layout, drawn);
-    if (center) drawButton(draw, subject, center, branchActionsHitBox(card));
+    drawButton(draw, { kind: 'branch', lane: card.item }, branchActionsCenter(card), branchActionsHitBox(card));
   }
   const changesetId = changesetWithActions(scene);
   if (changesetId === null) return;

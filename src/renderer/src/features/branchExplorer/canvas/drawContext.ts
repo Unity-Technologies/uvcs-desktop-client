@@ -20,7 +20,7 @@ export interface GraphScene {
   selectedChangeset: number | null;
   selectedBranch: string | null;
   /** The lead's label, when a label leads (`selectedChangeset` is then its changeset). */
-  selectedLabel: string | null;
+  leadLabel: string | null;
   /** Whether the pending changes are selected. */
   selectedPending: boolean;
   /** Every changeset and branch selected, drawn as selected; the lead's included. */
