@@ -20,18 +20,15 @@ export interface ChangePosition {
   followsView?: boolean;
 }
 
-/** The change to move to from `position`, down (1) or up (-1); none past the first or last. */
-export function adjacentChange({ count, current, above, followsView }: ChangePosition, direction: 1 | -1): number | null {
-  const target = current === null || followsView ? fromView(current ?? -1, above, direction) : current + direction;
-  return target >= 0 && target < count ? target : null;
-}
-
 /**
- * A move from where the view stands: down, to the first change starting below its top (past the one it opened at),
- * up, to the last starting above it.
+ * The change to move to from `position`, down (1) or up (-1); none past the first or last. Before the first move, from
+ * where the view stands; while it follows the scroll, from the change the count names (`shownChange`).
  */
-function fromView(openedAt: number, above: number, direction: 1 | -1): number {
-  return direction === 1 ? Math.max(above, openedAt + 1) : above - 1;
+export function adjacentChange(position: ChangePosition, direction: 1 | -1): number | null {
+  const { count, current, above, followsView } = position;
+  const from = followsView ? shownChange(position) : current;
+  const target = from === null ? (direction === 1 ? above : above - 1) : from + direction;
+  return target >= 0 && target < count ? target : null;
 }
 
 /** Where a move goes: to a step of this view (a change, a conflict), on to the file beside it in the list, or nowhere. */

@@ -63,10 +63,10 @@ describe('a diff opened at its first change, not moved to', () => {
     expect(positionLabel(opened(0))).toBe('1 of 30');
   });
 
-  it('follows the scroll: counts the change the view stands at and goes on from there', () => {
+  it('follows the scroll: counts the change the view stands at and steps from it, either way', () => {
     expect(positionLabel(opened(15))).toBe('15 of 30');
     expect(adjacentChange(opened(15), 1)).toBe(15);
-    expect(adjacentChange(opened(15), -1)).toBe(14);
+    expect(adjacentChange(opened(15), -1)).toBe(13);
   });
 
   it('stops following once a change is moved to', () => {

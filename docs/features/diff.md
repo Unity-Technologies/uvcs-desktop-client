@@ -470,7 +470,7 @@ link, on a page) opens with its first change in view, a few rows from the top un
 collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), current ("1 of 12") but not lit (`openingStep`,
 `StepView.show`). Until a change is moved to, the count and the moves follow the scroll (`ChangePosition.followsView`,
 `shownChange`): at the top, ↓ goes to the second change; scrolled down, the count names the change the view stands at
-and ↓ goes to the first one below its top. One opened on a link's lines stays on them, at no change, until the first
+and ↓ and ↑ step from it. One opened on a link's lines stays on them, at no change, until the first
 move. A conflicting file opens the same, at "1 of 3" conflicts. It opens so once, as the diff first shows: changes typed
 or read later leave the view where it is. A version shown alone (an added or deleted file) is one change; a file with
 none to step through (an image, a model, a binary, identical versions) keeps the arrows, which go from file to file
