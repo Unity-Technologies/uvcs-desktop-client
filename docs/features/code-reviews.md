@@ -535,8 +535,8 @@ one read serves both), say what was checked in when (`reviewRounds`).
   round's line folds through a button laid over it (`.roundToggle`), since the changeset, a link, can't sit inside a
   button; the time and the changeset sit above it with their own tooltip and card. Named only from the branch's own
   changesets (`ownBranchChangesets`): the previous review's, kept on screen while this one's are read, would name
-  another branch's. Nothing is written to the server and the status popover says nothing of it: the server has no field for it
-  (its note of a status holds only the comment), and inferring it costs no read.
+  another branch's. Nothing is written to the server and the status popover says nothing of it: the server has no
+  field for it (its note of a status holds only the comment), and inferring it costs no read.
 - **New to them** (`newThreadIds`): a thread settled since (applied in a changeset checked in after it, by the
   changeset's date, or by its number when the branch's list doesn't hold it; answered or discarded after it), or with
   something someone else said since. What they said themselves is no news to them.
