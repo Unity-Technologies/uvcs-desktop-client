@@ -158,7 +158,7 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   | `[mergerequest-status-open-to-draft]` | converted this to a draft |
   | `[mergerequest-status-<any>-to-closed]` | closed this |
   | `[mergerequest-status-closed-to-open]`, `…-merged-to-open` | reopened this |
-  | `[mergerequest-status-open-to-merged]6` | merged this into /main in cs:6 (the changeset a chip) |
+  | `[mergerequest-status-open-to-merged]6` | merged this into /main in cs:6 (the changeset named as words of the sentence, `plain`) |
   | `[changed-mergerequest-destination]4;19` | changed the destination from /main/release to /main |
   | `[hidden-mergerequest-branch]26`, `[unhidden-…]26` | hid the branch, unhid the branch |
 

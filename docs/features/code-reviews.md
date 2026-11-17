@@ -523,6 +523,18 @@ one read serves both), say what was checked in when (`reviewRounds`).
   own; a member of a reviewer group who sets a status is noted under their own name, as the server adds them. A
   changeset checked in while the reviewer was still reading counts as reviewed: the server notes when a status was
   given, not what was read. Dates compare as instants, across time zones.
+- **The changeset a status was given at** (`changesetAt`, `statusChangesetsOf`, `ReviewRound.changesetId`): every
+  Reviewed or Rework required names the newest changeset on the branch then, what reviewers used to write by hand with
+  it ("LGTM, cs 281866"). It shows once: on the round's line while the round is folded ("**Reviewed** by Violeta at
+  281866", `roundText`), on the status's own event once unfolded ("marked it Reviewed at 281866", `reviewEventRow`).
+  None for Under review, a status given before the branch's first changeset, or a review of a changeset or a shelve.
+  It's named as words of the sentence (`ReferenceChip`'s `plain`): the changeset's icon and number in the line's own
+  font and gray, the link color and an underline under the pointer, a chip's card and its click (it opens in the
+  review's Changes). A dot parts it from the time after it, whose number it would otherwise run into ("at 9 · 5
+minutes ago"). A chip's fill, and the link color at rest, read as badges and drew the eye from the verdict. The
+  round's line folds through a button laid over it (`.roundToggle`), since the changeset, a link, can't sit inside a
+  button. Nothing is written to the server and the status popover says nothing of it: the server has no field for it
+  (its note of a status holds only the comment), and inferring it costs no read.
 - **New to them** (`newThreadIds`): a thread settled since (applied in a changeset checked in after it, by the
   changeset's date, or by its number when the branch's list doesn't hold it; answered or discarded after it), or with
   something someone else said since. What they said themselves is no news to them.
