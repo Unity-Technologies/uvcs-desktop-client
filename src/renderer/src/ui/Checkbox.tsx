@@ -4,9 +4,6 @@ import styles from './Checkbox.module.css';
 
 export type CheckState = boolean | 'mixed';
 
-/** A box that marks a change: `added` fills a check in green, `removed` borders an empty box in red. */
-export type CheckboxTone = 'added' | 'removed';
-
 interface CheckboxProps {
   checked: CheckState;
   onChange: (checked: boolean) => void;
@@ -16,10 +13,9 @@ interface CheckboxProps {
   /** False inside a list that toggles it from the keyboard itself (Space), so Tab doesn't stop at every row. */
   focusable?: boolean;
   disabled?: boolean;
-  tone?: CheckboxTone;
 }
 
-export function Checkbox({ checked, onChange, label, ariaLabel, focusable = true, disabled, tone }: CheckboxProps) {
+export function Checkbox({ checked, onChange, label, ariaLabel, focusable = true, disabled }: CheckboxProps) {
   const box = (
     <button
       type="button"
@@ -29,7 +25,6 @@ export function Checkbox({ checked, onChange, label, ariaLabel, focusable = true
       tabIndex={focusable ? undefined : -1}
       disabled={disabled}
       className={styles.box}
-      data-tone={tone}
       data-state={checked === 'mixed' ? 'mixed' : checked ? 'checked' : 'unchecked'}
       onMouseDown={(event) => event.stopPropagation()}
       onKeyDown={(event) => {

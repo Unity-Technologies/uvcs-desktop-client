@@ -69,10 +69,11 @@ Its decisions are pure and tested:
   load a folder that holds anything already. The root is never removed, only its items.
 - `downloadTree.ts`: the rows shown (`downloadRows`; each folder lists folders and xlinks first, then files, by name,
   as Files does: `downloadTreeOf`, `sortItems`), what Apply does to each (`downloadChangeOf`) and how a row shows
-  it (`downloadChangeLook`), the keys (`downloadKey`, a desktop tree's), the body's state (`rootStatus`) and the
-  summary beside Apply (`rulesSummary`). Only what Apply changes stands out: an item it downloads has a green check and
-  name and the word Download beside it; one it removes, a red-bordered box and name and the word Remove, so the change
-  reads without its color too. What it keeps, leaves out or changes in part (a mixed folder) looks like any checkbox.
+  it (`downloadChangeMarker`), the keys (`downloadKey`, a desktop tree's), the body's state (`rootStatus`) and the
+  summary beside Apply (`rulesSummary`). Only what Apply changes stands out: checkboxes and names look as any other, and
+  an item it downloads has a green Download pill at the row's end, one it removes a red Remove pill
+  (`downloadChangeMarker`), so the change reads without its color too. What it keeps, leaves out or changes in part (a
+  mixed folder) has none.
 - `downloadTreeReads.ts`: what the folder reads give the tree (`downloadTreeReads`: the listings, what's loaded, the
   folders that failed to read) and when Apply can run (`canApply`).
 
