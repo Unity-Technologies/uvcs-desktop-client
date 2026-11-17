@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS_BUTTON_RADIUS, actionsMenuPoint, branchActionsCenter, branchesWithActions, changesetActionsCenter, changesetWithActions } from './actionsButton';
-import { COLUMN_WIDTH, NODE_RADIUS } from './geometry';
+import { largeHistory, sampleHistory } from '../model/graphFixtures';
+import { layoutGraph, type Lane } from '../model/layoutGraph';
+import {
+  ACTIONS_BUTTON_RADIUS,
+  actionsButtonCenter,
+  actionsMenuPoint,
+  branchActionsCenter,
+  branchActionsHitBox,
+  branchesWithActions,
+  changesetActionsCenter,
+  changesetWithActions,
+} from './actionsButton';
+import { DrawnBoxes } from './drawnBoxes';
+import { COLUMN_WIDTH, NODE_RADIUS, nodePoint } from './geometry';
 
 describe('which objects show a "More actions" button', () => {
   it('shows none for a branch unless it is selected or under the pointer', () => {
@@ -17,17 +29,31 @@ describe('which objects show a "More actions" button', () => {
   });
 
   it('shows one for the selected changeset only', () => {
-    expect(changesetWithActions({ selectedChangeset: 4 })).toBe(4);
-    expect(changesetWithActions({ selectedChangeset: null })).toBeNull();
+    expect(changesetWithActions({ selectedChangeset: 4, selectedLabel: null })).toBe(4);
+    expect(changesetWithActions({ selectedChangeset: null, selectedLabel: null })).toBeNull();
+  });
+
+  it('shows none for a selected label: a button there would open its changeset\'s menu, not the label\'s', () => {
+    expect(changesetWithActions({ selectedChangeset: 4, selectedLabel: 'v1' })).toBeNull();
   });
 });
 
 describe('where a "More actions" button goes', () => {
+  const card = { x: 100, y: 40, width: 120, height: 36 };
+
   it('sits just past a header card, centered on it, so it never covers the name or comment', () => {
-    const card = { x: 100, y: 40, width: 120, height: 36 };
     const center = branchActionsCenter(card);
     expect(center.y).toBe(58);
     expect(center.x - ACTIONS_BUTTON_RADIUS).toBeGreaterThan(card.x + card.width);
+  });
+
+  it('is found by the pointer from the card\'s edge to the card\'s bottom, so moving onto it never leaves the branch', () => {
+    const center = branchActionsCenter(card);
+    const box = branchActionsHitBox(card);
+    expect(box.x).toBe(card.x + card.width);
+    expect(box.x + box.width).toBe(center.x + ACTIONS_BUTTON_RADIUS);
+    expect(box.y).toBe(center.y - ACTIONS_BUTTON_RADIUS);
+    expect(box.y + box.height).toBe(Math.max(center.y + ACTIONS_BUTTON_RADIUS, card.y + card.height));
   });
 
   it('sits beside a changeset, clear of its selection halo and of the next column', () => {
@@ -38,7 +64,28 @@ describe('where a "More actions" button goes', () => {
     expect(center.x + ACTIONS_BUTTON_RADIUS).toBeLessThan(500 + COLUMN_WIDTH - NODE_RADIUS);
   });
 
-  it('opens its menu under it, from its left edge, wherever the graph is zoomed and panned', () => {
-    expect(actionsMenuPoint({ x: 100, y: 40, height: 18 }, { zoom: 2, panX: -50, panY: 10 })).toEqual({ x: 150, y: 126 });
+  it('opens its menu under it, from its left edge', () => {
+    expect(actionsMenuPoint({ x: 100, y: 50 })).toEqual({ x: 100 - ACTIONS_BUTTON_RADIUS, y: 50 + ACTIONS_BUTTON_RADIUS });
+  });
+});
+
+describe('where a subject\'s button is this frame', () => {
+  const layout = layoutGraph(sampleHistory());
+
+  it('is beside its branch\'s card where it was drawn, and nowhere when the card wasn\'t', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const drawn = { branchHeaders: new DrawnBoxes<Lane>() };
+    expect(actionsButtonCenter({ kind: 'branch', lane }, layout, drawn)).toBeNull();
+    drawn.branchHeaders.add(lane, 100, 40, 120, 36);
+    expect(actionsButtonCenter({ kind: 'branch', lane }, layout, drawn)).toEqual(branchActionsCenter({ x: 100, y: 40, width: 120, height: 36 }));
+  });
+
+  it('is beside its changeset, and nowhere for one not laid out or collapsed into "+N"', () => {
+    const drawn = { branchHeaders: new DrawnBoxes<Lane>() };
+    expect(actionsButtonCenter({ kind: 'changeset', id: 4 }, layout, drawn)).toEqual(changesetActionsCenter(nodePoint(layout, 4)!));
+    expect(actionsButtonCenter({ kind: 'changeset', id: 999 }, layout, drawn)).toBeNull();
+    const collapsedLayout = layoutGraph(largeHistory(300, 60), { keep: new Set([40]) });
+    const collapsed = collapsedLayout.nodesByColumn.find((node) => node.collapsed !== null)!;
+    expect(actionsButtonCenter({ kind: 'changeset', id: collapsed.changeset.id }, collapsedLayout, drawn)).toBeNull();
   });
 });

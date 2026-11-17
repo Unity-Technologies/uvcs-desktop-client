@@ -1,13 +1,16 @@
-import type { GraphScene } from './drawContext';
-import type { DrawnBox } from './drawnBoxes';
-import type { Point } from './curves';
-import type { GraphTarget } from './graphTargets';
-import type { Viewport } from './viewport';
-
 /**
  * The "More actions" button (⋯) that shows a branch's or a changeset's menu without a right-click: the graph's way to
  * say its objects have actions. It opens the same menu as the right-click and the menu key (`graphMenu`).
  */
+import type { GraphLayout } from '../model/layoutGraph';
+import type { DrawnTargets, GraphScene } from './drawContext';
+import type { DrawnBox } from './drawnBoxes';
+import type { Point } from './curves';
+import { nodePoint } from './geometry';
+import type { GraphTarget } from './graphTargets';
+
+/** A rectangle in world px. */
+export type Box = Pick<DrawnBox<unknown>, 'x' | 'y' | 'width' | 'height'>;
 
 /** What a button opens the menu of. */
 export type ActionsSubject = Extract<GraphTarget, { kind: 'branch' } | { kind: 'changeset' }>;
@@ -33,15 +36,33 @@ export function branchesWithActions({ hoveredBranch, selectedBranch }: Pick<Grap
 
 /**
  * The changeset that shows its button: only the one leading the selection. Changesets are too small and too many for
- * one on every hover; selecting one is how the user says it is the one they are looking at.
+ * one on every hover; selecting one is how the user says it is the one they are looking at. A selected label leads
+ * with its changeset, but its menu is the label's: its changeset shows none, which would open the changeset's instead.
  */
-export function changesetWithActions({ selectedChangeset }: Pick<GraphScene, 'selectedChangeset'>): number | null {
-  return selectedChangeset;
+export function changesetWithActions({ selectedChangeset, selectedLabel }: Pick<GraphScene, 'selectedChangeset' | 'selectedLabel'>): number | null {
+  return selectedLabel === null ? selectedChangeset : null;
 }
 
 /** Where a branch's button goes: just past the right end of its header card, centered on it, pinned with it. */
-export function branchActionsCenter(card: Pick<DrawnBox<unknown>, 'x' | 'y' | 'width' | 'height'>): Point {
+export function branchActionsCenter(card: Box): Point {
   return { x: card.x + card.width + BRANCH_GAP + ACTIONS_BUTTON_RADIUS, y: card.y + card.height / 2 };
+}
+
+/**
+ * Where the pointer finds a branch's button: the button, and the gap between it and the card down to the card's
+ * bottom, where the band starts. Moving from the card or the band onto the button never crosses empty space, which
+ * would leave the branch, and its button with it, before the pointer gets there.
+ */
+export function branchActionsHitBox(card: Box): Box {
+  const center = branchActionsCenter(card);
+  const left = card.x + card.width;
+  const top = center.y - ACTIONS_BUTTON_RADIUS;
+  return { x: left, y: top, width: center.x + ACTIONS_BUTTON_RADIUS - left, height: Math.max(center.y + ACTIONS_BUTTON_RADIUS, card.y + card.height) - top };
+}
+
+/** Where the pointer finds a changeset's button: the button itself. */
+export function changesetActionsHitBox(center: Point): Box {
+  return { x: center.x - ACTIONS_BUTTON_RADIUS, y: center.y - ACTIONS_BUTTON_RADIUS, width: ACTIONS_BUTTON_RADIUS * 2, height: ACTIONS_BUTTON_RADIUS * 2 };
 }
 
 /** Where a changeset's button goes: to the right of it, on its branch's line, before the next column's changeset. */
@@ -54,10 +75,20 @@ export function actionsKey(subject: ActionsSubject): string {
   return subject.kind === 'branch' ? `branch:${subject.lane.branch.name}` : `changeset:${subject.id}`;
 }
 
+/** Where a button's menu opens, in world px: under the button, from its left edge, as a dropdown opens under its button. */
+export function actionsMenuPoint(center: Point): Point {
+  return { x: center.x - ACTIONS_BUTTON_RADIUS, y: center.y + ACTIONS_BUTTON_RADIUS };
+}
+
 /**
- * Where a button's menu opens, in screen px from the canvas' corner: under the button, from its left edge, as a
- * dropdown opens under the button that opened it.
+ * Where a subject's button is drawn this frame: beside its branch's card where the last frame drew it, or beside its
+ * changeset unless it is collapsed into "+N". None when the card isn't drawn or the changeset isn't laid out.
  */
-export function actionsMenuPoint(button: Pick<DrawnBox<unknown>, 'x' | 'y' | 'height'>, { zoom, panX, panY }: Viewport): Point {
-  return { x: button.x * zoom + panX, y: (button.y + button.height) * zoom + panY };
+export function actionsButtonCenter(subject: ActionsSubject, layout: GraphLayout, drawn: Pick<DrawnTargets, 'branchHeaders'>): Point | null {
+  if (subject.kind === 'branch') {
+    const card = drawn.branchHeaders.find((lane) => lane === subject.lane);
+    return card && branchActionsCenter(card);
+  }
+  const point = nodePoint(layout, subject.id);
+  return point && !layout.nodes.get(subject.id)?.collapsed ? changesetActionsCenter(point) : null;
 }

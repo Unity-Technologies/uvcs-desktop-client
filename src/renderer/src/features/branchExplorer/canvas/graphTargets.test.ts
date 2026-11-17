@@ -7,7 +7,8 @@ import { COLUMN_WIDTH, columnX, headerTop, nodePoint, pendingPoint } from './geo
 import { pointOnCurve, linkCurve } from './curves';
 import type { DrawnTargets } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
-import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight, pointerCardStays } from './graphTargets';
+import { clickOutcome, doubleClickOutcome, hitTest, hoverCardFor, hoverCardKey, hoverHighlight, pointerCardStays } from './graphTargets';
+import { branchActionsHitBox } from './actionsButton';
 import { labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
 
@@ -262,6 +263,15 @@ describe('a "More actions" button for the pointer', () => {
     expect(hitTest(layout, point, drawn, { buttons: false })).toEqual({ kind: 'branch', lane });
   });
 
+  it('keeps the branch between its card and its button, so a slow pointer reaches the button', () => {
+    const drawn = drawnTargets();
+    const card = { x: 200, y: 40, width: 100, height: 22 };
+    drawn.branchHeaders.add(lane, card.x, card.y, card.width, card.height);
+    const box = branchActionsHitBox(card);
+    drawn.actionButtons.add({ kind: 'branch', lane }, box.x, box.y, box.width, box.height);
+    expect(hitTest(layout, { x: card.x + card.width + 1, y: card.y + card.height / 2 }, drawn)).toEqual({ kind: 'actions', of: { kind: 'branch', lane } });
+  });
+
   it('gets a plain tooltip with its name, not a card', () => {
     const { drawn, point } = withButton();
     expect(hoverCardFor(hitTest(layout, point, drawn), point, drawn)).toEqual({ kind: 'clippedText', key: 'actions:branch:/main/a', text: 'More actions' });
@@ -294,5 +304,31 @@ describe('pointerCardStays', () => {
 
   it('lets every other pointer card follow the pointer, a code review\'s tooltip too', () => {
     expect(pointerCardStays({ kind: 'codeReview', review })).toBe(false);
+  });
+});
+
+describe('what a click on the graph does', () => {
+  const lane = layoutGraph(sampleHistory()).lanesByBranch.get('/main/a')!;
+
+  it('opens a "More actions" button\'s menu, for what the button belongs to', () => {
+    expect(clickOutcome({ kind: 'actions', of: { kind: 'branch', lane } })).toEqual({ kind: 'menu', subject: { kind: 'branch', lane } });
+  });
+
+  it('selects anything else, or nothing', () => {
+    expect(clickOutcome({ kind: 'changeset', id: 4 })).toEqual({ kind: 'select', target: { kind: 'changeset', id: 4 } });
+    expect(clickOutcome(null)).toEqual({ kind: 'select', target: null });
+  });
+});
+
+describe('what a double-click on the graph does', () => {
+  const lane = layoutGraph(sampleHistory()).lanesByBranch.get('/main/a')!;
+
+  it('does nothing on a "More actions" button: its second click lands in the menu or on the button', () => {
+    expect(doubleClickOutcome({ kind: 'actions', of: { kind: 'branch', lane } }, { kind: 'branch', lane })).toEqual({ kind: 'none' });
+  });
+
+  it('activates what it lands on, and zooms in where nothing is', () => {
+    expect(doubleClickOutcome({ kind: 'changeset', id: 4 }, { kind: 'changeset', id: 4 })).toEqual({ kind: 'activate', target: { kind: 'changeset', id: 4 } });
+    expect(doubleClickOutcome(null, null)).toEqual({ kind: 'zoom' });
   });
 });

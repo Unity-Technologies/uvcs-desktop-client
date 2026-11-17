@@ -1,8 +1,8 @@
 import type { GraphChangeset } from '@shared/domain/branchExplorer';
-import type { ActionsSubject } from './actionsButton';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
+import type { ActionsSubject } from './actionsButton';
 import type { DrawnBoxes } from './drawnBoxes';
 import type { GraphPalette } from './graphPalette';
 import type { GraphViewOptions } from './graphViewOptions';
@@ -19,6 +19,8 @@ export interface GraphScene {
   /** What leads the selection (`leadOf`): the changeset, the branch or the pending changes. */
   selectedChangeset: number | null;
   selectedBranch: string | null;
+  /** The lead's label, when a label leads (`selectedChangeset` is then its changeset). */
+  selectedLabel: string | null;
   /** Whether the pending changes are selected. */
   selectedPending: boolean;
   /** Every changeset and branch selected, drawn as selected; the lead's included. */

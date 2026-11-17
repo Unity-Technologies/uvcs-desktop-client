@@ -74,6 +74,25 @@ export function pointerCardStays(target: PointerCardTarget): boolean {
   return target.kind === 'codeReview' && target.review.mergeRequest !== undefined;
 }
 
+/** What a click on the graph does: open a "More actions" button's menu, or select what it lands on. */
+export type ClickOutcome = { kind: 'menu'; subject: ActionsSubject } | { kind: 'select'; target: GraphTarget | null };
+
+export function clickOutcome(target: GraphTarget | null): ClickOutcome {
+  return target?.kind === 'actions' ? { kind: 'menu', subject: target.of } : { kind: 'select', target };
+}
+
+/** What a double-click does: activate what it lands on, zoom in where nothing is, or nothing at all. */
+export type DoubleClickOutcome = { kind: 'activate'; target: GraphTarget } | { kind: 'zoom' } | { kind: 'none' };
+
+/**
+ * From what is under the pointer with the buttons and without them (`hitTest`'s `buttons`): nothing on a "More
+ * actions" button, whose second click lands in the menu its first one opened, or on the button again.
+ */
+export function doubleClickOutcome(withButtons: GraphTarget | null, withoutButtons: GraphTarget | null): DoubleClickOutcome {
+  if (withButtons?.kind === 'actions') return { kind: 'none' };
+  return withoutButtons ? { kind: 'activate', target: withoutButtons } : { kind: 'zoom' };
+}
+
 /** What the frame lights up under the pointer. */
 export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending' | 'hoveredActions'>;
 

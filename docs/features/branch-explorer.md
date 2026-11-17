@@ -203,11 +203,15 @@ object's details.
 A right-click on a graph doesn't announce itself, so the branch under the pointer, the selected branch and the
 selected changeset show a "More actions" button (⋯) that opens the same menu the right-click opens on them, under the
 button (`actionsButton.ts`, `drawActionsButtons`). A click on it selects what it belongs to as the right-click does,
-so several selected keep their menu for all of them. A branch's button sits just past its header card, pinned with it
-when the band's start is scrolled away (`branchActionsCenter`); a changeset's sits beside it on its branch's line,
-clear of its selection halo and short of the next column (`changesetActionsCenter`). It is drawn on the canvas with
-the header cards, at zooms where they show, and hit before anything under it; for the right-click and the double-click
-it is part of what it belongs to (`hitTest`'s `buttons`). Its tooltip names it.
+so several selected keep their menu for all of them (`clickOutcome`); the menu opens as the menu key opens it
+(`openContextMenuAt`). A selected label leads with its changeset but shows no button, which would open the
+changeset's menu instead of the label's (`changesetWithActions`). A branch's button sits just past its header card,
+pinned with it when the band's start is scrolled away (`branchActionsCenter`); the pointer finds it from the card's
+edge down to the band (`branchActionsHitBox`), so moving onto it never crosses empty space and loses the branch on
+the way. A changeset's sits beside it on its branch's line, clear of its selection halo and short of the next column
+(`changesetActionsCenter`). It is drawn on the canvas with the header cards, at zooms where they show, and hit before
+anything under it; for the right-click it is part of what it belongs to (`hitTest`'s `buttons`), and a double-click on
+it does nothing (`doubleClickOutcome`). Its tooltip names it.
 
 Only those three show one: a button on every branch would crowd a graph of thousands, and changesets are too small
 and too many for one on every hover. The button is drawn rather than an HTML button laid over the canvas, as the code
