@@ -1,6 +1,6 @@
 import type { Place } from '@shared/domain/place';
-import { navigation } from '../../app/navigation/navigationStore';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
 import { menuAction, menuSubmenu, type MenuHost } from '../../components/menuWords';
