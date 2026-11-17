@@ -1,5 +1,7 @@
-/* As tall as its toolbar and its rows (`changesetRowsHeight`): what's under it gets the rest. */
+/* As tall as its toolbar and its rows (`changesetRowsHeight`): what's under it gets the rest. Its bottom border is the
+   splitter that sizes the rows (`ResizeHandle`), so it's positioned. */
 .list {
+  position: relative;
   display: flex;
   flex: none;
   flex-direction: column;
@@ -17,7 +19,7 @@
   padding: 0 var(--space-2);
 }
 
-/* The rows scroll inside past `mostRows`. */
+/* The rows scroll inside past `mostRows`, or the height dragged (`changesetRowsHeight`). */
 .rows {
   display: flex;
   flex-direction: column;
