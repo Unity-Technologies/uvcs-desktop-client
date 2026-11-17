@@ -1,6 +1,5 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { windowChrome } from '@shared/windowChrome';
-import { appLog } from '../diagnostics/appLog';
 import { sendEventTo } from '../ipc/sendEvent';
 import { coalesced } from '../system/coalesced';
 import { BUG_REPORT_URL, DOCUMENTATION_URL, FEATURE_REQUEST_URL } from './appInfo';
@@ -51,11 +50,12 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
  * title, once for each burst of such changes (opening a window focuses it and sets its title: a build takes 3-5 ms).
  * The first window opening installs it first.
  */
-export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates): () => void {
-  return coalesced(() => installAppMenu(windows, updates));
+export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string): () => void {
+  return coalesced(() => installAppMenu(windows, updates, logFile));
 }
 
-function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
+/** `logFile` is the log file Help ▸ Show Log Files shows (`appLog`). */
+function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string): void {
   const template = appMenuTemplate({
     platform: process.platform,
     isPackaged: app.isPackaged,
@@ -65,7 +65,7 @@ function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
     openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
     reportIssue: () => void shell.openExternal(BUG_REPORT_URL),
     // The file selected in its folder, its earlier files beside it.
-    showLogFiles: () => shell.showItemInFolder(appLog.file),
+    showLogFiles: () => shell.showItemInFolder(logFile),
     requestFeature: () => void shell.openExternal(FEATURE_REQUEST_URL),
     showAboutPanel: () => app.showAboutPanel(),
     checkForUpdates: () => void updates.check(),

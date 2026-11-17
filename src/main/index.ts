@@ -103,7 +103,7 @@ const closing = new ClosingWithWrites({
   kept: (windowId) => appIcon.windowKept(windowId),
   close: (windowId) => BrowserWindow.fromId(windowId)?.close(),
 });
-const installMenuBar = appMenuInstaller(windows, updates);
+const installMenuBar = appMenuInstaller(windows, updates, appLog.file);
 const quitting = new Quitting({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
