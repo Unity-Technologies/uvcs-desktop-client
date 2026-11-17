@@ -1,3 +1,4 @@
+import type { ChangeScroll } from './changeView';
 import { PLACEMENT_START, placementStep, type SettledPlacement } from './settledPlacement';
 
 /**
@@ -7,12 +8,6 @@ import { PLACEMENT_START, placementStep, type SettledPlacement } from './settled
  * moves it again: so it's placed until it stands still (`placementStep`). Placed once only, a change below wrapped
  * lines stood 1700 px lower, out of view.
  */
-/**
- * Why a change is scrolled to: a move to it (a short way smoothly, unless it's all in view), or the diff opening on it
- * (at once, unless it starts in view: a collapsed diff's first hunk, taller than the view, keeps the bar above it).
- */
-export type ChangeScroll = 'move' | 'open';
-
 export type ChangeScrollStep =
   /** Done: the change is in place, or in view as a diff opens. */
   | { kind: 'done' }
@@ -60,7 +55,7 @@ export function changeScrollStep(state: ChangeScrollState, frame: ChangeScrollFr
     return { step: { kind: 'rows', smooth: frame.why === 'move' }, state };
   }
   const { rowOffset, placeOffset, scrollTop, maxScroll } = frame;
-  const placed = placementStep(state.placement, { target: scrollTop + rowOffset - placeOffset, maxScroll });
+  const placed = placementStep(state.placement, { target: scrollTop + rowOffset - placeOffset, scrollTop, maxScroll });
   const step: ChangeScrollStep = placed.scrollTo !== null ? { kind: 'place', scrollTop: placed.scrollTo } : placed.done ? { kind: 'done' } : { kind: 'wait' };
   return { step, state: { ...state, placement: placed.state } };
 }

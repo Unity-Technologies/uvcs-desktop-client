@@ -28,7 +28,7 @@ export function scrollToLine(container: HTMLElement, line: ChangedLine, virtuali
     const box = fileContainer ? pierreLineBox(virtualizer, fileContainer, line) : undefined;
     if (box) {
       const target = scrollTopFor(box.top, fromTop(container, box.height));
-      const step = placementStep(placement, { target, maxScroll: container.scrollHeight - container.clientHeight });
+      const step = placementStep(placement, { target, scrollTop: container.scrollTop, maxScroll: container.scrollHeight - container.clientHeight });
       placement = step.state;
       if (step.scrollTo !== null) container.scrollTop = step.scrollTo;
       if (step.done) return;
