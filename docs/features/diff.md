@@ -469,9 +469,9 @@ file lands on its first conflict, and no arrival is left waiting for a file open
 (picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it starts
 in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), current ("1 of 12") but not
 lit, so the first move goes to the second (`openingStep`, `currentAtOpening`, `ChangeView.show`); one opened on a link's
-lines stays on them, at no change, until the first move. A merged file's conflicts, whose view can only light a
-conflict (no `StepView.show`), open where they are, at none. It opens so once,
-as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added or
+lines stays on them, at no change, until the first move. A conflicting file opens the same, at "1 of 3" conflicts; a
+view with no `StepView.show` would open where it is, at none (`currentAtOpening`). It opens so once, as the diff first
+shows: changes typed or read later leave the view where it is. A version shown alone (an added or
 deleted file) is one change; a file with none to step through (an image, a model, a binary, identical versions) keeps
 the arrows, which go from file to file ("Previous file", "Next file", no label), so stepping through the list never
 stops there. It steps through the files as the list shows them, never on to a folder (private, deleted or moved), which

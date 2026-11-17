@@ -8,7 +8,7 @@ import { ConflictPlace, conflictLinesSelector, conflictsAbove, type SurfaceScrol
 
 /**
  * The conflicts view's side of stepping through its conflicts (`ConflictNavigator`): a conflict moved to is scrolled
- * a few rows from the top unless it's all in view, and lit for a moment. Pierre draws each conflict as a row of
+ * a few rows from the top unless it's all in view, and lit for a moment; the one the view opens at, only scrolled to. Pierre draws each conflict as a row of
  * actions (`data-merge-conflict-actions`, holding our header), its lines and marker rows, down to `marker-end`.
  * Returns what to call when a conflict is resolved in the view, by its index among the `count` left
  * (`ConflictPlace.resolvedAt`): the next move goes on to the one that took its place.
@@ -28,6 +28,13 @@ export function useConflictView(viewRef: RefObject<StepView | null>, surfaceRef:
       const rows = conflictRowsFrom(first);
       scrollToRows(surface, first, rows, true);
       flash.light(conflictLinesSelector(rows.flatMap((row) => (row instanceof HTMLElement && row.dataset.lineIndex ? [row.dataset.lineIndex] : []))));
+    },
+    show: (index) => {
+      const surface = surfaceRef.current;
+      const first = actionRows(surface)[index];
+      if (!surface || !first) return;
+      place.current.moved();
+      scrollToRows(surface, first, conflictRowsFrom(first), false);
     },
     countAbove: () =>
       place.current.above(() => {

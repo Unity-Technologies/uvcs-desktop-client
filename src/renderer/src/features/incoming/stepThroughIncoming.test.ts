@@ -58,8 +58,8 @@ class IncomingList {
     this.shown = path;
     const arrival = this.stepsOfShown().takeArrival(path);
     const opening = openingStep(arrival, this.count, false);
-    // A diff opens at its first change, current; a conflicting file's view only lights a conflict (`StepView.show`).
-    this.current = currentAtOpening(opening, !this.files[path]!.conflicts);
+    // A diff and a conflicting file both open at their first step, current (`StepView.show`).
+    this.current = currentAtOpening(opening, true);
   }
 }
 
