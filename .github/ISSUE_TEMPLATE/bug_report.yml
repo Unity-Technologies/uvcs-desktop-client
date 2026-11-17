@@ -40,8 +40,15 @@ body:
   - type: textarea
     id: error-details
     attributes:
-      label: Logs or error details
+      label: Error details
       description: >-
         Optional. The error's Details ▸ Copy gives the command and what `cm` answered; the command log
         (⌘⇧L, or Ctrl+Shift+L) shows every command the app ran. Remove any path or name you'd rather not share.
       render: text
+  - type: textarea
+    id: log-file
+    attributes:
+      label: Log file
+      description: >-
+        Optional, and the most helpful. Help ▸ Show Log Files shows uvcs-desktop.log: drag it here. It lists the
+        commands the app ran and the errors it met, with passwords hidden; it does name your paths and branches.
