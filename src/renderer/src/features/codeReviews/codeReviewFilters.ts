@@ -24,9 +24,9 @@ interface CodeReviewsQueryFilters {
  * with other reviewers picked, the query asks for every review, as no reviewer filter does (one query key and one `cm
  * find`), and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. Waiting for
  * me and Opened by me ask nothing of their own: they keep the reviews read, in the time range (`matchesWaiting`,
- * `matchesOpenedByMe`), so their counts are what pressing them shows, and pressing them runs no command. Merged and Closed ask the
- * server for that state; Active (the code reviews and the merge requests Open or Draft) asks for none and narrows
- * locally, as `cm find` takes one state, so it shares All's query key.
+ * `matchesOpenedByMe`), so their counts are what pressing them shows, and pressing them runs no command. Merged and
+ * Closed ask the server for that state; Active (the code reviews and the merge requests Open or Draft) asks for none and
+ * narrows locally, as `cm find` takes one state, so it shares All's query key.
  */
 export function codeReviewsQuery({ since, people, status, mergeRequestState, reviewers }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
   return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[mergeRequestState], sinceDate: sinceDateFor(since, today) };

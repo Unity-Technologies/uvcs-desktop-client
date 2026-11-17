@@ -26,7 +26,8 @@ describe('what Merge requests asks the server for', () => {
 
   it('asks the same under Waiting for me and Opened by me: they keep the reviews read, so their counts are what pressing them shows', () => {
     const asked = compactFilter(codeReviewsQuery(ASKED, today));
-    // The view's filters, chips and all, as it hands them over.
+    // The view's filters, chips and all, as the view store holds them: the query must ignore the chips. That the view
+    // hands this function the store's filters, rather than widening the read itself, is the view's wiring (a `.tsx`).
     for (const chips of [{ waitingForMe: true, openedByMe: false }, { waitingForMe: false, openedByMe: true }, { waitingForMe: true, openedByMe: true }]) {
       const filters = { ...ASKED, ...chips };
       expect(compactFilter(codeReviewsQuery(filters, today))).toEqual(asked);
