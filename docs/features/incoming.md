@@ -12,7 +12,7 @@ The left pane is the incoming changesets above the files, as every list of chang
 - **The changesets' section** (`IncomingChangesetList`) lists them as a branch diff does (`ChangesetStepList`:
   docs/features/diff.md "A branch's diff" says how its rows, filter, steps, ⌥⇧↓ ⌥⇧↑ and selection work): oldest on
   top, under "All incoming changes", one line each. It shows that row and three changesets, then scrolls inside itself
-  (`INCOMING_ROWS_SHOWN`), so the files always start right below. It closes, and stays closed across sessions
+  (`INCOMING_ROWS_SHOWN`), so the files always start right below; the splitter under it sizes it as a branch diff's. It closes, and stays closed across sessions
   (`useIncomingViewStore`); closed, its header sums the changesets up: "3 changesets · Ana, Luis"
   (`changesetsSummary`). Each row is what the list of changesets read (comment, author, date): nothing is asked of `cm`
   per row, and no row counts its files. It holds the changesets read so far, 200 at a time
