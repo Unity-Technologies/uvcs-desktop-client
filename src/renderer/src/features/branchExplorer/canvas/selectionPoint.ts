@@ -22,7 +22,7 @@ export function selectionPoint(layout: GraphLayout, selection: GraphSelection): 
 
 /**
  * Where the keyboard opens a target's context menu, as a right click there would: a changeset, and a label, at the
- * changeset's node; a branch at its header card. Null for what the keyboard never opens a menu on.
+ * changeset's node; the pending changes where drawn; a branch at its header card. Null for what the keyboard never opens a menu on.
  */
 export function menuPoint(layout: GraphLayout, target: GraphTarget): Point | null {
   switch (target.kind) {
@@ -30,6 +30,8 @@ export function menuPoint(layout: GraphLayout, target: GraphTarget): Point | nul
       return nodePoint(layout, target.id);
     case 'label':
       return nodePoint(layout, target.label.changeset);
+    case 'pending':
+      return pendingPoint(layout);
     case 'branch':
       return headerPoint(layout, target.lane.branch.name);
     default:
