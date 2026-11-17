@@ -146,6 +146,14 @@ describe('attributesSectionOf', () => {
     expect(attributesSectionOf([], types, 'status')).toEqual({ body: 'chips', addable: [] });
   });
 
+  it('shows a placeholder while neither the values nor the types are read', () => {
+    expect(attributesSectionOf(undefined, undefined, null)).toEqual({ body: 'reading', addable: [] });
+  });
+
+  it('hides while the values are read on a server with no attribute type, so no section flashes and goes', () => {
+    expect(attributesSectionOf(undefined, [], null)).toEqual({ body: 'hidden', addable: [] });
+  });
+
   it('hides with no value and no attribute type on the server', () => {
     expect(attributesSectionOf([], [], null)).toEqual({ body: 'hidden', addable: [] });
   });
