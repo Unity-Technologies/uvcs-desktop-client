@@ -73,6 +73,13 @@ describe('Creating and editing xlinks from Files', () => {
     expect(unloadedXlinkOf(item, { underXlink: true }, { added: false, listedItems: [] })).toBeNull();
   });
 
+  it("loads no xlink's files in a partial workspace, which downloads them as it downloads a file", () => {
+    const item = { isPrivate: false, xlink };
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: 'partial' })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: 'standard' })).toEqual(item);
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: undefined })).toEqual(item);
+  });
+
   it('tells an item under an xlink from the folders listed above it', () => {
     const listings = new Map([
       ['', [{ path: 'code' }]],
