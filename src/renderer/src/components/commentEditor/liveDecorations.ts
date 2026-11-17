@@ -4,6 +4,7 @@ import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate
 import { editorFocus, hasFocus } from './editorFocus';
 import { liveMarksOf, type LiveMark } from './liveMarks';
 import { BulletWidget, ImageWidget, ReferenceWidget, TableWidget, TaskWidget } from './liveWidgets';
+import { parsedFurther } from './parsedFurther';
 import { tablesIn } from './tableModel';
 
 /* A field without the focus shows its comment as it reads: the decorations, the table field among them (a state field
@@ -50,7 +51,10 @@ function decorationOf(mark: LiveMark): Range<Decoration> {
   }
 }
 
-/** The text drawn as it reads, in the editor's visible ranges: redrawn as the text, the selection or the focus move. */
+/**
+ * The text drawn as it reads, in the editor's visible ranges: redrawn as the text, the selection or the focus move, and
+ * as more of a long comment is parsed (`parsedFurther`).
+ */
 const liveMarks = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
@@ -61,7 +65,14 @@ const liveMarks = ViewPlugin.fromClass(
 
     update(update: ViewUpdate): void {
       const focusMoved = update.startState.field(hasFocus) !== update.state.field(hasFocus);
-      if (update.docChanged || update.selectionSet || update.viewportChanged || focusMoved || issueReferencesChanged(update.startState, update.state)) this.decorations = draw(update.view);
+      const redrawn =
+        update.docChanged ||
+        update.selectionSet ||
+        update.viewportChanged ||
+        focusMoved ||
+        parsedFurther(update.startState, update.state) ||
+        issueReferencesChanged(update.startState, update.state);
+      if (redrawn) this.decorations = draw(update.view);
     }
   },
   {
@@ -80,7 +91,12 @@ function draw(view: EditorView): DecorationSet {
 const liveTables = StateField.define<DecorationSet>({
   create: (state) => tableDecorations(state),
   update: (decorations, transaction) =>
-    transaction.docChanged || transaction.selection || transaction.startState.field(hasFocus) !== transaction.state.field(hasFocus) ? tableDecorations(transaction.state) : decorations,
+    transaction.docChanged ||
+    transaction.selection ||
+    transaction.startState.field(hasFocus) !== transaction.state.field(hasFocus) ||
+    parsedFurther(transaction.startState, transaction.state)
+      ? tableDecorations(transaction.state)
+      : decorations,
   provide: (field) => EditorView.decorations.from(field),
 });
 
