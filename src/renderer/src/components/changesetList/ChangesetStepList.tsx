@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Layers } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useRef, type ReactNode } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { MenuEntry } from '../../lib/actions';
 import { formatShortAge } from '../../lib/formatDate';
@@ -9,13 +9,27 @@ import { Avatar } from '../../ui/Avatar';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { NoMatches } from '../../ui/NoMatches';
+import { ResizeHandle } from '../../ui/ResizeHandle';
 import { SearchField } from '../../ui/SearchField';
 import { ListSkeleton } from '../../ui/Skeleton';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
 import { ListToolbar } from '../ListToolbar';
 import { RecordComment } from '../RecordComment';
-import { CHANGESET_ROW_HEIGHT, changesetFilterPlaceholder, changesetListPlaces, changesetListRowKey, changesetRowsHeight, changesetRowTip, type ChangesetListRow } from './changesetStepListModel';
+import { useChangesetListHeightStore } from './changesetListHeightStore';
+import {
+  CHANGESET_ROW_HEIGHT,
+  CHANGESET_ROWS_MIN_HEIGHT,
+  CHANGESET_ROWS_MOST_SHARE,
+  changesetFilterPlaceholder,
+  changesetListPlaces,
+  changesetListRowKey,
+  changesetRowsDragged,
+  changesetRowsHeight,
+  changesetRowsMaxHeight,
+  changesetRowTip,
+  type ChangesetListRow,
+} from './changesetStepListModel';
 import type { ChangesetStepListState } from './useChangesetStepList';
 import styles from './ChangesetStepList.module.css';
 
@@ -32,7 +46,7 @@ interface ChangesetStepListProps {
   quiet?: (changeset: Changeset) => boolean;
   /** A line with words between two rows that is no row (`DataTable`'s): "Reviewed by you", "Show 200 more". */
   separator?: { beforeKey: string; content: ReactNode };
-  /** The most rows shown before the rest scroll inside the list, so what's under it keeps its room. */
+  /** The most rows shown before the rest scroll inside the list, so what's under it keeps its room, until the user drags its splitter. */
   mostRows: number;
   /** What the rows are, for screen readers. */
   label: string;
@@ -85,9 +99,23 @@ export function ChangesetStepList({ list, allChanges, quiet, separator, mostRows
   const reading = changesets === undefined;
   // How long ago, as of each time the rows change (read again, filtered): not on every step.
   const columns = useMemo(() => changesetColumns(allChanges, quiet, Date.now()), [allChanges.label, allChanges.tip, quiet, rows]);
-  const height = changesetRowsHeight(reading ? undefined : changesetListPlaces(rows, separator?.beforeKey), mostRows);
+  const { rowsHeight: dragged, setRowsHeight } = useChangesetListHeightStore();
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const places = reading ? undefined : changesetListPlaces(rows, separator?.beforeKey);
+  const height = changesetRowsHeight(places, mostRows, dragged);
   return (
     <div className={styles.list}>
+      <ResizeHandle
+        edge="bottom"
+        size={height}
+        min={CHANGESET_ROWS_MIN_HEIGHT}
+        // As the window is when the drag starts, which may have changed since the list was last drawn.
+        max={() => changesetRowsMaxHeight(window.innerHeight)}
+        // From what shows, which a short list keeps under the height dragged before.
+        measure={() => rowsRef.current?.offsetHeight ?? height}
+        onResize={(result) => setRowsHeight(changesetRowsDragged(result, places, mostRows, dragged))}
+        onReset={() => setRowsHeight(null)}
+      />
       <ListToolbar>
         <div className={styles.bar}>
           <SearchField
@@ -106,7 +134,7 @@ export function ChangesetStepList({ list, allChanges, quiet, separator, mostRows
           <IconButton size="small" icon={<ChevronDown size={14} />} label="Next changeset" shortcut={hotkey('nextChangeset')} disabled={stepsTo(1) === null} onClick={() => stepTo(1)} />
         </div>
       </ListToolbar>
-      <div className={styles.rows} style={{ height }}>
+      <div ref={rowsRef} className={styles.rows} style={{ height, maxHeight: `${CHANGESET_ROWS_MOST_SHARE * 100}vh` }}>
         {reading ? (
           <ListSkeleton rowHeight={CHANGESET_ROW_HEIGHT} />
         ) : (

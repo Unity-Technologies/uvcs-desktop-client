@@ -160,12 +160,41 @@ export const CHANGESET_ROW_HEIGHT = 28;
 /** The room the list's rows keep above and below them, as every list without column titles (`DataTable`'s inset). */
 const ROWS_INSET = 8;
 
+function placesHeight(places: number): number {
+  return places * CHANGESET_ROW_HEIGHT + ROWS_INSET;
+}
+
+/** The shortest the user can drag the rows: two of them, so the list never reads as gone. */
+export const CHANGESET_ROWS_MIN_HEIGHT = placesHeight(2);
+
+/** The share of the window the rows can be dragged to, so the files under them always keep the rest. */
+export const CHANGESET_ROWS_MOST_SHARE = 0.5;
+
+/** The tallest the user can drag the rows in a window this tall (`CHANGESET_ROWS_MOST_SHARE`), never under the shortest. */
+export function changesetRowsMaxHeight(windowHeight: number): number {
+  return Math.max(CHANGESET_ROWS_MIN_HEIGHT, Math.round(windowHeight * CHANGESET_ROWS_MOST_SHARE));
+}
+
 /**
- * How tall the list's rows are drawn: every place (the rows, and a line between two of them) up to `most`, those past
- * it scrolling inside, so the files under the list keep their room. Its tallest while the changesets are read
- * (`places` undefined), which the rows then rarely leave, and with none, for the filter's "No matching changesets".
+ * How tall the list's rows are drawn: every place (the rows, and a line between two of them) up to the height the
+ * user dragged the list to (`dragged`), or `most` places until they do, those past it scrolling inside, so the files
+ * under the list keep their room. Never taller than its places, so a short list leaves no gap above the files. Its
+ * tallest while the changesets are read (`places` undefined), which the rows then rarely leave, and with none, for the
+ * filter's "No matching changesets".
  */
-export function changesetRowsHeight(places: number | undefined, most: number): number {
-  const shown = places === undefined || places === 0 ? most : Math.min(places, most);
-  return shown * CHANGESET_ROW_HEIGHT + ROWS_INSET;
+export function changesetRowsHeight(places: number | undefined, most: number, dragged?: number | null): number {
+  const tallest = dragged ?? placesHeight(most);
+  return places === undefined || places === 0 ? tallest : Math.min(placesHeight(places), tallest);
+}
+
+/**
+ * The height to remember as the user drags the splitter to `result`. Every list shares it, so a list shorter than it
+ * (Incoming's three changesets) keeps it while the drag stays at or past its rows, where nothing on screen moves: only
+ * a drag that makes the list shorter than its rows is the user's new height.
+ */
+export function changesetRowsDragged(result: number, places: number | undefined, most: number, dragged: number | null): number | null {
+  if (places === undefined || places === 0) return result;
+  const rows = placesHeight(places);
+  const tallest = dragged ?? placesHeight(most);
+  return rows < tallest && result >= rows ? dragged : result;
 }

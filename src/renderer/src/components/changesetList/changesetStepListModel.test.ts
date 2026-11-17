@@ -11,7 +11,10 @@ import {
   changesetListRowKey,
   changesetListRows,
   changesetListSelection,
+  CHANGESET_ROWS_MIN_HEIGHT,
+  changesetRowsDragged,
   changesetRowsHeight,
+  changesetRowsMaxHeight,
   changesetRowTip,
   changesetStep,
   filterChangesets,
@@ -225,6 +228,56 @@ describe('changesetRowsHeight', () => {
   it('is its tallest while the changesets are read, and with no row, for the notice that none matches', () => {
     expect(changesetRowsHeight(undefined, 6)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
     expect(changesetRowsHeight(0, 6)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
+  });
+
+  it('takes the height the user dragged it to, in place of the most rows', () => {
+    expect(changesetRowsHeight(400, 6, 500)).toBe(500);
+    expect(changesetRowsHeight(400, 6, 90)).toBe(90);
+    expect(changesetRowsHeight(undefined, 6, 500)).toBe(500);
+    expect(changesetRowsHeight(0, 6, 500)).toBe(500);
+  });
+
+  it('is never taller than its rows, dragged or not, so a short list leaves no gap above the files', () => {
+    expect(changesetRowsHeight(3, 6, 500)).toBe(3 * CHANGESET_ROW_HEIGHT + 8);
+  });
+
+  it('goes back to the most rows when the dragged height is forgotten (a double-click on the splitter)', () => {
+    expect(changesetRowsHeight(400, 6, null)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
+  });
+});
+
+describe('changesetRowsDragged', () => {
+  const rows = (places: number) => places * CHANGESET_ROW_HEIGHT + 8;
+
+  it('remembers where a list as long as its height is dragged to', () => {
+    expect(changesetRowsDragged(400, 40, 6, null)).toBe(400);
+    expect(changesetRowsDragged(120, 40, 6, 400)).toBe(120);
+  });
+
+  it('keeps the height remembered when a short list is dragged where nothing moves, at or past its rows', () => {
+    expect(changesetRowsDragged(rows(4), 4, 6, rows(10))).toBe(rows(10));
+    expect(changesetRowsDragged(rows(4) + 3, 4, 6, rows(10))).toBe(rows(10));
+    expect(changesetRowsDragged(rows(8), 4, 6, null)).toBeNull();
+  });
+
+  it('takes a short list dragged shorter than its rows as the new height', () => {
+    expect(changesetRowsDragged(rows(2), 4, 6, rows(10))).toBe(rows(2));
+  });
+
+  it('takes any height while the changesets are read or none matches, the list as tall as its height then', () => {
+    expect(changesetRowsDragged(300, undefined, 6, rows(10))).toBe(300);
+    expect(changesetRowsDragged(300, 0, 6, null)).toBe(300);
+  });
+});
+
+describe('changesetRowsMaxHeight', () => {
+  it('lets the rows take half the window, the files keeping the rest', () => {
+    expect(changesetRowsMaxHeight(1000)).toBe(500);
+    expect(changesetRowsMaxHeight(851)).toBe(426);
+  });
+
+  it('never goes under the shortest the rows can be, in a tiny window', () => {
+    expect(changesetRowsMaxHeight(50)).toBe(CHANGESET_ROWS_MIN_HEIGHT);
   });
 });
 

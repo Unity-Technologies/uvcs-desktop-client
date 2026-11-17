@@ -1,4 +1,5 @@
-/* A few changesets, then the files: the list's height is capped in code (`INCOMING_ROWS_SHOWN`). */
+/* A few changesets, then the files: the list's height is capped in code (`INCOMING_ROWS_SHOWN`) until the user drags
+   it (`changesetRowsHeight`). */
 .section {
   display: flex;
   flex: none;
