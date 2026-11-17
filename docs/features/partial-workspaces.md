@@ -155,8 +155,8 @@ A partial workspace has loaded no one changeset (`cm` reports none), so New labe
 label first, as a repository with no workspace does (`newLabel`, `labelsWorkspaceChangeset`): `cm` refuses to label the
 workspace's own. Files offers no New xlink… (`newXlinkDirectoryOf`): `cm partial checkin` refuses a new xlink,
 whatever it points to, even downloaded first, and `cm checkin` refuses a partial workspace; an xlink already checked
-in, and downloaded, is edited and checked in there as anywhere. It downloads an xlink whole, as a file, when Choose what to download… picks it, so Files offers no
-Load its files on an xlink there (`unloadedXlinkOf`). A switch to a changeset, a label or a shelve stays offered and
+in, and downloaded, is edited and checked in there as anywhere. It downloads an xlink whole, as a file, when Choose
+what to download… picks it, so Files offers no Load its files on an xlink there (`unloadedXlinkOf`). A switch to a changeset, a label or a shelve stays offered and
 says to download the whole branch first ("Making a partial workspace standard").
 
 ## Staying partial
