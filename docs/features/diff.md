@@ -313,7 +313,14 @@ while the bars show it leaves room for them under its last line: scrolled to the
 them, and the view's scroll padding keeps the caret typing past the bottom clear of them too. Every text diff, and the whole-file editor, renders only the
 lines in view (Pierre's `Virtualizer` on the diff's scrolling element): what's drawn again (a line added, a typing
 pause's word marks, a theme switch) costs those lines, not the file's. With every line of a 190 KB file shown, the
-typing pause's redraw took 0.45 s before; it's now under a frame. A file's language comes from its path
+typing pause's redraw took 0.45 s before; it's now under a frame. Pierre lays out lines it hasn't rendered from an
+estimate, one row each, and renders the rows a scroll brings in a frame or more later, at their real heights: a wrapped
+line is taller. So whatever is scrolled into a place (a change stepped to, a link's line, a comment's row) is placed
+again on each frame until it stands still there (`placementStep`; `scrollToAnnotationRow` counts its own frames), never
+a fixed number of times, which left a change or a line screens away in a wrapped file. The user's wheel, touch, press
+or key stops it, so the view is never pulled back from where they take it (`stopOnUserScroll`: the scroll position
+can't tell theirs from Pierre's, which moves it too as it measures rows). Its tests run it over `FakePierreLayout`,
+which lays a diff out that way. A file's language comes from its path
 (`lib/syntaxLanguage`, for diffs, annotations and merges alike): its whole name first (Dockerfile, Cargo.lock,
 .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
 projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
@@ -451,8 +458,10 @@ Every text diff of two versions steps through its changes (`useChangeNavigation`
 they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ ⌥↑ to move lines while typing) and the header's arrows
 (see "The arrows never move" below), from the diff or the list beside it; the first move goes from the top of the view.
 The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff not rendered there yet is
-scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one, as changes are always in the
-hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff
+scrolled to where Pierre lays it out, `pierreLinePosition`, then placed again on each frame until it stands still two
+frames in a row, as the rows above it render at their real heights, which wrapped lines make taller than estimated:
+`changeScrollStep`, `placementStep`; collapsed lines never hide one, as changes are always in the hunks shown), lights
+up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff
 beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next file's first change or
 the previous file's last, asking about unsaved edits first. Incoming's diffs and conflicting files step through
 different files but share where a step arrives (`usePendingArrival`), so ↓ past a diff's last change into a conflicting
@@ -696,11 +705,12 @@ deep-links.md "Where links are copied"; `useLineTools` wires them into `TextDiff
 newer side (`linkedLinesOf`). A workspace file's diff picks lines to discard them instead (`useBlockDiscard`).
 
 A page opened on a file's lines (`focusPath` with `focusLines`, a link's) opens that file scrolled to them, a third of
-the way down, and selected (`scrollToLine`, from where Pierre lays the line out, rendered or not); its unchanged lines
-show unfolded, as a link may name one (`collapseUnchanged` off for that file). Once: selecting another file drops them
-(`linkFocusOn`), so coming back leaves the file where the user was. Changes takes them from outside
-(`requestLineFocus`, `useRequestedLineFocus`): the pending change's diff scrolls to them and shows them as Pierre's
-selection until lines are picked to discard, Pierre echoing them back picking nothing (`useLinePick`'s `marked`).
+the way down, and selected (`scrollToLine`, from where Pierre lays the line out, rendered or not, placed again until it
+stands still as the rows around it render: `placementStep`); its unchanged lines show unfolded, as a link may name one
+(`collapseUnchanged` off for that file). Once: selecting another file drops them (`linkFocusOn`), so coming back leaves
+the file where the user was. Changes takes them from outside (`requestLineFocus`, `useRequestedLineFocus`): the pending
+change's diff scrolls to them and shows them as Pierre's selection until lines are picked to discard, Pierre echoing
+them back picking nothing (`useLinePick`'s `marked`).
 
 ## The code's menu
 
