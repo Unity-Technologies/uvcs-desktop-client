@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { placeId } from '@shared/domain/place';
 import { mergedChangesetOf } from '@shared/domain/reviewConversation';
 import { commentDraftKey } from '../../../components/DetailsHeading';
@@ -85,10 +85,15 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   const pickedRound = pick && roundHolding(blocks, pick.threadId);
   const roundCount = roundCountOf(blocks);
 
+  // Elements are found within this conversation, never the document's: another view kept mounted, hidden, may show
+  // the same review, with the same ids (`mountedViews`).
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const elementById = (id: string): HTMLElement | null | undefined => scrollerRef.current?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+
   // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
   useEffect(() => {
-    const element = pick && document.getElementById(pickedElementId(pick));
+    const element = pick && elementById(pickedElementId(pick));
     if (read && pick && element) placeInView(element, pickedBehaviorOf(pick));
   }, [read, pick]);
 
@@ -98,7 +103,7 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   useEffect(() => {
     if (!placed || openedAtSince) return;
     setOpenedAtSince(true);
-    const sinceLine = document.getElementById(SINCE_LINE_ID);
+    const sinceLine = elementById(SINCE_LINE_ID);
     if (opensAtSince(blocks, focusThread) && sinceLine) placeInView(sinceLine, 'auto');
   }, [placed, openedAtSince, blocks, focusThread]);
 
@@ -149,7 +154,7 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
 
   return (
     // The whole tab scrolls, its scrollbar at the window's edge; the conversation is a column centered in it.
-    <div className={styles.scroller}>
+    <div ref={scrollerRef} className={styles.scroller}>
       <div className={styles.conversation}>
         <div className={styles.main}>
           {isPending ? (

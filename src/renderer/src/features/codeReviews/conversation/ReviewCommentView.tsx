@@ -45,7 +45,7 @@ interface ReviewCommentViewProps {
    * to; a reply a link goes to is scrolled to by the conversation, `pickedElementId`).
    */
   lit?: { seq: number; scrolls: boolean };
-  /** Its element's id, which going to it scrolls to (`commentElementId`): in the conversation only, as ids are unique. */
+  /** Its element's id, which going to it scrolls to (`commentElementId`): in the conversation only, whose own element finds it (another view may show the same review). */
   elementId?: string;
 }
 
