@@ -128,7 +128,29 @@
   text-decoration: underline;
 }
 
-/* With no toggle beside it, the action keeps to the right. */
+/* Copy and the action keep to the right, with or without the toggle. */
+.copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.copy:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.copy + .action {
+  margin-left: 0;
+}
+
 .action {
   margin-left: auto;
   padding: 2px 8px;

@@ -1,7 +1,8 @@
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, Copy, Info, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Spinner } from '../Spinner';
-import { autoDismissMsOf, detailToggleOf } from './toastDetail';
+import { useCopiedFeedback } from '../useCopiedFeedback';
+import { autoDismissMsOf, detailToggleOf, errorCopyTextOf } from './toastDetail';
 import type { Toast, ToastAction, ToastKind } from './toastStore';
 import { useClippedText } from './useClippedText';
 import styles from './Toast.module.css';
@@ -26,6 +27,8 @@ export function ToastCard({ toast, action, dismiss }: ToastCardProps) {
   const clipped = useClippedText(detailRef, !unfolded, toast.detail);
   const toggle = detailToggleOf(clipped, unfolded);
   const autoDismissMs = autoDismissMsOf(toast.kind, unfolded);
+  const copyText = errorCopyTextOf(toast);
+  const { copied, copy } = useCopiedFeedback();
 
   // Failures interrupt; the rest, operation progress included, wait for a pause.
   return (
@@ -44,11 +47,17 @@ export function ToastCard({ toast, action, dismiss }: ToastCardProps) {
             {toast.detail}
           </div>
         )}
-        {(toggle || action) && (
+        {(toggle || copyText || action) && (
           <div className={styles.footer}>
             {toggle && (
               <button className={styles.toggle} aria-expanded={unfolded} onClick={() => setUnfolded(!unfolded)}>
                 {toggle}
+              </button>
+            )}
+            {copyText && (
+              <button className={styles.copy} onClick={() => copy(copyText)}>
+                {copied ? <Check size={12} /> : <Copy size={12} />}
+                {copied ? 'Copied' : 'Copy'}
               </button>
             )}
             {action && (

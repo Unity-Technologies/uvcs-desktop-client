@@ -1,8 +1,9 @@
-import { AUTO_DISMISS_MS, type ToastKind } from './toastStore';
+import { AUTO_DISMISS_MS, type Toast, type ToastKind } from './toastStore';
 
 /**
- * How a toast's detail shows: folded to its first lines (`DETAIL_FOLDED_LINES`, a line clamp), or whole once the user
- * unfolds it. Never a scroll box inside the card: a long message (an error's, with a URL or a path) reads as text.
+ * How a toast's detail shows: folded to its first three lines (`.detail`'s line clamp in `Toast.module.css`), or whole
+ * once the user unfolds it. Never a scroll box inside the card: a long message (an error's, with a URL or a path) reads
+ * as text.
  */
 export type DetailToggle = 'Show more' | 'Show less';
 
@@ -15,4 +16,10 @@ export function detailToggleOf(clipped: boolean, unfolded: boolean): DetailToggl
 /** How long the toast stays up: one the user unfolded to read stays until they dismiss it. */
 export function autoDismissMsOf(kind: ToastKind, unfolded: boolean): number | null {
   return unfolded ? null : AUTO_DISMISS_MS[kind];
+}
+
+/** What an error toast's Copy puts on the clipboard, its title and message, to paste into a chat or a bug report. */
+export function errorCopyTextOf(toast: Pick<Toast, 'kind' | 'title' | 'detail'>): string | null {
+  if (toast.kind !== 'error' || !toast.detail) return null;
+  return `${toast.title}\n${toast.detail}`;
 }
