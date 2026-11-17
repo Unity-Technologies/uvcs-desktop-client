@@ -111,7 +111,7 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   const eventContext = { destination: review.mergeRequest?.destination, statusChangesets };
   const renderEntry = (entry: ConversationEntry) => (
     <li key={entryKey(entry)}>
-      {entry.kind === 'event' && <TimelineEventRow event={entry.event} context={eventContext} />}
+      {entry.kind === 'event' && <TimelineEventRow event={entry.event} context={eventContext} user={user} />}
       {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
       {entry.kind === 'checkins' && (
         <CheckinsRow entry={entry} onOpenChangeset={(changesetId) => navigation.openPage({ kind: 'codeReview', reviewId: review.id, tab: 'changes', focusChangeset: changesetId })} />

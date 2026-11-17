@@ -134,6 +134,7 @@
 
 .comment:hover .commentMenu,
 .description:hover .commentMenu,
+.event:hover .commentMenu,
 .foldedRow:hover .commentMenu,
 .commentMenu:focus-within,
 .commentMenu:has([aria-expanded='true']) {
@@ -518,6 +519,11 @@ button.pill:hover {
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
+}
+
+/* The editor of what a reviewer said with their status, where the comment shows. */
+.eventEditor {
+  margin-top: var(--space-1);
 }
 
 /* What a reviewer said with their status: a soft tint, no bar, as the timeline's rail is its only vertical line (a bar

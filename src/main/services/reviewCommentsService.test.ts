@@ -186,6 +186,16 @@ describe('writing on a review', () => {
     expect(seen.content).toBe('Static class reads well.');
   });
 
+  it("edits what a reviewer said with their status, the status kept: cm restores no marker but the description's", async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = reviewComments({ 'codereview comment edit': answer });
+
+    await service.editStatusComment(IN_WORKSPACE, 's1', 'Reviewed', 'LGTM, ship it.');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'edit', 's1', `-commentsfile=${seen.file}`] }]);
+    expect(seen.content).toBe('[status-reviewed]LGTM, ship it.');
+  });
+
   it('deletes a comment', async () => {
     const { service, lines } = reviewComments({ 'codereview comment delete': '' });
 

@@ -1,6 +1,6 @@
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
-import type { NewLineComment, ReviewComment } from '@shared/domain/reviewConversation';
+import type { NewLineComment, ReviewComment, ReviewEventChange } from '@shared/domain/reviewConversation';
 import { api } from '../../../api/client';
 import { runVoidAction } from '../../../app/operations/runOperation';
 import { isAffectedByCodeReviews, isAffectedByTakingPartInReview } from '../../../app/refresh/refreshScopes';
@@ -46,6 +46,11 @@ export async function markChangeRequest(place: Place, review: Pick<CodeReview, '
 
 export function editReviewComment(place: Place, comment: Pick<ReviewComment, 'guid'>, text: string): Promise<boolean> {
   return runVoidAction(place, "Couldn't save the comment", () => api.reviewComments.edit(place, comment.guid, text), isAffectedByCodeReviews);
+}
+
+/** What a reviewer said with their status, the status kept. */
+export function editStatusComment(place: Place, event: Pick<Extract<ReviewEventChange, { kind: 'statusChanged' }>, 'guid' | 'status'>, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't save the comment", () => api.reviewComments.editStatusComment(place, event.guid, event.status, text), isAffectedByCodeReviews);
 }
 
 export async function deleteReviewComment(place: Place, comment: Pick<ReviewComment, 'guid'>): Promise<boolean> {

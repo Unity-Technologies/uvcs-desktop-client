@@ -14,7 +14,7 @@ import {
   replyArgs,
   unapplyChangeRequestArgs,
 } from '../cm/reviewCommentArgs';
-import { conversationOf, FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
+import { conversationOf, FOUND_REVIEW_COMMENTS, statusCommentText } from '../cm/reviewCommentRecords';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
@@ -60,6 +60,11 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
     async edit(place, commentGuid, text) {
       const at = cmPlace(place);
       await withTempFile(text, (textFile) => cm.query(editCommentArgs(commentGuid, textFile, at), at.options));
+    },
+
+    async editStatusComment(place, commentGuid, status, text) {
+      const at = cmPlace(place);
+      await withTempFile(statusCommentText(status, text), (textFile) => cm.query(editCommentArgs(commentGuid, textFile, at), at.options));
     },
 
     async remove(place, commentGuid) {
