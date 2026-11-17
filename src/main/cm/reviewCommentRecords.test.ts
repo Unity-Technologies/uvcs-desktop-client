@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conversationOf, FOUND_REVIEW_COMMENTS } from './reviewCommentRecords';
+import { conversationOf, FOUND_REVIEW_COMMENTS, statusCommentText } from './reviewCommentRecords';
 import { recordsIn, recordsOutput } from './testing/cmOutput';
 
 const ANA = 'ana@acme.com';
@@ -186,5 +186,19 @@ describe('conversationOf', () => {
 
   it('reads nothing from a review nobody said anything on', () => {
     expect(conversationIn()).toEqual({ comments: [], events: [] });
+  });
+});
+
+describe('statusCommentText', () => {
+  it.each(['Under review', 'Reviewed', 'Rework required'] as const)('writes what a reviewer said with %s as the server reads it back, the status kept', (status) => {
+    const text = statusCommentText(status, 'Two changes\nbefore it goes in.');
+
+    expect(conversationIn(printed({ id: 58, guid: 's1', type: 'timeline', comment: text })).events).toEqual([
+      { id: 58, author: ANA, date: AT, kind: 'statusChanged', status, comment: 'Two changes\nbefore it goes in.', guid: 's1' },
+    ]);
+  });
+
+  it('keeps the status when what was said is cleared', () => {
+    expect(statusCommentText('Reviewed', '')).toBe('[status-reviewed]');
   });
 });
