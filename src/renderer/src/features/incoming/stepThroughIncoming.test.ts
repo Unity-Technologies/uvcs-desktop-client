@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentAtOpening, openingStep, positionLabel } from '../diff/viewer/changeNavigation';
+import { openingStep, positionLabel } from '../diff/viewer/changeNavigation';
 import { fileSteps, pendingArrival } from '../diff/viewer/fileSteps';
 import { pressStep } from '../diff/viewer/stepNavigation';
 
@@ -58,8 +58,7 @@ class IncomingList {
     this.shown = path;
     const arrival = this.stepsOfShown().takeArrival(path);
     const opening = openingStep(arrival, this.count, false);
-    // A diff and a conflicting file both open at their first step, current (`StepView.show`).
-    this.current = currentAtOpening(opening, true);
+    this.current = opening?.index ?? null;
   }
 }
 

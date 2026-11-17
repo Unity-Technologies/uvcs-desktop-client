@@ -70,7 +70,7 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
   const conflictsOnScreen: StepView = {
     isShown: () => conflictView.current?.isShown() ?? false,
     reveal: (index) => conflictView.current?.reveal(index),
-    show: (index) => conflictView.current?.show?.(index),
+    show: (index) => conflictView.current?.show(index),
     countAbove: () => conflictView.current?.countAbove() ?? 0,
     aboveAfterChange: (count) => conflictView.current?.aboveAfterChange(count) ?? 0,
   };

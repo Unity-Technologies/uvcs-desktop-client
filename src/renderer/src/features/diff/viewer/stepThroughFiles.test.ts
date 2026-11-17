@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { currentAtOpening, openingStep, positionLabel, plannedMove } from './changeNavigation';
+import { openingStep, positionLabel, plannedMove } from './changeNavigation';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { fileSteps, pendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
@@ -63,7 +63,7 @@ class DiffBesideList {
     this.shown = path;
     const arrival = this.steps().takeArrival(path);
     const opening = openingStep(arrival, this.count, false);
-    this.current = currentAtOpening(opening, true);
+    this.current = opening?.index ?? null;
   }
 }
 

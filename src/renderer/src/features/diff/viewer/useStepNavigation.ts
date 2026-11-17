@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState, type RefObject } 
 import { keysReach } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
-import { currentAtOpening, openingStep } from './changeNavigation';
+import { openingStep, shownChange } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { applyPress, pressGoal, takesKept, type PressEffect, type PressHolder, type PressSpot } from './pressRouting';
 import { positionAfterChange } from './stepNavigation';
@@ -20,7 +20,7 @@ export interface StepNavigation {
   noun: string;
   shortcuts: StepShortcuts;
   count: number;
-  /** The step moved to, by index; none before the first move or once the steps are others. */
+  /** The step the count names (`shownChange`): moved to, or the view opened at and stands at; none otherwise. */
   current: number | null;
   /** Where a move goes: to a step, on to the file beside it in the list (past the ends), or nowhere. */
   goesTo: (direction: 1 | -1) => ArrowGoal;
@@ -41,10 +41,9 @@ export interface StepView {
   /** Brings the step at `index` into view. */
   reveal: (index: number) => void;
   /**
-   * Brings the step at `index` into view as the view opens, current but not lit, nor picked. A view without it opens
-   * where it is, at no step, unless stepped to from the file beside it.
+   * Brings the step at `index` into view as the view opens, current but not lit, nor picked (`openingStep`).
    */
-  show?: (index: number) => void;
+  show: (index: number) => void;
   /** Whether the view opened on lines of its own (a link's), which it stays on unless stepped to. */
   opensOnLines?: () => boolean;
   /** How many steps start above the top of the view, read from the screen: where the first move goes from. */
@@ -96,15 +95,18 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   const files = useContext(FileStepsContext);
   const [current, setCurrent] = useState<number | null>(null);
   const [above, setAbove] = useState(0);
+  // Opened at a step, not moved to: the count and the first move follow the scroll (`ChangePosition.followsView`).
+  const [followsView, setFollowsView] = useState(false);
   const latestView = useRef(view);
   latestView.current = view;
   // The steps changed: the one moved to stays while there are as many.
   const [known, setKnown] = useState(steps);
   if (known !== steps) {
-    const after = positionAfterChange({ count: known.length, current, above }, known, steps, view.aboveAfterChange(steps.length));
+    const after = positionAfterChange({ count: known.length, current, above, followsView }, known, steps, view.aboveAfterChange(steps.length));
     setKnown(steps);
     setCurrent(after.current);
     setAbove(after.above);
+    setFollowsView(after.followsView ?? false);
   }
 
   const readAbove = useCallback((): number => {
@@ -123,9 +125,10 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   }, [readAbove]);
   useEffect(() => () => cancelAnimationFrame(scrollFrame.current), []);
 
-  const position = { count: steps.length, current, above };
+  const position = { count: steps.length, current, above, followsView };
   const moveTo = (target: number): void => {
     setCurrent(target);
+    setFollowsView(false);
     latestView.current.reveal(target);
   };
   // Presses meant for a file whose view hasn't taken them wait for it (`routePress`), tagged with that file.
@@ -163,11 +166,11 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
       }
       setOpened(true);
       const at = shown ? openingStep(from, steps.length, view.opensOnLines?.() ?? false) : null;
-      const current = currentAtOpening(at, view.show !== undefined);
       if (at?.lights) latestMoveTo.current(at.index);
-      else if (at && current !== null) {
-        setCurrent(current);
-        view.show?.(at.index);
+      else if (at) {
+        setCurrent(at.index);
+        setFollowsView(true);
+        view.show(at.index);
       }
     };
     // From the next frame, not at once: a development build's second mount (StrictMode) runs the view's cleanups,
@@ -202,7 +205,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
     noun,
     shortcuts,
     count: steps.length,
-    current,
+    current: shownChange(position),
     goesTo: (direction) => pressGoal(spot(), position, direction, files),
     go,
     onViewScroll,

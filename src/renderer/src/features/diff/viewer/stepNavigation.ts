@@ -18,7 +18,7 @@ export type PressOutcome = number | { file: string } | null;
  * it selects.
  */
 export function pressStep(position: ChangePosition, direction: 1 | -1, files: Pick<FileSteps, 'canStep' | 'step'> | null, readAbove: () => number): PressOutcome {
-  const from = position.current === null ? { ...position, above: readAbove() } : position;
+  const from = position.current === null || position.followsView ? { ...position, above: readAbove() } : position;
   const move = plannedMove(from, direction, files?.canStep(direction) ?? false);
   if (move?.to === 'file') {
     const file = files!.step(direction);
@@ -32,5 +32,6 @@ export function pressStep(position: ChangePosition, direction: 1 | -1, files: Pi
  * are as many; `above` is how many start above where the view stands now (`StepView.aboveAfterChange`).
  */
 export function positionAfterChange(position: ChangePosition, before: readonly unknown[], after: readonly unknown[], above: number): ChangePosition {
-  return { count: after.length, current: currentAfterChange(position.current, before, after), above };
+  const current = currentAfterChange(position.current, before, after);
+  return { count: after.length, current, above, followsView: current !== null && position.followsView };
 }

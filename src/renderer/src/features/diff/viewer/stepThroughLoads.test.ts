@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentAtOpening, openingStep, positionLabel, type ChangePosition } from './changeNavigation';
+import { openingStep, positionLabel, type ChangePosition } from './changeNavigation';
 import { headerArrows } from './diffFrameHost';
 import { fileSteps, pendingArrival, settlingOnOf } from './fileSteps';
 import { applyPress, pressGoal, takesKept, type PressEffect, type PressSpot } from './pressRouting';
@@ -147,7 +147,7 @@ class CachedDiffs {
 
   private open(body: { path: string; current: number | null; opened: boolean }): void {
     const opening = openingStep(this.steps().takeArrival(body.path), this.changes(body.path), false);
-    body.current = currentAtOpening(opening, true);
+    body.current = opening?.index ?? null;
     body.opened = true;
     this.rendersDue = true;
   }

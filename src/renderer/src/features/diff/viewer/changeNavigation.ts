@@ -13,12 +13,25 @@ export interface ChangePosition {
   current: number | null;
   /** How many changes start above the line at the top of the view: where the first move goes from. */
   above: number;
+  /**
+   * The current change is the one the view opened at, not moved to (`openingStep`): until a change is moved to, the
+   * count and the moves follow where the user scrolls (`above`).
+   */
+  followsView?: boolean;
 }
 
 /** The change to move to from `position`, down (1) or up (-1); none past the first or last. */
-export function adjacentChange({ count, current, above }: ChangePosition, direction: 1 | -1): number | null {
-  const target = current === null ? (direction === 1 ? above : above - 1) : current + direction;
+export function adjacentChange({ count, current, above, followsView }: ChangePosition, direction: 1 | -1): number | null {
+  const target = current === null || followsView ? fromView(current ?? -1, above, direction) : current + direction;
   return target >= 0 && target < count ? target : null;
+}
+
+/**
+ * A move from where the view stands: down, to the first change starting below its top (past the one it opened at),
+ * up, to the last starting above it.
+ */
+function fromView(openedAt: number, above: number, direction: 1 | -1): number {
+  return direction === 1 ? Math.max(above, openedAt + 1) : above - 1;
 }
 
 /** Where a move goes: to a step of this view (a change, a conflict), on to the file beside it in the list, or nowhere. */
@@ -42,7 +55,8 @@ export function arrivalChange(arrival: Arrival, count: number): number | null {
 
 /**
  * Where a view opens: at the step `index`, current ("1 of 12") either way; lit when stepped to from the file beside it,
- * only brought into view otherwise, so a file just picked doesn't flash at the user.
+ * only brought into view otherwise, so a file just picked doesn't flash at the user, and then the count follows the
+ * scroll until a step is moved to (`ChangePosition.followsView`).
  */
 export interface Opening {
   index: number;
@@ -59,14 +73,6 @@ export function openingStep(arrival: Arrival | null, count: number, opensOnLines
   if (count === 0) return null;
   if (arrival) return { index: arrivalChange(arrival, count)!, lights: true };
   return opensOnLines ? null : { index: 0, lights: false };
-}
-
-/**
- * The step current once a view opened (`openingStep`): the one it opened at, unless the view can only light a step,
- * not just bring it into view (`StepView.show`: a merged file's conflicts), which then opens where it is, at none.
- */
-export function currentAtOpening(opening: Opening | null, canShow: boolean): number | null {
-  return opening && (opening.lights || canShow) ? opening.index : null;
 }
 
 /** How many of the changes start above `line` of the modified file. */
@@ -102,6 +108,16 @@ export function currentAfterChange(current: number | null, before: readonly unkn
  * "3 of 12" while a change (or a conflict) is current, and nothing otherwise: one form only. How many there are is the
  * line counts' and the arrows' tips' to say, and that there are none, the diff's own (identical, binary).
  */
-export function positionLabel({ count, current }: Pick<ChangePosition, 'count' | 'current'>): string {
-  return current === null || count === 0 ? '' : `${formatCount(current + 1)} of ${formatCount(count)}`;
+export function positionLabel(position: Pick<ChangePosition, 'count' | 'current'> & Partial<ChangePosition>): string {
+  const shown = shownChange({ above: 0, ...position });
+  return shown === null || position.count === 0 ? '' : `${formatCount(shown + 1)} of ${formatCount(position.count)}`;
+}
+
+/**
+ * The change the count names: the current one; while the view follows the scroll (opened there, not moved to), the
+ * change it stands at, the last starting above its top.
+ */
+export function shownChange({ count, current, above, followsView }: ChangePosition): number | null {
+  if (current === null || !followsView) return current;
+  return Math.min(Math.max(current, above - 1), count - 1);
 }
