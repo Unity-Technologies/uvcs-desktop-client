@@ -5,7 +5,9 @@
 //   --scale=2       the shots were taken at twice the pixels (`scripts/screenshot.mjs --scale=2`): labels and spacing follow
 //   --dark          frames them in the dark theme's page, for shots of the dark theme
 // The two shots must be the same size: the same crop of the same place, so the change is all that differs.
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { app, BrowserWindow, nativeImage } from 'electron';
 import { beforeAfterArguments, beforeAfterLayout, beforeAfterSizeError, cropBoxError } from './build/beforeAfterLayout.mts';
 
@@ -44,7 +46,16 @@ async function main() {
   const layout = beforeAfterLayout(size, args.pixelRatio);
   const html = pageHtml(layout, before.toPNG().toString('base64'), after.toPNG().toString('base64'), args.dark ? FRAMES.dark : FRAMES.light, args.pixelRatio);
   const window = new BrowserWindow({ show: false, useContentSize: true, width: layout.width, height: layout.height, webPreferences: { offscreen: true } });
-  await window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  // From a file, not a data: URL: Chromium cuts a URL at 2 MB, and two shots at twice the pixels pass it, which drops
+  // the second shot from the page.
+  const folder = await mkdtemp(join(tmpdir(), 'before-after-'));
+  try {
+    const page = join(folder, 'page.html');
+    await writeFile(page, html);
+    await window.loadFile(page);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
   const picture = await window.webContents.capturePage({ x: 0, y: 0, width: layout.width, height: layout.height });
   await writeFile(args.output, picture.toPNG());
   console.log(`${args.output}: ${layout.width}×${layout.height}, ${layout.direction === 'row' ? 'side by side' : 'one above the other'}`);

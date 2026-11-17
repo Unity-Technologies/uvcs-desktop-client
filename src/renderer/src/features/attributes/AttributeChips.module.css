@@ -195,6 +195,11 @@
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
 
+/* Inside a details section's card, already tinted: the opened value stands out on the surface instead. */
+.attributes[data-in-card='true'] .opened {
+  background: var(--bg-surface);
+}
+
 .openedName {
   color: var(--text-tertiary);
   font-size: var(--text-xs);

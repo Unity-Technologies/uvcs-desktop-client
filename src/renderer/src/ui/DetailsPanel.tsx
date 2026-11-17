@@ -24,8 +24,6 @@ interface DetailsPanelProps {
   meta?: ReactNode[];
   /** Small status pills such as "Current" or "Hidden", next to the kind. */
   badges?: ReactNode;
-  /** Attribute chips, under the meta row. */
-  attributes?: ReactNode;
   /** The one main thing to do with the object, the same as double-clicking or pressing Enter on it: usually "Open diff". */
   primaryAction?: ReactNode;
   /** The object's context menu, behind a "More actions" button next to the primary action. */
@@ -40,7 +38,7 @@ interface DetailsPanelProps {
   fill?: boolean;
   /** Only `changes` shows, the rest kept mounted out of sight: a file's diff expanded to the whole window. */
   changesOnly?: boolean;
-  /** Sections of their own, under the heading. */
+  /** Titled sections under the heading (`DetailsSection`): what it relates to first, then its attributes. */
   children?: ReactNode;
 }
 
@@ -53,7 +51,6 @@ export function DetailsPanel({
   author,
   meta = [],
   badges,
-  attributes,
   primaryAction,
   menu = [],
   primaryActionId,
@@ -103,7 +100,6 @@ export function DetailsPanel({
               </div>
             </div>
           )}
-          {attributes}
           {properties.length > 0 && <MoreDetails properties={properties} />}
         </header>
         {children && <div className={styles.body}>{children}</div>}

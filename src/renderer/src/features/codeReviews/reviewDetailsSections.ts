@@ -10,7 +10,7 @@ import { mergeRequestSummaryOf, type MergeRequestSummary } from './mergeRequestS
  */
 export interface ReviewDetailsSections {
   review?: MergeRequestSummary['review'];
-  /** The branch's spec, whose attributes show (`AttributeChips`). */
+  /** The branch's spec, whose attributes show (`AttributesDetailsSection`). */
   branchAttributes?: string;
 }
 

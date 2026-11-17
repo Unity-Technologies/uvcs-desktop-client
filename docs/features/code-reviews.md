@@ -100,7 +100,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   never spreads it: a sighted keyboard user reads each reviewer's status on the review's page, beside its conversation,
   where every reviewer shows their status's icon); the details panel lists them under **Reviewers**, each with their
   status's icon (`ReviewerList`, read only), and a review of a branch the branch's attributes under **Branch
-  attributes** (`reviewDetailsSections`; hidden with nothing to show or add, `useAttributesShown`); the column is `REVIEWERS_COLUMN_WIDTH`, wide enough for the stack spread), the
+  attributes** (`reviewDetailsSections`, `AttributesDetailsSection`; hidden with nothing to show or add, `attributesSectionOf`); the column is `REVIEWERS_COLUMN_WIDTH`, wide enough for the stack spread), the
   comments with how many are open (`ReviewCommentCounts`; sorted by what's open first, `commentCountsSortValue`), the
   changes, the author and the last activity. When it was created has no column, to keep the rows light: the list
   comes newest first as `cm` reads it, its period goes by it, and the details panel says it. Each row leads with what

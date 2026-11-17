@@ -15,7 +15,7 @@ import { Button } from '../../ui/Button';
 import { DetailsBadge } from '../../ui/DetailsBadge';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import type { Property } from '../../ui/PropertyList';
-import { AttributeChips } from '../attributes/AttributeChips';
+import { AttributesDetailsSection } from '../attributes/AttributesDetailsSection';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { asMergeRequest } from '../codeReviews/mergeRequestState';
@@ -69,7 +69,6 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
           {branch.isHidden && <DetailsBadge>Hidden</DetailsBadge>}
         </>
       }
-      attributes={<AttributeChips key={branch.name} objectSpec={spec.branch(branch.name)} />}
       primaryAction={
         <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => diffBranch(branch)}>
           Open diff
@@ -92,6 +91,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
           <MergeRequestSummaryCard request={request} onOpen={() => openReview(request)} />
         </DetailsSection>
       )}
+      <AttributesDetailsSection objectSpec={spec.branch(branch.name)} />
     </DetailsPanel>
   );
 }

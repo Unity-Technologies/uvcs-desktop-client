@@ -1315,8 +1315,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
   `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; read as Markdown with chips for what it names, features/rich-comments.md; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
-  date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
-  then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
+  date · spec to copy · branch chip); properties and relations behind "More details". The header says what the object
+  is and nothing more: everything else is a titled section under it (`DetailsSection`, a caps title over a tinted
+  card, a small control such as Add at the title's right), what the object relates to or how it stands first (Merge
+  request, Review, Reviewers, In progress), then its attributes (`AttributesDetailsSection`: "Attributes", or "Branch
+  attributes" on a review; Add at the title's right while there's an attribute to add, the card holding the chips or "No attributes",
+  `attributesSectionOf`; never chips in the header, `detailsPanelsShowAttributesInSection.test.ts`). A
+  panel that is mostly properties (a lock, a folder, the workspace) shows them in a "Details" section instead of behind
+  More details. Then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch, label and shelve
   comments (a branch's with `cm branch editcomment`, the comment in a file, offered only from cm 11.0.16.10512
   on, `editsBranchComments` through `isCmVersionAtLeast`: an older cm takes the unknown subcommand as a branch to create; a label's by applying it again to its

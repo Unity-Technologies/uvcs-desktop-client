@@ -1,3 +1,4 @@
+import type { AttributeValue } from '@shared/domain/attribute';
 import { commentLineText } from '../../lib/comments/commentText';
 import { markdownPreview } from '../../lib/markdown';
 
@@ -128,4 +129,30 @@ export function suggestedValues(defaults: string[], used: string[]): string[] {
  */
 export function hasAttributesToShow(values: readonly unknown[] | undefined, types: readonly unknown[]): boolean {
   return values === undefined || values.length > 0 || types.length > 0;
+}
+
+/**
+ * What an object's Attributes section in a details panel shows (`AttributesDetailsSection`): `hidden` when there's
+ * nothing to show or add (`hasAttributesToShow`), and while the values are read on a server with no attribute types,
+ * so no section flashes on every selection there (a value whose type is gone shows once read); `reading`, a
+ * placeholder, until the values are read; `none`, "No
+ * attributes", when the object has no value; `chips`, the values, the one being added among them. Each is the card
+ * under its title, so the section keeps its shape and its Add stays at the title's right whatever it holds.
+ */
+export interface AttributesSection {
+  body: 'hidden' | 'reading' | 'none' | 'chips';
+  /** The attribute types its Add offers: those the object has no value for, none while one is being added; no Add without one. */
+  addable: string[];
+}
+
+export function attributesSectionOf(
+  values: readonly AttributeValue[] | undefined,
+  types: readonly { name: string }[] | undefined,
+  adding: string | null,
+): AttributesSection {
+  if (values === undefined) return { body: types?.length === 0 ? 'hidden' : 'reading', addable: [] };
+  if (types === undefined) return { body: values.length > 0 || adding ? 'chips' : 'reading', addable: [] };
+  if (!hasAttributesToShow(values, types)) return { body: 'hidden', addable: [] };
+  const addable = adding ? [] : types.filter((type) => !values.some((value) => value.name === type.name)).map((type) => type.name);
+  return { body: values.length > 0 || adding ? 'chips' : 'none', addable };
 }
