@@ -1,5 +1,6 @@
 import type { GraphSelection } from '../graphSelection';
 import type { GraphLayout } from '../model/layoutGraph';
+import { openContextMenuAt } from './contextMenuAt';
 import type { Point } from './curves';
 import { COLUMN_WIDTH, nodePoint } from './geometry';
 import type { GraphTarget } from './graphTargets';
@@ -92,13 +93,9 @@ export function createGraphCanvasHandle({ layout, view, size, canvas, container,
       const element = canvas();
       const point = menuPoint(layout, target);
       if (!element || !point) return;
-      const { zoom, panX, panY } = view.viewportRef.current;
-      const bounds = element.getBoundingClientRect();
       setContextTarget(target);
       clearHover();
-      element.dispatchEvent(
-        new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: bounds.left + point.x * zoom + panX, clientY: bounds.top + point.y * zoom + panY }),
-      );
+      openContextMenuAt(element, view.viewportRef.current, point);
     },
     centerOn: (selection) => {
       const point = selectionPoint(layout, selection);
