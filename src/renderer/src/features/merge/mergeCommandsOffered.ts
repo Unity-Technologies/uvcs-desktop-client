@@ -1,7 +1,7 @@
 import { offersMerges, offersServerMerges, type MenuPlace } from '../../components/mergesOffered';
 
 /** The palette's merge commands (`useMergeCommands`), in the order they show. */
-export const MERGE_COMMAND_IDS = ['merge.fromBranch', 'merge.toBranch', 'merge.cherryPick', 'merge.subtractive', 'merge.applyShelve'] as const;
+export const MERGE_COMMAND_IDS = ['merge.fromBranch', 'merge.toBranch', 'merge.cherryPick', 'merge.applyShelve', 'merge.subtractive'] as const;
 
 export type MergeCommandId = (typeof MERGE_COMMAND_IDS)[number];
 
