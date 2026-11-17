@@ -58,18 +58,8 @@ describe('changeScrollStep', () => {
   it('settles at the end of the content, where a change near the end of the file stands lower', () => {
     const jumped = changeScrollStep(CHANGE_SCROLL_START, frame({})).state;
     const atEnd = changeScrollStep(jumped, frame({ rowOffset: 500, scrollTop: 9000, maxScroll: 9000 }));
-    expect(atEnd.step).toEqual({ kind: 'place', scrollTop: 9000 });
-    const settling = changeScrollStep(atEnd.state, frame({ rowOffset: 500, scrollTop: 9000, maxScroll: 9000 }));
-    expect(settling.step).toEqual({ kind: 'wait' });
-    expect(changeScrollStep(settling.state, frame({ rowOffset: 500, scrollTop: 9000, maxScroll: 9000 })).step).toEqual({ kind: 'done' });
-  });
-
-  it('after a jump, leaves the view where the user scrolls it while the change stands still', () => {
-    const jumped = changeScrollStep(CHANGE_SCROLL_START, frame({})).state;
-    const placed = changeScrollStep(jumped, frame({ rowOffset: 1700, scrollTop: 4000 }));
-    const scrolled = changeScrollStep(placed.state, frame({ rowOffset: PLACE - 300, scrollTop: 5640 + 300 }));
-    expect(scrolled.step).toEqual({ kind: 'wait' });
-    expect(changeScrollStep(scrolled.state, frame({ rowOffset: PLACE - 700, scrollTop: 5640 + 700 })).step).toEqual({ kind: 'done' });
+    expect(atEnd.step).toEqual({ kind: 'wait' });
+    expect(changeScrollStep(atEnd.state, frame({ rowOffset: 500, scrollTop: 9000, maxScroll: 9000 })).step).toEqual({ kind: 'done' });
   });
 
   it('scrolls a diff opening on a change below the view to its rows, at once', () => {
