@@ -1,3 +1,4 @@
+import type { AttributeValue } from '@shared/domain/attribute';
 import { commentLineText } from '../../lib/comments/commentText';
 import { markdownPreview } from '../../lib/markdown';
 
@@ -128,4 +129,27 @@ export function suggestedValues(defaults: string[], used: string[]): string[] {
  */
 export function hasAttributesToShow(values: readonly unknown[] | undefined, types: readonly unknown[]): boolean {
   return values === undefined || values.length > 0 || types.length > 0;
+}
+
+/**
+ * What an object's Attributes section in a details panel shows (`AttributesDetailsSection`): `hidden` when there's
+ * nothing to show or add (`hasAttributesToShow`); `reading`, its title alone, until the values are read; `none`, its
+ * title and Add without a card, when the object has no value, so an empty section stays one line; `chips`, the values
+ * in a card, the one being added among them.
+ */
+export interface AttributesSection {
+  body: 'hidden' | 'reading' | 'none' | 'chips';
+  /** The attribute types its Add offers: those the object has no value for, none while one is being added. */
+  addable: string[];
+}
+
+export function attributesSectionOf(
+  values: readonly AttributeValue[] | undefined,
+  types: readonly { name: string }[],
+  adding: string | null,
+): AttributesSection {
+  if (values === undefined) return { body: 'reading', addable: [] };
+  if (!hasAttributesToShow(values, types)) return { body: 'hidden', addable: [] };
+  const addable = adding ? [] : types.filter((type) => !values.some((value) => value.name === type.name)).map((type) => type.name);
+  return { body: values.length > 0 || adding ? 'chips' : 'none', addable };
 }
