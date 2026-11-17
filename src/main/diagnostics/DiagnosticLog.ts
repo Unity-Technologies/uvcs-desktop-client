@@ -1,5 +1,6 @@
 import { appendFile, mkdir, rename, stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import { textForLog } from '../cm/hideSecrets';
 import { logRecord } from './logRecords';
 import { rotatesBefore, rotationRenames } from './logRotation';
@@ -27,6 +28,13 @@ export interface DiagnosticLogOptions {
   now?: () => Date;
 }
 
+/**
+ * The characters a record keeps, its start and its end (`clipForLog`): a command line and its output as the command
+ * log keeps them, with room to spare. An error's stack, a window's included, is clipped too, so no record, however it
+ * came, can take the file's size by itself.
+ */
+export const MAX_RECORD_LENGTH = MAX_LOGGED_COMMAND_LINE + MAX_LOGGED_OUTPUT + 4000;
+
 const NODE_LOG_FILES: LogFiles = {
   size: async (path) => {
     try {
@@ -45,7 +53,7 @@ const NODE_LOG_FILES: LogFiles = {
 
 /**
  * The app's log file, for a user to send with a bug report (ARCHITECTURE.md "The log file"). Each `write` is
- * a record, its secrets hidden (`textForLog`) and its time added (`logRecord`). Writing never blocks the caller nor
+ * a record, its secrets hidden (`textForLog`), clipped (`MAX_RECORD_LENGTH`) and its time added (`logRecord`). Writing never blocks the caller nor
  * throws back at it: records wait in memory while the file is written, and go in one append when it's done. A file
  * that can't be written loses those records quietly; the log never writes about its own failures.
  */
@@ -69,7 +77,7 @@ export class DiagnosticLog implements DiagnosticWriter {
 
   write(text: string): void {
     const when = this.now();
-    this.waiting.push(logRecord(when, when.getTimezoneOffset(), textForLog(text)));
+    this.waiting.push(logRecord(when, when.getTimezoneOffset(), clipForLog(textForLog(text), MAX_RECORD_LENGTH, 'ends')));
     // The first record waiting starts a write after the one running; later ones join it.
     if (this.waiting.length === 1) this.writing = this.writing.then(() => this.writeWaiting());
   }
@@ -95,10 +103,17 @@ export class DiagnosticLog implements DiagnosticWriter {
   }
 
   private async rotate(): Promise<void> {
-    for (const { from, to } of rotationRenames(this.options.file, this.options.keptFiles)) {
-      // An earlier file that doesn't exist yet (the log's first rotations) leaves nothing to move.
-      await this.files.rename(from, to).catch(() => undefined);
+    try {
+      for (const { from, to } of rotationRenames(this.options.file, this.options.keptFiles)) await this.files.rename(from, to).catch(unlessMissing);
+      this.size = 0;
+    } catch {
+      // A file held open elsewhere (a viewer, an antivirus on Windows) can't move: the records go on the current file,
+      // whose size is kept, so the next write tries again. Stopping at the first failure overwrites no earlier file.
     }
-    this.size = 0;
   }
+}
+
+/** An earlier file that doesn't exist yet (the log's first rotations) leaves nothing to move; any other failure stops. */
+function unlessMissing(error: unknown): void {
+  if ((error as NodeJS.ErrnoException | undefined)?.code !== 'ENOENT') throw error;
 }
