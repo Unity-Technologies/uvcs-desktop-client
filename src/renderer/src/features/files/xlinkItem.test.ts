@@ -35,24 +35,29 @@ describe('Creating and editing xlinks from Files', () => {
   });
 
   it('creates a new xlink in the folder selected, or the folder of the file selected, the root too', () => {
-    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace)).toBe('code');
-    expect(newXlinkDirectoryOf(item('code/a.cs', 'file'), inWorkspace)).toBe('code');
-    expect(newXlinkDirectoryOf(item('', 'directory'), inWorkspace)).toBe('');
+    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace, 'standard')).toBe('code');
+    expect(newXlinkDirectoryOf(item('code/a.cs', 'file'), inWorkspace, 'standard')).toBe('code');
+    expect(newXlinkDirectoryOf(item('', 'directory'), inWorkspace, 'standard')).toBe('');
   });
 
   it('creates none from a private item: cm takes an xlink only in a controlled folder', () => {
-    expect(newXlinkDirectoryOf(item('build', 'directory', { isPrivate: true }), inWorkspace)).toBeNull();
-    expect(newXlinkDirectoryOf(item('code/notes.txt', 'file', { isPrivate: true }), inWorkspace)).toBeNull();
+    expect(newXlinkDirectoryOf(item('build', 'directory', { isPrivate: true }), inWorkspace, 'standard')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/notes.txt', 'file', { isPrivate: true }), inWorkspace, 'standard')).toBeNull();
   });
 
   it('creates none from an xlink or anything under one: it would go in the xlinked repository', () => {
-    expect(newXlinkDirectoryOf(item('code/lib', 'directory', { xlink }), inWorkspace)).toBeNull();
-    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory'), { ...inWorkspace, underXlink: true })).toBeNull();
-    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), inWorkspace)).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/lib', 'directory', { xlink }), inWorkspace, 'standard')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory'), { ...inWorkspace, underXlink: true }, 'standard')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), inWorkspace, 'standard')).toBeNull();
+  });
+
+  it('creates none in a partial workspace, which can’t check in a new xlink; until its kind is read, it does', () => {
+    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace, 'partial')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace, undefined)).toBe('code');
   });
 
   it('trusts the listings alone until the workspace’s repository is read', () => {
-    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), { underXlink: false, workspaceRepository: undefined })).toBe('code/lib/src');
+    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), { underXlink: false, workspaceRepository: undefined }, 'standard')).toBe('code/lib/src');
   });
 
   it('edits an xlink of the workspace, not a folder, nor one nested in another xlink', () => {
