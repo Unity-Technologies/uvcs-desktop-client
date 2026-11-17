@@ -32,6 +32,15 @@ export function codeReviewsQuery({ since, people, status, mergeRequestState, rev
   return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[mergeRequestState], sinceDate: sinceDateFor(since, today) };
 }
 
+/**
+ * What Merge requests' list is read with, from the view's chips: `codeReviewsQuery` under the state the Kind chip leaves
+ * (`stateUnderKind`). The view and the sidebar's count (`useCodeReviewsListFilter`) both read with it, so they share one
+ * query key and one `cm find review`.
+ */
+export function codeReviewsListQuery({ kind, mergeRequestState, ...filters }: CodeReviewsQueryFilters & { kind: ReviewKindFilter }, today = new Date()): CodeReviewFilter {
+  return codeReviewsQuery({ ...filters, mergeRequestState: stateUnderKind(kind, mergeRequestState) }, today);
+}
+
 /** The states the server is asked for; the others read every review. */
 const SERVER_STATES: Record<MergeRequestStateFilter, CodeReviewFilter['mergeRequestState']> = { active: undefined, all: undefined, merged: 'Merged', closed: 'Closed' };
 
