@@ -91,6 +91,15 @@ export function changeNavigatorView(facts: NavigatorFacts): NavigatorView | null
   };
 }
 
+/**
+ * The label the header shows, given the one it `held` (showed last): while it waits for the next file's diff, the one it
+ * showed, so the count swaps in place on a fast read; otherwise the view's own, empty included, so a file with no count
+ * between two (an image) never lets an older file's come back.
+ */
+export function heldLabel(held: string, view: Pick<NavigatorView, 'label' | 'waiting'>): string {
+  return view.waiting ? held : view.label;
+}
+
 /** The tip of an arrow going on to a file: its name where the list gives it ("Next file: GameManager.cs"). */
 function fileTip(way: 'Previous' | 'Next', path: string | null | undefined, unnamed: string): string {
   return path ? `${way} file: ${fileNameOf(path)}` : unnamed;

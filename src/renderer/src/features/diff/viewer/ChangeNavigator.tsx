@@ -1,11 +1,11 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useContext, useRef, type MouseEvent, type Ref } from 'react';
+import { useContext, useState, type MouseEvent, type Ref } from 'react';
 import { settleClickFocus } from '../../../lib/focusRing';
 import { formatShortcut } from '../../../lib/shortcuts';
 import { hotkey, hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
 import { IconButton } from '../../../ui/IconButton';
 import { PaneToolbarGroup } from '../../../ui/PaneToolbar';
-import { changeNavigatorView } from './changeNavigatorView';
+import { changeNavigatorView, heldLabel } from './changeNavigatorView';
 import { FileStepsContext } from './fileSteps';
 import type { StepNavigation } from './useStepNavigation';
 import styles from './ChangeNavigator.module.css';
@@ -35,11 +35,11 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
   const { noun, shortcuts, count, current } = navigation;
   const neighbors = files ? { previous: files.neighbor(-1), next: files.neighbor(1) } : undefined;
   const view = changeNavigatorView({ stepsOwn, count, current, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles: files !== null, hostSteps, neighbors, filePosition: files?.position });
-  // While the next file is read, the last count keeps its place, faded out only if the read is slow: no flicker.
-  const lastLabel = useRef('');
-  if (view?.label) lastLabel.current = view.label;
+  // While the next file is read, the count shown keeps its place, faded out only if the read is slow (`heldLabel`).
+  const [held, setHeld] = useState('');
+  const shownLabel = view ? heldLabel(held, view) : '';
+  if (shownLabel !== held) setHeld(shownLabel);
   if (!view) return null;
-  const shownLabel = view.waiting ? lastLabel.current : view.label;
   // A click leaves the arrow focused with no ring (`settleClickFocus`), Enter or Space as Chromium decides.
   const step = (event: MouseEvent<HTMLButtonElement>, direction: 1 | -1): void => {
     navigation.go(direction);
