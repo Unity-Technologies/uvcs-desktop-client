@@ -8,10 +8,11 @@ import { useCodeReviewsListFilter } from './useCodeReviewsListFilter';
 import { badgeReadsReviews, waitingBadge } from './waitingForMe';
 
 /**
- * The sidebar's count on Merge requests: the reviews waiting for the user among those the view reads (`useCodeReviewsListFilter`). It
- * reads that list itself as the window opens, once its first screen is in (`badgeReadsReviews`): one `cm find review`
- * in the time range, which the view then shows without reading it again. Read rarely (`slowChanging`): a focus reads it
- * again only while the view shows it; the review writes and the Refresh button do.
+ * The sidebar's count on Merge requests: the reviews waiting for the user among those the view reads
+ * (`useCodeReviewsListFilter`). It reads that list itself as the window opens, once its first screen is in
+ * (`badgeReadsReviews`): one `cm find review` in the time range, which the view shows when opened while it's fresh (the
+ * view's own staleness, thirty seconds). The count reads it rarely (`slowChanging`): a focus reads it again only while
+ * the view shows it; the review writes and the Refresh button do.
  */
 export function useWaitingForMeBadge(): NavBadge | undefined {
   const me = usePlaceUser();

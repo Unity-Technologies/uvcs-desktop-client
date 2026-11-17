@@ -132,8 +132,11 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   the window opens. It reads that list once the first screen is in (the pending changes read, or failed; at once on a
   repository, which reads none: `badgeReadsReviews`), so it never competes with the window's first reads, and rarely
   (`SLOW_CHANGING_QUERY`): a focus reads it again only while the view shows it; a write on a review and the Refresh
-  button do. Counting only once the view was opened, as a sidebar read nothing, was tried: the count was missing until
-  then, where the user looks first. It counts Waiting for me only, never with Opened by me: it says the user has
+  button do. Opening the view within its own staleness (thirty seconds) shows that list without reading it again. The
+  read is bounded by the view's time range (the last three months unless the user chose another), so a user who chose
+  Any time reads every review as each window opens: the count must agree with the view's Waiting for me. Counting only
+  once the view was opened, as a sidebar read nothing, was tried: the count was missing until then, where the user
+  looks first. It counts Waiting for me only, never with Opened by me: it says the user has
   something to do.
 - **Opened by me** (a `ToggleChip`, the store's `openedByMe`) keeps the user's reviews not reviewed yet (Under review or
   Rework required), counting them, "Opened by me · 2" (`matchesOpenedByMe`, `openedByMeCount`,

@@ -9,7 +9,10 @@ import { compactFilter } from '../../lib/compactFilter';
 import { codeReviewKey } from './codeReviewKey';
 import { listedReviewIn, showReviewReadInListsIn } from './listedReview';
 
-/** How a list of reviews is read: `enabled` false reads nothing yet; `slowChanging`, rarely (`SLOW_CHANGING_QUERY`). */
+/**
+ * How a list of reviews is read: `enabled` false reads nothing yet; `slowChanging`, rarely (`SLOW_CHANGING_QUERY`: fresh
+ * for five minutes, and a focus never reads it again).
+ */
 interface CodeReviewsReading {
   enabled?: boolean;
   slowChanging?: boolean;
