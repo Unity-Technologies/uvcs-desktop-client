@@ -1168,6 +1168,11 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
   clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
+- **Going to a thing**: navigating to a thread or comment in a code review's conversation (`placeInView`) places its top
+  a fifth down the viewport, even when it was already on screen and however tall it is, so it reads with what follows
+  it; the top and the bottom of the scroll range stop it short (`placedScrollTop` in `lib/scrollPlacement.ts`). Not
+  `focusScrollTop`, which bottom-aligns a card taller than two-thirds of the viewport, right for a comment shown in its
+  context, not for going to it.
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet

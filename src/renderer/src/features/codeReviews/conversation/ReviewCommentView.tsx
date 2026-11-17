@@ -7,6 +7,7 @@ import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { formatDateTime } from '../../../lib/formatDate';
+import { placeInView } from '../../../lib/scrollPlacement';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
@@ -54,8 +55,13 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
   const element = useRef<HTMLElement>(null);
   const litSeq = lit?.seq;
   const scrollsWhenLit = lit?.scrolls === true;
+  // Scrolls for a new light only: a card folded and unfolded again remounts this comment with the same light, which
+  // must not bring it back into place.
+  const lastPlacedSeq = useRef(litSeq);
   useEffect(() => {
-    if (litSeq !== undefined && scrollsWhenLit) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (litSeq === undefined || !scrollsWhenLit || litSeq === lastPlacedSeq.current) return;
+    lastPlacedSeq.current = litSeq;
+    if (element.current) placeInView(element.current, 'smooth');
   }, [litSeq, scrollsWhenLit]);
   const [editing, setEditing] = useState(startsEditing);
   useEffect(() => {
