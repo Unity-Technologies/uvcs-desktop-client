@@ -11,6 +11,11 @@ describe('fencedCodeIn', () => {
       { from: 54, text: 'var c;', language: 'c#' },
     ]);
   });
+
+  it('finds a block far into a long comment, once the editor has read it all', () => {
+    const intro = 'Some words before the code.\n'.repeat(200);
+    expect(fencedCodeIn(editorState(`${intro}\`\`\`ts\nlet a = 1;\n\`\`\``))).toEqual([{ from: intro.length + 6, text: 'let a = 1;', language: 'ts' }]);
+  });
 });
 
 describe('fencedCodeIn, for a suggestion', () => {
