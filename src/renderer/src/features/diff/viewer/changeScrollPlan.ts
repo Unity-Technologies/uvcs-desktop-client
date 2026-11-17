@@ -1,18 +1,18 @@
 import { PLACEMENT_START, placementStep, type SettledPlacement } from './settledPlacement';
 
 /**
+ * Why a change is scrolled to: a move to it (a short way smoothly, unless it's all in view), or the diff opening on it
+ * (at once, unless it starts in view: a collapsed diff's first hunk, taller than the view, keeps the bar above it).
+ */
+export type ChangeScroll = 'move' | 'open';
+
+/**
  * What one frame of scrolling to a change decides (`scrollToChange`), from what the diff shows on that frame
  * (`ChangeScrollFrame`). A change not rendered yet is jumped to where Pierre estimates it, once; once its rows render,
  * they're scrolled to. After a jump, the rows above it render on the frames that follow at their real heights, which
  * moves it again: so it's placed until it stands still (`placementStep`). Placed once only, a change below wrapped
  * lines stood 1700 px lower, out of view.
  */
-/**
- * Why a change is scrolled to: a move to it (a short way smoothly, unless it's all in view), or the diff opening on it
- * (at once, unless it starts in view: a collapsed diff's first hunk, taller than the view, keeps the bar above it).
- */
-export type ChangeScroll = 'move' | 'open';
-
 export type ChangeScrollStep =
   /** Done: the change is in place, or in view as a diff opens. */
   | { kind: 'done' }
