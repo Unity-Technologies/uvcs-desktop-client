@@ -11,9 +11,8 @@ describe('revealAsked', () => {
     expect(holdsNewValues([first.key, first.asked], [again.key, again.asked])).toBe(true);
   });
 
-  it('asks nothing new while no row is asked for: a view shown again keeps its scroll', () => {
-    const first = revealAsked(NO_ROW_REVEAL, 'src/a.cs');
-
-    expect(holdsNewValues([first.key, first.asked], [first.key, first.asked])).toBe(false);
+  it('asks for nothing until a row is asked for', () => {
+    expect(holdsNewValues([NO_ROW_REVEAL.key, NO_ROW_REVEAL.asked], [NO_ROW_REVEAL.key, NO_ROW_REVEAL.asked])).toBe(false);
+    expect(revealAsked(NO_ROW_REVEAL, 'src/a.cs').asked).toBe(1);
   });
 });

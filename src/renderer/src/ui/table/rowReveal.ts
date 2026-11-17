@@ -1,5 +1,5 @@
 /**
- * A row a table is asked to scroll to (`DataTable`'s `reveal`): its key, and how many times one was asked for. The
+ * A row a table is asked to scroll to (`DataTable`'s `revealKey` and `revealCount`): its key, and how many times one was asked for. The
  * count makes each request new, so the same row asked for again (Go to file on the file already selected, in a view
  * kept mounted where the user scrolled it away) is shown again, while the view showing again asks nothing.
  */

@@ -43,7 +43,7 @@ interface DataTableProps<Row> {
    * Counts the times `revealKey` was asked for (`RowReveal`): the same row asked for again shows again, while the view
    * showing again doesn't scroll the table back to it.
    */
-  revealAsked?: number;
+  revealCount?: number;
   /** Selects a row whenever no shown row is selected (the first, or the one that took the place of a selected row that went away), so a details panel next to the table always has something to show. */
   selectFirstRow?: boolean;
   /** What the rows are, for screen readers (e.g. "Changesets"). */
@@ -83,7 +83,7 @@ export function DataTable<Row>({
   onRowKeyDown,
   letterMoves = false,
   revealKey,
-  revealAsked,
+  revealCount,
   selectFirstRow = false,
   label,
   hideHeader = false,
@@ -135,7 +135,7 @@ export function DataTable<Row>({
   };
 
   // Only when the requested row changes (or appears), not on every re-render of the rows, nor as the view shows again.
-  useNewValuesEffect(() => void reveal(revealKey ?? null), [revealKey, revealAsked, orderedKeys.length]);
+  useNewValuesEffect(() => void reveal(revealKey ?? null), [revealKey, revealCount, orderedKeys.length]);
 
   // A selection kept from an earlier visit shows once its row is in; so does one made while the view was hidden, kept
   // mounted (`selectionSetWhileHidden`), as the view shows again and runs its effects: this one first.

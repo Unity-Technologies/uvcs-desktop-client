@@ -127,7 +127,7 @@ export function FileTreeTable({
       contextMenu={(selected) => contextMenu(selected.map((row) => row.item))}
       onRowKeyDown={onRowKeyDown}
       revealKey={reveal?.key}
-      revealAsked={reveal?.asked}
+      revealCount={reveal?.asked}
       rowHeight={28}
     />
   );
