@@ -99,10 +99,10 @@
   overflow: hidden;
 }
 
-/* Whole, up to half the window: only a message longer than that scrolls. */
+/* Whole, up to a third of the window, so two unfolded at once still fit: only a message longer than that scrolls. */
 .detail[data-unfolded] {
   display: block;
-  max-height: 50vh;
+  max-height: 30vh;
   overflow: auto;
 }
 
@@ -115,16 +115,16 @@
   margin-top: var(--space-2);
 }
 
+/* As a folded comment's toggle (`FoldedComment`). */
 .toggle {
   padding: 2px 0;
   border: none;
   background: none;
-  color: var(--text-secondary);
+  color: var(--accent-text);
   font-size: var(--text-sm);
 }
 
 .toggle:hover {
-  color: var(--text-primary);
   text-decoration: underline;
 }
 

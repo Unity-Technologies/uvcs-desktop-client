@@ -25,8 +25,9 @@ export function ToastCard({ toast, action, dismiss }: ToastCardProps) {
   const detailRef = useRef<HTMLDivElement>(null);
   const [unfolded, setUnfolded] = useState(false);
   const clipped = useClippedText(detailRef, !unfolded, toast.detail);
-  const toggle = detailToggleOf(clipped, unfolded);
-  const autoDismissMs = autoDismissMsOf(toast.kind, unfolded);
+  const fold = { hasDetail: Boolean(toast.detail), unfolded };
+  const toggle = detailToggleOf({ ...fold, clipped });
+  const autoDismissMs = autoDismissMsOf(toast.kind, fold);
   const copyText = errorCopyTextOf(toast);
   const { copied, copy } = useCopiedFeedback();
 

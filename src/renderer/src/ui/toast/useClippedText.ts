@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
+import { isCut } from '../../lib/isCut';
 
 /**
  * Whether a line-clamped element hides some of its text, followed as it resizes or its text changes. Measured only
@@ -9,7 +10,7 @@ export function useClippedText(elementRef: RefObject<HTMLElement | null>, clampe
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element || !clamped) return;
-    const measure = () => setClipped(element.scrollHeight > element.clientHeight);
+    const measure = () => setClipped(isCut(element));
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
