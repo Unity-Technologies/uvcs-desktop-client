@@ -135,7 +135,7 @@ export function fileSteps(
 ): FileSteps {
   return {
     canStep: (direction) => adjacentKey(keys, current, direction, list.rowOrder) !== null,
-    position: current !== null && keys.includes(current) ? { index: keys.indexOf(current), count: keys.length } : null,
+    position: positionOf(keys, current),
     neighbor: (direction) => {
       const key = adjacentKey(keys, current, direction, list.rowOrder);
       return key === null ? null : list.pathOf(key);
@@ -195,6 +195,12 @@ export function settlingOnOf(selected: { path: string } | undefined, diffed: { p
  */
 export function arrivedByStep(previous: string | null, path: string, steppingTo: string | null): boolean {
   return previous !== path && steppingTo === path;
+}
+
+/** Where `current` stands among `keys`; none for a row that isn't one of them (a folder, a group). */
+function positionOf(keys: readonly string[], current: string | null): { index: number; count: number } | null {
+  const index = current === null ? -1 : keys.indexOf(current);
+  return index === -1 ? null : { index, count: keys.length };
 }
 
 /** A list's selection made at once, nothing to ask first: the step it's for is told (`FileStepsOptions.select`). */

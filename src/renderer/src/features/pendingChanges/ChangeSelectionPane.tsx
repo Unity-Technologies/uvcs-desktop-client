@@ -28,7 +28,8 @@ interface ChangeSelectionPaneProps {
 
 /** Beside the list of changes: the diff of the change selected, or what the selection holds instead. */
 export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, diffMeta, focusedFolder, fileSteps, anchorKey, reviewMarks }: ChangeSelectionPaneProps) {
-  // With no diff, what the selection holds shows under a diff's header, its arrows going on to the files around it.
+  // A row selected with no diff (several files, a folder, a group) shows under a diff's header, its arrows going on to
+  // the files around it; with nothing selected there is no row to step from.
   const besideSteps = (state: ReactNode) => (
     <StepsAroundEmptyState fileSteps={fileSteps} selectedKey={anchorKey ?? ''}>
       {state}
@@ -53,5 +54,5 @@ export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, 
       />,
     );
   }
-  return besideSteps(<EmptyState title="Select a change" description="Pick a file on the left to see what changed." />);
+  return <EmptyState title="Select a change" description="Pick a file on the left to see what changed." />;
 }
