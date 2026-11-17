@@ -146,6 +146,14 @@ Changes. Apply shelve stays too. `menuGrammar.test.ts` builds the menus for a pa
 known yet, every merge is offered, as most workspaces are standard. The app menu's Merge from Branch… stays enabled
 there and does nothing, as its command isn't registered.
 
+## Other operations it refuses
+
+A partial workspace has loaded no one changeset (`cm` reports none), so New label in Labels asks which changeset to
+label first, as a repository with no workspace does (`newLabel`, `labelsWorkspaceChangeset`): `cm` refuses to label the
+workspace's own. It downloads an xlink whole, as a file, when Choose what to download… picks it, so Files offers no
+Load its files on an xlink there (`unloadedXlinkOf`). A switch to a changeset, a label or a shelve stays offered and
+says to download the whole branch first ("Making a partial workspace standard").
+
 ## Staying partial
 
 Every update the app runs on a partial workspace is `cm partial update --dontmerge`, chosen by the workspace's kind

@@ -81,7 +81,7 @@ Only `cm xlink` failing keeps the dialog open.
 
 **Load its files** (`XlinksApi.load`, `loadXlinkFiles`) loads them later, the same way: on a checked-in xlink whose
 folder Files listed empty (`unloadedXlinkOf`), as one checked in from Changes is, and from the toast when they didn't
-load as it was created. An added xlink isn't offered it: nothing loads one before it's checked in.
+load as it was created. An added xlink isn't offered it: nothing loads one before it's checked in. Nor is a partial workspace, which downloads an xlink as it downloads a file (partial-workspaces.md).
 
 An edit that fails halfway leaves the xlink as the dialog still shows it, so Save can be pressed again: when adding
 the new rules fails, the rules just deleted are added back (`xlinksService`). Pointing it again where the first try
