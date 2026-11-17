@@ -197,6 +197,8 @@ export interface ConversationInput {
   reviewDate: string;
   /** How the page first laid the conversation out, kept while it's open; none lays it out afresh. */
   layout?: ConversationLayout;
+  /** The changeset each status was given at (`statusChangesetsOf`), from the branch's own list; none names none. */
+  statusChangesets?: ReadonlyMap<number, number>;
 }
 
 /**
@@ -236,7 +238,7 @@ export function conversationBlocksOf(input: ConversationInput): ConversationBloc
 
 /** The conversation's blocks, and where each item was placed in them. */
 function laidOut(input: ConversationInput): { placed: Placed[]; blocks: ConversationBlock[] } {
-  const { conversation, user, changesets, layout } = input;
+  const { conversation, user, changesets, layout, statusChangesets } = input;
   const { whose, statuses } = roundStatusesOf(conversation.events, user);
   const checkpoint = checkpointOf(conversation.events, user, changesets);
   const placed = placedItems(input, checkpoint);
@@ -252,7 +254,7 @@ function laidOut(input: ConversationInput): { placed: Placed[]; blocks: Conversa
     const startedIn = threads.filter((thread) => Date.parse(thread.root.date) > start && Date.parse(thread.root.date) <= end);
     // A round closed since the page laid the conversation out held what was on screen: it stays unfolded.
     const keptFolds = layout && (layout.roundsFold.get(closing.eventId) ?? false);
-    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, changesetAt(closing.date, changesets), startedIn, keptFolds), entries: entriesOf(inRound, false) });
+    blocks.push({ kind: 'round', round: roundOf(index + 1, closing, statusChangesets?.get(closing.eventId), startedIn, keptFolds), entries: entriesOf(inRound, false) });
   });
   const rest = placed.slice(next);
   const since = whose === 'own' && rest.length > 0;
@@ -317,8 +319,13 @@ function roundOf(number: number, closing: ClosingStatus, changesetId: number | u
     date: closing.date,
     comment: closing.comment,
     ...(changesetId !== undefined && { changesetId }),
-    applied: count('applied'), discarded: count('discarded'), answered: count('answered'), open, folds: keptFolds ?? open === 0 
+    applied: count('applied'),
+    discarded: count('discarded'),
+    answered: count('answered'),
+    open,
+    folds: keptFolds ?? open === 0,
   };
+
 }
 
 /**

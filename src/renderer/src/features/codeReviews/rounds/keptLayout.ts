@@ -51,3 +51,11 @@ export interface QueryAnswer {
 export function answerIsCurrent({ data, isError, isFetching, isPlaceholderData }: QueryAnswer): boolean {
   return (data !== undefined || isError) && !isFetching && !isPlaceholderData;
 }
+
+/**
+ * The changesets a review may name as the ones its statuses were given at: its branch's own list, never another
+ * review's kept on screen while this one's are read (`isPlaceholderData`), whose numbers belong to another branch.
+ */
+export function ownBranchChangesets<T>({ data, isPlaceholderData }: { data: T | undefined; isPlaceholderData: boolean }): T | undefined {
+  return isPlaceholderData ? undefined : data;
+}
