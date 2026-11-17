@@ -21,6 +21,7 @@ import {
   deleteReviewComment,
   discardChangeRequest,
   editReviewComment,
+  editStatusComment,
   markChangeRequest,
   replyToComment,
   saveReviewDescription,
@@ -29,6 +30,7 @@ import {
 const ws = '/ws';
 const inWs = workspacePlace(ws);
 const comment = { guid: 'c1' };
+const status = { guid: 's1', status: 'Reviewed' } as const;
 
 beforeEach(() => {
   asked.picked = undefined;
@@ -37,7 +39,7 @@ beforeEach(() => {
 
 describe('writing on a review', () => {
   it('adds, replies, discards, edits and describes, each with one call', async () => {
-    for (const method of ['reviewComments.add', 'reviewComments.addOnLine', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.setDescription'] as const) {
+    for (const method of ['reviewComments.add', 'reviewComments.addOnLine', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.editStatusComment', 'reviewComments.setDescription'] as const) {
       fakeApi.answer(method, () => undefined);
     }
 
@@ -46,6 +48,7 @@ describe('writing on a review', () => {
     expect(await replyToComment(inWs, comment, 'Thanks')).toBe(true);
     expect(await discardChangeRequest(inWs, comment, 'cm calls it target')).toBe(true);
     expect(await editReviewComment(inWs, comment, 'Nicer')).toBe(true);
+    expect(await editStatusComment(inWs, status, 'LGTM')).toBe(true);
     expect(await saveReviewDescription(inWs, 41, '')).toBe(true);
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
@@ -54,12 +57,13 @@ describe('writing on a review', () => {
       ['reviewComments.reply', 'c1', 'Thanks'],
       ['reviewComments.reply', 'c1', 'cm calls it target', { discard: true }],
       ['reviewComments.edit', 'c1', 'Nicer'],
+      ['reviewComments.editStatusComment', 's1', 'Reviewed', 'LGTM'],
       ['reviewComments.setDescription', 41, ''],
     ]);
   });
 
   it('reads only the reviews again after each write, their lists and conversations, never the workspace', async () => {
-    for (const method of ['reviewComments.add', 'reviewComments.addOnLine', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.remove', 'reviewComments.setDescription'] as const) {
+    for (const method of ['reviewComments.add', 'reviewComments.addOnLine', 'reviewComments.reply', 'reviewComments.edit', 'reviewComments.editStatusComment', 'reviewComments.remove', 'reviewComments.setDescription'] as const) {
       fakeApi.answer(method, () => undefined);
     }
     answerConfirms(true);
@@ -69,6 +73,7 @@ describe('writing on a review', () => {
       () => replyToComment(inWs, comment, 'Thanks'),
       () => discardChangeRequest(inWs, comment, 'Not needed'),
       () => editReviewComment(inWs, comment, 'Nicer'),
+      () => editStatusComment(inWs, status, 'LGTM'),
       () => deleteReviewComment(inWs, comment),
       () => saveReviewDescription(inWs, 41, 'Why'),
     ];
