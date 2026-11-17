@@ -1,3 +1,4 @@
+import { fileNameOf } from '../../../lib/text';
 import { positionLabel } from './changeNavigation';
 
 /**
@@ -35,11 +36,15 @@ export interface NavigatorFacts {
    * instead (a merge page's conflict arrows).
    */
   hostSteps: boolean;
+  /** The paths of the files before and after the one shown in the list beside it (`FileSteps.neighbor`): the tips name them. */
+  neighbors?: { previous: string | null; next: string | null };
 }
 
 export interface NavigatorArrow {
   tip: string;
   enabled: boolean;
+  /** A press goes on to another file: the arrow says so before it's pressed (`ChangeNavigator`'s double chevron). */
+  leavesFile: boolean;
 }
 
 export interface NavigatorView {
@@ -64,9 +69,24 @@ export function changeNavigatorView(facts: NavigatorFacts): NavigatorView | null
   const namesFiles = facts.besideFiles && !hasSteps;
   return {
     label: hasSteps ? positionLabel(facts) : '',
-    previous: arrowOf(facts.previous, namesFiles, { step: `Previous ${facts.noun}${inFile}`, fileStep: `Previous file's last ${facts.noun}`, file: 'Previous file', queued: `Previous ${facts.noun}` }),
-    next: arrowOf(facts.next, namesFiles, { step: `Next ${facts.noun}${inFile}`, fileStep: `Next file's first ${facts.noun}`, file: 'Next file', queued: `Next ${facts.noun}` }),
+    previous: arrowOf(facts.previous, namesFiles, {
+      step: `Previous ${facts.noun}${inFile}`,
+      fileStep: fileTip('Previous', facts.neighbors?.previous, `Previous file's last ${facts.noun}`),
+      file: fileTip('Previous', facts.neighbors?.previous, 'Previous file'),
+      queued: `Previous ${facts.noun}`,
+    }),
+    next: arrowOf(facts.next, namesFiles, {
+      step: `Next ${facts.noun}${inFile}`,
+      fileStep: fileTip('Next', facts.neighbors?.next, `Next file's first ${facts.noun}`),
+      file: fileTip('Next', facts.neighbors?.next, 'Next file'),
+      queued: `Next ${facts.noun}`,
+    }),
   };
+}
+
+/** The tip of an arrow going on to a file: its name where the list gives it ("Next file: GameManager.cs"). */
+function fileTip(way: 'Previous' | 'Next', path: string | null | undefined, unnamed: string): string {
+  return path ? `${way} file: ${fileNameOf(path)}` : unnamed;
 }
 
 /** An arrow's tip by where it goes: a step, the next file's first step, the next file, or kept for the file read. */
@@ -79,8 +99,8 @@ interface ArrowTips {
 
 function arrowOf(goesTo: ArrowGoal, namesFiles: boolean, tips: ArrowTips): NavigatorArrow {
   // Kept for the file being read: enabled both ways, as the keys are, wherever that file sits in the list.
-  if (goesTo === 'queued') return { tip: tips.queued, enabled: true };
-  if (goesTo === 'step') return { tip: tips.step, enabled: true };
-  if (goesTo === 'file') return { tip: namesFiles ? tips.file : tips.fileStep, enabled: true };
-  return { tip: namesFiles ? tips.file : tips.step, enabled: false };
+  if (goesTo === 'queued') return { tip: tips.queued, enabled: true, leavesFile: false };
+  if (goesTo === 'step') return { tip: tips.step, enabled: true, leavesFile: false };
+  if (goesTo === 'file') return { tip: namesFiles ? tips.file : tips.fileStep, enabled: true, leavesFile: true };
+  return { tip: namesFiles ? tips.file : tips.step, enabled: false, leavesFile: false };
 }

@@ -492,7 +492,9 @@ xlink. Right before them, with no room reserved, the label has one form, "3 of 1
 (`positionLabel`), which is from the moment a text diff opens (it opens current at its first change, `openingStep`), so
 the count is always there and the label doesn't appear under the user's first click; it is empty only where nothing is
 current: no changes to step through (the diff itself says so: identical, binary, an image) or a link's lines before the
-first move. A count with no position ("12 changes", "– of 12") and "No changes" are left out on purpose: several forms of
+first move. An arrow whose press leaves the file says so before it's pressed: a double chevron (`ChevronsDown`,
+`NavigatorArrow.leavesFile`) and a tip naming the file it goes to ("Next file: GameManager.cs", `FileSteps.neighbor`),
+past the last change, before the first, and on a file with none to step through. A count with no position ("12 changes", "– of 12") and "No changes" are left out on purpose: several forms of
 one label read as noise, and the room they needed, reserved, left "1 of 1" floating in a gap. It grows leftward, in tabular figures; then the Expand button and
 the view's controls. What they show is `changeNavigatorView`, decided by the view, never by the file shown: beside a
 list of files always (disabled at its ends rather than gone); with no list, on every diff a `FileDiffViewer` draws
