@@ -83,10 +83,15 @@ function switchView(view: ViewId, shows: ViewSwitch['shows']): void {
   if (routed({ kind: 'goToView' }, pages) === 'workspaceWindow') {
     return void api.windows.showWorkspaceWindow(shows === 'list' ? viewListCommandId(view) : viewCommandId(view));
   }
+  // Another place may open while unsaved edits are asked about (opening a workspace goes to its Changes, then opens it
+  // at once): what the place left showed then belongs to none of the new one's views.
+  const askedIn = useSession.getState().place;
   const leave = (): void =>
     useNavigation.setState((state) => ({
       ...(view !== state.view && { view }),
-      ...switchedViews(state.kept, { from: state.view, pages: pagesWithoutMerge(state.merge, state.pages), to: view, shows }),
+      ...(useSession.getState().place === askedIn
+        ? switchedViews(state.kept, { from: state.view, pages: pagesWithoutMerge(state.merge, state.pages), to: view, shows })
+        : { pages: [] }),
       merge: mergeAfterLeaving(state.merge, state.pages),
     }));
   if (view === useNavigation.getState().view) leave();
