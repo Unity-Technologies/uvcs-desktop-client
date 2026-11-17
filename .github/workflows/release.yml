@@ -98,9 +98,8 @@ jobs:
   # macOS and Windows: the signing repo's Sign workflow builds, signs and uploads them to the same draft; this job
   # starts it and fails when it does. It reaches that repository as the Unity-Technologies org's GitHub App
   # uvcs-desktop-release, installed only on the two repositories: each token, minted for this job and revoked when it
-  # ends, may only start and read that repository's workflows (Actions: read and write). A token lasts an hour and a
-  # Sign run can take longer, so the job watches in rounds of at most 50 minutes, each with a new token
-  # (.github/actions/watch-signing-run), up to 150 minutes. The release environment keeps the App's key
+  # ends, may only start, read and cancel that repository's workflows (Actions: read and write). A token lasts an hour,
+  # well past the 30 minutes the job waits for a Sign run. The release environment keeps the App's key
   # (RELEASE_APP_PRIVATE_KEY) and Client ID (RELEASE_APP_CLIENT_ID) to runs from main.
   sign:
     needs: prepare
@@ -109,9 +108,6 @@ jobs:
     env:
       SIGNING_REPO: Unity-Technologies/uvcs-desktop-client-release-signing
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          sparse-checkout: .github/actions
       - name: Get a token for the signing repository
         id: app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
@@ -143,31 +139,26 @@ jobs:
           fi
           echo "Signing: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
-      - name: Wait for the signing run (first 50 minutes)
-        id: watch-1
-        uses: ./.github/actions/watch-signing-run
-        with:
-          run-id: ${{ steps.start.outputs.run-id }}
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - name: Wait for the signing run (up to 100 minutes)
-        id: watch-2
-        if: steps.watch-1.outputs.finished == 'false'
-        uses: ./.github/actions/watch-signing-run
-        with:
-          run-id: ${{ steps.start.outputs.run-id }}
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - name: Wait for the signing run (up to 150 minutes)
-        id: watch-3
-        if: steps.watch-2.outputs.finished == 'false'
-        uses: ./.github/actions/watch-signing-run
-        with:
-          run-id: ${{ steps.start.outputs.run-id }}
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - name: Fail if the signing run is still going
-        if: steps.watch-3.outputs.finished == 'false'
+      # A Sign run takes about 8 minutes (never 10 in 20 releases), and each of its jobs has a time limit of its
+      # own (sign-release.yml). 30 minutes also covers a wait for one of Unity's runners: past it the run is stuck (a
+      # notarization waiting through an Apple outage), so it is cancelled, so it can't upload to the draft later, and
+      # the release fails at once instead of waiting.
+      - name: Wait for the signing run
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RUN_ID: ${{ steps.start.outputs.run-id }}
+          SIGNING_LIMIT_MINUTES: 30
+        # `timeout` ends the watch with 124 when the limit runs out; any other status is the run's own outcome.
         run: |
-          echo "::error::The signing run is still going after 150 minutes, and may still upload to the draft: https://github.com/$SIGNING_REPO/actions/runs/${{ steps.start.outputs.run-id }}"
-          exit 1
+          set +e
+          timeout "${SIGNING_LIMIT_MINUTES}m" gh run watch "$RUN_ID" --repo "$SIGNING_REPO" \
+            --exit-status --interval 30 > /dev/null
+          status=$?
+          set -e
+          # The error comes first: a run that ends just as the limit runs out can't be cancelled any more.
+          if [ "$status" -eq 124 ]; then
+            echo "::error::The signing run took more than $SIGNING_LIMIT_MINUTES minutes and is cancelled: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID"
+            gh run cancel "$RUN_ID" --repo "$SIGNING_REPO" || true
+            exit 1
+          fi
+          exit "$status"
