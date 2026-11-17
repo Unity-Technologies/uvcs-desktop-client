@@ -2,7 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import type { ChangeBlock, ChangedLine, ChangeRegion } from './changeBlocks';
 import { modifiedLineAt } from './changeNavigation';
-import { CHANGE_SCROLL_START, changeScrollStep } from './changeScrollPlan';
+import { CHANGE_SCROLL_START, changeScrollStep, type ChangeScroll } from './changeScrollPlan';
 import { lineOfRow, topProbePoints, type LineAtTop } from './rowPosition';
 import { lineRowSelector, pierreShadowRoot } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
@@ -29,15 +29,10 @@ const CONTEXT_ROWS = 3;
 const MAX_FRAMES = 60;
 
 /**
- * Why a change is scrolled to: a move to it (a short way smoothly, unless it's all in view), or the diff opening on it
- * (at once, unless it starts in view: a collapsed diff's first hunk, taller than the view, keeps the bar above it).
- */
-export type ChangeScroll = 'move' | 'open';
-
-/**
  * Scrolls the diff in `container` so the change starts a few rows from the top, unless it's in view already
  * (`ChangeScroll`). A big diff renders only the lines in view: a change not rendered yet is scrolled to where Pierre
- * lays it out, then set right once its rows render. Returns a function that stops it.
+ * lays it out, then placed again on each frame until it stands still (`changeScrollStep`). Returns a function that stops
+ * it.
  */
 export function scrollToChange(container: HTMLElement, change: ChangeRegion, virtualizer: Virtualizer | undefined, why: ChangeScroll): () => void {
   let frames = 0;
