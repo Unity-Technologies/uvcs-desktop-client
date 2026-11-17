@@ -50,7 +50,18 @@ describe('scrolling to a change, frame by frame, in a diff laid out as Pierre do
     const diff = new FakePierreDiff({ lines: 2000, wrapped: [] });
     expect(scrollToChangeIn(diff, 1500, 'move')).toBe(PLACE);
   });
+
+  // A project file with wrapped lines: rows above the change measured taller than their estimate after the jump to it
+  // moved it 1700 px below where it should have stood, as the next file's first change was stepped to.
+  it.each<ChangeScroll>(['move', 'open'])('brings a change below wrapped lines a few rows from the top (%s)', (why) => {
+    const diff = new FakePierreDiff({ lines: 800, wrapped: everyOther(800) });
+    expect(scrollToChangeIn(diff, 187, why)).toBe(PLACE);
+  });
 });
+
+function everyOther(lines: number): number[] {
+  return Array.from({ length: lines / 2 }, (_, index) => 2 * index + 1);
+}
 
 /**
  * Runs `changeScrollStep` over a diff laid out as Pierre lays one out, frame by frame as `scrollToChange` does: what
