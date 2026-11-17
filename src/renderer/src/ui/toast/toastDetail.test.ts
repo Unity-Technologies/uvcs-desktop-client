@@ -4,27 +4,36 @@ import { AUTO_DISMISS_MS } from './toastStore';
 
 describe('detailToggleOf', () => {
   it('offers no toggle when the whole detail fits in the folded lines', () => {
-    expect(detailToggleOf(false, false)).toBeNull();
+    expect(detailToggleOf({ hasDetail: true, clipped: false, unfolded: false })).toBeNull();
   });
 
   it('offers to show more when the folded detail hides some of its text', () => {
-    expect(detailToggleOf(true, false)).toBe('Show more');
+    expect(detailToggleOf({ hasDetail: true, clipped: true, unfolded: false })).toBe('Show more');
   });
 
   it('offers to show less once the detail is unfolded', () => {
-    expect(detailToggleOf(true, true)).toBe('Show less');
+    expect(detailToggleOf({ hasDetail: true, clipped: true, unfolded: true })).toBe('Show less');
+  });
+
+  it('offers no toggle once the toast has no detail left, whatever was measured or unfolded before', () => {
+    expect(detailToggleOf({ hasDetail: false, clipped: true, unfolded: false })).toBeNull();
+    expect(detailToggleOf({ hasDetail: false, clipped: true, unfolded: true })).toBeNull();
   });
 });
 
 describe('autoDismissMsOf', () => {
   it('counts down as its kind does while the detail is folded', () => {
-    expect(autoDismissMsOf('error', false)).toBe(AUTO_DISMISS_MS.error);
-    expect(autoDismissMsOf('progress', false)).toBeNull();
+    expect(autoDismissMsOf('error', { hasDetail: true, unfolded: false })).toBe(AUTO_DISMISS_MS.error);
+    expect(autoDismissMsOf('progress', { hasDetail: true, unfolded: false })).toBeNull();
   });
 
   it('keeps a toast the user unfolded to read until they dismiss it', () => {
-    expect(autoDismissMsOf('error', true)).toBeNull();
-    expect(autoDismissMsOf('success', true)).toBeNull();
+    expect(autoDismissMsOf('error', { hasDetail: true, unfolded: true })).toBeNull();
+    expect(autoDismissMsOf('success', { hasDetail: true, unfolded: true })).toBeNull();
+  });
+
+  it('counts down as its kind does once it has no detail left to read', () => {
+    expect(autoDismissMsOf('success', { hasDetail: false, unfolded: true })).toBe(AUTO_DISMISS_MS.success);
   });
 });
 
