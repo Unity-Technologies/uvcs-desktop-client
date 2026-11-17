@@ -382,8 +382,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             clippedTip.hide();
           }}
           onContextMenu={(event) => {
-            // Nothing under the pointer: no menu (preventing the default also stops the menu from opening).
-            if (!onCanvas(event) || !contextTargetRef.current) event.preventDefault();
+            // Nothing under the pointer, or nothing to offer for it (a "+N" node, three changesets selected): no menu, never
+            // an empty one. Preventing the default also stops the menu from opening.
+            const target = contextTargetRef.current;
+            if (!onCanvas(event) || !target || contextMenu(target).length === 0) event.preventDefault();
           }}
           onDoubleClick={onDoubleClick}
         >
