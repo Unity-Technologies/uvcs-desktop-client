@@ -59,9 +59,8 @@ export function checkpointOf(events: readonly ReviewEvent[], user: string | unde
   const { whose, statuses } = roundStatusesOf(events, user);
   const last = statuses.at(-1);
   if (whose !== 'own' || !last) return undefined;
-  const at = Date.parse(last.date);
-  const changeset = changesets?.find((candidate) => Date.parse(candidate.date) <= at);
-  return { date: last.date, status: last.status, ...(changeset && { changesetId: changeset.id }) };
+  const changesetId = changesetAt(last.date, changesets);
+  return { date: last.date, status: last.status, ...(changesetId !== undefined && { changesetId }) };
 }
 
 /**
@@ -72,9 +71,18 @@ export function reviewedUpToOf(events: readonly ReviewEvent[], user: string | un
   const { whose, statuses } = roundStatusesOf(events, user);
   const last = statuses.at(-1);
   if (!last) return undefined;
-  const at = Date.parse(last.date);
-  const changeset = changesets?.find((candidate) => Date.parse(candidate.date) <= at);
-  return { date: last.date, ...(changeset && { changesetId: changeset.id }), ...(whose === 'everyone' && { by: last.reviewer }) };
+  const changesetId = changesetAt(last.date, changesets);
+  return { date: last.date, ...(changesetId !== undefined && { changesetId }), ...(whose === 'everyone' && { by: last.reviewer }) };
+}
+
+/**
+ * The newest changeset on the branch at a moment: what a status given then covers. None before the branch's first
+ * changeset, or for a review of a changeset or a shelve. `changesets` newest first, as the page reads them; dates
+ * compare as instants, across time zones.
+ */
+export function changesetAt(date: string, changesets: readonly Changeset[] | undefined): number | undefined {
+  const at = Date.parse(date);
+  return changesets?.find((changeset) => Date.parse(changeset.date) <= at)?.id;
 }
 
 /**
