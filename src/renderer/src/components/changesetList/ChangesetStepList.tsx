@@ -24,6 +24,7 @@ import {
   changesetFilterPlaceholder,
   changesetListPlaces,
   changesetListRowKey,
+  changesetRowsDragged,
   changesetRowsHeight,
   changesetRowsMaxHeight,
   changesetRowTip,
@@ -100,17 +101,19 @@ export function ChangesetStepList({ list, allChanges, quiet, separator, mostRows
   const columns = useMemo(() => changesetColumns(allChanges, quiet, Date.now()), [allChanges.label, allChanges.tip, quiet, rows]);
   const { rowsHeight: dragged, setRowsHeight } = useChangesetListHeightStore();
   const rowsRef = useRef<HTMLDivElement>(null);
-  const height = changesetRowsHeight(reading ? undefined : changesetListPlaces(rows, separator?.beforeKey), mostRows, dragged);
+  const places = reading ? undefined : changesetListPlaces(rows, separator?.beforeKey);
+  const height = changesetRowsHeight(places, mostRows, dragged);
   return (
     <div className={styles.list}>
       <ResizeHandle
         edge="bottom"
         size={height}
         min={CHANGESET_ROWS_MIN_HEIGHT}
-        max={changesetRowsMaxHeight(window.innerHeight)}
+        // As the window is when the drag starts, which may have changed since the list was last drawn.
+        max={() => changesetRowsMaxHeight(window.innerHeight)}
         // From what shows, which a short list keeps under the height dragged before.
         measure={() => rowsRef.current?.offsetHeight ?? height}
-        onResize={setRowsHeight}
+        onResize={(result) => setRowsHeight(changesetRowsDragged(result, places, mostRows, dragged))}
         onReset={() => setRowsHeight(null)}
       />
       <ListToolbar>
