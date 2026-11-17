@@ -21,6 +21,14 @@ describe('focusScrollTop', () => {
     expect(focusScrollTop({ top: 5000, bottom: 6000, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: LONG })).toBe(5000 - 3 * LINE);
   });
 
+  it('puts an element brought alone a third down, with nothing above it kept', () => {
+    expect(focusScrollTop({ top: 5000, bottom: 5040, contextAbove: 0, viewHeight: PANE, contentHeight: LONG })).toBe(5000 - PANE / 3);
+  });
+
+  it('shows the top of an element taller than the viewport when nothing is kept above it', () => {
+    expect(focusScrollTop({ top: 5000, bottom: 6500, contextAbove: 0, viewHeight: PANE, contentHeight: LONG })).toBe(5000);
+  });
+
   it('leaves a line near the top of the file at the top', () => {
     expect(focusScrollTop({ top: 60, bottom: 260, contextAbove: 3 * LINE, viewHeight: PANE, contentHeight: LONG })).toBe(0);
   });

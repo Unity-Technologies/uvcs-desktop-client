@@ -13,7 +13,8 @@ import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard } from './ReviewThreadCard';
 import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
-import { openItemsOf, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { openItemsOf, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { placeInView } from '../../../lib/scrollPlacement';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
 import { openItemsIn } from '../mergeCard';
@@ -87,7 +88,8 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   // Brought into view once read, after its card unfolds.
   const read = conversation !== undefined;
   useEffect(() => {
-    if (read && pick) document.getElementById(pickedElementId(pick))?.scrollIntoView(pickedScrollOf(pick));
+    const element = pick && document.getElementById(pickedElementId(pick));
+    if (read && pick && element) placeInView(element, pickedBehaviorOf(pick));
   }, [read, pick]);
 
   // Opened where the reviewer left off, once: their own status set meanwhile moves the line, never the page.
@@ -96,7 +98,8 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   useEffect(() => {
     if (!placed || openedAtSince) return;
     setOpenedAtSince(true);
-    if (opensAtSince(blocks, focusThread)) document.getElementById(SINCE_LINE_ID)?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    const sinceLine = document.getElementById(SINCE_LINE_ID);
+    if (opensAtSince(blocks, focusThread) && sinceLine) placeInView(sinceLine, 'auto');
   }, [placed, openedAtSince, blocks, focusThread]);
 
   const eventContext = { destination: review.mergeRequest?.destination };

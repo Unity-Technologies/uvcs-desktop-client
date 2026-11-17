@@ -109,12 +109,11 @@ export function pickedElementId(pick: ThreadPick): string {
 }
 
 /**
- * How the conversation brings the picked thread into view. One picked in Open glides only as far as it must: on screen
- * it stays where it is (its light says which), off screen it comes to the nearest edge, as an answer gone to does
- * (`ReviewCommentView`). The page opened at one shows it centered, at once.
+ * How the conversation glides to the picked thread: a pick in Open glides, the page opened at one jumps at once. Either
+ * way it lands a third down the viewport (`placeInView`), even when already on screen.
  */
-export function pickedScrollOf(pick: ThreadPick): ScrollIntoViewOptions {
-  return pick.by === 'rail' ? { block: 'nearest', behavior: 'smooth' } : { block: 'center', behavior: 'auto' };
+export function pickedBehaviorOf(pick: ThreadPick): ScrollBehavior {
+  return pick.by === 'rail' ? 'smooth' : 'auto';
 }
 
 /** The thread's element in the conversation, which going to it scrolls to. */

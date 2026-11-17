@@ -6,6 +6,7 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Markdown } from '../../../components/Markdown';
 import { lazyComponent } from '../../../lib/lazyComponent';
+import { placeInView } from '../../../lib/scrollPlacement';
 import { formatDateTime } from '../../../lib/formatDate';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
@@ -55,7 +56,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
   const litSeq = lit?.seq;
   const scrollsWhenLit = lit?.scrolls === true;
   useEffect(() => {
-    if (litSeq !== undefined && scrollsWhenLit) element.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (litSeq !== undefined && scrollsWhenLit && element.current) placeInView(element.current, 'smooth');
   }, [litSeq, scrollsWhenLit]);
   const [editing, setEditing] = useState(startsEditing);
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, openItemsOf, type CardLight, pickedElementId, pickedScrollOf, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
+import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, openItemsOf, type CardLight, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
 import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
 
@@ -86,13 +86,13 @@ describe('threadMarkOf', () => {
   });
 });
 
-describe('pickedScrollOf', () => {
-  it('leaves a thread picked in Open where it is when on screen, else glides it to the nearest edge', () => {
-    expect(pickedScrollOf(pickThread(undefined, 7))).toEqual({ block: 'nearest', behavior: 'smooth' });
+describe('pickedBehaviorOf', () => {
+  it('glides to a thread picked in Open', () => {
+    expect(pickedBehaviorOf(pickThread(undefined, 7))).toBe('smooth');
   });
 
-  it('opens the page with the thread it goes to centered, at once', () => {
-    expect(pickedScrollOf(pickOnFocus(undefined, 7)!)).toEqual({ block: 'center', behavior: 'auto' });
+  it('jumps to the thread the page opened at, at once', () => {
+    expect(pickedBehaviorOf(pickOnFocus(undefined, 7)!)).toBe('auto');
   });
 });
 

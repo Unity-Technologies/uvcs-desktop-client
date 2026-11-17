@@ -33,3 +33,28 @@ export function listScrollTop(card: Placed, view: { scrollTop: number; height: n
   if (card.bottom - scrollTop > view.height) scrollTop = Math.min(card.bottom - view.height, card.top);
   return clampScrollTop(scrollTop, view.height, view.contentHeight);
 }
+
+/**
+ * Brings an element into view the way every navigation to a thing does (a thread, a comment, a section): its top a third
+ * down the viewport, so it reads with what follows it, even when it was already on screen. Only the scroll range's ends
+ * stop it short. An element taller than the viewport shows its top. `behavior` is `smooth` for a glide, `auto` at once.
+ */
+export function placeInView(element: HTMLElement, behavior: ScrollBehavior): void {
+  const container = scrollingParentOf(element);
+  const isDocument = container === document.scrollingElement;
+  const containerTop = isDocument ? 0 : container.getBoundingClientRect().top;
+  const box = element.getBoundingClientRect();
+  const top = box.top - containerTop + container.scrollTop;
+  const viewHeight = isDocument ? window.innerHeight : container.clientHeight;
+  // Nothing above it is kept: `contextAbove` 0 puts the element's top, not the lines before it, a third down.
+  const scrollTop = focusScrollTop({ top, bottom: top + box.height, contextAbove: 0, viewHeight, contentHeight: container.scrollHeight });
+  container.scrollTo({ top: scrollTop, behavior });
+}
+
+/** The nearest ancestor that scrolls its content, or the document when none does. */
+function scrollingParentOf(element: HTMLElement): HTMLElement {
+  for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+    if (parent.scrollHeight > parent.clientHeight && /auto|scroll/.test(getComputedStyle(parent).overflowY)) return parent;
+  }
+  return document.scrollingElement as HTMLElement;
+}
