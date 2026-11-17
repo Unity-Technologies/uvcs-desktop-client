@@ -285,8 +285,8 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
 };
 
 /**
- * The object menus a partial workspace shows: none offers a merge (`offersMerges`), not even one on the server, and
- * every other rule of the grammar holds (they join `MENUS`' checks below).
+ * The object menus a partial workspace shows: no merge into the workspace (`offersMerges`), only the merges on the
+ * server (`offersServerMerges`), and every other rule of the grammar holds (they join `MENUS`' checks below).
  */
 const partialContext = { place: workspacePlace(ws), workspaceKind: 'partial' } as const;
 const PARTIAL_MENUS: Record<string, () => MenuEntry[]> = {
@@ -365,10 +365,20 @@ describe('menus without a workspace', () => {
 });
 
 describe('menus of a partial workspace', () => {
+  /** What never touches the workspace, so a partial one offers it: Merge to…, finishing a task. */
+  const SERVER_MERGES = ['mergeTask', 'mergeTo'];
   const merges = (menu: MenuEntry[]): string[] => topEntries(menu).filter((entry) => groupOf(entry) === 'merge').map((entry) => entry.id ?? '');
 
-  it.each(Object.entries(PARTIAL_MENUS))('%s: offers no merge, into the workspace or on the server', (_name, build) => {
-    expect(merges(build())).toEqual([]);
+  it.each(Object.entries(PARTIAL_MENUS))('%s: offers no merge into the workspace, only merges on the server', (_name, build) => {
+    expect(merges(build()).filter((id) => !SERVER_MERGES.includes(id))).toEqual([]);
+  });
+
+  it('offers the merges on the server, as a standard workspace does', () => {
+    expect(merges(PARTIAL_MENUS.partialBranch!())).toEqual(['mergeTask', 'mergeTo']);
+    expect(merges(PARTIAL_MENUS.partialChangeset!())).toEqual(['mergeTo']);
+    expect(merges(PARTIAL_MENUS.partialChangesetInterval!())).toEqual([]);
+    expect(merges(PARTIAL_MENUS.partialLabel!())).toEqual(['mergeTo']);
+    expect(merges(PARTIAL_MENUS.partialPaletteBranch!())).toEqual(merges(PARTIAL_MENUS.partialBranch!()));
   });
 
   it('offers in a standard workspace the merges a partial one leaves out', () => {
