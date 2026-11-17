@@ -7,7 +7,8 @@ interface ResizeHandleProps {
   /** Current height of the element being sized. */
   size: number;
   min: number;
-  max: number;
+  /** The tallest it can be, or how to read it when a drag starts (from the window, which can change size meanwhile). */
+  max: number | (() => number);
   onResize: (size: number) => void;
   /** The element's height when a drag starts, where it can differ from `size` (e.g. it grows to fill the space left). */
   measure?: () => number;
@@ -22,7 +23,8 @@ export function ResizeHandle({ size, min, max, onResize, measure, edge = 'top', 
   const startDrag = (event: PointerEvent): void => {
     const startY = event.clientY;
     const startSize = measure?.() ?? size;
-    trackPointerDrag(event, 'row-resize', (move) => onResize(resizedSize(edge, { startSize, startY, y: move.clientY }, min, max)));
+    const tallest = typeof max === 'function' ? max() : max;
+    trackPointerDrag(event, 'row-resize', (move) => onResize(resizedSize(edge, { startSize, startY, y: move.clientY }, min, tallest)));
   };
 
   return (
