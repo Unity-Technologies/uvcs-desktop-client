@@ -54,18 +54,18 @@ describe('arrivalChange', () => {
 });
 
 describe('openingStep', () => {
-  it('moves to the change a step from the file beside it arrives at', () => {
-    expect(openingStep('first', 4, false)).toEqual({ index: 0, movesTo: true });
-    expect(openingStep('last', 4, false)).toEqual({ index: 3, movesTo: true });
+  it('moves to the change a step from the file beside it arrives at, lit', () => {
+    expect(openingStep('first', 4, false)).toEqual({ index: 0, lights: true });
+    expect(openingStep('last', 4, false)).toEqual({ index: 3, lights: true });
   });
 
-  it('brings the first change into view, without moving to it, in a diff opened any other way', () => {
-    expect(openingStep(null, 4, false)).toEqual({ index: 0, movesTo: false });
+  it('opens at the first change, counted ("1 of 4") but not lit, in a diff opened any other way', () => {
+    expect(openingStep(null, 4, false)).toEqual({ index: 0, lights: false });
   });
 
-  it("stays on a link's lines, unless stepped to", () => {
+  it("stays on a link's lines, at no change, unless stepped to", () => {
     expect(openingStep(null, 4, true)).toBeNull();
-    expect(openingStep('last', 4, true)).toEqual({ index: 3, movesTo: true });
+    expect(openingStep('last', 4, true)).toEqual({ index: 3, lights: true });
   });
 
   it('opens a diff without changes where it is', () => {

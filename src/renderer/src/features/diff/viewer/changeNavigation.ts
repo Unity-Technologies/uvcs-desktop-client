@@ -40,22 +40,33 @@ export function arrivalChange(arrival: Arrival, count: number): number | null {
   return arrival === 'first' ? 0 : count - 1;
 }
 
-/** Where a view opens: at the step `index`, moved to (lit, counted "1 of 12") or only brought into view. */
+/**
+ * Where a view opens: at the step `index`, current ("1 of 12") either way; lit when stepped to from the file beside it,
+ * only brought into view otherwise, so a file just picked doesn't flash at the user.
+ */
 export interface Opening {
   index: number;
-  movesTo: boolean;
+  lights: boolean;
 }
 
 /**
- * Where a view opens (`useStepNavigation`): stepped to from the file beside it, moved to its first or last step;
- * opened any other way (picked in a list, from a link, on a page), with its first step brought into view but not moved
- * to, so the first move down still goes to it. None without steps, nor on a link's lines (`opensOnLines`), which it
- * stays on unless stepped to.
+ * Where a view opens (`useStepNavigation`): stepped to from the file beside it, at its first or last step, lit; opened
+ * any other way (picked in a list, from a link, on a page), at its first step, brought into view, so the first move
+ * down goes to the second. None without steps, nor on a link's lines (`opensOnLines`), which it stays on, at no step,
+ * unless stepped to.
  */
 export function openingStep(arrival: Arrival | null, count: number, opensOnLines: boolean): Opening | null {
   if (count === 0) return null;
-  if (arrival) return { index: arrivalChange(arrival, count)!, movesTo: true };
-  return opensOnLines ? null : { index: 0, movesTo: false };
+  if (arrival) return { index: arrivalChange(arrival, count)!, lights: true };
+  return opensOnLines ? null : { index: 0, lights: false };
+}
+
+/**
+ * The step current once a view opened (`openingStep`): the one it opened at, unless the view can only light a step,
+ * not just bring it into view (`StepView.show`: a merged file's conflicts), which then opens where it is, at none.
+ */
+export function currentAtOpening(opening: Opening | null, canShow: boolean): number | null {
+  return opening && (opening.lights || canShow) ? opening.index : null;
 }
 
 /** How many of the changes start above `line` of the modified file. */

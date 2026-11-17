@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState, type RefObject } 
 import { keysReach } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
-import { openingStep } from './changeNavigation';
+import { currentAtOpening, openingStep } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { applyPress, pressGoal, takesKept, type PressEffect, type PressHolder, type PressSpot } from './pressRouting';
 import { positionAfterChange } from './stepNavigation';
@@ -41,8 +41,8 @@ export interface StepView {
   /** Brings the step at `index` into view. */
   reveal: (index: number) => void;
   /**
-   * Brings the step at `index` into view as the view opens, without moving to it: not lit, nor picked. A view without
-   * it opens where it is, unless stepped to from the file beside it.
+   * Brings the step at `index` into view as the view opens, current but not lit, nor picked. A view without it opens
+   * where it is, at no step, unless stepped to from the file beside it.
    */
   show?: (index: number) => void;
   /** Whether the view opened on lines of its own (a link's), which it stays on unless stepped to. */
@@ -140,9 +140,9 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
   const latestMoveTo = useRef(moveTo);
   latestMoveTo.current = moveTo;
 
-  // Opened by a step from the file beside it: at its first or last step; opened otherwise, with its first step in
-  // view (`openingStep`). Once, as the view first shows (or never, given up on): steps that come later, typed or
-  // read again, leave the view where it is.
+  // Opened by a step from the file beside it: at its first or last step, lit; opened otherwise, at its first step,
+  // current but not lit (`openingStep`). Once, as the view first shows (or never, given up on): steps that come later,
+  // typed or read again, leave the view where it is.
   const arrival = useRef<Arrival | null | undefined>(undefined);
   const [opened, setOpened] = useState(false);
   useEffect(() => {
@@ -163,8 +163,12 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts, a
       }
       setOpened(true);
       const at = shown ? openingStep(from, steps.length, view.opensOnLines?.() ?? false) : null;
-      if (at?.movesTo) latestMoveTo.current(at.index);
-      else if (at) view.show?.(at.index);
+      const current = currentAtOpening(at, view.show !== undefined);
+      if (at?.lights) latestMoveTo.current(at.index);
+      else if (at && current !== null) {
+        setCurrent(current);
+        view.show?.(at.index);
+      }
     };
     // From the next frame, not at once: a development build's second mount (StrictMode) runs the view's cleanups,
     // which would stop the scroll started here, then this effect again, which would find the view opened already.
