@@ -8,7 +8,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { OutputBlock } from '../../ui/OutputBlock';
 import { PropertyList } from '../../ui/PropertyList';
 import { appInfoQuery } from '../about/appInfoQuery';
-import { commandEnding } from '../shell/commandEnding';
+import { commandEnding } from '@shared/commandEnding';
 import { cmVersionQuery } from '../startup/useCmAvailability';
 import { useCopiedFeedback } from '../../ui/useCopiedFeedback';
 import styles from './ErrorDialog.module.css';

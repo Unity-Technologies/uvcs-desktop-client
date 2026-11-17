@@ -10,8 +10,14 @@ function handled() {
   const process = new EventEmitter();
   const reported: UnexpectedError[] = [];
   const logged: string[] = [];
-  handleUnexpectedErrors(process, (error) => reported.push(error), (text) => logged.push(text));
-  return { process, reported, logged };
+  const recorded: string[] = [];
+  handleUnexpectedErrors(
+    process,
+    (error) => reported.push(error),
+    (text) => logged.push(text),
+    (text) => recorded.push(text),
+  );
+  return { process, reported, logged, recorded };
 }
 
 describe('handleUnexpectedErrors', () => {
@@ -33,14 +39,15 @@ describe('handleUnexpectedErrors', () => {
     expect(reported).toEqual([{ message: 'the server went away', details: 'the server went away' }]);
   });
 
-  it('reports an error that repeats once, and logs every time', () => {
-    const { process, reported, logged } = handled();
+  it('reports and records an error that repeats once, and logs it to the console every time', () => {
+    const { process, reported, logged, recorded } = handled();
 
     for (let time = 0; time < 3; time++) process.emit('uncaughtException', new Error('write EPIPE'));
     process.emit('uncaughtException', new Error('another one'));
 
     expect(reported.map((error) => error.message)).toEqual(['write EPIPE', 'another one']);
     expect(logged).toHaveLength(4);
+    expect(recorded.map((text) => text.split('\n')[0])).toEqual(['Unexpected error (uncaught exception): Error: write EPIPE', 'Unexpected error (uncaught exception): Error: another one']);
   });
 
   it('only logs a report that fails, never throwing back from the handler', () => {

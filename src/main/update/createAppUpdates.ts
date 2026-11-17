@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { app, net, shell } from 'electron';
+import { appLog } from '../diagnostics/appLog';
 import { sendEvent } from '../ipc/sendEvent';
 import { AppUpdates, type AppUpdatesDependencies, type UpdateFeed } from './AppUpdates';
 import { downloadInstaller } from './downloadInstaller';
@@ -41,7 +42,10 @@ export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates
     // A preview never installs: quitting afterwards must not reopen the windows as a restart to install would.
     beforeRestart: previewFile ? () => undefined : aroundInstalling.beforeRestart,
     push: (status) => sendEvent('updateStatusChanged', status),
-    logFailure: (text) => console.warn(text),
+    logFailure: (text) => {
+      console.warn(text);
+      appLog.write(text);
+    },
   });
 }
 

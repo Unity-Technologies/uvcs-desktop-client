@@ -15,12 +15,13 @@ macOS, About shows the OS's panel instead (`showAboutPanel`), which reads the bu
 ## Reporting an issue
 
 Issues open on GitHub's issue forms (`.github/ISSUE_TEMPLATE/`): a bug report (what happened, what was expected, the
-steps, the app details, and optional logs or error details) and a feature request (the problem, the idea, other
+steps, the app details, and optional error details and log file) and a feature request (the problem, the idea, other
 options). Blank issues are off, and `config.yml` sends security reports to the private advisory form (SECURITY.md).
 The app opens a form through its address, prefilling fields by their `id` (`issueFormUrl`, `shared/issueForms.ts`:
 `BUG_REPORT_FORM` and `FEATURE_REQUEST_FORM` name the forms and the ids the app fills, which `issueForms.test.ts`
 checks against the YAML). Help ▸ Report an Issue and Request a Feature open the empty forms (`BUG_REPORT_URL`,
-`FEATURE_REQUEST_URL`); About fills in the app details.
+`FEATURE_REQUEST_URL`); About fills in the app details. Help ▸ Show Log Files shows the log file to attach to it
+(ARCHITECTURE.md "The log file"); a link can't attach a file, so the form's `log-file` field asks for it.
 
 The error dialog (`ErrorDialog`, from an error toast's Details) has Report an Issue next to Show in command log: the
 bug report titled with what failed, with the app details and the error as its Copy button gives it (`errorIssueUrl`,
