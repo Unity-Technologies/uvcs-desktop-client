@@ -312,6 +312,11 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text and
   link to copy (Copy ▸ Comment, Link; see "Links to comments").
+- **What a reviewer said with their status** is edited by that reviewer, in place in the timeline
+  (`canEditStatusComment`, `statusCommentMenu`, `TimelineEventRow`), even when they said nothing; nobody deletes it,
+  as the status would go with it. `cm codereview comment edit` writes the text as given and puts back only a
+  description's prefix, so the service writes the status's own (`statusCommentText`, `editStatusComment`), or the
+  edit would lose the status.
 - **Marked applied by hand** (`changeRequestMarkOf`, `markChangeRequest`): a change request's menu, in the conversation
   and in the code, marks an open one **Mark as applied…** and an applied one **Mark as not applied**, for anyone
   signed in, its author too (anyone may check in its fix). Not a discarded one, nor a reply. `cm` takes a changeset to
