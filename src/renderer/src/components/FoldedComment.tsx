@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { copyAsSource } from './comments/copyAsSource';
-import { foldedCut, isCut } from './foldedCut';
+import { isCut } from '../lib/isCut';
+import { foldedCut } from './foldedCut';
 import { Markdown } from './Markdown';
 import styles from './FoldedComment.module.css';
 
