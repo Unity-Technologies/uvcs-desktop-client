@@ -7,7 +7,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
-import { offersMerges, type MenuPlace } from '../../components/mergesOffered';
+import { offersMerges, offersServerMerges, type MenuPlace } from '../../components/mergesOffered';
 import { menuAction, type MenuHost } from '../../components/menuWords';
 import { toolsSubmenu } from '../../components/tools/toolsMenu';
 import { toolSubject } from '../../components/tools/toolSubjects';
@@ -41,7 +41,8 @@ export function labelCopyTexts(place: Place, label: Pick<LabelInfo, 'name' | 'co
 /**
  * The menu of the selected labels, the same wherever labels show: the Labels view, the Branch Explorer, the top bar,
  * the palette and their details. What needs a workspace (switching to it, merging it in) isn't there for a repository
- * explored without one, and no merge is there in a partial workspace (`offersMerges`).
+ * explored without one, and a partial workspace offers only the merge on the server (`offersMerges`,
+ * `offersServerMerges`).
  */
 export function labelMenu(context: MenuPlace, labels: LabelInfo[], host: MenuHost = {}): MenuEntry[] {
   if (labels.length === 0) return [];
@@ -57,7 +58,7 @@ export function labelMenu(context: MenuPlace, labels: LabelInfo[], host: MenuHos
     pair && menuAction('diffPair', () => diffLabels(pair[0], pair[1])),
     single && workspacePath !== null && menuAction('switch', () => void switchToLabel(workspacePath, single), { label: 'Switch to this label' }),
     single && merges && menuAction('merge', () => mergeFromLabel(single)),
-    single && merges && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
+    single && offersServerMerges(context) && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
     single && menuAction('newBranch', () => void createBranchFromLabel(place, single).then((name) => name && host.onBranchCreated?.(name))),
     single && menuAction('compare', () => void diffWithAnotherLabel(single), { label: 'Compare with another label…' }),
     single && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),

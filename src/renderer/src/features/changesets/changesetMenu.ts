@@ -9,7 +9,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
-import { offersMerges, type MenuPlace } from '../../components/mergesOffered';
+import { offersMerges, offersServerMerges, type MenuPlace } from '../../components/mergesOffered';
 import { menuAction, type MenuHost } from '../../components/menuWords';
 import { toolsSubmenu } from '../../components/tools/toolsMenu';
 import { toolSubject } from '../../components/tools/toolSubjects';
@@ -64,7 +64,8 @@ export function changesetCopyTexts(place: Place, changeset: ChangesetInfo, repos
  * The menu of the selected changesets (one, or two for interval operations), the same wherever changesets show: the
  * Changesets view, a branch diff's list of changesets, the Branch Explorer, Incoming, the top bar, the palette
  * and their details. What needs a workspace (switching, reverting, merging into it) isn't there for a repository
- * explored without one, and no merge is there in a partial workspace (`offersMerges`).
+ * explored without one, and a partial workspace offers only the merge on the server (`offersMerges`,
+ * `offersServerMerges`).
  */
 export function changesetMenu(context: ChangesetMenuContext, selected: ChangesetInfo[], host: MenuHost = {}): MenuEntry[] {
   if (selected.length === 1) return singleChangesetMenu(context, selected[0]!, host);
@@ -88,7 +89,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     workspacePath !== null && menuAction('switch', () => void switchToChangeset(workspacePath, changeset), { label: 'Switch to this changeset' }),
     canRevertTo && menuAction('revert', () => revertWorkspaceToChangeset(changeset, loadedChangeset), { label: 'Revert workspace to this changeset…' }),
     merges && menuAction('merge', () => openMerge({ kind: 'merge', sourceSpec: source })),
-    merges && menuAction('mergeTo', () => void mergeChangesetTo(changeset)),
+    offersServerMerges(context) && menuAction('mergeTo', () => void mergeChangesetTo(changeset)),
     merges && menuAction('cherryPick', () => openMerge({ kind: 'cherryPick', sourceSpec: source }), { label: 'Cherry pick this changeset' }),
     merges && menuAction('subtractive', () => openMerge({ kind: 'subtractive', sourceSpec: source })),
     menuAction('newBranch', () =>

@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { spec } from '@shared/domain/specs';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { usePlace, useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { offersMerges } from '../../components/mergesOffered';
 import { branchWorkedOn } from '../../components/workingObject';
 import { branchLabel } from '../../lib/branchLabels';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -14,14 +13,15 @@ import { mergeCommandsOffered, type MergeCommandId } from './mergeCommandsOffere
 import { openMerge } from './mergeOperations';
 
 /**
- * Palette commands to start any kind of merge, and to apply a shelve; a partial workspace has only the latter
- * (`mergeCommandsOffered`). The app menu's merge items do nothing there (docs/features/partial-workspaces.md "No merges").
+ * Palette commands to start any kind of merge, and to apply a shelve; a partial workspace has no merge into the
+ * workspace (`mergeCommandsOffered`, docs/features/partial-workspaces.md "Merges").
  */
 export function useMergeCommands(): void {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
   const currentBranch = branchWorkedOn(workspace?.selector);
-  const merges = offersMerges({ place: usePlace(), workspaceKind: workspace?.kind });
+  const place = usePlace();
+  const workspaceKind = workspace?.kind;
 
   const commands = useMemo<Command[]>(() => {
     const all: Record<MergeCommandId, Command> = {
@@ -81,8 +81,8 @@ export function useMergeCommands(): void {
         },
       },
     };
-    return mergeCommandsOffered(merges).map((id) => all[id]);
-  }, [currentBranch, workspacePath, merges]);
+    return mergeCommandsOffered({ place, workspaceKind }).map((id) => all[id]);
+  }, [currentBranch, workspacePath, place, workspaceKind]);
 
   useCommands(commands);
 }

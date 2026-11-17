@@ -8,7 +8,7 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { serverMergeLabel } from '../../components/mergeMenuLabels';
-import { offersMerges, type MenuPlace } from '../../components/mergesOffered';
+import { offersMerges, offersServerMerges, type MenuPlace } from '../../components/mergesOffered';
 import { menuAction, type MenuHost } from '../../components/menuWords';
 import { toolsSubmenu } from '../../components/tools/toolsMenu';
 import { toolSubject } from '../../components/tools/toolSubjects';
@@ -56,13 +56,15 @@ export interface BranchMenuContext extends MenuPlace {
 /**
  * The menu of the selected branches, the same wherever branches show: the Branches view, the Branch Explorer, the
  * branch switcher, the top bar, the palette and their details. What needs a workspace (switching, merging into it)
- * isn't there for a repository explored without one, and no merge is there in a partial workspace (`offersMerges`).
+ * isn't there for a repository explored without one, and a partial workspace offers only the merges on the server
+ * (`offersMerges`, `offersServerMerges`).
  */
 export function branchMenu(context: BranchMenuContext, branches: BranchInfo[], host: MenuHost = {}): MenuEntry[] {
   if (branches.length === 0) return [];
   const { place, currentBranch } = context;
   const workspacePath = workspacePathOf(place);
   const merges = offersMerges(context);
+  const serverMerges = offersServerMerges(context);
 
   const single = branches.length === 1 ? branches[0]! : null;
   const isCurrent = single?.name === currentBranch;
@@ -77,8 +79,8 @@ export function branchMenu(context: BranchMenuContext, branches: BranchInfo[], h
     single && workspacePath !== null && menuAction('switch', () => void switchToBranch(workspacePath, single.name), { label: 'Switch to this branch', ...onCurrent }),
     single && workspacePath !== null && menuAction('taskWorkspace', () => openTaskWorkspaceDialog({ workspacePath, branch: single.name }), onCurrent),
     single && merges && menuAction('merge', () => mergeFromBranch(single.name), onCurrent),
-    single && merges && isTaskBranch(single) && menuAction('mergeTask', () => openTaskMerge(single), { label: serverMergeLabel(single.parent) }),
-    single && merges && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name, isTaskBranch(single) ? taskMergeOf(single) : undefined)),
+    single && serverMerges && isTaskBranch(single) && menuAction('mergeTask', () => openTaskMerge(single), { label: serverMergeLabel(single.parent) }),
+    single && serverMerges && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name, isTaskBranch(single) ? taskMergeOf(single) : undefined)),
     single && merges && menuAction('cherryPick', () => cherryPickFromBranch(single.name), { label: 'Cherry pick branch changes', ...onCurrent }),
     single && menuAction('newBranch', () => void openCreateBranchDialog(place, branchHeadOrigin(single)).then((name) => name && host.onBranchCreated?.(name))),
     single && canMergeSomewhere(single) && menuAction('newMergeRequest', () => openCreateMergeRequestDialog(place, single)),
