@@ -45,8 +45,6 @@ export interface NavigatorFacts {
 export interface NavigatorArrow {
   tip: string;
   enabled: boolean;
-  /** A press goes on to another file: the arrow says so before it's pressed (`ChangeNavigator`'s double chevron). */
-  leavesFile: boolean;
 }
 
 export interface NavigatorView {
@@ -102,8 +100,8 @@ interface ArrowTips {
 
 function arrowOf(goesTo: ArrowGoal, namesFiles: boolean, tips: ArrowTips): NavigatorArrow {
   // Kept for the file being read: enabled both ways, as the keys are, wherever that file sits in the list.
-  if (goesTo === 'queued') return { tip: tips.queued, enabled: true, leavesFile: false };
-  if (goesTo === 'step') return { tip: tips.step, enabled: true, leavesFile: false };
-  if (goesTo === 'file') return { tip: namesFiles ? tips.file : tips.fileStep, enabled: true, leavesFile: true };
-  return { tip: namesFiles ? tips.file : tips.step, enabled: false, leavesFile: false };
+  if (goesTo === 'queued') return { tip: tips.queued, enabled: true };
+  if (goesTo === 'step') return { tip: tips.step, enabled: true };
+  if (goesTo === 'file') return { tip: namesFiles ? tips.file : tips.fileStep, enabled: true };
+  return { tip: namesFiles ? tips.file : tips.step, enabled: false };
 }

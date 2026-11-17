@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useContext, type MouseEvent, type Ref } from 'react';
 import { settleClickFocus } from '../../../lib/focusRing';
 import { formatShortcut } from '../../../lib/shortcuts';
@@ -27,8 +27,8 @@ interface ChangeNavigatorProps {
 /**
  * A view's way through its changes (or conflicts: the navigation's noun), at the far right of its header: where it
  * stands ("3 of 12"), right-aligned so it grows leftward, then previous and next, side by side at the edge. Past the
- * first or last, beside a list of files, the arrows go on to the file before or after, and say so before they're
- * pressed: a double chevron, and a tip naming that file (`changeNavigatorView`).
+ * first or last, beside a list of files, the arrows go on to the file before or after, their tips naming that file
+ * (`changeNavigatorView`).
  */
 export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWhileTyping = false, className, ref }: ChangeNavigatorProps) {
   const files = useContext(FileStepsContext);
@@ -48,7 +48,7 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
       </span>
       <IconButton
         size="small"
-        icon={view.previous.leavesFile ? <ChevronsUp size={14} /> : <ChevronUp size={14} />}
+        icon={<ChevronUp size={14} />}
         label={view.previous.tip}
         shortcut={hotkey(shortcuts.previous)}
         data-tip-sub={otherKey(shortcuts.previous, keysWhileTyping)}
@@ -57,7 +57,7 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
       />
       <IconButton
         size="small"
-        icon={view.next.leavesFile ? <ChevronsDown size={14} /> : <ChevronDown size={14} />}
+        icon={<ChevronDown size={14} />}
         label={view.next.tip}
         shortcut={hotkey(shortcuts.next)}
         data-tip-sub={otherKey(shortcuts.next, keysWhileTyping)}

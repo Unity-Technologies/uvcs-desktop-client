@@ -492,9 +492,10 @@ xlink. Right before them, with no room reserved, the label has one form, "3 of 1
 (`positionLabel`), which is from the moment a text diff opens (it opens current at its first change, `openingStep`), so
 the count is always there and the label doesn't appear under the user's first click; it is empty only where nothing is
 current: no changes to step through (the diff itself says so: identical, binary, an image) or a link's lines before the
-first move. An arrow whose press leaves the file says so before it's pressed: a double chevron (`ChevronsDown`,
-`NavigatorArrow.leavesFile`) and a tip naming the file it goes to ("Next file: GameManager.cs", `FileSteps.neighbor`),
-past the last change, before the first, and on a file with none to step through. Beside a list, every tip also says
+first move. An arrow whose press leaves the file names the file it goes to in its tip ("Next file: GameManager.cs",
+`FileSteps.neighbor`), past the last change, before the first, and on a file with none to step through. Its icon stays
+the same: a double chevron and a chevron with a bar at its tip were tried, and an arrow changing shape as the user
+clicks through read as noise. Beside a list, every tip also says
 which file of it is shown ("· file 2 of 9", `FileSteps.position`); the label doesn't, as "1 of 27 · file 1 of 9" read
 as too much for the header. The file a step lands in lights its
 title for a moment, as the change moved to lights (`arrivedByStep`, `SteppedDiffFrame`'s `useArrivals`); a file picked
