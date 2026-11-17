@@ -30,7 +30,9 @@ vi.mock('../window/incomingNotification', () => ({ showIncomingNotification: vi.
 function system(answers: Record<string, CmAnswer>, settings: Partial<AppSettings> = {}) {
   const fake = fakeCmClient(answers);
   const relocate = vi.spyOn(fake.cm, 'relocate');
-  return { ...fake, relocate, service: createSystemService(serviceContext(fake.cm, { settings: memorySettings(settings) }), profilesContext(fake.cm)) };
+  const logged: string[] = [];
+  const diagnosticLog = { write: (text: string) => void logged.push(text) };
+  return { ...fake, relocate, logged, service: createSystemService(serviceContext(fake.cm, { settings: memorySettings(settings), diagnosticLog }), profilesContext(fake.cm)) };
 }
 
 describe('the cm version', () => {
@@ -52,6 +54,25 @@ describe('the cm version', () => {
     await service.cmVersion();
 
     expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('writes the version and where cm is to the log file once, when it answers', async () => {
+    const { service, cm, logged } = system({ version: '11.0.16.9876\n' });
+
+    await service.cmVersion();
+    await service.cmVersion();
+
+    expect(logged).toEqual([`cm 11.0.16.9876 at ${cm.executable}`]);
+  });
+});
+
+describe('a window’s unexpected error', () => {
+  it('goes to the log file with its stack', async () => {
+    const { service, logged } = system({});
+
+    await service.logUnexpectedError({ message: 'boom', details: 'Error: boom\n    at render (App.tsx:3)' });
+
+    expect(logged).toEqual(['Unexpected error in a window: Error: boom\n    at render (App.tsx:3)']);
   });
 });
 

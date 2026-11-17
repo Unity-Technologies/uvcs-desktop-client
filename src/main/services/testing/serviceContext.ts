@@ -19,7 +19,7 @@ export function serviceContext(cm: CmClient, parts: Partial<ServiceContext> = {}
   );
   // Nothing downloads in a service's test unless it says so: the trees list through its fake `cm`.
   const downloads = { read: () => Promise.reject(new Error('Nothing downloads here')) };
-  return { cm, operations, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), ...parts } as ServiceContext;
+  return { cm, operations, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), diagnosticLog: { write: () => undefined }, ...parts } as ServiceContext;
 }
 
 /** The profiles read the accounts, the servers and the setup check share, over the test's `cm`. */

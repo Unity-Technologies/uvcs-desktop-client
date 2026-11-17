@@ -7,6 +7,7 @@ import { showsGravatar } from '@shared/domain/gravatarChoice';
 import type { ConnectionProblem } from '@shared/domain/setup';
 import { checkConnection } from '../cm/connectionCheck';
 import { checkSetup } from '../cm/setupCheck';
+import { cmFoundText } from '../diagnostics/logRecords';
 import { outermostPaths } from '../files/pathContainment';
 import { callerId } from '../ipc/caller';
 import { readDraggedPath } from '../system/dragPasteboard';
@@ -17,7 +18,7 @@ import { isWebAddress } from '../system/webAddress';
 import { showIncomingNotification } from '../window/incomingNotification';
 import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
-export function createSystemService({ cm, operations, windows, settings }: ServiceContext, { profiles }: ProfilesContext): SystemApi {
+export function createSystemService({ cm, operations, windows, settings, diagnosticLog }: ServiceContext, { profiles }: ProfilesContext): SystemApi {
   const gravatars = new GravatarCache(async (url) => {
     const response = await net.fetch(url);
     if (!response.ok) return null;
@@ -28,7 +29,10 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
   const cmVersion = untilSucceeded(async () => {
     cm.relocate();
     // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
-    return (await cm.execute(['version'])).trim();
+    const version = (await cm.execute(['version'])).trim();
+    // Once a launch: the log's reader learns which `cm` the app ran, with no command of its own.
+    diagnosticLog.write(cmFoundText(version, cm.executable));
+    return version;
   });
   const setupProblem = untilSucceeded(() => checkSetup(profiles), (problem) => problem === null);
   // Per server: once it answers, later windows on its workspaces take that answer.
@@ -74,6 +78,7 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     takeRequestedPlace: async () => windows.takeRequested(callerId()),
     // The one gate on Gravatar: nothing goes there until the user turned pictures on themselves.
     gravatar: async (user, size) => (showsGravatar(settings.get()) ? gravatars.picture(user, size) : null),
+    logUnexpectedError: async (error) => diagnosticLog.write(`Unexpected error in a window: ${error.details}`),
     notifyIncoming: async (workspacePath, message) => showIncomingNotification(windows, workspacePath, message),
   };
 }
