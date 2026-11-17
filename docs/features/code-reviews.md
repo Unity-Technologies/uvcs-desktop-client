@@ -238,8 +238,8 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   add, `useAttributesShown`).
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
-  into view (`pickedScrollOf`): from Open, only as far as it must, a card on screen staying where it is and one off
-  screen gliding to the nearest edge; when the page opens at it, centered at once. It's unfolded, lit for a moment
+  into view (`pickedBehaviorOf`, `placeInView`): from Open it glides, the page opened at it jumps at once, and either way
+  its card lands a third down the viewport, even when already on screen (ARCHITECTURE.md "Going to a thing"). It's unfolded, lit for a moment
   and ringed in the accent until another is gone to, as a thread selected in the code is (`threadMarkOf`: the card's
   `highlight` and `selected`); its Open entry keeps the Comments panel's accent bar. Each pick counts, so going to the
   thread already on screen, or to the same one again, lights it again: without it, a click on what's already in view
