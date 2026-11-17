@@ -18,7 +18,8 @@ export interface ChipTarget {
 /** A file a chip names: "Player.cs" in "/src/game", at "Changeset 12" (none when a link names no version). */
 export interface ChipFile {
   name: string;
-  folder: string;
+  /** None for the root itself. */
+  folder?: string;
   at?: string;
 }
 
@@ -158,9 +159,10 @@ function pointObject(point: ReferencePoint): LinkObject {
   return point.kind === 'branch' || point.kind === 'label' ? { kind: point.kind, name: point.name } : { kind: point.kind, id: point.id };
 }
 
-/** A server path's file apart from its folder, `/` for one at the root. */
+/** A server path's item apart from its folder, `/` for one at the root; written with a slash at its end (a folder) too. */
 function chipFile(path: string, at: string | undefined): ChipFile {
-  return { name: lastSegment(path), folder: parentOf(path) || '/', ...(at && { at }) };
+  const item = path.replace(/\/+$/, '');
+  return { name: lastSegment(item || '/'), ...(item && { folder: parentOf(item) || '/' }), ...(at && { at }) };
 }
 
 function sentenceCase(words: string): string {
@@ -278,7 +280,7 @@ export function chipCard(chip: { title: string; repository?: string; file?: Chip
 
 /** A file's card: its name, its folder under it, then which version and where ("Changeset 12 · In art"). */
 function fileCard(file: ChipFile, repository: string | undefined): ChipCard {
-  return { title: file.name, folder: file.folder, meta: [...(file.at ? [file.at] : []), ...(repository ? [repository] : [])] };
+  return { title: file.name, ...(file.folder && { folder: file.folder }), meta: [...(file.at ? [file.at] : []), ...(repository ? [repository] : [])] };
 }
 
 function repositoryWords(title: string, repository: string, unread: UnreadObject | undefined): string {

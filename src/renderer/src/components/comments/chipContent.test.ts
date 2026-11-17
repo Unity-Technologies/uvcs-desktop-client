@@ -67,6 +67,8 @@ describe('chipContent', () => {
       target: { repository: 'game@acme@unity', object: { kind: 'branch', name: '/main/task' } },
     });
     expect(chipOf('uvcs://acme@unity/repos/game/changesets/12/-/files/src/a.cs')).toMatchObject({ icon: 'file', label: 'a.cs', title: '/src/a.cs in changeset 12', file: { name: 'a.cs', folder: '/src', at: 'Changeset 12' } });
+    expect(chipOf('serverpath:/src/client/#br:/main')).toMatchObject({ label: 'client', file: { name: 'client', folder: '/src', at: 'Branch /main' } });
+    expect(chipOf('serverpath:/#br:/main')).toMatchObject({ file: { name: '/', at: 'Branch /main' } });
     expect(chipOf('uvcs://acme@unity/repos/game/-/files/a.cs')).toMatchObject({ icon: 'file', label: 'a.cs', title: '/a.cs', file: { name: 'a.cs', folder: '/' } });
     expect(chipOf('uvcs://acme@unity/repos/game/-/changesets')).toMatchObject({ icon: 'link', label: 'game' });
     expect(chipOf('uvcs://acme@unity/repos/game/code-reviews/311/-/comments/5702')).toMatchObject({ icon: 'codeReview', label: '311', title: 'A comment in code review 311' });
