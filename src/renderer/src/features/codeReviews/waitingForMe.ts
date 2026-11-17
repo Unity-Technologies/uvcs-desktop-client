@@ -49,3 +49,8 @@ export function waitingBadge(reviews: readonly WaitingFields[] | undefined, user
   const count = reviews ? waitingCount(reviews, user) : 0;
   return count > 0 ? { count } : undefined;
 }
+
+/** Whether the sidebar's count reads the reviews (`useWaitingForMeBadge`). */
+export function badgeReadsReviews(_window: { hasWorkspace: boolean; firstScreenRead: boolean }): boolean {
+  return false;
+}
