@@ -91,8 +91,8 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
 
 ## Safety
 
-- **Secrets never show**: the command log, `CmError`s and console warnings hide passwords (`main/cm/hideSecrets.ts`).
-  A new `cm` option carrying a secret joins `SECRET_OPTIONS`; never log, toast or store a credential yourself.
+- **Secrets never show**: the command log, the log file, `CmError`s and console warnings hide passwords
+  (`main/cm/hideSecrets.ts`). A new `cm` option carrying a secret joins `SECRET_OPTIONS`; never log, toast or store a credential yourself.
 - **The renderer is untrusted**: keep `contextIsolation` and `sandbox` on, and give it capabilities only as typed
   `UvcsApi` methods, never a generic "run this" channel.
 - **Nothing external opens by itself**: `cm` never opens a merge or diff tool, and background work never opens anything.
