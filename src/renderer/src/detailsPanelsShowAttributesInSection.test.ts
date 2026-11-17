@@ -3,11 +3,12 @@ import { relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 
-/** The sources that render the bare chips (`<AttributeChips`), by their path under the renderer, written with `/`. */
-const rendersBareChips = filesUnder(__dirname, isAppSource)
-  .filter((file) => /<AttributeChips\b/.test(readFileSync(file, 'utf8')))
-  .map((file) => relative(__dirname, file).split('\\').join('/'))
-  .sort();
+/** The sources that render `component` (`<AttributeChips`), by their path under the renderer, written with `/`. */
+const sourcesRendering = (component: string): string[] =>
+  filesUnder(__dirname, isAppSource)
+    .filter((file) => new RegExp(`<${component}\\b`).test(readFileSync(file, 'utf8')))
+    .map((file) => relative(__dirname, file).split('\\').join('/'))
+    .sort();
 
 /**
  * Every details panel shows an object's attributes the same way, in a titled section under its heading
@@ -16,6 +17,7 @@ const rendersBareChips = filesUnder(__dirname, isAppSource)
  */
 describe('details panels', () => {
   it('show attributes only through their Attributes section', () => {
-    expect(rendersBareChips).toEqual(['features/codeReviews/conversation/BranchAttributesSection.tsx']);
+    expect(sourcesRendering('AttributeChips')).toEqual(['features/codeReviews/conversation/BranchAttributesSection.tsx']);
+    expect(sourcesRendering('AttributeChipList')).toEqual(['features/attributes/AttributeChips.tsx', 'features/attributes/AttributesDetailsSection.tsx']);
   });
 });

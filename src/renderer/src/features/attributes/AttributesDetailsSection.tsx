@@ -14,7 +14,7 @@ interface AttributesDetailsSectionProps {
 
 /**
  * An object's attributes in a details panel, as every panel shows them (docs/ARCHITECTURE.md "List and details"): a
- * titled section with Add always at its right, and a card under it: a placeholder while the values are read, the chips,
+ * titled section with Add at its right while there's an attribute to add, and a card under it: a placeholder while the values are read, the chips,
  * or "No attributes" (`attributesSectionOf`).
  */
 export function AttributesDetailsSection({ objectSpec, title = 'Attributes' }: AttributesDetailsSectionProps) {
@@ -29,7 +29,7 @@ function AttributesSectionOf({ objectSpec, title }: Required<AttributesDetailsSe
 
   const add = section.addable.length > 0 && (
     <AddAttributeMenu attributes={section.addable} onAdd={editing.add} align="end">
-      <button className={styles.add} data-tip="Add an attribute">
+      <button className={styles.add}>
         <Plus size={12} />
         Add
       </button>
