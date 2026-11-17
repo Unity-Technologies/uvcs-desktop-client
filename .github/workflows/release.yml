@@ -139,7 +139,7 @@ jobs:
           fi
           echo "Signing: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
-      # A Sign run takes about 8 minutes (never 10 in its first 20 releases), and each of its jobs has a time limit of its
+      # A Sign run takes about 8 minutes (never 10 in 20 releases), and each of its jobs has a time limit of its
       # own (sign-release.yml). 30 minutes also covers a wait for one of Unity's runners: past it the run is stuck (a
       # notarization waiting through an Apple outage), so it is cancelled, so it can't upload to the draft later, and
       # the release fails at once instead of waiting.
@@ -155,9 +155,10 @@ jobs:
             --exit-status --interval 30 > /dev/null
           status=$?
           set -e
+          # The error comes first: a run that ends just as the limit runs out can't be cancelled any more.
           if [ "$status" -eq 124 ]; then
-            gh run cancel "$RUN_ID" --repo "$SIGNING_REPO"
-            echo "::error::The signing run took more than $SIGNING_LIMIT_MINUTES minutes and was cancelled: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID"
+            echo "::error::The signing run took more than $SIGNING_LIMIT_MINUTES minutes and is cancelled: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID"
+            gh run cancel "$RUN_ID" --repo "$SIGNING_REPO" || true
             exit 1
           fi
           exit "$status"

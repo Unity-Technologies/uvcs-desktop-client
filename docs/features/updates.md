@@ -183,7 +183,8 @@ update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
   repositories keep in a `release` environment open only to runs from main. A Sign run takes about 8 minutes: each of
   its jobs has a time limit about twice its slowest run (`timeout-minutes`), and the `sign` job waits 30 minutes at
   most (`SIGNING_LIMIT_MINUTES`), then cancels the run, so it can't upload to the draft later, and fails. A stuck run
-  (a notarization waiting through an Apple outage) fails a release in minutes, not hours. Rotating the key means generating a new one in the
+  (a notarization waiting through an Apple outage) fails a release in minutes, not hours; re-running the Release's
+  failed jobs starts a new Sign run for the same tag and draft. Rotating the key means generating a new one in the
   App's Credentials, setting `RELEASE_APP_PRIVATE_KEY` in both repositories, then deleting the old key. Unity's
   signing certificates are in Azure Key Vault, which accepts only Unity's networks, and Unity's runners that reach it
   may serve only private repositories (SSDLC), which this one isn't. The Sign workflow builds this repository's tag
