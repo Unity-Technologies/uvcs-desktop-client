@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Button } from '../../../ui/Button';
 import { setReviewSubscription } from '../codeReviewOperations';
@@ -10,6 +10,8 @@ import styles from './ReviewConversation.module.css';
  * Nothing at all while it's read, when it can't be, or when the repository sends no review emails.
  */
 export function NotificationsSection({ reviewId }: { reviewId: number }) {
+  // Its own per page: a review may show in two views kept mounted (`KeptView`).
+  const titleId = useId();
   const place = usePlace();
   const section = useReviewSubscription(reviewId);
   const [changing, setChanging] = useState(false);
@@ -25,8 +27,8 @@ export function NotificationsSection({ reviewId }: { reviewId: number }) {
   };
 
   return (
-    <section className={styles.railSection} aria-labelledby="review-notifications">
-      <h2 id="review-notifications" className={styles.railTitle}>
+    <section className={styles.railSection} aria-labelledby={titleId}>
+      <h2 id={titleId} className={styles.railTitle}>
         Notifications
       </h2>
       <p className={styles.railNote}>{section.text}</p>

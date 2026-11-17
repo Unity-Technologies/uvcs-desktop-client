@@ -47,7 +47,7 @@ export function usePlaceCommands(): void {
 
   const commands = useMemo<Command[]>(
     () => [
-      ...viewCommands(viewsOf(place), navigation.goToView),
+      ...viewCommands(viewsOf(place), navigation.returnToView),
       refreshCommand(place),
       {
         id: 'workspace.reviewMode',

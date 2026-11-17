@@ -35,6 +35,11 @@ export function firstViewOf(place: Place): ViewId {
   return place.kind === 'workspace' ? 'changes' : 'branchExplorer';
 }
 
+/** `view` where the place shows it, else the place's first view: a view asked for from outside the window. */
+export function viewShownIn(place: Place, view: ViewId): ViewId {
+  return showsView(place, view) ? view : firstViewOf(place);
+}
+
 /** Whether `value`, read from outside the page (its address), names a view. */
 export function isViewId(value: string): value is ViewId {
   return (VIEW_IDS as readonly string[]).includes(value);
@@ -46,6 +51,21 @@ export function isViewId(value: string): value is ViewId {
  */
 export function viewCommandId(view: ViewId): string {
   return `goto.${view}`;
+}
+
+/**
+ * What a page window sends its workspace window to show a view's list (`navigation.goToView` there: a link, Show in
+ * Locks), apart from the view's own command, which returns to the view as the user left it (`returnToView`). No
+ * command of its own, so the palette never lists it: `runMenuCommand` reads it (`viewOfListCommand`).
+ */
+export function viewListCommandId(view: ViewId): string {
+  return `${viewCommandId(view)}.list`;
+}
+
+/** The view whose list `commandId` asks for (`viewListCommandId`); null for any other command. */
+export function viewOfListCommand(commandId: string): ViewId | null {
+  const view = /^goto\.(\w+)\.list$/.exec(commandId)?.[1];
+  return view !== undefined && isViewId(view) ? view : null;
 }
 
 /**

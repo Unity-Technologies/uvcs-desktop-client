@@ -1,4 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useNewValuesEffect } from '../../lib/useNewValuesEffect';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { focusAs, ringsOnClickFocus } from '../../lib/focusRing';
@@ -7,7 +8,7 @@ import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../
 import { isModPressed } from '../../lib/shortcuts';
 import { focusedKeyOf, selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
-import { anchorRevealStep } from './anchorReveal';
+import { anchorRevealStep, selectionSetWhileHidden } from './anchorReveal';
 import type { Column } from './column';
 import { DataTableHeader } from './DataTableHeader';
 import { DataTableRow } from './DataTableRow';
@@ -38,6 +39,11 @@ interface DataTableProps<Row> {
   letterMoves?: boolean;
   /** Scrolls this row into view (centered) whenever it changes, e.g. after revealing a search result. */
   revealKey?: string | null;
+  /**
+   * Counts the times `revealKey` was asked for (`RowReveal`): the same row asked for again shows again, while the view
+   * showing again doesn't scroll the table back to it.
+   */
+  revealCount?: number;
   /** Selects a row whenever no shown row is selected (the first, or the one that took the place of a selected row that went away), so a details panel next to the table always has something to show. */
   selectFirstRow?: boolean;
   /** What the rows are, for screen readers (e.g. "Changesets"). */
@@ -77,6 +83,7 @@ export function DataTable<Row>({
   onRowKeyDown,
   letterMoves = false,
   revealKey,
+  revealCount,
   selectFirstRow = false,
   label,
   hideHeader = false,
@@ -127,11 +134,21 @@ export function DataTable<Row>({
     return true;
   };
 
-  // Only when the requested row changes (or appears), not on every re-render of the rows.
-  useEffect(() => void reveal(revealKey ?? null), [revealKey, orderedKeys.length]);
+  // Only when the requested row changes (or appears), not on every re-render of the rows, nor as the view shows again.
+  useNewValuesEffect(() => void reveal(revealKey ?? null), [revealKey, revealCount, orderedKeys.length]);
 
-  // A selection kept from an earlier visit shows once its row is in.
+  // A selection kept from an earlier visit shows once its row is in; so does one made while the view was hidden, kept
+  // mounted (`selectionSetWhileHidden`), as the view shows again and runs its effects: this one first.
   const revealedAnchor = useRef(false);
+  const selectionNow = useRef(selection);
+  selectionNow.current = selection;
+  const selectionWhenHidden = useRef<SelectionState | undefined>(undefined);
+  useEffect(() => {
+    if (selectionSetWhileHidden(selectionWhenHidden.current, selectionNow.current)) revealedAnchor.current = false;
+    return () => {
+      selectionWhenHidden.current = selectionNow.current;
+    };
+  }, []);
   useEffect(() => {
     const step = anchorRevealStep(orderedKeys.length, revealedAnchor.current);
     if (step === 'forget') revealedAnchor.current = false;

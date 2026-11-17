@@ -42,7 +42,7 @@ export function Sidebar({ card }: { card: ReactNode }) {
 }
 
 function SidebarViewItem({ view }: { view: ViewDefinition }) {
-  const { view: activeView, pages, goToView } = useNavigation();
+  const { view: activeView, pages, returnToView } = useNavigation();
   const badge = view.useBadge?.();
   const dot = view.useDot?.();
   const Icon = view.icon;
@@ -57,7 +57,7 @@ function SidebarViewItem({ view }: { view: ViewDefinition }) {
       active={active}
       dimmed={active && pages.length > 0}
       shortcut={view.shortcut}
-      onClick={() => goToView(view.id)}
+      onClick={() => returnToView(view.id)}
     />
   );
 }

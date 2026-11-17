@@ -1,12 +1,12 @@
-import { useRef, type ReactNode } from 'react';
+import { Activity, useRef, type ReactNode } from 'react';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { SplitPane } from '../../ui/SplitPane';
 import { Stowable } from '../../ui/Stowable';
 import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { showsMerge } from '../navigation/mergeInProgress';
 import { useNavigation } from '../navigation/navigationStore';
+import { viewLayers } from '../navigation/keptViews';
 import { PageShownContext } from '../navigation/pageShown';
-import { viewDefinition } from '../navigation/viewRegistry';
 import { useOwnPageWindows } from '../pageWindow/useShowInFollowingWindow';
 import { CommandLogPanel } from './CommandLogPanel';
 import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
@@ -18,7 +18,7 @@ import { usePlaceCommands } from './usePlaceCommands';
 import { useMergeRequestCommands } from '../../features/codeReviews/useMergeRequestCommands';
 import styles from './PlaceLayout.module.css';
 import { ViewShownContext } from '../../lib/viewShown';
-import { viewLayerShown } from './viewLayer';
+import { KeptView } from './KeptView';
 
 interface PlaceLayoutProps {
   /** The top bar: a workspace's branch, or the repository explored and the way to make it a workspace. */
@@ -35,7 +35,7 @@ interface PlaceLayoutProps {
  * its command log and its page windows.
  */
 export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps) {
-  const { view, pages, merge } = useNavigation();
+  const { view, pages, merge, kept } = useNavigation();
   const commandLogOpen = useCommandLogStore((state) => state.open);
   const commandLogHeight = useCommandLogStore((state) => state.height);
   const setCommandLogHeight = useCommandLogStore((state) => state.setHeight);
@@ -49,8 +49,6 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
   const contentRef = useRef<HTMLDivElement>(null);
   useMainFocus(contentRef);
 
-  const ActiveView = viewDefinition(view).component;
-  const topPage = pages.at(-1);
   const mergeShown = showsMerge(merge, pages);
 
   return (
@@ -75,25 +73,24 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
             hidden={commandLogOpen ? undefined : 'second'}
             first={
               <div ref={contentRef} className={styles.content} data-diff-expanded={diffExpanded || undefined}>
-                {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so
-                    each one arrives with the view transition. */}
-                <div key={view} className={styles.layer} hidden={!viewLayerShown(topPage)}>
-                  <ViewShownContext.Provider value={viewLayerShown(topPage)}>
-                    <ActiveView key={view} />
-                  </ViewShownContext.Provider>
-                </div>
+                {/* The views shown last stay mounted with their pages, hidden, as the user left them (`mountedViews`):
+                    an Activity keeps what they show and stops their effects (shortcuts, watchers, reads). */}
+                {viewLayers(view, pages, kept, mergeShown).map((layer) => (
+                  <Activity key={layer.view} mode={layer.shown ? 'visible' : 'hidden'}>
+                    <KeptView view={layer.view} pages={layer.pages} drawsTop={layer.drawsTop} />
+                  </Activity>
+                ))}
                 {/* A merge in progress stays mounted, shown or set aside, with all the user decided in it; set aside, no
                     shortcut inside it listens (`ViewShownContext`, read by `useShortcut`), its diffs' included. */}
                 {merge && (
                   <div key={`merge:${merge.id}`} className={styles.layer} hidden={!mergeShown}>
                     <PageShownContext.Provider value={mergeShown}>
                       <ViewShownContext.Provider value={mergeShown}>
-                        <PageFrame page={merge.page} />
+                        <PageFrame page={merge.page} view={view} previous={pages.at(-2)} />
                       </ViewShownContext.Provider>
                     </PageShownContext.Provider>
                   </div>
                 )}
-                {topPage && !mergeShown && <PageFrame key={pages.length} page={topPage} />}
               </div>
             }
             second={<CommandLogPanel />}

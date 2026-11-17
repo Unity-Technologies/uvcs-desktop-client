@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useKeptElement } from '../../../lib/useKeptElement';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { ChangeNavigator } from './ChangeNavigator';
@@ -41,7 +42,7 @@ interface SteppedDiffFrameProps {
  */
 export function SteppedDiffFrame({ title, stepsThroughChanges = true, requested, children }: SteppedDiffFrameProps) {
   const frame = useRef<HTMLDivElement>(null);
-  const [controls, setControls] = useState<HTMLElement | null>(null);
+  const [controls, setControls] = useKeptElement<HTMLElement>();
   const [store] = useState<PublishedStore>(() => createStore(() => ({ published: null })));
   // The list's (shared by the lists of one view, so a step into a file shown otherwise hands it its presses), else its
   // own.

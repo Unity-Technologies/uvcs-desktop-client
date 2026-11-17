@@ -1,4 +1,5 @@
 import { beforeEach } from 'vitest';
+import { NO_KEPT_VIEWS } from '../app/navigation/keptViews';
 import { repositoryPlace } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../api/queryKeys';
@@ -95,6 +96,6 @@ export function whereTheWindowIs(): { view: ViewId; pages: Page[] } {
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] });
-  useNavigation.setState({ view: 'changes', pages: [], merge: null });
+  useNavigation.setState({ view: 'changes', pages: [], merge: null, kept: NO_KEPT_VIEWS });
   queryClient.clear();
 });

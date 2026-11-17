@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useCommandStore, type Command } from './commandStore';
 import { menuCommandTarget, runMenuCommand } from './useMenuCommands';
+import { useNavigation } from '../navigation/navigationStore';
+import { useSession } from '../workspace/sessionStore';
+import type { Page } from '../navigation/pages';
 
 const noDialog = { querySelector: () => null };
 const behindDialog = { querySelector: () => ({}) as Element };
@@ -17,6 +20,23 @@ function registered(owner: string, ...commands: Partial<Command>[]): ReturnType<
 afterEach(() => useCommandStore.setState({ commandsByOwner: new Map() }));
 
 describe('runMenuCommand', () => {
+  it("shows the list of the view a page window asked for, never the pages that view was left with", () => {
+    const history: Page = { kind: 'history', path: 'src/a.cs' };
+    useSession.getState().openWorkspace('/ws');
+    useNavigation.setState({ view: 'changes', pages: [], kept: { stacks: { locks: [history] }, recent: ['locks'] } });
+    runMenuCommand('goto.locks.list', noDialog);
+
+    expect(useNavigation.getState()).toMatchObject({ view: 'locks', pages: [] });
+  });
+
+  it("shows the place's first view for a view the place doesn't show: Changes asked for in a repository explored", () => {
+    useSession.getState().explore('demo@local');
+    useNavigation.setState({ view: 'labels', pages: [] });
+    runMenuCommand('goto.changes.list', noDialog);
+
+    expect(useNavigation.getState().view).toBe('branchExplorer');
+  });
+
   it('runs the command a native menu item names, whichever component registered it', () => {
     registered('sidebar', { id: 'app.sidebar' });
     const [checkin] = registered('changes', { id: 'changes.checkin' });

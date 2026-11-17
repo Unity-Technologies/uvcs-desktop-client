@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { NO_ROW_REVEAL, revealAsked, type RowReveal } from '../../ui/table/rowReveal';
 import { placeId } from '@shared/domain/place';
 import { revisionRef } from '@shared/domain/revision';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
@@ -77,10 +78,10 @@ export function RepositoryTree({ changesetId, opening, search, detailsKey, onSho
   const itemLinks = useFilesItemLinks(linkOrigin, focused);
   const lineLinks = useMemo<LineLinks>(() => (linkOrigin ? { ...itemLinks, focus: linkFocus } : { focus: linkFocus, publishes: true }), [linkOrigin, itemLinks, linkFocus]);
   useEffect(() => onShownItem?.(focused?.path ?? null), [focused?.path]);
-  const [revealPath, setRevealPath] = useState<string | null>(opening.selected);
+  const [reveal, setReveal] = useState<RowReveal>(() => (opening.selected === null ? NO_ROW_REVEAL : revealAsked(NO_ROW_REVEAL, opening.selected)));
   const selectFolder = (path: string): void => {
     setSelection(singleSelection(path));
-    setRevealPath(path);
+    setReveal((previous) => revealAsked(previous, path));
   };
 
   if (error) return <EmptyState title="Couldn't browse the repository" description={error.message} />;
@@ -103,7 +104,7 @@ export function RepositoryTree({ changesetId, opening, search, detailsKey, onSho
               onToggleDirectory={(directory) => toggle(treeId, directory)}
               onOpenFile={(item) => void openRevision(place, revisionRef(item), item.name)}
               contextMenu={(items) => revisionMenu(place, changesetId, repository, items)}
-              revealPath={revealPath}
+              reveal={reveal}
               onGoToFile={onGoToFile}
             />
           </div>

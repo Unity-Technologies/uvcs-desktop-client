@@ -312,7 +312,8 @@ try {
     // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
     await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
     await window.getByRole('dialog').getByRole('option', { name: /^Changeset 3/ }).click();
-    await main.getByText('src/player.cs', { exact: true }).first().waitFor();
+    // Visible only: the views shown lately stay mounted, hidden, and may list the same file (`mountedViews`).
+    await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
