@@ -675,7 +675,9 @@ dialog never shows.
 
 What a user sends with a bug report: the windows' command logs end with the session, so main keeps one log file in the
 OS's logs folder for the app (`app.getPath('logs')`: `~/Library/Logs/<app>` on macOS, `logs` in the user data folder on
-Windows and Linux), `uvcs-desktop.log` (`appLog`, `main/diagnostics/`). Help ▸ Show Log Files shows it in the file
+Windows and Linux), `uvcs-desktop.log` (`appLog`, `main/diagnostics/`); an app run from the repository logs in
+`logs` in its user data folder on every OS, so the smoke test's temp folder holds its log. Help ▸ Show Log Files
+shows it in the file
 manager (`showLogFiles`), and the bug report form asks for it (`.github/ISSUE_TEMPLATE/bug_report.yml`, `log-file`).
 It never leaves the device by itself.
 
