@@ -7,6 +7,7 @@ import { lineOfRow, topProbePoints, type LineAtTop } from './rowPosition';
 import { lineRowSelector, pierreShadowRoot } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
 import { scrollSmoothlyTo } from './smoothScrollPlan';
+import { stopOnUserScroll } from './userScrollStop';
 
 /** What the diff's navigation asks of the diff on screen (`TextDiff`). */
 export interface ChangeView {
@@ -31,8 +32,8 @@ const MAX_FRAMES = 60;
 /**
  * Scrolls the diff in `container` so the change starts a few rows from the top, unless it's in view already
  * (`ChangeScroll`). A big diff renders only the lines in view: a change not rendered yet is scrolled to where Pierre
- * lays it out, then placed again on each frame until it stands still (`changeScrollStep`). Returns a function that stops
- * it.
+ * lays it out, then placed again on each frame until it stands still (`changeScrollStep`) or the user moves the view
+ * (`stopOnUserScroll`). Returns a function that stops it.
  */
 export function scrollToChange(container: HTMLElement, change: ChangeRegion, virtualizer: Virtualizer | undefined, why: ChangeScroll): () => void {
   let frames = 0;
@@ -56,14 +57,23 @@ export function scrollToChange(container: HTMLElement, change: ChangeRegion, vir
     });
     state = decided.state;
     const { step } = decided;
-    if (step.kind === 'done') return;
-    if (step.kind === 'rows') return scrollToRows(container, first!, lastRows(root!, change), step.smooth);
+    if (step.kind === 'done') return stopListening();
+    if (step.kind === 'rows') {
+      stopListening();
+      return scrollToRows(container, first!, lastRows(root!, change), step.smooth);
+    }
     if (step.kind === 'jump') container.scrollTop = estimatedTop! - placeOffset;
     if (step.kind === 'place') container.scrollTop = step.scrollTop;
     if (++frames < MAX_FRAMES) frame = requestAnimationFrame(attempt);
+    else stopListening();
   };
+  const stop = (): void => {
+    cancelAnimationFrame(frame);
+    stopListening();
+  };
+  const stopListening = stopOnUserScroll(container, stop);
   attempt();
-  return () => cancelAnimationFrame(frame);
+  return stop;
 }
 
 /**
