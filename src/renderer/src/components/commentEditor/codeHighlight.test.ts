@@ -33,7 +33,7 @@ describe('fencedCodeIn, for a suggestion', () => {
 
 describe('fencedCodeIn, for a block too big to highlight', () => {
   it('leaves a pasted log past the comments’ limit plain, as the shown comment does', () => {
-    // One long line: the parse reads it at once, where thousands of lines would take it past its time budget.
+    // One long line, past the comments' limit: thousands of lines would only make the parse slower.
     const log = 'Build step done. '.repeat(1250);
     expect(fencedCodeIn(editorState(`\`\`\`text\n${log}\n\`\`\``))).toEqual([]);
   });
