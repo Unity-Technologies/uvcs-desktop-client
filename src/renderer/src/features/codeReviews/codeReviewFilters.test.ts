@@ -6,7 +6,7 @@ import { compactFilter } from '../../lib/compactFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
-import { codeReviewsQuery, isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, showsStateChip, stateUnderKind, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { codeReviewsListQuery, codeReviewsQuery, isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, showsStateChip, stateUnderKind, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
 
 const today = new Date(2026, 8, 25);
@@ -49,6 +49,13 @@ describe('the State chip', () => {
   const of = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', id: number) => codeReviewSummary({ id, mergeRequest: { state, destination: '/main' } });
   const all = [plain, of('Draft', 2), of('Open', 3), of('Merged', 4), of('Closed', 5)];
   const kept = (state: Parameters<typeof matchesState>[1]) => all.filter((review) => matchesState(review, state)).map((review) => review.id);
+
+  it("reads the list under the Kind chip's state: with Code reviews alone, the State chip's left over asks for no state", () => {
+    const merged = { ...ASKED, kind: 'codeReviews', mergeRequestState: 'merged' } as const;
+    expect(compactFilter(codeReviewsListQuery(merged, today))).toEqual(compactFilter(codeReviewsQuery({ ...ASKED, mergeRequestState: 'all' }, today)));
+    expect(codeReviewsListQuery({ ...merged, kind: 'mergeRequests' }, today).mergeRequestState).toBe('Merged');
+    expect(codeReviewsListQuery({ ...merged, kind: 'any' }, today).mergeRequestState).toBe('Merged');
+  });
 
   it('asks the server for Merged and Closed, and for no state under Active and All, which share one query', () => {
     expect(codeReviewsQuery({ ...ASKED, mergeRequestState: 'merged' }, today).mergeRequestState).toBe('Merged');

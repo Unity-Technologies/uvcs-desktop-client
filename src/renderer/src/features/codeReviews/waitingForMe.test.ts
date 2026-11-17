@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { waitingBadge, waitingCount, waitingForMe, waitingForMeTip } from './waitingForMe';
+import { badgeReadsReviews, waitingBadge, waitingCount, waitingForMe, waitingForMeTip } from './waitingForMe';
 
 describe('whether a review waits for the user', () => {
   it('waits for a reviewer whose own status is Under review, whatever the review as a whole says', () => {
@@ -69,6 +69,17 @@ describe('waitingBadge', () => {
     expect(waitingBadge([asked, reviewed], 'ana')).toEqual({ count: 1 });
     expect(waitingBadge([reviewed], 'ana')).toBeUndefined();
     expect(waitingBadge(undefined, 'ana')).toBeUndefined();
+  });
+});
+
+describe('badgeReadsReviews', () => {
+  it("reads the sidebar's count as a workspace opens, once its first screen is in, so it never competes with the window's first data", () => {
+    expect(badgeReadsReviews({ hasWorkspace: true, firstScreenRead: false })).toBe(false);
+    expect(badgeReadsReviews({ hasWorkspace: true, firstScreenRead: true })).toBe(true);
+  });
+
+  it('reads it at once in a window on a repository, which reads no pending changes to wait for', () => {
+    expect(badgeReadsReviews({ hasWorkspace: false, firstScreenRead: false })).toBe(true);
   });
 });
 

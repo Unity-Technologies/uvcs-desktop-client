@@ -49,3 +49,12 @@ export function waitingBadge(reviews: readonly WaitingFields[] | undefined, user
   const count = reviews ? waitingCount(reviews, user) : 0;
   return count > 0 ? { count } : undefined;
 }
+
+/**
+ * Whether the sidebar's count reads the reviews (`useWaitingForMeBadge`): in a workspace, once its first screen is in
+ * (`firstScreenRead`: the pending changes read, or their read failed), so the read never competes with the window's first
+ * data; on a repository, at once, as it reads no pending changes to wait for.
+ */
+export function badgeReadsReviews({ hasWorkspace, firstScreenRead }: { hasWorkspace: boolean; firstScreenRead: boolean }): boolean {
+  return !hasWorkspace || firstScreenRead;
+}
