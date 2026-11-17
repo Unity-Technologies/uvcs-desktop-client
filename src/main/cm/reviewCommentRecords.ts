@@ -1,4 +1,4 @@
-import { MERGE_REQUEST_STATES, type CodeReviewStatus, type MergeRequestState } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, MERGE_REQUEST_STATES, type CodeReviewStatus, type MergeRequestState } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewCommentKind, ReviewConversation, ReviewEventChange } from '@shared/domain/reviewConversation';
 import { foundObjects } from './foundObjects';
 import { integerValue } from './formatRecords';
@@ -126,7 +126,8 @@ function kindOf(record: RawReviewComment): ReviewCommentKind {
  * reviewers, separated by `;` (an older server wrote `[requested-review-from-<id>]`, which names no one readable).
  */
 function eventChangeOf({ text, guid }: RawReviewComment): ReviewEventChange {
-  for (const [prefix, status] of STATUS_PREFIXES) {
+  for (const status of CODE_REVIEW_STATUSES) {
+    const prefix = STATUS_PREFIXES[status];
     if (text.startsWith(prefix)) return { kind: 'statusChanged', status, comment: text.slice(prefix.length), guid };
   }
   if (text.startsWith('[renamed-title]')) {
@@ -180,11 +181,19 @@ function integerOrUndefined(text: string): number | undefined {
   return /^\d+$/.test(text.trim()) ? Number.parseInt(text.trim(), 10) : undefined;
 }
 
-const STATUS_PREFIXES: ReadonlyArray<readonly [string, CodeReviewStatus]> = [
-  ['[status-under-review]', 'Under review'],
-  ['[status-reviewed]', 'Reviewed'],
-  ['[status-rework-required]', 'Rework required'],
-];
+const STATUS_PREFIXES: Readonly<Record<CodeReviewStatus, string>> = {
+  'Under review': '[status-under-review]',
+  Reviewed: '[status-reviewed]',
+  'Rework required': '[status-rework-required]',
+};
+
+/**
+ * What a reviewer said with their status, as the server stores it: behind the status's prefix, which `cm codereview
+ * comment edit` writes as given (it puts back only a description's), so an edit that left it out would lose the status.
+ */
+export function statusCommentText(status: CodeReviewStatus, comment: string): string {
+  return STATUS_PREFIXES[status] + comment;
+}
 
 const TITLE_SEPARATOR = '#->#';
 

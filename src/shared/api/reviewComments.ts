@@ -1,3 +1,4 @@
+import type { CodeReviewStatus } from '../domain/codeReview';
 import type { Place } from '../domain/place';
 import type { NewLineComment, ReviewConversation } from '../domain/reviewConversation';
 
@@ -11,6 +12,8 @@ export interface ReviewCommentsApi {
   /** `discard`: the reply discards the change request it answers, saying why. */
   reply(place: Place, commentGuid: string, text: string, options?: { discard?: boolean }): Promise<void>;
   edit(place: Place, commentGuid: string, text: string): Promise<void>;
+  /** Edits what a reviewer said with their status (a `statusChanged` event's `guid`), the status kept. */
+  editStatusComment(place: Place, commentGuid: string, status: CodeReviewStatus, text: string): Promise<void>;
   remove(place: Place, commentGuid: string): Promise<void>;
   /** Marks a change request applied in a changeset of the review's repository, by hand. */
   markApplied(place: Place, changeRequestGuid: string, changesetId: number): Promise<void>;
