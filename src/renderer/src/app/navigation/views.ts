@@ -35,6 +35,11 @@ export function firstViewOf(place: Place): ViewId {
   return place.kind === 'workspace' ? 'changes' : 'branchExplorer';
 }
 
+/** `view` where the place shows it, else the place's first view: a view asked for from outside the window. */
+export function viewShownIn(place: Place, view: ViewId): ViewId {
+  return showsView(place, view) ? view : firstViewOf(place);
+}
+
 /** Whether `value`, read from outside the page (its address), names a view. */
 export function isViewId(value: string): value is ViewId {
   return (VIEW_IDS as readonly string[]).includes(value);

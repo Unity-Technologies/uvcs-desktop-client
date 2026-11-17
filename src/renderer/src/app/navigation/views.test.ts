@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
-import { firstViewOf, showsPage, showsView, VIEW_IDS, viewCommandId, viewListCommandId, viewOfListCommand } from './views';
+import { firstViewOf, showsPage, showsView, VIEW_IDS, viewCommandId, viewShownIn, viewListCommandId, viewOfListCommand } from './views';
 
 const inWorkspace = workspacePlace('/wk/game');
 const inRepository = repositoryPlace('game@local');
@@ -39,5 +39,13 @@ describe("what a page window asks its workspace window for a view", () => {
   it('is no view for any other command, or a view that no longer exists', () => {
     expect(viewOfListCommand('changes.checkin')).toBeNull();
     expect(viewOfListCommand('goto.nowhere.list')).toBeNull();
+  });
+});
+
+describe('a view asked for from outside the window', () => {
+  it("is the place's first view where the place doesn't show it: a repository explored has no Changes", () => {
+    expect(viewShownIn(repositoryPlace('demo@local'), 'changes')).toBe('branchExplorer');
+    expect(viewShownIn(repositoryPlace('demo@local'), 'locks')).toBe('locks');
+    expect(viewShownIn(workspacePlace('/ws'), 'changes')).toBe('changes');
   });
 });
