@@ -10,6 +10,9 @@ const PLACE = 3 * ROW;
 const frame = (overrides: Partial<ChangeScrollFrame>): ChangeScrollFrame => ({
   why: 'move',
   rowOffset: null,
+  placeOffset: PLACE,
+  scrollTop: 0,
+  maxScroll: 30_000,
   viewHeight: VIEW_HEIGHT,
   canJump: true,
   ...overrides,
@@ -32,6 +35,31 @@ describe('changeScrollStep', () => {
 
   it('leaves a diff opening on a change that starts in view where it is', () => {
     expect(changeScrollStep(CHANGE_SCROLL_START, frame({ why: 'open', rowOffset: 100 })).step).toEqual({ kind: 'done' });
+  });
+
+  it('after a jump, places the change again until it stands in its place two frames in a row', () => {
+    const jumped = changeScrollStep(CHANGE_SCROLL_START, frame({})).state;
+    const moved = changeScrollStep(jumped, frame({ rowOffset: 1700, scrollTop: 4000 }));
+    expect(moved.step).toEqual({ kind: 'place', scrollTop: 4000 + 1700 - PLACE });
+    const once = changeScrollStep(moved.state, frame({ rowOffset: PLACE, scrollTop: 5640 }));
+    expect(once.step).toEqual({ kind: 'wait' });
+    const movedAgain = changeScrollStep(once.state, frame({ rowOffset: PLACE + 40, scrollTop: 5640 }));
+    expect(movedAgain.step).toEqual({ kind: 'place', scrollTop: 5680 });
+    const settling = changeScrollStep(movedAgain.state, frame({ rowOffset: PLACE, scrollTop: 5680 }));
+    expect(settling.step).toEqual({ kind: 'wait' });
+    expect(changeScrollStep(settling.state, frame({ rowOffset: PLACE, scrollTop: 5680 })).step).toEqual({ kind: 'done' });
+  });
+
+  it('after a jump, places a change in view too, rather than leave it where the estimate put it', () => {
+    const jumped = changeScrollStep(CHANGE_SCROLL_START, frame({ why: 'open' })).state;
+    expect(changeScrollStep(jumped, frame({ why: 'open', rowOffset: 400, scrollTop: 3600 })).step).toEqual({ kind: 'place', scrollTop: 3940 });
+  });
+
+  it('settles at the end of the content, where a change near the end of the file stands lower', () => {
+    const jumped = changeScrollStep(CHANGE_SCROLL_START, frame({})).state;
+    const atEnd = changeScrollStep(jumped, frame({ rowOffset: 500, scrollTop: 9000, maxScroll: 9000 }));
+    expect(atEnd.step).toEqual({ kind: 'wait' });
+    expect(changeScrollStep(atEnd.state, frame({ rowOffset: 500, scrollTop: 9000, maxScroll: 9000 })).step).toEqual({ kind: 'done' });
   });
 
   it('scrolls a diff opening on a change below the view to its rows, at once', () => {
@@ -57,6 +85,12 @@ describe('scrolling to a change, frame by frame, in a diff laid out as Pierre do
     const diff = new FakePierreDiff({ lines: 800, wrapped: everyOther(800) });
     expect(scrollToChangeIn(diff, 187, why)).toBe(PLACE);
   });
+
+  it('brings a change below wrapped lines as far up as the end of the content lets it', () => {
+    const diff = new FakePierreDiff({ lines: 800, wrapped: everyOther(800) });
+    expect(scrollToChangeIn(diff, 795, 'move')).toBe(diff.estimatedTop(795) - diff.maxScroll());
+    expect(diff.scrollTop).toBe(diff.maxScroll());
+  });
 });
 
 function everyOther(lines: number): number[] {
@@ -71,7 +105,7 @@ function everyOther(lines: number): number[] {
 function scrollToChangeIn(diff: FakePierreDiff, line: number, why: ChangeScroll): number | null {
   let state = CHANGE_SCROLL_START;
   for (let frames = 0; frames < 60; frames++) {
-    const decided = changeScrollStep(state, frame({ why, rowOffset: diff.rowOffset(line) }));
+    const decided = changeScrollStep(state, frame({ why, rowOffset: diff.rowOffset(line), scrollTop: diff.scrollTop, maxScroll: diff.maxScroll() }));
     state = decided.state;
     if (finishes(decided.step, diff, line)) break;
     diff.render();
@@ -94,6 +128,9 @@ function finishes(step: ChangeScrollStep, diff: FakePierreDiff, line: number): b
       if (offset < 0 || offset + diff.height(line) > VIEW_HEIGHT) diff.scrollTop += offset - PLACE;
       return true;
     }
+    case 'place':
+      diff.scrollTop = step.scrollTop;
+      return false;
     case 'wait':
       return false;
   }
@@ -132,10 +169,14 @@ class FakePierreDiff {
     return line >= this.rendered.first && line <= this.rendered.last ? this.estimatedTop(line) - this.scrollTop : null;
   }
 
+  maxScroll(): number {
+    return Math.max(0, this.estimatedTop(this.lines + 1) - VIEW_HEIGHT);
+  }
+
   /** Renders the rows in view and a view's worth around them, measuring their heights. */
   render(): void {
     const overscan = VIEW_HEIGHT;
-    this.scrollTop = Math.min(Math.max(0, this.scrollTop), Math.max(0, this.estimatedTop(this.lines + 1) - VIEW_HEIGHT));
+    this.scrollTop = Math.min(Math.max(0, this.scrollTop), this.maxScroll());
     let first = 0;
     let last = 0;
     for (let line = 1; line <= this.lines; line++) {

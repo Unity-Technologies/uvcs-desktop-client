@@ -49,9 +49,13 @@ export function scrollToChange(container: HTMLElement, change: ChangeRegion, vir
     const fileContainer = container.querySelector('diffs-container');
     const estimatedTop = virtualizer && fileContainer ? pierreLinePosition(virtualizer, fileContainer, change.lines[0]!) : undefined;
     const view = container.getBoundingClientRect();
+    const placeOffset = CONTEXT_ROWS * rowHeight(first ?? root?.querySelector('[data-line]'));
     const decided = changeScrollStep(state, {
       why,
       rowOffset: first ? first.getBoundingClientRect().top - view.top : null,
+      placeOffset,
+      scrollTop: container.scrollTop,
+      maxScroll: container.scrollHeight - container.clientHeight,
       viewHeight: view.height,
       canJump: estimatedTop !== undefined,
     });
@@ -59,7 +63,8 @@ export function scrollToChange(container: HTMLElement, change: ChangeRegion, vir
     const { step } = decided;
     if (step.kind === 'done') return;
     if (step.kind === 'rows') return scrollToRows(container, first!, lastRows(root!, change), step.smooth);
-    if (step.kind === 'jump') container.scrollTop = estimatedTop! - CONTEXT_ROWS * rowHeight(root?.querySelector('[data-line]'));
+    if (step.kind === 'jump') container.scrollTop = estimatedTop! - placeOffset;
+    if (step.kind === 'place') container.scrollTop = step.scrollTop;
     if (++frames < MAX_FRAMES) frame = requestAnimationFrame(attempt);
   };
   attempt();
