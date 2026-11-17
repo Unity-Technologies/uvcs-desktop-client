@@ -32,14 +32,14 @@ describe('focusScrollTop', () => {
 });
 
 describe('placedScrollTop', () => {
-  it('puts an element a quarter down the viewport, on screen or not', () => {
-    expect(placedScrollTop(2000, PANE, LONG)).toBe(2000 - PANE / 4);
-    expect(placedScrollTop(400, PANE, LONG)).toBe(400 - PANE / 4);
+  it('puts an element a fifth down the viewport, on screen or not', () => {
+    expect(placedScrollTop(2000, PANE, LONG)).toBe(2000 - PANE / 5);
+    expect(placedScrollTop(400, PANE, LONG)).toBe(400 - PANE / 5);
   });
 
-  it('puts the top of a card taller than two-thirds of the viewport a quarter down too, not bottom-aligned', () => {
+  it('puts the top of a card taller than two-thirds of the viewport a fifth down too, not bottom-aligned', () => {
     // A card taller than the viewport: its top, not its end, is what a reader needs.
-    expect(placedScrollTop(5000, PANE, LONG)).toBe(5000 - PANE / 4);
+    expect(placedScrollTop(5000, PANE, LONG)).toBe(5000 - PANE / 5);
   });
 
   it('never scrolls above the top, or past the end of the content', () => {

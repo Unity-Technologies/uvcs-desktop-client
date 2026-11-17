@@ -35,19 +35,19 @@ export function listScrollTop(card: Placed, view: { scrollTop: number; height: n
 }
 
 /**
- * Where to scroll so an element's top sits a quarter down the viewport, whatever its height: it reads with what follows
+ * Where to scroll so an element's top sits a fifth down the viewport, whatever its height: it reads with what follows
  * it, even when it was already on screen. Only the scroll range's ends stop it short, so an element taller than the
  * viewport shows its top. (`focusScrollTop` bottom-aligns a tall card, which is right for a comment in its context,
  * not for navigating to a thread.)
  */
-const PLACED_FROM_TOP = 4;
+const PLACED_FROM_TOP = 5;
 
 export function placedScrollTop(elementTop: number, viewHeight: number, contentHeight: number): number {
   return Math.min(Math.max(elementTop - viewHeight / PLACED_FROM_TOP, 0), Math.max(contentHeight - viewHeight, 0));
 }
 
 /**
- * Brings an element into view the way every navigation to a thing does (a thread, a comment): its top a quarter down the
+ * Brings an element into view the way every navigation to a thing does (a thread, a comment): its top a fifth down the
  * viewport (`placedScrollTop`). `behavior` is `smooth` for a glide, `auto` at once.
  */
 export function placeInView(element: HTMLElement, behavior: ScrollBehavior): void {

@@ -1169,7 +1169,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
   clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
 - **Going to a thing**: navigating to a thread or comment in a code review's conversation (`placeInView`) places its top
-  a quarter down the viewport, even when it was already on screen and however tall it is, so it reads with what follows
+  a fifth down the viewport, even when it was already on screen and however tall it is, so it reads with what follows
   it; the top and the bottom of the scroll range stop it short (`placedScrollTop` in `lib/scrollPlacement.ts`). Not
   `focusScrollTop`, which bottom-aligns a card taller than two-thirds of the viewport, right for a comment shown in its
   context, not for going to it.

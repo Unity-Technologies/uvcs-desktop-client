@@ -110,7 +110,7 @@ export function pickedElementId(pick: ThreadPick): string {
 
 /**
  * How the conversation glides to the picked thread: a pick in Open glides, the page opened at one jumps at once. Either
- * way it lands a quarter down the viewport (`placeInView`), even when already on screen.
+ * way it lands a fifth down the viewport (`placeInView`), even when already on screen.
  */
 export function pickedBehaviorOf(pick: ThreadPick): ScrollBehavior {
   return pick.by === 'rail' ? 'smooth' : 'auto';

@@ -239,7 +239,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedBehaviorOf`, `placeInView`): from Open it glides, the page opened at it jumps at once, and either way
-  its card lands a quarter down the viewport, even when already on screen (ARCHITECTURE.md "Going to a thing"). It's unfolded, lit for a moment
+  its card lands a fifth down the viewport, even when already on screen (ARCHITECTURE.md "Going to a thing"). It's unfolded, lit for a moment
   and ringed in the accent until another is gone to, as a thread selected in the code is (`threadMarkOf`: the card's
   `highlight` and `selected`); its Open entry keeps the Comments panel's accent bar. Each pick counts, so going to the
   thread already on screen, or to the same one again, lights it again: without it, a click on what's already in view
@@ -337,7 +337,7 @@ command of its own.
   file's link in the conversation does (`commentLocationPage`): under its line, or among the outdated above the code
   for one on an earlier version whose line changed. The thread shows whole, its replies with it; the reply isn't lit
   there, the thread is.
-- A comment on the whole review opens the conversation at its thread, a quarter down, unfolded, lit and ringed, as "Show in
+- A comment on the whole review opens the conversation at its thread, a fifth down, unfolded, lit and ringed, as "Show in
   conversation" does. A reply opens it at the reply (`focusReply`, `pickOnFocus`'s `replyId`): the reply brought into
   view and lit rather than the whole card (`threadMarkOf`'s `litReply`, `pickedElementId`), its round unfolded. The
   card decides what it lights from its props (`cardLightOf`), so one mounting at the reply, a link opened cold, lights
