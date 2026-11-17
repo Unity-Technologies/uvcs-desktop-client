@@ -234,8 +234,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   author did to themselves reads so ("added themselves as a reviewer", "left the reviewers"). Beside it, the
   reviewers (see "Reviewers and their status"), **Open**: the change requests and questions still open
   (`ReviewSideRail`, `openItemsOf`), **Notifications** (see "Email notifications") and, for a review of a branch,
-  **Branch attributes**, edited in place (`BranchAttributesSection`, `AttributeChips`; hidden with nothing to show or
-  add, `useAttributesShown`).
+  **Branch attributes**, edited in place as the branch's details show them, Add at the title's right and "No
+  attributes" when it has none, without the details' card (`BranchAttributesSection`, `useAttributesSection`; hidden
+  with nothing to show or add, `attributesSectionOf`).
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedScrollOf`): from Open, only as far as it must, a card on screen staying where it is and one off

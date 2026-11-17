@@ -125,18 +125,19 @@ export function suggestedValues(defaults: string[], used: string[]): string[] {
 /**
  * Whether an object's attribute chips have anything to show: until its values are read (they show loading), any value,
  * or any attribute type to add. A server with no attribute types and an object with none shows nothing, so a section
- * titled for them hides (`useAttributesShown`).
+ * titled for them hides (`attributesSectionOf`).
  */
 export function hasAttributesToShow(values: readonly unknown[] | undefined, types: readonly unknown[]): boolean {
   return values === undefined || values.length > 0 || types.length > 0;
 }
 
 /**
- * What an object's Attributes section in a details panel shows (`AttributesDetailsSection`): `hidden` when there's
+ * What an object's attributes section shows, in a details panel (`AttributesDetailsSection`) or the review page's rail
+ * (`BranchAttributesSection`): `hidden` when there's
  * nothing to show or add (`hasAttributesToShow`), and while the values are read on a server with no attribute types,
  * so no section flashes on every selection there (a value whose type is gone shows once read); `reading`, a
  * placeholder, until the values are read; `none`, "No
- * attributes", when the object has no value; `chips`, the values, the one being added among them. Each is the card
+ * attributes", when the object has no value; `chips`, the values, the one being added among them. Each is what's
  * under its title, so the section keeps its shape and its Add stays at the title's right whatever it holds.
  */
 export interface AttributesSection {
