@@ -192,8 +192,9 @@ what acts on two changesets orders them by id (`intervalMenu`).
 A right-click on something selected keeps the selection (`selectedOnContextClick`), and its menu is the lists' menu
 for all of it (`graphMenu`'s `selectionMenu`): two changesets get their diff, more get none; branches get Hide and
 Delete for all; labels get Delete for all and the diff of two. A right-click elsewhere selects that first and gets
-its own menu: the pending changes' opens Changes, a merge in progress' goes to its source changeset. What has no
-actions (a "+N" node, three changesets) opens no menu, never an empty one (`GraphCanvas`'s `onContextMenu`). The keys that act on one object (Enter, Shift+Enter, M) act on the lead and leave it alone selected,
+its own menu: the pending changes' opens Changes, a merge in progress' goes to its source changeset. What has
+no actions (a "+N" node, three changesets) opens no menu, never an empty one (`GraphCanvas`'s `onContextMenu`).
+The keys that act on one object (Enter, Shift+Enter, M) act on the lead and leave it alone selected,
 so the graph shows which (`onLead` in `graphKeyboard.ts`); the menu key (Shift+F10) opens the whole selection's menu.
 Several selected keep only what the graph still shows once it is laid out again (`selectionsLaidOut`), so a branch
 just hidden or deleted leaves the selection. The details panel and screen readers say how many are selected (`severalSelected`) instead of one
