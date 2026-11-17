@@ -153,7 +153,9 @@ there and does nothing, as its command isn't registered.
 
 A partial workspace has loaded no one changeset (`cm` reports none), so New label in Labels asks which changeset to
 label first, as a repository with no workspace does (`newLabel`, `labelsWorkspaceChangeset`): `cm` refuses to label the
-workspace's own. It downloads an xlink whole, as a file, when Choose what to download… picks it, so Files offers no
+workspace's own. Files offers no New xlink… (`newXlinkDirectoryOf`): `cm partial checkin` refuses a new xlink,
+whatever it points to, even downloaded first, and `cm checkin` refuses a partial workspace; an xlink already checked
+in, and downloaded, is edited and checked in there as anywhere. It downloads an xlink whole, as a file, when Choose what to download… picks it, so Files offers no
 Load its files on an xlink there (`unloadedXlinkOf`), and the toast after creating one offers Choose what to
 download… for its files instead (`createdXlinkMessage`). A switch to a changeset, a label or a shelve stays offered and
 says to download the whole branch first ("Making a partial workspace standard").

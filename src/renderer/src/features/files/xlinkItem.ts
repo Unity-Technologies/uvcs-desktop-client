@@ -55,9 +55,15 @@ export function isUnderXlink(path: string, listing: (directory: string) => reado
  * The folder a new xlink made from an item goes into: the item itself, or a file's folder. Only a controlled folder
  * of the workspace's own repository takes one (`cm`: "is not in a workspace"), so none from a private item, whose
  * folder may be private too, nor from an xlink or anything under one: the new one would go in the xlinked repository.
+ * None in a partial workspace either: `cm partial checkin` refuses a new xlink, whatever it points to, and `cm
+ * checkin` refuses a partial workspace (docs/features/partial-workspaces.md). One already checked in edits there.
  */
-export function newXlinkDirectoryOf(item: Pick<TreeItem, 'path' | 'itemType' | 'isPrivate' | 'xlink' | 'repository'>, where: XlinkSurroundings): string | null {
-  if (item.isPrivate || item.xlink || where.underXlink) return null;
+export function newXlinkDirectoryOf(
+  item: Pick<TreeItem, 'path' | 'itemType' | 'isPrivate' | 'xlink' | 'repository'>,
+  where: XlinkSurroundings,
+  workspaceKind: WorkspaceKind | undefined,
+): string | null {
+  if (workspaceKind === 'partial' || item.isPrivate || item.xlink || where.underXlink) return null;
   if (where.workspaceRepository && item.repository && item.repository !== where.workspaceRepository) return null;
   return item.itemType === 'directory' ? item.path : parentOf(item.path);
 }

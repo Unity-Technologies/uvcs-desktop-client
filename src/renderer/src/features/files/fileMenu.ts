@@ -95,7 +95,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const directory = targetDirectoryFor(single ?? undefined);
   const workspace = queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey);
   const surroundings = single && xlinkSurroundingsOf(workspacePath, single, workspace?.repository);
-  const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings);
+  const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings, workspace?.kind);
   const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
   const unloadedXlink =
     single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path), workspaceKind: workspace?.kind });
