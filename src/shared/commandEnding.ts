@@ -1,4 +1,4 @@
-import type { CommandLogEntry } from '@shared/events';
+import type { CommandLogEntry } from './events';
 
 /**
  * The exit code main logs for a command that ended without one of its own: `cm` not found, stopped on a prompt, or

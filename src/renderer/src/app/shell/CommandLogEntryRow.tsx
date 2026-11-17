@@ -3,7 +3,7 @@ import { Copy } from 'lucide-react';
 import { memo } from 'react';
 import { withControlPictures } from '../../lib/controlPictures';
 import { Highlight } from '../../ui/Highlight';
-import { entryEnding } from './commandEnding';
+import { entryEnding } from '@shared/commandEnding';
 import { FoldableCommandLine } from './FoldableCommandLine';
 import styles from './CommandLogPanel.module.css';
 
