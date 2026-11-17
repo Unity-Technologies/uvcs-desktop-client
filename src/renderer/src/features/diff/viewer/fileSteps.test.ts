@@ -158,6 +158,13 @@ describe('fileSteps', () => {
     expect(selected).toEqual(['b']);
   });
 
+  it('names the file a step would go to, selecting nothing, and none past the ends', () => {
+    const { steps, selected } = list('b');
+    expect([steps.neighbor(-1), steps.neighbor(1)]).toEqual(['src/a.ts', 'src/c.ts']);
+    expect(list('c').steps.neighbor(1)).toBeNull();
+    expect(selected).toEqual([]);
+  });
+
   it('selects nothing past the ends', () => {
     const { steps, selected } = list('c');
     expect(steps.canStep(1)).toBe(false);
