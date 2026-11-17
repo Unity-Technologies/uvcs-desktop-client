@@ -1140,7 +1140,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     sidebar, ⌘1… and the palette's Go to return to a view as it was left (`navigation.returnToView`), and to its list
     when it is the view shown. Every other way into a view (a link, "View changes", "Show in Locks", a toast) shows its
     list, closing the pages it was left with (`navigation.goToView`): it goes there to show something in the list. A
-    page window asks its workspace window for one or the other (`viewCommandId`, `viewListCommandId`). Another place
+    page window asks its workspace window for one or the other (`viewCommandId`, `viewListCommandId`); a view its
+    place doesn't show gives the place's first (`viewShownIn`). Another place
     opening while unsaved edits are asked about keeps nothing of the place left.
     Leaving a view still settles unsaved edits first (`afterLeaving`), so a view set aside never holds any. A merge in
     progress belongs to no view: a view keeps only the pages under it. Another place opening forgets them all; the
@@ -1153,8 +1154,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     observer, so past their `gcTime` (five minutes) or the bound on unused ones (`boundUnusedQueries`) they're
     dropped: a view shown again after that reads them anew, showing as loading, its own state (tab, selection, typed
     text) kept. Effects that scroll to a value run for new values only (`useNewValuesEffect`), never because the
-    view shows again; a table shows a selection made while it was hidden (`anchorChangedWhileHidden`: Show in
-    Locks). A view past them unmounts and comes back from its pages alone. What's kept hidden is in the DOM: code looks elements up within itself, never by
+    view shows again; a row asked for again is a new request (`RowReveal`, `revealAsked`, `DataTable`'s
+    `revealCount`: Go to file on the file selected), and a table shows a selection set while it was hidden, the row
+    already selected too (`selectionSetWhileHidden`, as `selectInView` sets one: Show in Locks). A view past them unmounts and comes back from its pages alone. What's kept hidden is in the DOM: code looks elements up within itself, never by
     a document-wide id (a review's conversation, `elementById`), and checks what shows (`checkVisibility`, as
     `focusMain` does).
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
