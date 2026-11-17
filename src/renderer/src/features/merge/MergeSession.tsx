@@ -1,6 +1,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import { Folder } from 'lucide-react';
+import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -18,6 +19,7 @@ import { FileStepsContext, selectNow, useFileSteps } from '../diff/viewer/fileSt
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
+import { offersResolvingInWorkspace } from '../mergeTask/resolveTaskInWorkspace';
 import { TaskMergeOptions } from '../mergeTask/TaskMergeOptions';
 import { useFinishingTask } from '../mergeTask/useFinishingTask';
 import { conflictedFilesOf } from './conflictedFiles';
@@ -84,6 +86,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
 
   const intoServerBranch = Boolean(request.destinationBranch);
   const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
+  const workspaceKind = useWorkspaceInfoOf(workspacePath).data?.kind;
   // Thousands of items, from the plan and the directory decisions alone: sorted and laid out once, not again for every
   // version loaded or file decided, which change only the progress the rows read.
   const items = useMemo(() => buildMergeItems(plan, directory.decisions, conflictedFiles), [plan, directory.decisions, conflictedFiles]);
@@ -201,7 +204,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
           options={finishing && <TaskMergeOptions mergeRequest={finishing.task.mergeRequest} review={finishing.review} user={finishing.user} choices={taskChoices} onChange={setTaskChoices} />}
           alternative={
             task &&
-            conflicting &&
+            offersResolvingInWorkspace({ conflicting, workspacePath, workspaceKind }) &&
             request.destinationBranch && <ResolveInWorkspaceMenu workspacePath={workspacePath} sourceSpec={request.sourceSpec} destination={request.destinationBranch} task={task} />
           }
           mergeButtonRef={mergeButtonRef}
