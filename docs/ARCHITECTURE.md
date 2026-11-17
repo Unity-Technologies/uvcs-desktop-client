@@ -1139,7 +1139,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - **Views keep their place**: each view keeps the pages it was left with (`KeptViews`, `switchedViews`). The
     sidebar, ⌘1… and the palette's Go to return to a view as it was left (`navigation.returnToView`), and to its list
     when it is the view shown. Every other way into a view (a link, "View changes", "Show in Locks", a toast) shows its
-    list, closing the pages it was left with (`navigation.goToView`): it goes there to show something in the list.
+    list, closing the pages it was left with (`navigation.goToView`): it goes there to show something in the list. A
+    page window asks its workspace window for one or the other (`viewCommandId`, `viewListCommandId`). Another place
+    opening while unsaved edits are asked about keeps nothing of the place left.
     Leaving a view still settles unsaved edits first (`afterLeaving`), so a view set aside never holds any. A merge in
     progress belongs to no view: a view keeps only the pages under it. Another place opening forgets them all; the
     home screen between two visits of one place doesn't.
@@ -1147,8 +1149,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     with their top page, each in an `Activity` (`PlaceLayout`, `KeptView`), in the sidebar's order so none moves.
     Hidden, a view keeps its DOM and React state (a list's scroll and filter, a review's tab, its picked thread, what
     was typed) while its effects stop: no shortcut, watcher or query observer runs, so it asks `cm` nothing. Shown
-    again, it reads what went stale as a view mounted anew would, and nothing else. A view past them unmounts and
-    comes back from its pages alone. What's kept hidden is in the DOM: code looks elements up within itself, never by
+    again, it reads what went stale as a view mounted anew would, and nothing else. Hidden, its queries have no
+    observer, so past their `gcTime` (five minutes) or the bound on unused ones (`boundUnusedQueries`) they're
+    dropped: a view shown again after that reads them anew, showing as loading, its own state (tab, selection, typed
+    text) kept. Effects that scroll to a value run for new values only (`useNewValuesEffect`), never because the
+    view shows again; a table shows a selection made while it was hidden (`anchorChangedWhileHidden`: Show in
+    Locks). A view past them unmounts and comes back from its pages alone. What's kept hidden is in the DOM: code looks elements up within itself, never by
     a document-wide id (a review's conversation, `elementById`), and checks what shows (`checkVisibility`, as
     `focusMain` does).
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
