@@ -44,14 +44,13 @@ export function TimelineEventRow({ event, context }: { event: ShownEvent; contex
           <Avatar user={event.author} size={18} />
           <span className={styles.author}>{displayName(event.author)}</span> {row.text}
           {row.changeset !== undefined && (
+            // One piece when the line wraps: the changeset and the dot that parts its number from the time's
+            // ("at 10 · 5 minutes ago", never "at 10 5 minutes ago").
             <span className={styles.eventChangeset}>
               <ReferenceChip reference={{ kind: 'changeset', id: row.changeset }} source={`cs:${row.changeset}`} plain />
-            </span>
-          )}
-          {/* After a changeset, its number and the time's would read as one ("10 5 minutes ago"): a dot between. */}
-          {row.changeset !== undefined && (
-            <span className={styles.eventSeparator} aria-hidden>
-              ·
+              <span className={styles.eventSeparator} aria-hidden>
+                ·
+              </span>
             </span>
           )}{' '}
           <RelativeTime date={event.date} />
