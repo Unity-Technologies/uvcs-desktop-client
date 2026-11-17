@@ -59,7 +59,7 @@ before.
   line, then "Changeset 4207 · Ana Diaz · 2 hours ago" (a review's status too). An object of the place's
   repository shows only what the window already read, with no command, however it's written (`cs:12@game` reads as
   `cs:12`). Another repository's changeset or label is read as "What a chip reads" says. Nothing read yet, the card
-  says what it is ("Changeset 4207"). The card, as an image's preview, is placed by its chip
+  says what it is ("Changeset 4207"); a file's shows its name, its folder under it (wrapping between folders, `SlashBreakingText`), then its version ("Branch /main"), from `ChipFile`. The card, as an image's preview, is placed by its chip
   (`AnchoredCard`, `hoverCardPosition`) the way the app's tooltips are, never as a popover layer: it takes no keys or
   focus, so Esc still closes a dialog while a card shows (a popover's layer took it; checked by hand in a dialog, as
   no test reaches the layers). A click opens it as its link would (`openReference` → `openLink`):
