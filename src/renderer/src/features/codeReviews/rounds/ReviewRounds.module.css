@@ -71,9 +71,11 @@
 }
 
 .roundLine time {
-  /* Above the fold button, as the changeset: the time's tooltip gives its date. */
+  /* Above the fold button, as the changeset: the time's tooltip gives its date. It doesn't fold the round, so it
+     doesn't promise a click. */
   position: relative;
   z-index: 1;
+  cursor: default;
   flex: none;
   color: var(--text-tertiary);
 }

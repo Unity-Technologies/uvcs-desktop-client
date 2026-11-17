@@ -325,7 +325,6 @@ function roundOf(number: number, closing: ClosingStatus, changesetId: number | u
     open,
     folds: keptFolds ?? open === 0,
   };
-
 }
 
 /**
