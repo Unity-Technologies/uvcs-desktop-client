@@ -11,7 +11,7 @@ import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, useCodeReviewsVie
 
 const today = new Date(2026, 8, 25);
 
-const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', mergeRequestState: 'active', reviewers: EVERYONE, waitingForMe: false, openedByMe: false } as const;
+const ASKED = { since: 'last3Months', people: EVERYONE, status: 'any', mergeRequestState: 'active', reviewers: EVERYONE } as const;
 
 describe('what Merge requests asks the server for', () => {
   it('asks by date alone with the defaults (the last three months), whatever the status or assignment left out', () => {
@@ -24,17 +24,18 @@ describe('what Merge requests asks the server for', () => {
     expect(compactFilter(codeReviewsQuery({ ...ASKED, reviewers: { mine: false, others: ['zoe'] } }, today))).toEqual(compactFilter(codeReviewsQuery(ASKED, today)));
   });
 
-  it('reads every date under Waiting for me: a review waiting for the user for months still waits', () => {
-    expect(codeReviewsQuery({ ...ASKED, waitingForMe: true }, today).sinceDate).toBeUndefined();
-  });
-
-  it("asks for the user's reviews of any date under Opened by me, who else is picked kept as picked", () => {
-    expect(compactFilter(codeReviewsQuery({ ...ASKED, openedByMe: true }, today))).toEqual({ owners: ['me'] });
-    expect(codeReviewsQuery({ ...ASKED, openedByMe: true, people: { mine: false, others: ['zoe'] } }, today).owners).toEqual(['zoe']);
+  it('asks the same under Waiting for me and Opened by me: they keep the reviews read, so their counts are what pressing them shows', () => {
+    const asked = compactFilter(codeReviewsQuery(ASKED, today));
+    // The view's filters, chips and all, as the view store holds them: the query must ignore the chips. That the view
+    // hands this function the store's filters, rather than widening the read itself, is the view's wiring (a `.tsx`).
+    for (const chips of [{ waitingForMe: true, openedByMe: false }, { waitingForMe: false, openedByMe: true }, { waitingForMe: true, openedByMe: true }]) {
+      const filters = { ...ASKED, ...chips };
+      expect(compactFilter(codeReviewsQuery(filters, today))).toEqual(asked);
+    }
   });
 
   it('puts who created them, the assignment and the status into the query', () => {
-    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', mergeRequestState: 'active', reviewers: MINE, waitingForMe: false, openedByMe: false }, today)).toEqual({
+    expect(codeReviewsQuery({ since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] }, status: 'Reviewed', mergeRequestState: 'active', reviewers: MINE }, today)).toEqual({
       owners: ['me', 'ana', 'zoe'],
       reviewerIsMe: true,
       status: 'Reviewed',

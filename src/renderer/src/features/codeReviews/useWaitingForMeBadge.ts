@@ -17,8 +17,6 @@ export function useWaitingForMeBadge(): NavBadge | undefined {
   const status = useCodeReviewsViewStore((state) => state.status);
   const mergeRequestState = useCodeReviewsViewStore((state) => state.mergeRequestState);
   const reviewers = useCodeReviewsViewStore((state) => state.reviewers);
-  const waitingForMe = useCodeReviewsViewStore((state) => state.waitingForMe);
-  const openedByMe = useCodeReviewsViewStore((state) => state.openedByMe);
-  const { data } = useCodeReviews(codeReviewsQuery({ since, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe }), { enabled: false });
+  const { data } = useCodeReviews(codeReviewsQuery({ since, people, status, mergeRequestState, reviewers }), { enabled: false });
   return waitingBadge(data, me);
 }
