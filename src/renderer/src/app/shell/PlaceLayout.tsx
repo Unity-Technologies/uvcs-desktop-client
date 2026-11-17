@@ -5,9 +5,8 @@ import { Stowable } from '../../ui/Stowable';
 import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { showsMerge } from '../navigation/mergeInProgress';
 import { useNavigation } from '../navigation/navigationStore';
-import { mountedViews } from '../navigation/keptViews';
+import { viewLayers } from '../navigation/keptViews';
 import { PageShownContext } from '../navigation/pageShown';
-import type { Page } from '../navigation/pages';
 import { useOwnPageWindows } from '../pageWindow/useShowInFollowingWindow';
 import { CommandLogPanel } from './CommandLogPanel';
 import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
@@ -20,9 +19,6 @@ import { useMergeRequestCommands } from '../../features/codeReviews/useMergeRequ
 import styles from './PlaceLayout.module.css';
 import { ViewShownContext } from '../../lib/viewShown';
 import { KeptView } from './KeptView';
-
-/** The pages of a view left at its list: one array, so a hidden view's `KeptView` gets the same props each time. */
-const NO_PAGES: readonly Page[] = [];
 
 interface PlaceLayoutProps {
   /** The top bar: a workspace's branch, or the repository explored and the way to make it a workspace. */
@@ -79,9 +75,9 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
               <div ref={contentRef} className={styles.content} data-diff-expanded={diffExpanded || undefined}>
                 {/* The views shown last stay mounted with their pages, hidden, as the user left them (`mountedViews`):
                     an Activity keeps what they show and stops their effects (shortcuts, watchers, reads). */}
-                {mountedViews(view, kept.recent).map((id) => (
-                  <Activity key={id} mode={id === view ? 'visible' : 'hidden'}>
-                    <KeptView view={id} pages={id === view ? pages : (kept.stacks[id] ?? NO_PAGES)} drawsTop={id !== view || !mergeShown} />
+                {viewLayers(view, pages, kept, mergeShown).map((layer) => (
+                  <Activity key={layer.view} mode={layer.shown ? 'visible' : 'hidden'}>
+                    <KeptView view={layer.view} pages={layer.pages} drawsTop={layer.drawsTop} />
                   </Activity>
                 ))}
                 {/* A merge in progress stays mounted, shown or set aside, with all the user decided in it; set aside, no

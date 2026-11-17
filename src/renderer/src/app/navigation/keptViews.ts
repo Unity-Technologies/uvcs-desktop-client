@@ -50,3 +50,27 @@ export function mountedViews(shown: ViewId, recent: readonly ViewId[]): ViewId[]
   const latest = new Set([...new Set([shown, ...recent])].slice(0, MOUNTED_VIEWS));
   return VIEW_IDS.filter((view) => latest.has(view));
 }
+
+/** A view mounted in the place's screen (`PlaceLayout`, `KeptView`), and what it draws. */
+export interface ViewLayer {
+  view: ViewId;
+  /** The view on screen; the others are hidden, kept as they were left. */
+  shown: boolean;
+  /** Its pages, in the order they stacked: the one on top shows over it. */
+  pages: readonly Page[];
+  /** Whether it draws its page on top: not the merge in progress shown, which has a layer of its own. */
+  drawsTop: boolean;
+}
+
+/** The pages of a view left at its list: one array, so a hidden view's layer is drawn with the same ones each time. */
+const NO_PAGES: readonly Page[] = [];
+
+/**
+ * The views mounted while `shown` shows with `pages` (`mountedViews`): it with its pages, the others with those they
+ * were left with. `mergeShown`: the merge in progress is the page on top of the view shown (`showsMerge`).
+ */
+export function viewLayers(shown: ViewId, pages: readonly Page[], kept: KeptViews, mergeShown: boolean): ViewLayer[] {
+  return mountedViews(shown, kept.recent).map((view) =>
+    view === shown ? { view, shown: true, pages, drawsTop: !mergeShown } : { view, shown: false, pages: kept.stacks[view] ?? NO_PAGES, drawsTop: true },
+  );
+}

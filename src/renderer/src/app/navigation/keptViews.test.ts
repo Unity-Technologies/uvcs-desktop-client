@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MOUNTED_VIEWS, mountedViews, NO_KEPT_VIEWS, switchedViews, type KeptViews } from './keptViews';
+import { MOUNTED_VIEWS, mountedViews, NO_KEPT_VIEWS, switchedViews, viewLayers, type KeptViews } from './keptViews';
 import type { Page } from './pages';
 
 const review: Page = { kind: 'codeReview', reviewId: 41, tab: 'changes', focusChangeset: 120 };
@@ -75,5 +75,30 @@ describe('mountedViews', () => {
 
   it("lists them in the sidebar's order, whatever the order they were shown in, so none moves as another comes forward", () => {
     expect(mountedViews('codeReviews', ['codeReviews', 'branchExplorer', 'changes'])).toEqual(mountedViews('changes', ['changes', 'codeReviews', 'branchExplorer']));
+  });
+});
+
+describe('viewLayers', () => {
+  const merge: Page = { kind: 'merge', request: { kind: 'merge', sourceSpec: 'br:/main/task' } };
+  const kept: KeptViews = { stacks: { codeReviews: [review] }, recent: ['branchExplorer', 'codeReviews', 'labels'] };
+
+  it('draws the view shown with its pages, and the others hidden with the pages they were left with', () => {
+    expect(viewLayers('branchExplorer', [history], kept, false)).toEqual([
+      { view: 'branchExplorer', shown: true, pages: [history], drawsTop: true },
+      { view: 'labels', shown: false, pages: [], drawsTop: true },
+      { view: 'codeReviews', shown: false, pages: [review], drawsTop: true },
+    ]);
+  });
+
+  it('leaves the merge in progress shown to its own layer: the view under it draws no page', () => {
+    expect(viewLayers('branchExplorer', [history, merge], kept, true)[0]).toEqual({ view: 'branchExplorer', shown: true, pages: [history, merge], drawsTop: false });
+  });
+
+  it('draws the page opened over a merge set aside, as any page', () => {
+    expect(viewLayers('branchExplorer', [merge, history], kept, false)[0]?.drawsTop).toBe(true);
+  });
+
+  it("gives a view left at its list the same pages each time, so its hidden layer isn't drawn again", () => {
+    expect(viewLayers('branchExplorer', [], kept, false)[1]?.pages).toBe(viewLayers('codeReviews', [], kept, false)[1]?.pages);
   });
 });
