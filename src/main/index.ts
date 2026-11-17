@@ -1,5 +1,6 @@
 // First: errors nothing else catches are the app's to report from here on, never Electron's native dialog.
 import './errors/installUnexpectedErrorHandlers';
+import { release } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
 import { repositoryPlace } from '@shared/domain/place';
@@ -10,6 +11,9 @@ import { locateCm } from './cm/locateCm';
 import { warnOnOrganizationIds } from './cm/organizationIds';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
 import { findWorkspaceRoot } from './cm/workspaceRoot';
+import { logAppHealth } from './diagnostics/appHealth';
+import { appLog } from './diagnostics/appLog';
+import { commandText, startedText } from './diagnostics/logRecords';
 import { apiMethods } from './ipc/apiMethods';
 import { EarlyCalls } from './ipc/EarlyCalls';
 import { registerApi } from './ipc/registerApi';
@@ -119,6 +123,8 @@ const commandLog = new CommandLogRelay((entry) => {
   else sendEvent('commandLogged', entry);
 });
 cm.onCommandLogged((entry) => commandLog.logged(entry));
+// And to the log file, which outlives the windows' command logs (ARCHITECTURE.md "The log file").
+cm.onCommandLogged((entry) => appLog.write(commandText(entry)));
 if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
 if (!app.isPackaged) warnOnOrganizationIds(cm);
 ignoreOwnCommandWrites(cm, watchers, headers);
@@ -147,6 +153,7 @@ const api = createServices({
   repositoryPaths,
   branchNames,
   issueTrackers,
+  diagnosticLog: appLog,
 });
 const early = new EarlyCalls(apiMethods(api));
 
@@ -172,6 +179,8 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
 }
 
 if (isTheRunningApp()) {
+  appLog.write(startedText({ appVersion: app.getVersion(), platform: process.platform, osRelease: release(), arch: process.arch, electronVersion: process.versions.electron }));
+  logAppHealth(app, appLog);
   const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
   const links = receiveLinks(windows);
   // `cm` doesn't need Electron ready: the first screen's commands run while it gets there.

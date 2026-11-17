@@ -1,5 +1,6 @@
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
+import type { DiagnosticWriter } from '../diagnostics/DiagnosticLog';
 import type { ProfileList } from '../cm/ProfileList';
 import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
 import type { OperationTracker } from '../operations/OperationTracker';
@@ -49,6 +50,8 @@ export interface ServiceContext {
   branchNames: BranchNamesCache;
   /** The issue trackers' engine: connections, bindings and issue reads (`IssueTrackers`). */
   issueTrackers: IssueTrackers;
+  /** The log file a user sends with a bug report (`appLog`). */
+  diagnosticLog: DiagnosticWriter;
 }
 
 /**
