@@ -134,6 +134,7 @@
 
 .comment:hover .commentMenu,
 .description:hover .commentMenu,
+.event:hover .commentMenu,
 .foldedRow:hover .commentMenu,
 .commentMenu:focus-within,
 .commentMenu:has([aria-expanded='true']) {
@@ -522,6 +523,10 @@ button.pill:hover {
 
 /* What a reviewer said with their status: a soft tint, no bar, as the timeline's rail is its only vertical line (a bar
    beside it read as two). */
+.eventEditor {
+  margin-top: var(--space-1);
+}
+
 .eventComment {
   margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
