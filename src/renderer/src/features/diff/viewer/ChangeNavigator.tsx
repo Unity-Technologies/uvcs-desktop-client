@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useContext, type MouseEvent, type Ref } from 'react';
+import { useContext, useRef, type MouseEvent, type Ref } from 'react';
 import { settleClickFocus } from '../../../lib/focusRing';
 import { formatShortcut } from '../../../lib/shortcuts';
 import { hotkey, hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
@@ -35,7 +35,11 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
   const { noun, shortcuts, count, current } = navigation;
   const neighbors = files ? { previous: files.neighbor(-1), next: files.neighbor(1) } : undefined;
   const view = changeNavigatorView({ stepsOwn, count, current, noun, previous: navigation.goesTo(-1), next: navigation.goesTo(1), besideFiles: files !== null, hostSteps, neighbors, filePosition: files?.position });
+  // While the next file is read, the last count keeps its place, faded out only if the read is slow: no flicker.
+  const lastLabel = useRef('');
+  if (view?.label) lastLabel.current = view.label;
   if (!view) return null;
+  const shownLabel = view.waiting ? lastLabel.current : view.label;
   // A click leaves the arrow focused with no ring (`settleClickFocus`), Enter or Space as Chromium decides.
   const step = (event: MouseEvent<HTMLButtonElement>, direction: 1 | -1): void => {
     navigation.go(direction);
@@ -43,8 +47,8 @@ export function ChangeNavigator({ navigation, stepsOwn, hostSteps = true, keysWh
   };
   return (
     <PaneToolbarGroup ref={ref} className={className}>
-      <span className={styles.position} data-toolbar-extra aria-live="polite">
-        {view.label}
+      <span className={view.waiting ? `${styles.position} ${styles.waiting}` : styles.position} data-toolbar-extra aria-live="polite" aria-hidden={view.waiting || undefined}>
+        {shownLabel}
       </span>
       <IconButton
         size="small"

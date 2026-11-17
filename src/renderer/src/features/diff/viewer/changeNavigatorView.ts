@@ -50,6 +50,11 @@ export interface NavigatorArrow {
 export interface NavigatorView {
   /** "3 of 12" while a step is current; empty otherwise, the arrows then standing alone. */
   label: string;
+  /**
+   * The arrows wait for the file being read (their presses kept for it): its count is coming, so the label keeps its
+   * place rather than going and coming back (`ChangeNavigator`).
+   */
+  waiting: boolean;
   previous: NavigatorArrow;
   next: NavigatorArrow;
 }
@@ -70,6 +75,7 @@ export function changeNavigatorView(facts: NavigatorFacts): NavigatorView | null
   const inList = facts.filePosition ? ` · file ${formatCount(facts.filePosition.index + 1)} of ${formatCount(facts.filePosition.count)}` : '';
   return {
     label: hasSteps ? positionLabel(facts) : '',
+    waiting: facts.previous === 'queued' || facts.next === 'queued',
     previous: arrowOf(facts.previous, namesFiles, {
       step: `Previous ${facts.noun}${inFile}${inList}`,
       fileStep: fileTip('Previous', facts.neighbors?.previous, `Previous file's last ${facts.noun}`) + inList,
