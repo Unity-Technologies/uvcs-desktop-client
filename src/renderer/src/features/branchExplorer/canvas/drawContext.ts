@@ -1,4 +1,5 @@
 import type { GraphChangeset } from '@shared/domain/branchExplorer';
+import type { ActionsSubject } from './actionsButton';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
@@ -28,6 +29,8 @@ export interface GraphScene {
   hoveredBranch: string | null;
   /** The code review whose chip is under the pointer. */
   hoveredReview: number | null;
+  /** The "More actions" button under the pointer (`actionsKey`). */
+  hoveredActions: string | null;
   homeChangeset: number | null;
   /** How many changes the workspace has pending, counted in the pending changeset (`layout.pending`). */
   pendingChangeCount: number;
@@ -58,6 +61,8 @@ export interface DrawnTargets {
   cutBranchComments: DrawnBoxes<Lane>;
   /** Changeset comments, as wide as the text drawn. */
   captions: DrawnBoxes<NodeLayout>;
+  /** The "More actions" buttons drawn (`drawActionsButtons`). */
+  actionButtons: DrawnBoxes<ActionsSubject>;
 }
 
 /** Opacity of the changesets the author filter or a search pushes into the background. */

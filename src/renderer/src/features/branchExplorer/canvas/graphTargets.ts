@@ -2,6 +2,7 @@ import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
+import { actionsKey, type ActionsSubject } from './actionsButton';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, linkCurve, type Point } from './curves';
@@ -24,10 +25,15 @@ export type GraphTarget =
   /** A merge in progress, into the pending changes. */
   | { kind: 'pendingMergeLink'; link: PendingMergeLink }
   /** The code review chip in a branch's header card. */
-  | { kind: 'codeReview'; review: CodeReviewSummary };
+  | { kind: 'codeReview'; review: CodeReviewSummary }
+  /** The "More actions" button of a branch or a changeset (`actionsButton.ts`): a click opens its menu. */
+  | { kind: 'actions'; of: ActionsSubject };
 
-/** What gets a card by the pointer: everything but branches. */
-export type PointerCardTarget = Exclude<GraphTarget, { kind: 'branch' }>;
+/** What gets a card by the pointer: everything but branches and the "More actions" buttons, which get a tooltip. */
+export type PointerCardTarget = Exclude<GraphTarget, { kind: 'branch' } | { kind: 'actions' }>;
+
+/** A "More actions" button's tooltip, as an icon button's names it in the lists. */
+export const ACTIONS_TOOLTIP = 'More actions';
 
 /**
  * The hover card for what the pointer is on. A changeset's card completes its comment over its caption, whether the
@@ -35,16 +41,19 @@ export type PointerCardTarget = Exclude<GraphTarget, { kind: 'branch' }>;
  * caption isn't drawn gets its card by the pointer). A branch gets no card: its two-line header already says it all,
  * and a card there would cover the changesets the pointer is heading to. Only a header's line that doesn't show all
  * of it (a name cut to fit, a comment cut or with more lines) gets a plain tooltip with the whole of it, like any
- * clipped label in the app, while the pointer is on that line. Anything else gets its card by the pointer.
+ * clipped label in the app, while the pointer is on that line. A "More actions" button gets that plain tooltip too, with
+ * its name. Anything else gets its card by the pointer.
  * The boxes are the last frame's, reused by the next one: read them right away.
  */
 export type HoverCard =
   | { kind: 'caption'; target: Extract<GraphTarget, { kind: 'changeset' }>; caption: DrawnBox<NodeLayout> }
   | { kind: 'pointer'; target: PointerCardTarget }
+  /** A plain tooltip by the pointer: a header's line cut short, or a button's name. */
   | { kind: 'clippedText'; key: string; text: string };
 
 export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: DrawnTargets | null): HoverCard | null {
   if (!target) return null;
+  if (target.kind === 'actions') return { kind: 'clippedText', key: `actions:${actionsKey(target.of)}`, text: ACTIONS_TOOLTIP };
   if (target.kind === 'changeset') {
     const caption = drawn?.captions.find((node) => node.changeset.id === target.id);
     return caption ? { kind: 'caption', target, caption } : { kind: 'pointer', target };
@@ -66,15 +75,20 @@ export function pointerCardStays(target: PointerCardTarget): boolean {
 }
 
 /** What the frame lights up under the pointer. */
-export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending'>;
+export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending' | 'hoveredActions'>;
 
-/** The pointer on a "+N" node lights it as its changeset; on a code review chip, the chip. */
+/**
+ * The pointer on a "+N" node lights it as its changeset; on a code review chip, the chip. On a "More actions" button it
+ * lights the button and what it belongs to, so a branch's button stays while the pointer moves from the branch onto it.
+ */
 export function hoverHighlight(hovered: GraphTarget | null): HoverHighlight {
+  const on = hovered?.kind === 'actions' ? hovered.of : hovered;
   return {
-    hoveredChangeset: hovered?.kind === 'changeset' ? hovered.id : hovered?.kind === 'collapsed' ? hovered.node.changeset.id : null,
-    hoveredBranch: hovered?.kind === 'branch' ? hovered.lane.branch.name : null,
-    hoveredReview: hovered?.kind === 'codeReview' ? hovered.review.id : null,
-    hoveredPending: hovered?.kind === 'pending',
+    hoveredChangeset: on?.kind === 'changeset' ? on.id : on?.kind === 'collapsed' ? on.node.changeset.id : null,
+    hoveredBranch: on?.kind === 'branch' ? on.lane.branch.name : null,
+    hoveredReview: on?.kind === 'codeReview' ? on.review.id : null,
+    hoveredPending: on?.kind === 'pending',
+    hoveredActions: hovered?.kind === 'actions' ? actionsKey(hovered.of) : null,
   };
 }
 
@@ -105,6 +119,8 @@ const LINE_HIT_DISTANCE = 6;
 export interface HitOptions {
   /** Whether code review chips are their own target, or part of their header. */
   chips?: boolean;
+  /** Whether "More actions" buttons are their own target, or part of what they belong to (for the right-click). */
+  buttons?: boolean;
   zoom?: number;
   /** Whether labels are drawn (`detail.labels`): a hidden label can't be hit. */
   labels?: boolean;
@@ -117,14 +133,17 @@ export interface HitOptions {
 /**
  * Finds what is under a world-space point, most specific first. What moves with the view or is cut to its room
  * (code review chips, branch headers pinned to the edge, comments) is hit where the last frame drew it.
- * Code review chips only react to clicks: for anything else, `chips: false` makes them part of their header.
+ * Code review chips only react to clicks: for anything else, `chips: false` makes them part of their header. The
+ * "More actions" buttons, on top of everything, likewise: `buttons: false` makes each part of what it belongs to.
  */
 export function hitTest(
   layout: GraphLayout,
   point: Point,
   drawn: DrawnTargets | null = null,
-  { chips = true, zoom = 1, labels = true, mergeLinks = true, bands = true }: HitOptions = {},
+  { chips = true, buttons = true, zoom = 1, labels = true, mergeLinks = true, bands = true }: HitOptions = {},
 ): GraphTarget | null {
+  const button = drawn?.actionButtons.at(point);
+  if (button) return buttons ? { kind: 'actions', of: button.item } : button.item;
   const chip = chips ? drawn?.reviewChips.at(point) : null;
   if (chip) return { kind: 'codeReview', review: chip.item };
   const header = drawn?.branchHeaders.at(point);

@@ -14,7 +14,7 @@ import { laneShape } from './laneShape';
 const layout = layoutGraph(sampleHistory());
 
 function drawnTargets(): DrawnTargets {
-  return { reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), cutBranchNames: new DrawnBoxes(), cutBranchComments: new DrawnBoxes(), captions: new DrawnBoxes() };
+  return { reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), cutBranchNames: new DrawnBoxes(), cutBranchComments: new DrawnBoxes(), captions: new DrawnBoxes(), actionButtons: new DrawnBoxes() };
 }
 
 describe('hitTest', () => {
@@ -226,13 +226,45 @@ describe('hoverCardFor', () => {
 
 describe('hoverHighlight', () => {
   it('lights a "+N" node as its changeset, a branch, a code review chip and the pending changes', () => {
-    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false };
+    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false, hoveredActions: null };
     const node = layout.nodes.get(5)!;
     expect(hoverHighlight(null)).toEqual(none);
     expect(hoverHighlight({ kind: 'collapsed', node })).toEqual({ ...none, hoveredChangeset: node.changeset.id });
     expect(hoverHighlight({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! })).toEqual({ ...none, hoveredBranch: '/main/a' });
     expect(hoverHighlight({ kind: 'codeReview', review: { id: 7 } as CodeReview })).toEqual({ ...none, hoveredReview: 7 });
     expect(hoverHighlight({ kind: 'pending' })).toEqual({ ...none, hoveredPending: true });
+  });
+
+  it('lights a "More actions" button and what it belongs to, so a branch keeps its button as the pointer moves onto it', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    expect(hoverHighlight({ kind: 'actions', of: { kind: 'branch', lane } })).toMatchObject({ hoveredBranch: '/main/a', hoveredActions: 'branch:/main/a' });
+    expect(hoverHighlight({ kind: 'actions', of: { kind: 'changeset', id: 4 } })).toMatchObject({ hoveredChangeset: 4, hoveredActions: 'changeset:4' });
+  });
+});
+
+describe('a "More actions" button for the pointer', () => {
+  const lane = layout.lanesByBranch.get('/main/a')!;
+  /** A button drawn over changeset 4, so it covers something the pointer would otherwise hit. */
+  function withButton(): { drawn: DrawnTargets; point: { x: number; y: number } } {
+    const drawn = drawnTargets();
+    const point = nodePoint(layout, 4)!;
+    drawn.actionButtons.add({ kind: 'branch', lane }, point.x - 9, point.y - 9, 18, 18);
+    return { drawn, point };
+  }
+
+  it('is hit before whatever it is drawn over', () => {
+    const { drawn, point } = withButton();
+    expect(hitTest(layout, point, drawn)).toEqual({ kind: 'actions', of: { kind: 'branch', lane } });
+  });
+
+  it('is what it belongs to for the right-click and the double-click', () => {
+    const { drawn, point } = withButton();
+    expect(hitTest(layout, point, drawn, { buttons: false })).toEqual({ kind: 'branch', lane });
+  });
+
+  it('gets a plain tooltip with its name, not a card', () => {
+    const { drawn, point } = withButton();
+    expect(hoverCardFor(hitTest(layout, point, drawn), point, drawn)).toEqual({ kind: 'clippedText', key: 'actions:branch:/main/a', text: 'More actions' });
   });
 });
 

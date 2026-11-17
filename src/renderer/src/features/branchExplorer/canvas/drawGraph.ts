@@ -1,5 +1,6 @@
 import { COLUMN_WIDTH, GRAPH_PADDING } from './geometry';
 import { detailLevel, type DrawContext, type DrawnTargets, type GraphScene, type VisibleArea } from './drawContext';
+import { drawActionsButtons } from './drawActionsButtons';
 import { drawBranchHeaders } from './drawBranchHeaders';
 import { drawCompactBranchNames } from './drawCompactBranchNames';
 import { drawCaptions } from './drawCaptions';
@@ -15,9 +16,9 @@ import { toWorld } from './viewport';
 const worldPen = new OriginPen();
 
 /**
- * Draws one frame, back to front: day separators, branch bands, links, changesets, their comments, labels and
- * branch headers, the workspace marker, then the date ruler on top. Only what is on screen is drawn, so large
- * histories stay smooth.
+ * Draws one frame, back to front: day separators, branch bands, links, changesets, their comments, labels, branch
+ * headers and the "More actions" buttons, the workspace marker, then the date ruler on top. Only what is on screen is
+ * drawn, so large histories stay smooth.
  * The world is drawn relative to an origin near the screen (`OriginPen`), so the canvas only ever sees small numbers.
  * Fills `drawn` with where the pointer targets landed.
  */
@@ -28,6 +29,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   drawn.cutBranchNames.reset();
   drawn.cutBranchComments.reset();
   drawn.captions.reset();
+  drawn.actionButtons.reset();
   const visible = visibleArea(scene);
   const screenPen = contextPen(ctx);
   const draw: DrawContext = { ctx, pen: screenPen, scene, visible, detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn };
@@ -64,6 +66,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
     world();
     if (draw.detail.labels) drawLabels(draw);
     drawBranchHeaders(draw);
+    drawActionsButtons(draw);
     screen();
   } else {
     drawCompactBranchNames(draw);

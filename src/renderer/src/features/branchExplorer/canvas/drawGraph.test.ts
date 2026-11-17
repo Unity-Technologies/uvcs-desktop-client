@@ -138,6 +138,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     hoveredBranch: lane.branch.name,
     hoveredReview: null,
     hoveredPending: false,
+    hoveredActions: null,
     homeChangeset: focus.changeset.id,
     pendingChangeCount: 0,
     currentBranch: lane.branch.name,
@@ -153,6 +154,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     cutBranchNames: new DrawnBoxes(),
     cutBranchComments: new DrawnBoxes(),
     captions: new DrawnBoxes(),
+    actionButtons: new DrawnBoxes(),
   };
   drawGraph(recording.ctx, scene, PIXEL_RATIO, drawn);
   return recording;
@@ -224,6 +226,7 @@ function drawSample(options: Partial<GraphViewOptions> = {}, selection: Partial<
     hoveredBranch: null,
     hoveredReview: null,
     hoveredPending: false,
+    hoveredActions: null,
     homeChangeset: null,
     pendingChangeCount: 0,
     currentBranch: null,
@@ -240,6 +243,7 @@ function drawSample(options: Partial<GraphViewOptions> = {}, selection: Partial<
     cutBranchNames: new DrawnBoxes(),
     cutBranchComments: new DrawnBoxes(),
     captions: new DrawnBoxes(),
+    actionButtons: new DrawnBoxes(),
   };
   drawGraph(recording.ctx, scene, PIXEL_RATIO, drawn);
   return { ...recording, drawn };
@@ -298,15 +302,49 @@ describe('drawGraph draws a selection the same however many things it holds', ()
       .sort();
   };
 
+  /** The selection's lead also gets its "More actions" button, drawn in the neutral inks (`drawActionsButtons`). */
+  const SELECTION_INKS = [SELECTION_RING, SELECTION_SOFT, INK].sort();
+
   it('draws several branches in the selection color, as it draws one', () => {
     const one = inksOfSelection({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) });
-    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
+    expect(one).toEqual(SELECTION_INKS);
     expect(inksOfSelection({ selectedBranch: '/main/b', selectedBranches: new Set(['/main/a', '/main/b']) })).toEqual(one);
   });
 
   it('draws several changesets in the selection color, as it draws one', () => {
     const one = inksOfSelection({ selectedChangeset: 2, selectedChangesets: new Set([2]) });
-    expect(one).toEqual([SELECTION_RING, SELECTION_SOFT].sort());
+    expect(one).toEqual(SELECTION_INKS);
     expect(inksOfSelection({ selectedChangeset: 3, selectedChangesets: new Set([2, 3]) })).toEqual(one);
+  });
+});
+
+describe('drawGraph draws "More actions" buttons only where the user is looking', () => {
+  const buttonsOf = (selection: Partial<GraphScene>) => {
+    const { drawn } = drawSample({}, selection);
+    const names: string[] = [];
+    for (const name of ['/main', '/main/a', '/main/b']) if (drawn.actionButtons.find((subject) => subject.kind === 'branch' && subject.lane.branch.name === name)) names.push(name);
+    for (const id of [1, 2, 3, 4, 5, 6, 7]) if (drawn.actionButtons.find((subject) => subject.kind === 'changeset' && subject.id === id)) names.push(`cs:${id}`);
+    return names;
+  };
+
+  it('draws none with nothing selected and nothing under the pointer', () => {
+    expect(buttonsOf({})).toEqual([]);
+  });
+
+  it('draws one beside the selected branch and the branch under the pointer', () => {
+    expect(buttonsOf({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']) })).toEqual(['/main/a']);
+    expect(buttonsOf({ hoveredBranch: '/main/b' })).toEqual(['/main/b']);
+    expect(buttonsOf({ selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']), hoveredBranch: '/main/b' })).toEqual(['/main/a', '/main/b']);
+  });
+
+  it('draws one beside the selected changeset, never on hover alone', () => {
+    expect(buttonsOf({ selectedChangeset: 2, selectedChangesets: new Set([2]) })).toEqual(['cs:2']);
+    expect(buttonsOf({ hoveredChangeset: 2 })).toEqual([]);
+  });
+
+  it('draws none while the zoom is too far out for the header cards', () => {
+    const selected = { selectedBranch: '/main/a', selectedBranches: new Set(['/main/a']), selectedChangeset: 2, selectedChangesets: new Set([2]) };
+    const { drawn } = drawSample({}, { ...selected, viewport: { zoom: 0.3, panX: 0, panY: 0 } });
+    expect(drawn.actionButtons.find(() => true)).toBeNull();
   });
 });
