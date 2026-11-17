@@ -8,7 +8,7 @@ import { usePageShown } from '../navigation/pageShown';
 import { usePageTitle } from '../navigation/usePageTitle';
 import { useBackButtons } from '../navigation/useBackButtons';
 import { viewDefinition } from '../navigation/viewRegistry';
-import { showsPage } from '../navigation/views';
+import { showsPage, type ViewId } from '../navigation/views';
 import { usePlace } from '../workspace/useWorkspace';
 import { EmptyState } from '../../ui/EmptyState';
 import { useShortcut } from '../../lib/useShortcut';
@@ -21,10 +21,20 @@ import { Breadcrumb } from './Breadcrumb';
 import styles from './PageFrame.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
 
-export function PageFrame({ page }: { page: Page }) {
-  const { view, pages, goBack } = useNavigation();
+interface PageFrameProps {
+  page: Page;
+  /** The view the page is over, and the page under it, if any: what its breadcrumb goes back to. */
+  view: ViewId;
+  previous: Page | undefined;
+}
+
+/**
+ * A page with its breadcrumb. What it goes back to comes from its props, not from the view shown, as the page of a
+ * view kept mounted, hidden, renders too (`KeptView`).
+ */
+export function PageFrame({ page, view, previous }: PageFrameProps) {
+  const goBack = useNavigation((state) => state.goBack);
   const place = usePlace();
-  const previous = pages.at(-2);
   const title = usePageTitle(page);
   const previousTitle = usePageTitle(previous);
   const diffExpanded = useDiffExpanded();
