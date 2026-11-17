@@ -45,6 +45,13 @@ describe('changeNavigatorView', () => {
     });
   });
 
+  it("says in the tips which file of the list is shown, never in the label, which stays short", () => {
+    const view = changeNavigatorView({ ...textBeforeStepping, current: 2, previous: 'step', next: 'file', neighbors, filePosition: { index: 1, count: 9 } });
+    expect(view?.label).toBe('3 of 12');
+    expect(view?.previous.tip).toBe('Previous change · 12 in this file · file 2 of 9');
+    expect(view?.next.tip).toBe('Next file: GameManager.cs · file 2 of 9');
+  });
+
   it('names no file while the arrow stays within the diff', () => {
     const onAChange = { ...textBeforeStepping, current: 2, previous: 'step', next: 'step', neighbors } as const;
     expect(changeNavigatorView(onAChange)?.next).toEqual({ tip: 'Next change · 12 in this file', enabled: true, leavesFile: false });

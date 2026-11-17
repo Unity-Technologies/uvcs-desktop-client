@@ -171,6 +171,12 @@ describe('fileSteps', () => {
     expect([fileSteps(['a', 'b'], 'Changed', list, pendingArrival()).neighbor(-1), fileSteps(['a', 'b'], 'Changed', list, pendingArrival()).neighbor(1)]).toEqual([null, 'a']);
   });
 
+  it("says where the file shown stands in the list, and nothing for a row that isn't a file", () => {
+    expect(list('b').steps.position).toEqual({ index: 1, count: 3 });
+    const rows = { select: (_key: string, done: () => void) => selectNow(done, () => undefined), pathOf: (key: string) => key, rowOrder: ['a', 'Art', 'b'] };
+    expect(fileSteps(['a', 'b'], 'Art', rows, pendingArrival()).position).toBeNull();
+  });
+
   it('selects nothing past the ends', () => {
     const { steps, selected } = list('c');
     expect(steps.canStep(1)).toBe(false);
