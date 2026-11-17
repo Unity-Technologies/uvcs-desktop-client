@@ -157,6 +157,7 @@ describe('selectionHighlights', () => {
     expect(selectionHighlights([{ kind: 'branch', name: '/main' }])).toEqual({
       selectedChangeset: null,
       selectedBranch: '/main',
+      selectedLabel: null,
       selectedPending: false,
       selectedChangesets: new Set(),
       selectedBranches: new Set(['/main']),
@@ -168,6 +169,7 @@ describe('selectionHighlights', () => {
     expect(selectionHighlights([{ kind: 'changeset', id: 6, label: 'v1' }, { kind: 'changeset', id: 4, label: 'v2' }])).toEqual({
       selectedChangeset: 4,
       selectedBranch: null,
+      selectedLabel: 'v2',
       selectedPending: false,
       selectedChangesets: new Set([6, 4]),
       selectedBranches: new Set(),
