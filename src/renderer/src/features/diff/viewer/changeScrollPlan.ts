@@ -1,12 +1,12 @@
 import type { ChangeScroll } from './changeView';
+import { PLACEMENT_START, placementStep, type SettledPlacement } from './settledPlacement';
 
 /**
  * What one frame of scrolling to a change decides (`scrollToChange`), from what the diff shows on that frame
  * (`ChangeScrollFrame`). A change not rendered yet is jumped to where Pierre estimates it, once; once its rows render,
  * they're scrolled to. After a jump, the rows above it render on the frames that follow at their real heights, which
- * moves it again (a wrapped line taller than its estimate; Pierre keeps the rows it measures where they stood, not the
- * change): so it's placed again on each frame, until it stands in its place on two frames in a row
- * (`SETTLED_FRAMES`). Placed once only, a change below wrapped lines stood 1700 px lower, out of view.
+ * moves it again: so it's placed until it stands still (`placementStep`). Placed once only, a change below wrapped
+ * lines stood 1700 px lower, out of view.
  */
 export type ChangeScrollStep =
   /** Done: the change is in place, or in view as a diff opens. */
@@ -39,17 +39,11 @@ export interface ChangeScrollFrame {
 export interface ChangeScrollState {
   /** Jumped to where Pierre estimated the change. */
   jumped: boolean;
-  /** Frames in a row the change stood in its place, after a jump. */
-  settledFrames: number;
+  /** Placing the change, after a jump. */
+  placement: SettledPlacement;
 }
 
-export const CHANGE_SCROLL_START: ChangeScrollState = { jumped: false, settledFrames: 0 };
-
-/** Frames in a row a change must stand in its place, after a jump, before the rows above it are taken as laid out. */
-export const SETTLED_FRAMES = 2;
-
-/** Within this, in pixels, a change stands in its place (scroll positions are fractional on high-density screens). */
-const IN_PLACE = 1;
+export const CHANGE_SCROLL_START: ChangeScrollState = { jumped: false, placement: PLACEMENT_START };
 
 export function changeScrollStep(state: ChangeScrollState, frame: ChangeScrollFrame): { step: ChangeScrollStep; state: ChangeScrollState } {
   if (frame.rowOffset === null) {
@@ -60,15 +54,10 @@ export function changeScrollStep(state: ChangeScrollState, frame: ChangeScrollFr
     if (frame.why === 'open' && startsInView(frame)) return { step: { kind: 'done' }, state };
     return { step: { kind: 'rows', smooth: frame.why === 'move' }, state };
   }
-  const scrollTop = placedScrollTop(frame);
-  if (Math.abs(scrollTop - frame.scrollTop) > IN_PLACE) return { step: { kind: 'place', scrollTop }, state: { ...state, settledFrames: 0 } };
-  const settledFrames = state.settledFrames + 1;
-  return { step: settledFrames >= SETTLED_FRAMES ? { kind: 'done' } : { kind: 'wait' }, state: { ...state, settledFrames } };
-}
-
-/** The scroll position that puts the change's first row `placeOffset` below the top, within the ends of the content. */
-function placedScrollTop({ rowOffset, placeOffset, scrollTop, maxScroll }: ChangeScrollFrame): number {
-  return Math.min(Math.max(0, scrollTop + rowOffset! - placeOffset), Math.max(0, maxScroll));
+  const { rowOffset, placeOffset, scrollTop, maxScroll } = frame;
+  const placed = placementStep(state.placement, { target: scrollTop + rowOffset - placeOffset, scrollTop, maxScroll });
+  const step: ChangeScrollStep = placed.scrollTo !== null ? { kind: 'place', scrollTop: placed.scrollTo } : placed.done ? { kind: 'done' } : { kind: 'wait' };
+  return { step, state: { ...state, placement: placed.state } };
 }
 
 function startsInView({ rowOffset, viewHeight }: ChangeScrollFrame): boolean {

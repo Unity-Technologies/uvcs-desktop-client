@@ -453,7 +453,7 @@ they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ 
 The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff not rendered there yet is
 scrolled to where Pierre lays it out, `pierreLinePosition`, then placed again on each frame until it stands still two
 frames in a row, as the rows above it render at their real heights, which wrapped lines make taller than estimated:
-`changeScrollStep`, `SETTLED_FRAMES`; collapsed lines never hide one, as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff
+`changeScrollStep`, `placementStep`; collapsed lines never hide one, as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff
 beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next file's first change or
 the previous file's last, asking about unsaved edits first. Incoming's diffs and conflicting files step through
 different files but share where a step arrives (`usePendingArrival`), so ↓ past a diff's last change into a conflicting
