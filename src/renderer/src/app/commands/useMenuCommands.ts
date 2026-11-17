@@ -37,8 +37,12 @@ export function menuCommandTarget(commandId: string, commands: readonly Pick<Com
 export function runMenuCommand(commandId: string, root?: Parameters<typeof isModalDialogOpen>[0]): void {
   if (isModalDialogOpen(root)) return;
   const listOf = viewOfListCommand(commandId);
-  const place = useSession.getState().place;
-  if (listOf) return void (place && navigation.goToView(viewShownIn(place, listOf)));
+  if (listOf) {
+    // A view's list for a place shown; on the home screen, where no place is, there is no view to show.
+    const place = useSession.getState().place;
+    if (place) navigation.goToView(viewShownIn(place, listOf));
+    return;
+  }
   const command = allCommands().find((candidate) => candidate.id === commandId);
   if (command && !command.disabled) command.run();
 }
