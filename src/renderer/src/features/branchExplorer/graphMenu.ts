@@ -1,5 +1,6 @@
 import type { Place } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
 import { menuAction, menuSubmenu, type MenuHost } from '../../components/menuWords';
@@ -52,13 +53,19 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
     }
     case 'codeReview':
       return graphCodeReviewMenu(target.review, context);
+    case 'pending':
+      // What Enter and a double-click open (`openSelection`), as the details panel's button names it.
+      return [menuAction('diff', () => navigation.goToView('changes'), { label: 'Open Changes' })];
+    case 'pendingMergeLink':
+      return [menuAction('source', () => context.goToChangeset(target.link.sourceChangeset))];
     case 'mergeLink':
       return groupedMenu([
         menuAction('diffMerge', () => graphActions.diffChangeset(target.link.destinationChangeset)),
         menuAction('source', () => context.goToChangeset(target.link.sourceChangeset)),
         menuAction('destination', () => context.goToChangeset(target.link.destinationChangeset)),
       ]);
-    default:
+    case 'collapsed': // A click on it shows the changesets it stands for; it has no actions of its own.
+    case undefined:
       return [];
   }
 }

@@ -107,6 +107,7 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
     if (label) canvas.current?.openContextMenu({ kind: 'label', label, more: [] });
     else if (selectedId !== null) canvas.current?.openContextMenu({ kind: 'changeset', id: layout.nodes.get(selectedId)?.changeset.id ?? selectedId });
     else if (selection?.kind === 'branch' && lane) canvas.current?.openContextMenu({ kind: 'branch', lane });
+    else if (selection?.kind === 'pending') canvas.current?.openContextMenu({ kind: 'pending' });
   };
 
   return [

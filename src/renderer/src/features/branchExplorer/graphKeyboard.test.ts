@@ -8,6 +8,8 @@ import type { GraphSelection, GraphSelections } from './graphSelection';
 import type { BranchPins } from './model/branchRows';
 import { branch, changeset, sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
+import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
+import type { GraphTarget } from './canvas/graphTargets';
 
 describe('keyboardMergeSource', () => {
   it('merges the changeset or branch selected into the workspace', () => {
@@ -70,6 +72,17 @@ describe('the keys that act on one object', () => {
     handleGraphKey(keyPressed('Enter'), keyboardOn({ kind: 'changeset', id: 4 }, selected));
     expect(selected).toEqual([{ kind: 'changeset', id: 4 }]);
     expect(diff).toHaveBeenCalledWith(4);
+  });
+
+  it('the menu key opens the pending changes’ menu, as a right-click there does', () => {
+    const opened: GraphTarget[] = [];
+    const keyboard = {
+      ...keyboardOn({ kind: 'pending' }, []),
+      layout: layoutGraph(sampleHistory(), undefined, { branch: '/main/a', parent: 5, mergeLinks: [] }),
+      canvas: { current: { openContextMenu: (target: GraphTarget) => opened.push(target) } as unknown as GraphCanvasHandle },
+    };
+    handleGraphKey(keyPressed('ContextMenu'), keyboard);
+    expect(opened).toEqual([{ kind: 'pending' }]);
   });
 });
 
