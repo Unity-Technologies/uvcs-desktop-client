@@ -2,3 +2,34 @@
 .controls {
   display: contents;
 }
+
+/* A file reached by a step from the one beside it (↓ past the last change): its title lights for a moment, as the change
+   moved to does (`flashCss`): a band as wide as the title's room, as a change's is as wide as its rows, so the jump to
+   another file is seen. It takes the title's whole room, as the title does: a fitted path sizes to it. With reduced
+   motion, the list's selection says it. */
+.arrived {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0 calc(-1 * var(--space-1));
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .arrived {
+    animation: arrived 1.2s var(--ease-out) forwards;
+  }
+}
+
+@keyframes arrived {
+  from {
+    background: var(--bg-selected-strong);
+  }
+
+  to {
+    background: transparent;
+  }
+}

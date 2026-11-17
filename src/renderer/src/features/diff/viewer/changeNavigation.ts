@@ -13,11 +13,21 @@ export interface ChangePosition {
   current: number | null;
   /** How many changes start above the line at the top of the view: where the first move goes from. */
   above: number;
+  /**
+   * The current change is the one the view opened at, not moved to (`openingStep`): until a change is moved to, the
+   * count and the moves follow where the user scrolls (`above`).
+   */
+  followsView?: boolean;
 }
 
-/** The change to move to from `position`, down (1) or up (-1); none past the first or last. */
-export function adjacentChange({ count, current, above }: ChangePosition, direction: 1 | -1): number | null {
-  const target = current === null ? (direction === 1 ? above : above - 1) : current + direction;
+/**
+ * The change to move to from `position`, down (1) or up (-1); none past the first or last. Before the first move, from
+ * where the view stands; while it follows the scroll, from the change the count names (`shownChange`).
+ */
+export function adjacentChange(position: ChangePosition, direction: 1 | -1): number | null {
+  const { count, current, above, followsView } = position;
+  const from = followsView ? shownChange(position) : current;
+  const target = from === null ? (direction === 1 ? above : above - 1) : from + direction;
   return target >= 0 && target < count ? target : null;
 }
 
@@ -40,22 +50,26 @@ export function arrivalChange(arrival: Arrival, count: number): number | null {
   return arrival === 'first' ? 0 : count - 1;
 }
 
-/** Where a view opens: at the step `index`, moved to (lit, counted "1 of 12") or only brought into view. */
+/**
+ * Where a view opens: at the step `index`, current ("1 of 12") either way; lit when stepped to from the file beside it,
+ * only brought into view otherwise, so a file just picked doesn't flash at the user, and then the count follows the
+ * scroll until a step is moved to (`ChangePosition.followsView`).
+ */
 export interface Opening {
   index: number;
-  movesTo: boolean;
+  lights: boolean;
 }
 
 /**
- * Where a view opens (`useStepNavigation`): stepped to from the file beside it, moved to its first or last step;
- * opened any other way (picked in a list, from a link, on a page), with its first step brought into view but not moved
- * to, so the first move down still goes to it. None without steps, nor on a link's lines (`opensOnLines`), which it
- * stays on unless stepped to.
+ * Where a view opens (`useStepNavigation`): stepped to from the file beside it, at its first or last step, lit; opened
+ * any other way (picked in a list, from a link, on a page), at its first step, brought into view, so the first move
+ * down goes to the second. None without steps, nor on a link's lines (`opensOnLines`), which it stays on, at no step,
+ * unless stepped to.
  */
 export function openingStep(arrival: Arrival | null, count: number, opensOnLines: boolean): Opening | null {
   if (count === 0) return null;
-  if (arrival) return { index: arrivalChange(arrival, count)!, movesTo: true };
-  return opensOnLines ? null : { index: 0, movesTo: false };
+  if (arrival) return { index: arrivalChange(arrival, count)!, lights: true };
+  return opensOnLines ? null : { index: 0, lights: false };
 }
 
 /** How many of the changes start above `line` of the modified file. */
@@ -91,6 +105,16 @@ export function currentAfterChange(current: number | null, before: readonly unkn
  * "3 of 12" while a change (or a conflict) is current, and nothing otherwise: one form only. How many there are is the
  * line counts' and the arrows' tips' to say, and that there are none, the diff's own (identical, binary).
  */
-export function positionLabel({ count, current }: Pick<ChangePosition, 'count' | 'current'>): string {
-  return current === null || count === 0 ? '' : `${formatCount(current + 1)} of ${formatCount(count)}`;
+export function positionLabel(position: Pick<ChangePosition, 'count' | 'current'> & Partial<ChangePosition>): string {
+  const shown = shownChange({ above: 0, ...position });
+  return shown === null || position.count === 0 ? '' : `${formatCount(shown + 1)} of ${formatCount(position.count)}`;
+}
+
+/**
+ * The change the count names: the current one; while the view follows the scroll (opened there, not moved to), the
+ * change it stands at, the last starting above its top.
+ */
+export function shownChange({ count, current, above, followsView }: ChangePosition): number | null {
+  if (current === null || !followsView) return current;
+  return Math.min(Math.max(current, above - 1), count - 1);
 }

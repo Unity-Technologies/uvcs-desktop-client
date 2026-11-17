@@ -5,7 +5,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { ChangeNavigator } from './ChangeNavigator';
 import { DiffFrameHostContext, headerArrows, type DiffFrameHost, type HeaderState, type PublishedNavigation } from './diffFrameHost';
 import { DiffViewerFrame } from './DiffViewerFrame';
-import { FileStepsContext } from './fileSteps';
+import { arrivedByStep, FileStepsContext, type FileSteps } from './fileSteps';
 import { StepQueue } from './stepQueue';
 import { useFileOnlyNavigation } from './useFileOnlyNavigation';
 import styles from './SteppedDiffFrame.module.css';
@@ -52,8 +52,11 @@ export function SteppedDiffFrame({ title, stepsThroughChanges = true, requested,
   const publish = useMemo(() => (published: PublishedNavigation | null) => store.setState({ published }), [store]);
   const host = useMemo<DiffFrameHost>(() => ({ frame, controls, publish, queue, requestedKey: requested.key }), [controls, publish, queue, requested.key]);
   const navigator = <HostedNavigator store={store} queue={queue} frame={frame} hostSteps={stepsThroughChanges} requested={requested} />;
+  const arrivals = useArrivals(requested.path, useContext(FileStepsContext));
+  // Drawn anew on each arrival, so its flash plays again.
+  const shownTitle = arrivals > 0 ? <span key={arrivals} className={styles.arrived}>{title}</span> : title;
   return (
-    <DiffViewerFrame ref={frame} title={title} controls={<span ref={setControls} className={styles.controls} />} navigator={navigator}>
+    <DiffViewerFrame ref={frame} title={shownTitle} controls={<span ref={setControls} className={styles.controls} />} navigator={navigator}>
       <DiffFrameHostContext.Provider value={host}>{children}</DiffFrameHostContext.Provider>
     </DiffViewerFrame>
   );
@@ -84,4 +87,14 @@ function HostedNavigator({ store, queue, frame, hostSteps, requested }: HostedNa
   useEffect(() => queue.keepOnly([path, files?.steppingTo() ?? null]), [path]);
   const shown = arrows.body ?? { navigation: header, stepsOwn: false };
   return <ChangeNavigator navigation={shown.navigation} stepsOwn={shown.stepsOwn} hostSteps={hostSteps} keysWhileTyping />;
+}
+
+/**
+ * How many times a step from the file beside it brought the frame to a file (`arrivedByStep`): its title lights for a
+ * moment on each, so ↓ past a file's last change is seen to land in another file. A file picked in the list doesn't.
+ */
+function useArrivals(path: string, files: FileSteps | null): number {
+  const [seen, setSeen] = useState(() => ({ path, arrivals: arrivedByStep(null, path, files?.steppingTo() ?? null) ? 1 : 0 }));
+  if (seen.path !== path) setSeen({ path, arrivals: seen.arrivals + (arrivedByStep(seen.path, path, files?.steppingTo() ?? null) ? 1 : 0) });
+  return seen.arrivals;
 }

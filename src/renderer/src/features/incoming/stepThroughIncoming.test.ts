@@ -58,7 +58,7 @@ class IncomingList {
     this.shown = path;
     const arrival = this.stepsOfShown().takeArrival(path);
     const opening = openingStep(arrival, this.count, false);
-    this.current = opening?.movesTo ? opening.index : null;
+    this.current = opening?.index ?? null;
   }
 }
 
@@ -67,13 +67,13 @@ describe('stepping through Incoming', () => {
 
   it("goes on past a diff's last change to the conflicting file's first conflict", () => {
     const list = incoming();
-    expect([list.press(1).header, list.press(1).header, list.press(1).header]).toEqual(['a.cs: 1 of 2', 'a.cs: 2 of 2', 'b.cs: 1 of 2']);
+    expect([list.header, list.press(1).header, list.press(1).header]).toEqual(['a.cs: 1 of 2', 'a.cs: 2 of 2', 'b.cs: 1 of 2']);
   });
 
   it('leaves no arrival behind for a file opened later', () => {
-    const list = incoming().press(1).press(1).press(1);
+    const list = incoming().press(1).press(1);
     expect(list.staleArrival).toBe(false);
-    expect(list.pick('c.cs').header).toBe('c.cs');
+    expect(list.pick('c.cs').header).toBe('c.cs: 1 of 1');
   });
 
   it("comes back up from a conflict to the diff's last change", () => {

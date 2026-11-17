@@ -353,6 +353,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
                 diffMeta={diffChange && pairs.metaOf(diffChange)}
                 focusedFolder={focusedFolder}
                 fileSteps={fileSteps}
+                anchorKey={selection.anchor}
                 reviewMarks={review.marks}
               />
             </ExpandableDiffContext.Provider>

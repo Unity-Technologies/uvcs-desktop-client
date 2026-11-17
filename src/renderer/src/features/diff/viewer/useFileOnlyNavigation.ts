@@ -6,7 +6,7 @@ import { useStepNavigation, type StepNavigation, type StepView } from './useStep
 const NO_STEPS: readonly unknown[] = [];
 
 /** No view to step through: nothing shows, nothing to reveal. */
-const NO_VIEW: StepView = { isShown: () => false, reveal: () => undefined, countAbove: () => 0, aboveAfterChange: () => 0 };
+const NO_VIEW: StepView = { isShown: () => false, reveal: () => undefined, show: () => undefined, countAbove: () => 0, aboveAfterChange: () => 0 };
 
 /** How a navigation with no diff of its own holds its presses. */
 interface FileOnlyOptions {

@@ -436,7 +436,8 @@ another view (ARCHITECTURE.md "Views keep their place").
 
 A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through changes"),
 with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and its arrows at the end of its view bar, "2
-of 3" before them while a conflict is current, as a diff's (`ConflictNavigator`, on `useStepNavigation`). The keys work
+of 3" before them while a conflict is current, as a diff's (`ConflictNavigator`, on `useStepNavigation`); it opens at its
+first conflict, "1 of 3", as a diff opens at its first change. The keys work
 from anywhere in the file's panel, its views' segments included (`STEP_FRAME`), from the list and with nothing focused.
 A conflict moved to comes a few rows from the top unless it's all in view, and lights up (`useConflictView`: Pierre
 draws each one from its actions row down to its end marker). Every conflict shown is one still to decide: resolving one

@@ -1,3 +1,4 @@
+import { fileNameOf, formatCount } from '../../../lib/text';
 import { positionLabel } from './changeNavigation';
 
 /**
@@ -35,6 +36,10 @@ export interface NavigatorFacts {
    * instead (a merge page's conflict arrows).
    */
   hostSteps: boolean;
+  /** The paths of the files before and after the one shown in the list beside it (`FileSteps.neighbor`): the tips name them. */
+  neighbors?: { previous: string | null; next: string | null };
+  /** Where the file shown stands in that list (`FileSteps.position`): the tips say it, the label stays short. */
+  filePosition?: { index: number; count: number } | null;
 }
 
 export interface NavigatorArrow {
@@ -45,6 +50,11 @@ export interface NavigatorArrow {
 export interface NavigatorView {
   /** "3 of 12" while a step is current; empty otherwise, the arrows then standing alone. */
   label: string;
+  /**
+   * The arrows wait for the file being read (their presses kept for it): its count is coming, so the label keeps its
+   * place rather than going and coming back (`ChangeNavigator`).
+   */
+  waiting: boolean;
   previous: NavigatorArrow;
   next: NavigatorArrow;
 }
@@ -62,11 +72,37 @@ export function changeNavigatorView(facts: NavigatorFacts): NavigatorView | null
   const inFile = hasSteps ? ` · ${facts.count} in this file` : '';
   // With nothing to step through and no files to go on to, the arrows name the changes they'd step through.
   const namesFiles = facts.besideFiles && !hasSteps;
+  const inList = facts.filePosition ? ` · file ${formatCount(facts.filePosition.index + 1)} of ${formatCount(facts.filePosition.count)}` : '';
   return {
     label: hasSteps ? positionLabel(facts) : '',
-    previous: arrowOf(facts.previous, namesFiles, { step: `Previous ${facts.noun}${inFile}`, fileStep: `Previous file's last ${facts.noun}`, file: 'Previous file', queued: `Previous ${facts.noun}` }),
-    next: arrowOf(facts.next, namesFiles, { step: `Next ${facts.noun}${inFile}`, fileStep: `Next file's first ${facts.noun}`, file: 'Next file', queued: `Next ${facts.noun}` }),
+    waiting: facts.previous === 'queued' || facts.next === 'queued',
+    previous: arrowOf(facts.previous, namesFiles, {
+      step: `Previous ${facts.noun}${inFile}${inList}`,
+      fileStep: fileTip('Previous', facts.neighbors?.previous, `Previous file's last ${facts.noun}`) + inList,
+      file: fileTip('Previous', facts.neighbors?.previous, 'Previous file') + inList,
+      queued: `Previous ${facts.noun}`,
+    }),
+    next: arrowOf(facts.next, namesFiles, {
+      step: `Next ${facts.noun}${inFile}${inList}`,
+      fileStep: fileTip('Next', facts.neighbors?.next, `Next file's first ${facts.noun}`) + inList,
+      file: fileTip('Next', facts.neighbors?.next, 'Next file') + inList,
+      queued: `Next ${facts.noun}`,
+    }),
   };
+}
+
+/**
+ * The label the header shows, given the one it `held` (showed last): while it waits for the next file's diff, the one it
+ * showed, so the count swaps in place on a fast read; otherwise the view's own, empty included, so a file with no count
+ * between two (an image) never lets an older file's come back.
+ */
+export function heldLabel(held: string, view: Pick<NavigatorView, 'label' | 'waiting'>): string {
+  return view.waiting ? held : view.label;
+}
+
+/** The tip of an arrow going on to a file: its name where the list gives it ("Next file: GameManager.cs"). */
+function fileTip(way: 'Previous' | 'Next', path: string | null | undefined, unnamed: string): string {
+  return path ? `${way} file: ${fileNameOf(path)}` : unnamed;
 }
 
 /** An arrow's tip by where it goes: a step, the next file's first step, the next file, or kept for the file read. */

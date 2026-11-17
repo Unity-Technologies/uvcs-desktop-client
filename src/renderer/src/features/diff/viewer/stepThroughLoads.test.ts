@@ -147,7 +147,7 @@ class CachedDiffs {
 
   private open(body: { path: string; current: number | null; opened: boolean }): void {
     const opening = openingStep(this.steps().takeArrival(body.path), this.changes(body.path), false);
-    body.current = opening?.movesTo ? opening.index : null;
+    body.current = opening?.index ?? null;
     body.opened = true;
     this.rendersDue = true;
   }
@@ -242,7 +242,7 @@ class CachedDiffs {
   }
 }
 
-const atLastChangeOfA = (files: Record<string, number | 'xlink'>, settles = false) => new CachedDiffs({ 'a.cs': 3, ...files }, settles).press(1).press(1).press(1);
+const atLastChangeOfA = (files: Record<string, number | 'xlink'>, settles = false) => new CachedDiffs({ 'a.cs': 3, ...files }, settles).press(1).press(1);
 
 describe('a burst of ↓ across diffs read from the cache', () => {
   it('lands ↓↓↓ from A\'s last change across a one-change file on the next file\'s 2nd change, no press lost on the way', () => {
@@ -294,11 +294,11 @@ describe('a burst of ↓ across diffs read from the cache', () => {
   });
 
   it('keeps for the file picked in Changes a press made before its selection settled, never stepping the previous file', () => {
-    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).pick('c.cs').rerender().press(1).settle().frame().header).toBe('c.cs: 1 of 2');
+    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).pick('c.cs').rerender().press(1).settle().frame().header).toBe('c.cs: 2 of 2');
   });
 
-  it('drops the presses meant for a file once another is picked while it loads: that one opens at its top', () => {
-    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).press(1).press(1).pick('c.cs').settle().frame().header).toBe('c.cs');
+  it('drops the presses meant for a file once another is picked while it loads: that one opens at its first change', () => {
+    expect(atLastChangeOfA({ 'b.cs': 3, 'c.cs': 2 }, true).press(1).press(1).pick('c.cs').settle().frame().header).toBe('c.cs: 1 of 2');
   });
 
   it('keeps stepping through the file shown after its unsaved edits were kept, and picking the next later replays nothing', () => {
