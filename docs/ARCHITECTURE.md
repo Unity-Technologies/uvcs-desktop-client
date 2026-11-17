@@ -662,6 +662,11 @@ dialog never shows.
   in the browser before sending). The stack never shows on screen. A render error shows `AppErrorBoundary`'s
   `WindowErrorScreen` (Reload, Report an Issue) instead of a blank window: one boundary around the screen, inside the
   dialogs and toasts so they keep working, and one around the whole app as the last resort.
+- **A toast reads as text, never a scroll box**: its detail (an error's message, often a URL or a path) shows its first
+  three lines and a "Show more" when it hides the rest (`detailToggleOf`, measured by `useClippedText`); unfolded, it
+  shows whole and the toast stays until dismissed (`autoDismissMsOf`). The action sits under the text, so the message
+  has the card's whole width (`ToastCard`). An error toast's Copy puts its title and message on the clipboard
+  (`errorCopyTextOf`).
 - `unexpectedErrors.test.ts` checks that the handlers are main's first import, installed in one place, and that every
   timer of `CmShellSession` goes through `guarded`.
 

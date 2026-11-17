@@ -5,17 +5,6 @@ export interface FoldedCut {
 }
 
 /**
- * The scroll overflow under which an element counts as whole: line heights round to fractional pixels, so a block that
- * fits can still scroll by a pixel or two.
- */
-const ROUNDING_SLACK_PX = 2;
-
-/** Whether an element's content runs past its clamped height. */
-export function isCut(element: { scrollHeight: number; clientHeight: number } | null): boolean {
-  return Boolean(element && element.scrollHeight - element.clientHeight > ROUNDING_SLACK_PX);
-}
-
-/**
  * What is cut once measured again. A part found cut stays cut: once expanded nothing overflows, yet "Show less" must
  * stay. Gives back `current` itself when nothing changed, so a resize that changes nothing doesn't render again.
  */
