@@ -81,7 +81,7 @@ export function editableXlinkOf<Item extends Pick<TreeItem, 'xlink' | 'isPrivate
 export function unloadedXlinkOf<Item extends Pick<TreeItem, 'xlink' | 'isPrivate'>>(
   item: Item,
   where: Pick<XlinkSurroundings, 'underXlink'>,
-  { added, listedItems, workspaceKind }: { added: boolean; listedItems: readonly unknown[] | undefined; workspaceKind?: WorkspaceKind },
+  { added, listedItems, workspaceKind }: { added: boolean; listedItems: readonly unknown[] | undefined; workspaceKind: WorkspaceKind | undefined },
 ): (Item & { xlink: XlinkTarget }) | null {
   const xlink = editableXlinkOf(item, where);
   return xlink && !added && workspaceKind !== 'partial' && listedItems?.length === 0 ? xlink : null;

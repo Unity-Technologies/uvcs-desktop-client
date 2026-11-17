@@ -63,14 +63,14 @@ describe('Creating and editing xlinks from Files', () => {
 
   it('loads the files of a checked-in xlink whose folder is listed empty, and of no other', () => {
     const item = { isPrivate: false, xlink };
-    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [] })).toEqual(item);
-    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [{ path: 'code/lib/src' }] })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: 'standard' })).toEqual(item);
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [{ path: 'code/lib/src' }], workspaceKind: 'standard' })).toBeNull();
     // Not read yet: nothing tells it is empty.
-    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: undefined })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: undefined, workspaceKind: 'standard' })).toBeNull();
     // Not checked in: no command can load it yet.
-    expect(unloadedXlinkOf(item, inWorkspace, { added: true, listedItems: [] })).toBeNull();
-    expect(unloadedXlinkOf({ isPrivate: false }, inWorkspace, { added: false, listedItems: [] })).toBeNull();
-    expect(unloadedXlinkOf(item, { underXlink: true }, { added: false, listedItems: [] })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: true, listedItems: [], workspaceKind: 'standard' })).toBeNull();
+    expect(unloadedXlinkOf({ isPrivate: false }, inWorkspace, { added: false, listedItems: [], workspaceKind: 'standard' })).toBeNull();
+    expect(unloadedXlinkOf(item, { underXlink: true }, { added: false, listedItems: [], workspaceKind: 'standard' })).toBeNull();
   });
 
   it("loads no xlink's files in a partial workspace, which downloads them as it downloads a file", () => {
