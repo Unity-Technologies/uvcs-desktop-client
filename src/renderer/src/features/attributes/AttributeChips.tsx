@@ -25,7 +25,7 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
   const { values, types, rows } = editing;
 
   if (!values) return <div className={styles.loading} aria-busy="true" aria-label="Loading attributes" />;
-  if (!hasAttributesToShow(rows, types)) return null;
+  if (!hasAttributesToShow(rows, types ?? [])) return null;
 
   const { addable } = attributesSectionOf(values, types, editing.adding);
   return (

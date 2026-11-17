@@ -12,7 +12,8 @@ export type OpenedAttribute = { name: string; mode: 'edit' | 'read' };
 export interface AttributeEditing {
   /** The object's values, undefined until read. */
   values: AttributeValue[] | undefined;
-  types: { name: string }[];
+  /** The server's attribute types, undefined until read. */
+  types: { name: string }[] | undefined;
   /** The attribute being added, shown as a chip with an empty value until it's saved. */
   adding: string | null;
   /** The chips' rows: the values and the one being added. */
@@ -36,7 +37,7 @@ export interface AttributeEditing {
 export function useAttributeEditing(objectSpec: string): AttributeEditing {
   const place = usePlace();
   const { data: values } = useAttributeValues(objectSpec);
-  const { data: types = [] } = useAttributeTypes();
+  const { data: types } = useAttributeTypes();
   const [adding, setAdding] = useState<string | null>(null);
   const [opened, setOpened] = useState<OpenedAttribute | null>(null);
 

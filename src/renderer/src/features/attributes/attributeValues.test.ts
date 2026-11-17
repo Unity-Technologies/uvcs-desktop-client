@@ -154,6 +154,11 @@ describe('attributesSectionOf', () => {
     expect(attributesSectionOf(undefined, [], null)).toEqual({ body: 'hidden', addable: [] });
   });
 
+  it('waits for the types to say whether an object with no value shows, and shows its values meanwhile, with no Add', () => {
+    expect(attributesSectionOf([], undefined, null)).toEqual({ body: 'reading', addable: [] });
+    expect(attributesSectionOf([{ name: 'status', value: 'RESOLVED' }], undefined, null)).toEqual({ body: 'chips', addable: [] });
+  });
+
   it('hides with no value and no attribute type on the server', () => {
     expect(attributesSectionOf([], [], null)).toEqual({ body: 'hidden', addable: [] });
   });
