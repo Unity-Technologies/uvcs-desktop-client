@@ -521,12 +521,13 @@ button.pill:hover {
   font-size: var(--text-sm);
 }
 
-/* What a reviewer said with their status: a soft tint, no bar, as the timeline's rail is its only vertical line (a bar
-   beside it read as two). */
+/* The editor of what a reviewer said with their status, where the comment shows. */
 .eventEditor {
   margin-top: var(--space-1);
 }
 
+/* What a reviewer said with their status: a soft tint, no bar, as the timeline's rail is its only vertical line (a bar
+   beside it read as two). */
 .eventComment {
   margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
