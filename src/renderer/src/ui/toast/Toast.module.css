@@ -92,11 +92,45 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
-  max-height: 120px;
+  /* Folded to its first lines (`toastDetail`), never a scroll box in the middle of the card. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* Whole, up to half the window: only a message longer than that scrolls. */
+.detail[data-unfolded] {
+  display: block;
+  max-height: 50vh;
   overflow: auto;
 }
 
+/* Under the text, so the detail has the card's whole width. */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.toggle {
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.toggle:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* With no toggle beside it, the action keeps to the right. */
 .action {
+  margin-left: auto;
   padding: 2px 8px;
   border: none;
   border-radius: var(--radius-sm);
