@@ -9,7 +9,7 @@ import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
 import { DetailsPanel } from '../../ui/DetailsPanel';
-import { AttributeChips } from '../attributes/AttributeChips';
+import { AttributesDetailsSection } from '../attributes/AttributesDetailsSection';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { saveLabelComment, showLabelChanges } from './labelOperations';
@@ -34,7 +34,6 @@ export function LabelDetails({ place, label, menu, links = PLAIN_LINKS }: LabelD
         <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what={copiedWhat('Changeset', 'spec')} />,
         <BranchChip key="branch" name={label.branch} onSelect={links.selectBranch} />,
       ]}
-      attributes={<AttributeChips key={label.name} objectSpec={spec.label(label.name)} />}
       primaryAction={
         <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => showLabelChanges(label)}>
           Open diff
@@ -49,6 +48,8 @@ export function LabelDetails({ place, label, menu, links = PLAIN_LINKS }: LabelD
         { label: 'Repository', value: label.repository },
       ]}
       changes={<ChangedFilesSection target={{ kind: 'changeset', changesetId: label.changeset }} onOpen={(path) => showLabelChanges(label, path)} />}
-    />
+    >
+      <AttributesDetailsSection objectSpec={spec.label(label.name)} />
+    </DetailsPanel>
   );
 }

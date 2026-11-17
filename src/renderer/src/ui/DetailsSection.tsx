@@ -5,7 +5,8 @@ interface DetailsSectionProps {
   title: string;
   /** A small control at the right of the title, e.g. "Add". */
   action?: ReactNode;
-  children: ReactNode;
+  /** The card's content; without it the section is its title alone, e.g. an Attributes section with none yet. */
+  children?: ReactNode;
 }
 
 /** A titled card inside the details panel. */
@@ -16,7 +17,7 @@ export function DetailsSection({ title, action, children }: DetailsSectionProps)
         <h3 className={styles.sectionTitle}>{title}</h3>
         {action}
       </div>
-      <div className={styles.card}>{children}</div>
+      {children && <div className={styles.card}>{children}</div>}
     </section>
   );
 }
