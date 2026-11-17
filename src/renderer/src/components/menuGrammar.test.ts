@@ -560,12 +560,12 @@ describe('new merge requests and code reviews of a branch', () => {
 
   it('offers a merge request above a code review on a branch that can merge somewhere', () => {
     expect(creating(MENUS.branch!())).toEqual(['New branch from here…', 'New merge request…', 'New code review…']);
-    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/release', parent: '/main' }], '/main'))).toContain('New merge request…');
+    expect(creating(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main' }, [{ ...branch, name: '/release', parent: '/main' }]))).toContain('New merge request…');
     expect(creating(REPOSITORY_MENUS.repositoryBranch!())).toContain('New merge request…');
   });
 
   it("offers only a code review on a top-level branch, which has nowhere to merge, and on several", () => {
-    expect(creating(branchMenu(workspacePlace(ws), [{ ...branch, name: '/main', parent: '' }], '/main/task'))).toEqual(['New branch from here…', 'New code review…']);
+    expect(creating(branchMenu({ place: workspacePlace(ws), workspaceKind: undefined, currentBranch: '/main/task' }, [{ ...branch, name: '/main', parent: '' }]))).toEqual(['New branch from here…', 'New code review…']);
     expect(creating(MENUS.branches!())).toEqual([]);
   });
 });
