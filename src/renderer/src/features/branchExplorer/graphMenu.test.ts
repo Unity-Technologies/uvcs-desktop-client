@@ -116,3 +116,9 @@ describe('graphMenu for the pending changes', () => {
     expect(goneTo).toEqual([4]);
   });
 });
+
+describe('graphMenu for a "+N" node', () => {
+  it('has nothing: a click on it shows the changesets it stands for', () => {
+    expect(graphMenu({ kind: 'collapsed', node: layout.nodes.get(4)! }, contextWith([]))).toEqual([]);
+  });
+});
