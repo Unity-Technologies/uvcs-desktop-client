@@ -531,9 +531,11 @@ one read serves both), say what was checked in when (`reviewRounds`).
   It's named as words of the sentence (`ReferenceChip`'s `plain`): the changeset's icon and number in the line's own
   font and gray, the link color and an underline under the pointer, a chip's card and its click (it opens in the
   review's Changes). A dot parts it from the time after it, whose number it would otherwise run into ("at 9 · 5
-minutes ago"). A chip's fill, and the link color at rest, read as badges and drew the eye from the verdict. The
+  minutes ago"). A chip's fill, and the link color at rest, read as badges and drew the eye from the verdict. The
   round's line folds through a button laid over it (`.roundToggle`), since the changeset, a link, can't sit inside a
-  button. Nothing is written to the server and the status popover says nothing of it: the server has no field for it
+  button; the time and the changeset sit above it with their own tooltip and card. Named only from the branch's own
+  changesets (`ownBranchChangesets`): the previous review's, kept on screen while this one's are read, would name
+  another branch's. Nothing is written to the server and the status popover says nothing of it: the server has no field for it
   (its note of a status holds only the comment), and inferring it costs no read.
 - **New to them** (`newThreadIds`): a thread settled since (applied in a changeset checked in after it, by the
   changeset's date, or by its number when the branch's list doesn't hold it; answered or discarded after it), or with
