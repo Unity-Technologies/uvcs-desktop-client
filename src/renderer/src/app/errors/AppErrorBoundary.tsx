@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import type { UnexpectedError } from '@shared/events';
-import { describeWindowError } from './unexpectedErrors';
+import { logWindowError } from './reportUnexpectedErrors';
+import { renderError } from './unexpectedErrors';
 import { WindowErrorScreen } from './WindowErrorScreen';
 
 interface AppErrorBoundaryProps {
@@ -19,11 +20,12 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   override state: AppErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: unknown): AppErrorBoundaryState {
-    return { error: describeWindowError(error) ?? { message: String(error), details: String(error) } };
+    return { error: renderError(error) };
   }
 
   override componentDidCatch(error: unknown, info: ErrorInfo): void {
     console.error('The window ran into an error while rendering:', error, info.componentStack);
+    logWindowError(renderError(error, info.componentStack));
   }
 
   override render(): ReactNode {

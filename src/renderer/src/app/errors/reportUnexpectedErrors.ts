@@ -20,8 +20,16 @@ export function reportUnexpectedErrors(): void {
     console.error(`${UNEXPECTED_ERROR_TITLE} in the main process: ${error.details}`);
     tellUnexpectedError(error);
   });
-  window.addEventListener('error', (event) => tellIfFailure(describeWindowError(event.error, event.message)));
-  window.addEventListener('unhandledrejection', (event) => tellIfFailure(describeWindowError(event.reason)));
+  window.addEventListener('error', (event) => tellWindowError(describeWindowError(event.error, event.message)));
+  window.addEventListener('unhandledrejection', (event) => tellWindowError(describeWindowError(event.reason)));
+}
+
+/**
+ * Writes an error of the window's own to the log file a user sends with a bug report (the main process logs its
+ * own). A window that can't reach main to log it has nothing better to do with the failure.
+ */
+export function logWindowError(error: UnexpectedError): void {
+  api.system.logUnexpectedError(error).catch(() => undefined);
 }
 
 /** Opens the bug report on the error, with the app's details filled in, for the user to review in the browser. */
@@ -30,8 +38,11 @@ export async function reportUnexpectedError(error: UnexpectedError): Promise<voi
   await api.system.openExternal(unexpectedErrorIssueUrl(info, queryClient.getQueryData(cmVersionQuery.queryKey), error));
 }
 
-function tellIfFailure(error: UnexpectedError | null): void {
-  if (error) tellUnexpectedError(error);
+/** The window's own error, logged and told once per message, as one that repeats (a timer, a listener) would flood both. */
+function tellWindowError(error: UnexpectedError | null): void {
+  if (!error || told.has(error.message)) return;
+  logWindowError(error);
+  tellUnexpectedError(error);
 }
 
 function tellUnexpectedError(error: UnexpectedError): void {
