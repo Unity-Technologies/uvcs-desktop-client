@@ -11,7 +11,9 @@ import {
   changesetListRowKey,
   changesetListRows,
   changesetListSelection,
+  CHANGESET_ROWS_MIN_HEIGHT,
   changesetRowsHeight,
+  changesetRowsMaxHeight,
   changesetRowTip,
   changesetStep,
   filterChangesets,
@@ -225,6 +227,32 @@ describe('changesetRowsHeight', () => {
   it('is its tallest while the changesets are read, and with no row, for the notice that none matches', () => {
     expect(changesetRowsHeight(undefined, 6)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
     expect(changesetRowsHeight(0, 6)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
+  });
+
+  it('takes the height the user dragged it to, in place of the most rows', () => {
+    expect(changesetRowsHeight(400, 6, 500)).toBe(500);
+    expect(changesetRowsHeight(400, 6, 90)).toBe(90);
+    expect(changesetRowsHeight(undefined, 6, 500)).toBe(500);
+    expect(changesetRowsHeight(0, 6, 500)).toBe(500);
+  });
+
+  it('is never taller than its rows, dragged or not, so a short list leaves no gap above the files', () => {
+    expect(changesetRowsHeight(3, 6, 500)).toBe(3 * CHANGESET_ROW_HEIGHT + 8);
+  });
+
+  it('goes back to the most rows when the dragged height is forgotten (a double-click on the splitter)', () => {
+    expect(changesetRowsHeight(400, 6, null)).toBe(6 * CHANGESET_ROW_HEIGHT + 8);
+  });
+});
+
+describe('changesetRowsMaxHeight', () => {
+  it('lets the rows take half the window, the files keeping the rest', () => {
+    expect(changesetRowsMaxHeight(1000)).toBe(500);
+    expect(changesetRowsMaxHeight(851)).toBe(426);
+  });
+
+  it('never goes under the shortest the rows can be, in a tiny window', () => {
+    expect(changesetRowsMaxHeight(50)).toBe(CHANGESET_ROWS_MIN_HEIGHT);
   });
 });
 
