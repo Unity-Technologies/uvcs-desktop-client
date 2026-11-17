@@ -16,10 +16,6 @@ interface CodeReviewsQueryFilters {
   mergeRequestState: MergeRequestStateFilter;
   /** Who is asked to review them: I'm a reviewer, people picked, both. */
   reviewers: PeoplePick;
-  /** Only those waiting for the user: of any date, as the official client's "Needs my review" reads them. */
-  waitingForMe: boolean;
-  /** Only the user's not reviewed yet: of any date, as the official client's "Opened by me" reads them. */
-  openedByMe: boolean;
 }
 
 /**
@@ -27,16 +23,13 @@ interface CodeReviewsQueryFilters {
  * and the time range; the text is matched locally. I'm a reviewer alone is the server's (`where reviewer = 'me'`);
  * with other reviewers picked, the query asks for every review, as no reviewer filter does (one query key and one `cm
  * find`), and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. Waiting for
- * me is local too (`matchesWaiting`), over reviews of any date: one left waiting for months is still the user's to do.
- * Opened by me reads the user's reviews of any date (`owners: me`, unless people are picked, kept as picked) and keeps
- * those not reviewed yet locally (`matchesOpenedByMe`): the query takes one status, not two. Merged and Closed ask the
+ * me and Opened by me ask nothing of their own: they keep the reviews read, in the time range (`matchesWaiting`,
+ * `matchesOpenedByMe`), so their counts are what pressing them shows, and pressing them runs no command. Merged and Closed ask the
  * server for that state; Active (the code reviews and the merge requests Open or Draft) asks for none and narrows
  * locally, as `cm find` takes one state, so it shares All's query key.
  */
-export function codeReviewsQuery({ since, people, status, mergeRequestState, reviewers, waitingForMe, openedByMe }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
-  const sinceDate = waitingForMe || openedByMe ? undefined : sinceDateFor(since, today);
-  const owners = openedByMe && isEveryone(people) ? ['me'] : pickedOwners(people);
-  return { owners, reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[mergeRequestState], sinceDate };
+export function codeReviewsQuery({ since, people, status, mergeRequestState, reviewers }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
+  return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[mergeRequestState], sinceDate: sinceDateFor(since, today) };
 }
 
 /** The states the server is asked for; the others read every review. */

@@ -120,9 +120,10 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   chip an older version remembered (`reviewerIsMe`) reads as I'm a reviewer (`restoredReviewersFilter`, a
   `FilterUpgrade`).
 - **Waiting for me** (a `ToggleChip`, the store's `waitingForMe`) keeps the rows with the dot, counting them,
-  "Waiting for me · 2" (`waitingChipLabel`, `waitingCount`). It reads reviews of any date, whatever the time range says, as the official client's "Needs my
-  review" does (`codeReviewsQuery`): one left waiting for months is still the user's to do. It narrows locally
-  (`matchesWaiting`): it takes the user's
+  "Waiting for me · 2" (`waitingChipLabel`, `waitingCount`). It narrows the reviews read, in the time range, locally
+  (`matchesWaiting`), asking the server nothing of its own (`codeReviewsQuery`): its count is what pressing it shows,
+  and pressing it runs no command. Reading every date while it was on, as the official client's "Needs my review" does,
+  was tried: the count, made from the time range, then changed once pressed. It takes the user's
   own reviews in rework, which `reviewer = 'me'` leaves out, and goes by each reviewer's own status, which the query
   can't ask for. A chip of its own, not a third choice of a reviewer menu ("Any reviewer, I'm a reviewer, Waiting for
   me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.
@@ -130,9 +131,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   view read, by its filters, reading nothing itself: no `cm find` runs for a sidebar, so the count shows once the view
   was opened. It counts Waiting for me only, never with Opened by me: it says the user has something to do.
 - **Opened by me** (a `ToggleChip`, the store's `openedByMe`) keeps the user's reviews not reviewed yet (Under review or
-  Rework required), of any date, counting them, "Opened by me · 2" (`matchesOpenedByMe`, `openedByMeCount`,
-  `openedChipLabel`), as the official client's preset of that name does in one click. It asks for the user's reviews
-  (`owners: me`, unless people are picked) and keeps the statuses locally: `cm find review` takes one status. Waiting for
+  Rework required), counting them, "Opened by me · 2" (`matchesOpenedByMe`, `openedByMeCount`,
+  `openedChipLabel`), as the official client's preset of that name does in one click. Like Waiting for me, it narrows
+  the reviews read, in the time range, locally, asking the server nothing of its own. Waiting for
   me and Opened by me are chips, not presets that set the other filters: each is one condition that combines with the
   rest. Presets in the sidebar, as the official client lists them, were left out: two more rows for what a count and two
   chips say.

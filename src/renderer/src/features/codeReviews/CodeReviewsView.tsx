@@ -72,7 +72,7 @@ export function CodeReviewsView() {
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const queriedReviewers = useDebouncedValue(reviewers, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, mergeRequestState, reviewers: queriedReviewers, waitingForMe, openedByMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, mergeRequestState, reviewers: queriedReviewers }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
   const reviewerNames = useMemo(() => (reviews ?? []).flatMap((review) => review.reviewers.map((reviewer) => reviewer.name)), [reviews]);
   const offeredReviewers = usePeopleSeen('codeReviewReviewers', reviewerNames, itself);
