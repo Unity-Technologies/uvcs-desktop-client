@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import type { ReviewComment, ReviewEvent } from '@shared/domain/reviewConversation';
-import { answerIsCurrent, keptLayoutAfter, type LayoutReading } from './keptLayout';
+import { answerIsCurrent, keptLayoutAfter, ownBranchChangesets, type LayoutReading } from './keptLayout';
 import { conversationLayoutOf } from './reviewRounds';
 
 const REQUEST: ReviewComment = {
@@ -86,5 +86,15 @@ describe('answerIsCurrent', () => {
 
   it('refuses no answer yet', () => {
     expect(answerIsCurrent({ data: undefined, isError: false, isFetching: false, isPlaceholderData: false })).toBe(false);
+  });
+});
+
+describe('ownBranchChangesets', () => {
+  it("names changesets from the branch's own list, cached or read again", () => {
+    expect(ownBranchChangesets({ data: [APPLYING], isPlaceholderData: false })).toEqual([APPLYING]);
+  });
+
+  it("names none from another review's changesets kept on screen while this one's are read: they'd name another branch's", () => {
+    expect(ownBranchChangesets({ data: [APPLYING], isPlaceholderData: true })).toBeUndefined();
   });
 });

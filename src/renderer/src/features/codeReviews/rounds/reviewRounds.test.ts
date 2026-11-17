@@ -283,9 +283,16 @@ describe('conversationBlocksOf', () => {
   it("names on each round the changeset its status was given at", () => {
     const events = [status(3, 'vio', 'Rework required', at(7, 10)), status(9, 'vio', 'Reviewed', at(9, 16))];
     const branch = changesets([12, at(7, 9)], [14, at(9, 15)], [15, at(10, 9)]);
-    const blocks = conversationBlocksOf({ conversation: conversation([], events), user: 'vio', changesets: branch, reviewDate: at(7, 8) });
+    const blocks = conversationBlocksOf({ conversation: conversation([], events), user: 'vio', changesets: branch, reviewDate: at(7, 8), statusChangesets: statusChangesetsOf(events, branch) });
 
     expect(blocks.flatMap((block) => (block.kind === 'round' ? [block.round.changesetId] : []))).toEqual([12, 14]);
+  });
+
+  it("names none on a round while the branch's own changesets are still read", () => {
+    const events = [status(3, 'vio', 'Rework required', at(7, 10))];
+    const blocks = conversationBlocksOf({ conversation: conversation([], events), user: 'vio', changesets: changesets([12, at(7, 9)]), reviewDate: at(7, 8) });
+
+    expect(blocks.flatMap((block) => (block.kind === 'round' ? [block.round.changesetId] : []))).toEqual([undefined]);
   });
 
   it('folds nothing and draws no line on a first review', () => {
