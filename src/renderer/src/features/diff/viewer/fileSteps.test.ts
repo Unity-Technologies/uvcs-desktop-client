@@ -165,6 +165,12 @@ describe('fileSteps', () => {
     expect(selected).toEqual([]);
   });
 
+  it("names the files around a folder or group selected, given the list's rows, for the arrows shown with no diff", () => {
+    const list = { select: (_key: string, done: () => void) => selectNow(done, () => undefined), pathOf: (key: string) => key, rowOrder: ['Changed', 'a', 'Art', 'b'] };
+    expect([fileSteps(['a', 'b'], 'Art', list, pendingArrival()).neighbor(-1), fileSteps(['a', 'b'], 'Art', list, pendingArrival()).neighbor(1)]).toEqual(['a', 'b']);
+    expect([fileSteps(['a', 'b'], 'Changed', list, pendingArrival()).neighbor(-1), fileSteps(['a', 'b'], 'Changed', list, pendingArrival()).neighbor(1)]).toEqual([null, 'a']);
+  });
+
   it('selects nothing past the ends', () => {
     const { steps, selected } = list('c');
     expect(steps.canStep(1)).toBe(false);

@@ -25,6 +25,7 @@ import { changesetDiffPage } from '../changesets/changesetOperations';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
 import { FileStepsContext, selectNow, useFileSteps, usePendingArrival } from '../diff/viewer/fileSteps';
+import { StepsAroundEmptyState } from '../diff/viewer/StepsAroundEmptyState';
 import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
@@ -126,7 +127,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   });
   // A file's diff goes on past its last or first change to the files around it, as the list shows them.
   const fileKeys = useMemo(() => fileRowKeys(rows), [rows]);
-  const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))), pathOf: (key) => key, pending: arrival });
+  // Every row in list order: from a folder or group selected, the arrows go on to the files around it (`adjacentKey`).
+  const rowOrder = useMemo(() => rows.map((row) => row.key), [rows]);
+  const fileSteps = useFileSteps({ keys: fileKeys, rowOrder, current: selection.anchor, select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))), pathOf: (key) => key, pending: arrival });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
 
@@ -218,7 +221,11 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (focusedGroup) {
       const name = focusedGroup.type === 'group' ? focusedGroup.label : focusedGroup.path;
-      return <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(rangeLength(focusedGroup.held), 'change')}. Select a file to see its diff.`} />;
+      return (
+        <StepsAroundEmptyState fileSteps={fileSteps} selectedKey={focusedGroup.key}>
+          <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(rangeLength(focusedGroup.held), 'change')}. Select a file to see its diff.`} />
+        </StepsAroundEmptyState>
+      );
     }
     return <EmptyState title="Select a changeset or a file" />;
   };
