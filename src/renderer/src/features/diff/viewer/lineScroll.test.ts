@@ -26,7 +26,8 @@ describe('scrollToLine, frame by frame, in a diff laid out as Pierre does', () =
 
   it('leaves the view where the user scrolls it while the line settles into place', () => {
     const diff = new FakePierreLayout({ lines: 800, wrapped: everyOtherLine(800), viewHeight: VIEW_HEIGHT });
-    expect(scrollToLineIn(diff, 187, { userScrollsAt: 1 })).toBeLessThan(A_THIRD - 400);
+    scrollToLineIn(diff, 187, { userScroll: { atFrame: 1, to: 1000 } });
+    expect(diff.scrollTop).toBe(1000);
   });
 
   it('brings a line near the end of a wrapped diff as far up as the end of the content lets it', () => {
@@ -38,14 +39,15 @@ describe('scrollToLine, frame by frame, in a diff laid out as Pierre does', () =
 
 /**
  * Runs `scrollToLine` on a scrolling element and a virtualizer standing for `diff`, frame by frame (its
- * `requestAnimationFrame`s), Pierre rendering what each frame scrolled to; the user turns the wheel 500 px down on the
- * frame `userScrollsAt`, if given. Returns where the line stands below the top of the view once it stopped and Pierre
+ * `requestAnimationFrame`s), Pierre rendering what each frame scrolled to; the user turns the wheel to `userScroll.to`
+ * on its frame, if given. Returns where the line stands below the top of the view once it stopped and Pierre
  * rendered what it scrolled to.
  */
-function scrollToLineIn(diff: FakePierreLayout, lineNumber: number, { userScrollsAt }: { userScrollsAt?: number } = {}): number {
-  const frames: FrameRequestCallback[] = [];
-  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback));
-  vi.stubGlobal('cancelAnimationFrame', () => undefined);
+function scrollToLineIn(diff: FakePierreLayout, lineNumber: number, { userScroll }: { userScroll?: { atFrame: number; to: number } } = {}): number {
+  const frames = new Map<number, FrameRequestCallback>();
+  let lastId = 0;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => (frames.set(++lastId, callback), lastId));
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
   const fileContainer = {} as Element;
   const container = scrollingElementOf(diff, fileContainer);
   const internals: VirtualizerInternals = {
@@ -55,13 +57,15 @@ function scrollToLineIn(diff: FakePierreLayout, lineNumber: number, { userScroll
   diff.startFrame();
   scrollToLine(container, { side: 'deletions', lineNumber }, internals as unknown as Virtualizer, A_THIRD_DOWN);
   diff.endFrame();
-  for (let frame = 0; frame < 60 && frames.length > 0; frame++) {
+  for (let frame = 0; frame < 60 && frames.size > 0; frame++) {
     diff.startFrame();
-    if (frame === userScrollsAt) {
+    if (frame === userScroll?.atFrame) {
       container.dispatchEvent(new Event('wheel'));
-      diff.scrollTo(diff.scrollTop + 500);
+      diff.scrollTo(userScroll.to);
     }
-    frames.splice(0).forEach((callback) => callback(frame));
+    const due = [...frames.values()];
+    frames.clear();
+    due.forEach((callback) => callback(frame));
     diff.endFrame();
   }
   diff.startFrame();
