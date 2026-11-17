@@ -1,5 +1,6 @@
 import type { ItemDetails, TreeItem, XlinkTarget } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
+import type { WorkspaceKind } from '@shared/domain/workspace';
 import { xlinkKind, xlinkSummary } from '../../components/xlinkWords';
 import { parentOf } from '../../lib/paths';
 
@@ -74,13 +75,14 @@ export function editableXlinkOf<Item extends Pick<TreeItem, 'xlink' | 'isPrivate
  * only once it is checked in and the folder updated (docs/features/xlinks.md): one checked in from Changes, or whose
  * files didn't load as it was created, stays empty until "Load its files". Not while it is added, as nothing can load
  * it yet; nor before its folder is listed, as an unread listing tells nothing. An xlink to an empty folder of its
- * repository is offered it too: loading it again changes nothing.
+ * repository is offered it too: loading it again changes nothing. Never in a partial workspace, which downloads an xlink
+ * whole, as a file, when Choose what to download… picks it (docs/features/partial-workspaces.md).
  */
 export function unloadedXlinkOf<Item extends Pick<TreeItem, 'xlink' | 'isPrivate'>>(
   item: Item,
   where: Pick<XlinkSurroundings, 'underXlink'>,
-  { added, listedItems }: { added: boolean; listedItems: readonly unknown[] | undefined },
+  { added, listedItems, workspaceKind }: { added: boolean; listedItems: readonly unknown[] | undefined; workspaceKind?: WorkspaceKind },
 ): (Item & { xlink: XlinkTarget }) | null {
   const xlink = editableXlinkOf(item, where);
-  return xlink && !added && listedItems?.length === 0 ? xlink : null;
+  return xlink && !added && workspaceKind !== 'partial' && listedItems?.length === 0 ? xlink : null;
 }
