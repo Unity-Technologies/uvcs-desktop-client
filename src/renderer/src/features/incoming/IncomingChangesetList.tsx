@@ -74,7 +74,6 @@ export function IncomingChangesetList({ list, changesets, more, open, onToggle, 
       <div ref={showMoreRef}>
         <ChangesetStepList
           list={list}
-          allChanges={ALL_INCOMING_ROW}
           separator={older && showMoreKey ? { beforeKey: showMoreKey, content: <IncomingShowMore loading={older.loading} onShowMore={showMore} /> } : undefined}
           mostRows={CHANGESET_LIST_MOST_ROWS}
           label="Incoming changesets"

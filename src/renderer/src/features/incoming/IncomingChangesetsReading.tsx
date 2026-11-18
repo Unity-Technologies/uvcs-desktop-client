@@ -15,10 +15,10 @@ const ALL: ChangesetListFocus = { kind: 'all' };
 export function IncomingChangesetsReading() {
   const open = !useIncomingViewStore((state) => state.changesetsCollapsed);
   const toggle = useIncomingViewStore((state) => state.toggleChangesets);
-  const list = useChangesetStepList({ changesets: undefined, focus: ALL, allApart: true, stepsEnabled: false });
+  const list = useChangesetStepList({ changesets: undefined, focus: ALL, stepsEnabled: false });
   return (
     <ChangesetFold allChanges={ALL_INCOMING_ROW} selected onSelectAll={() => undefined} foldLabel={changesetFoldLabel(open)} open={open} onToggle={toggle}>
-      <ChangesetStepList list={list} allChanges={ALL_INCOMING_ROW} mostRows={CHANGESET_LIST_MOST_ROWS} label="Incoming changesets" contextMenu={() => []} />
+      <ChangesetStepList list={list} mostRows={CHANGESET_LIST_MOST_ROWS} label="Incoming changesets" contextMenu={() => []} />
     </ChangesetFold>
   );
 }

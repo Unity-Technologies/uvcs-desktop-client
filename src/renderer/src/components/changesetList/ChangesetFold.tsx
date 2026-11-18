@@ -1,7 +1,12 @@
 import { ChevronDown, Layers } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { AllChangesRow } from './ChangesetStepList';
 import styles from './ChangesetFold.module.css';
+
+/** The row standing for every changeset combined: its words, fitted, and its tooltip (a branch's whole name). */
+export interface AllChangesRow {
+  label: string;
+  tip?: string;
+}
 
 /**
  * Changesets above the files, under the row that stands for them all ("All changes on task", "All incoming changes"),

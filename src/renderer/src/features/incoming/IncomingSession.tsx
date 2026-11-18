@@ -81,8 +81,6 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const changesetSteps = useChangesetStepList({
     changesets: changesetList.changesets,
     focus: ALL_INCOMING_FOCUS,
-    // "All incoming changes" stands apart above the list, which folds under it, as a branch diff's does.
-    allApart: true,
     // Folded, a step would change the files out of sight.
     stepsEnabled: changesetsOpen,
     onSelect: (picked) => {

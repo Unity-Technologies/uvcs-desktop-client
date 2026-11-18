@@ -8,35 +8,20 @@ import { pluralize } from '../../lib/text';
 import { displayName, userFilterTexts } from '../../lib/userName';
 
 /**
- * The list of changesets a branch diff and Incoming step through (`ChangesetStepList`): a first row standing for all
- * of them combined ("All changes on task", "All incoming changes"), then the changesets oldest on top, one selected
- * showing its own diff and several selected showing as one (`changesetListChoice`).
+ * The list of changesets a branch diff and Incoming step through (`ChangesetStepList`): the changesets oldest on top,
+ * one selected showing its own diff and several selected showing as one (`changesetListChoice`), under the row that
+ * stands for all of them combined ("All changes on task", "All incoming changes"), which the place shows apart above
+ * the list (`ChangesetFold`), so the filter never hides it.
  */
 
-/** The key of the row standing for every changeset combined, among the changesets' numbers. */
+/** The key the selection holds for every changeset combined (the row above the list), among the changesets' numbers. */
 export const ALL_CHANGES_KEY = 'all';
 
-/** A row of the list: everything combined, or one changeset. */
-export type ChangesetListRow = { kind: 'all' } | { kind: 'changeset'; changeset: Changeset };
-
-const ALL_ROW: ChangesetListRow = { kind: 'all' };
-
-export function changesetListRowKey(row: ChangesetListRow): string {
-  return row.kind === 'all' ? ALL_CHANGES_KEY : String(row.changeset.id);
+export function changesetListRowKey(changeset: Changeset): string {
+  return String(changeset.id);
 }
 
-/**
- * The rows for the changesets `shown` (oldest first): everything combined on top, then each changeset. While words are
- * typed in the filter only the changesets they match show, without the combined row, which no word matches (nor
- * when the place shows it apart, `allApart`: a branch diff's row above the list, which folds the list under it); its diff
- * stays shown while selected, as a changeset the filter hides does.
- */
-export function changesetListRows(shown: readonly Changeset[], query: string, { allApart = false }: { allApart?: boolean } = {}): ChangesetListRow[] {
-  const rows = shown.map((changeset): ChangesetListRow => ({ kind: 'changeset', changeset }));
-  return query.trim() || allApart ? rows : [ALL_ROW, ...rows];
-}
-
-/** The selection of the combined row alone: what the list opens on. */
+/** The selection of every changeset combined alone: what the list opens on. */
 export const ALL_CHANGES_SELECTION: SelectionState = { selected: new Set([ALL_CHANGES_KEY]), anchor: ALL_CHANGES_KEY };
 
 /**
@@ -149,7 +134,7 @@ export function focusRevealKey(focus: ChangesetListFocus): string {
 }
 
 /** How many places the list's rows take: every row, and the line between two of them when its row shows. */
-export function changesetListPlaces(rows: readonly ChangesetListRow[], separatorBeforeKey: string | undefined): number {
+export function changesetListPlaces(rows: readonly Changeset[], separatorBeforeKey: string | undefined): number {
   const separates = separatorBeforeKey !== undefined && rows.some((row) => changesetListRowKey(row) === separatorBeforeKey);
   return rows.length + (separates ? 1 : 0);
 }

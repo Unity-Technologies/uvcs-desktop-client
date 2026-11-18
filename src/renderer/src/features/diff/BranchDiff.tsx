@@ -75,7 +75,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     setFocus(askedFocus);
     if (askedOpen(askedFocus)) setAsked(true);
   }, [focusRequest?.seq]);
-  const list = useChangesetStepList({ changesets, focus, allApart: true, stepsEnabled: changesetStepsWork(open, changesets) });
+  const list = useChangesetStepList({ changesets, focus, stepsEnabled: changesetStepsWork(open, changesets) });
 
   // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset. The whole branch read
   // tells where it starts, for the branch diff up to a changeset.
@@ -120,7 +120,6 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     >
       <ChangesetStepList
         list={list}
-        allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
         quiet={reviewedUpTo && quiet}
         separator={
           separator && {
