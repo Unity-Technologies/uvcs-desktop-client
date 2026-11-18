@@ -1,4 +1,5 @@
 import type { CreateLabelRequest, LabelsApi } from '@shared/api/labels';
+import { serverOfRepository } from '@shared/domain/permissions';
 import type { Place } from '@shared/domain/place';
 import { cmPlace } from '../cm/cmPlace';
 import { equalsCondition, findArgs } from '../cm/findQuery';
@@ -39,7 +40,7 @@ export function createLabelsService({ cm }: ServiceContext): LabelsApi {
     // Outside every workspace in both places: `labelCommentArgs` names the repository on every spec.
     editComment(_place, label, comment) {
       return withTempFile(comment, async (commentsFile) => {
-        await cm.query(labelCommentArgs(label, comment, commentsFile), { outsideWorkspaces: true });
+        await cm.query(labelCommentArgs(label, comment, commentsFile), { outsideWorkspaces: true, server: serverOfRepository(label.repository) || undefined });
       });
     },
 
