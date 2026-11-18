@@ -9,7 +9,7 @@ import { CmError } from './CmError';
 import { MAX_LOGGED_COMMAND_LINE } from '@shared/clipForLog';
 import type { CmResult } from './CmResult';
 import { RecordReader } from './formatRecords';
-import { CmOutputTooLargeError, textLimitOf } from './outputLimit';
+import { CmItemTooLargeError, CmOutputTooLargeError, textLimitOf } from './outputLimit';
 import type { OutputReading } from './outputReading';
 import { formatOutput } from './testing/cmOutput';
 import { MAX_QUICK_WRITE_PATHS } from './longCommands';
@@ -581,6 +581,23 @@ describe('CmClient commands that end without an exit code', () => {
     expect(error).toMatchObject({
       message: 'The command printed more than 4 MB, too much to read, and was stopped.',
       command: { commandLine: 'cm fileinfo a.cs --xml --encoding=utf-8', exitCode: -1, logEntryId: logged[0]?.id },
+    });
+  });
+
+  it('fails a list whose item never ended with a CmError naming it, run as a process before its shell is ready', async () => {
+    const { cm, logged, processes } = fakeClient({
+      warm: false,
+      answer: () => {
+        throw new CmItemTooLargeError(16 * 1024 * 1024);
+      },
+    });
+
+    const error = await failureOf(cm.queryRecords(['find', 'branch', '--format={name}'], (fields) => fields, { cwd: WORKSPACE }));
+
+    expect(processes).toHaveLength(1);
+    expect(error).toMatchObject({
+      message: 'The command printed more than 16 MB without ending an item of its list, too much to read, and was stopped.',
+      command: { commandLine: 'cm find branch --format={name} --encoding=utf-8', exitCode: -1, logEntryId: logged[0]?.id },
     });
   });
 });
