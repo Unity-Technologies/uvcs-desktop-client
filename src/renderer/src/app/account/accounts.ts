@@ -3,12 +3,11 @@ import type { Account } from '@shared/domain/account';
 import { userAccountsOf } from '@shared/domain/userAccounts';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { describeServer } from '../../lib/servers';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 import { usePlaceServer, useWindowServer } from '../workspace/useWorkspace';
-import { accountForServer } from './serverAccount';
+import { accountForServer, profileLabel } from './serverAccount';
 
 /** Refreshed when the window regains focus after a minute: signing in with the official client adds or changes one. */
 export const accountsQuery = queryOptions({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: 60_000 });
@@ -67,10 +66,10 @@ export function cachedServerUser(server: string): string | undefined {
 }
 
 export async function removeAccount(account: Account): Promise<void> {
-  const { label } = describeServer(account.server);
+  const label = profileLabel(account);
   const confirmed = await confirm({
     title: `Remove the account on ${label}?`,
-    message: `This computer forgets how to sign in to ${account.server} as ${account.user}. Sign in again with the Unity Version Control app to use it.`,
+    message: `This computer forgets how to sign in to ${label} as ${account.user}. Sign in again with the Unity Version Control app to use it.`,
     confirmLabel: 'Remove account',
     danger: true,
   });

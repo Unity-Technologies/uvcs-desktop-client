@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Account } from '@shared/domain/account';
-import { accountForServer, cloudDashboardUrl, lockRulesUrl, organizationName, signInMethod } from './serverAccount';
+import { accountForServer, cloudDashboardUrl, lockRulesUrl, organizationName, profileLabel, signInMethod } from './serverAccount';
 
 const account = (name: string, server = name, user = 'me@acme.com'): Account => ({ name, server, user, workingMode: 'SSOWorkingMode' });
 
@@ -32,6 +32,19 @@ describe('organizationName', () => {
     expect(organizationName('1375488836673@cloud', genesis)).toBe('acme');
     expect(organizationName('other@cloud', wildcard)).toBe('other');
     expect(organizationName('ssl://host:8088', onPremises)).toBeNull();
+  });
+});
+
+describe('profileLabel', () => {
+  it('names an organization by its readable name, whichever form the profile keeps it in', () => {
+    expect(profileLabel(account('acme@unity', '1375488836673@cloud'))).toBe('acme');
+    expect(profileLabel(genesis)).toBe('acme');
+    expect(profileLabel(legacy)).toBe('libra4d');
+  });
+
+  it('names a server as the sidebar does, and `*@cloud` as every organization', () => {
+    expect(profileLabel(onPremises)).toBe('ssl://host:8088');
+    expect(profileLabel(wildcard)).toBe('Any cloud organization');
   });
 });
 
