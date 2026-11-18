@@ -1,14 +1,14 @@
 import type { Account, UserAccount } from '@shared/domain/account';
 import { describeServer } from '../../lib/servers';
 import { pluralize } from '../../lib/text';
-import { signInMethod } from '../account/serverAccount';
+import { organizationName, signInMethod } from '../account/serverAccount';
 import { accountOfServer } from '../account/userAccounts';
 
 /** A place an account signs in to, in Settings › Accounts: removed one at a time (`cm profile delete`). */
 export interface AccountRowServer {
   /** The profile it is, removed by its name. */
   profile: Account;
-  /** As the home sidebar names it: `acme`, `build:8087`, "Any cloud organization" for `*@cloud`. */
+  /** By its readable name (`organizationName`): `acme`, `build:8087`, "Any cloud organization" for `*@cloud`. */
   label: string;
 }
 
@@ -41,7 +41,8 @@ function accountDetail(account: UserAccount): string {
 }
 
 function rowServers(account: UserAccount): AccountRowServer[] {
-  const servers = account.profiles.map((profile) => ({ profile, label: describeServer(profile.server).label }));
+  // An organization by its readable name, never its genesis id, as the account menu names it.
+  const servers = account.profiles.map((profile) => ({ profile, label: organizationName(profile.server, profile) ?? describeServer(profile.server).label }));
   const isWildcard = (server: AccountRowServer) => server.profile.server.startsWith('*@');
   return servers.sort((a, b) => Number(isWildcard(a)) - Number(isWildcard(b)) || a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
 }

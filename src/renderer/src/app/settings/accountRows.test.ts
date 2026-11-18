@@ -41,6 +41,15 @@ describe('accountRowsOf', () => {
     ]);
   });
 
+  it('names an organization by its readable name, never its genesis id, and finds its account by either', () => {
+    const genesis = { name: 'tools@unity', server: '1375488836673@cloud', user: 'cy@example.com', workingMode: 'SSOWorkingMode' };
+    const cy = { ...unityAccount('cy@example.com', ['1375488836673@cloud']), profiles: [genesis] };
+
+    const [row] = accountRowsOf([ana, cy], 'tools@unity');
+    expect(row!.account).toBe(cy);
+    expect(row!.servers.map(({ label }) => label)).toEqual(['tools']);
+  });
+
   it("opens a Unity account's row to its organizations, and lets a server's row stand for its one server", () => {
     const [anaRow, , buildRow] = accountRowsOf(accounts, undefined);
 
