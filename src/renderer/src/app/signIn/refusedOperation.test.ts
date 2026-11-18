@@ -7,6 +7,7 @@ import { ApiError } from '../../api/client';
 import { pressToastAction, shownToasts } from '../../testing/operationOutcome';
 import { runAction, runOperation, runRead } from '../operations/runOperation';
 import { useSession } from '../workspace/sessionStore';
+import { useCommandLogStore } from '../shell/commandLogStore';
 import { queryClient } from '../queryClient';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import { forgetRefusedOperation, offerRefusedAgain } from './refusedOperation';
@@ -15,7 +16,8 @@ const WS = '/work/game';
 const PLACE = workspacePlace(WS);
 
 const problem = (server: string): SignInProblem => ({ kind: 'sessionEnded', server, details: { commandLine: `cm checkconnection ${server}`, output: '' } });
-const refused = (server: string) => new ApiError({ message: `Sign in to ${server} to continue.`, signIn: problem(server) });
+const refused = (server: string) =>
+  new ApiError({ message: 'Sign in to this server again to continue.', signIn: problem(server), command: { commandLine: 'cm checkin', exitCode: 1, output: '', logEntryId: 42 } });
 
 /** The workspace's info as the window read it: on acme@cloud. */
 function workspaceOnAcme(): void {
@@ -42,14 +44,16 @@ function checkIn(error: Error, failures = 1) {
 
 beforeEach(() => {
   forgetRefusedOperation();
+  useCommandLogStore.setState({ handledIds: new Set() });
   workspaceOnAcme();
 });
 
 describe('an operation refused for a sign-in', () => {
-  it("raises no error toast: the sign-in screen already tells", async () => {
+  it("raises no error toast, nor points at its command as a failure: the sign-in screen already tells", async () => {
     await checkIn(refused('acme@cloud')).run();
 
     expect(shownToasts()).toEqual([]);
+    expect(useCommandLogStore.getState().handledIds.has(42)).toBe(true);
   });
 
   it('is offered again once its server is signed in, never run by itself', async () => {

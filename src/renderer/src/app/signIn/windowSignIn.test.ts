@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 import type { ServerSession, SignInProblem } from '@shared/domain/signIn';
 import { ApiError } from '../../api/client';
-import { failedForSignInTo, serverToKeepChecking, signedInAgain, signInCovering, signInProblemOf, toldBySignInScreen, workspaceSignInProblem } from './windowSignIn';
+import { failedForSignInEntries, failedForSignInTo, serverToKeepChecking, signedInAgain, signInCovering, signInProblemOf, toldBySignInScreen, workspaceSignInProblem } from './windowSignIn';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 
@@ -87,5 +87,18 @@ describe('serverToKeepChecking', () => {
   it('is none on the home screen, or while the info reads', () => {
     expect(serverToKeepChecking(null, { data: undefined, error: null })).toBeUndefined();
     expect(serverToKeepChecking(workspacePlace('/wk'), { data: undefined, error: null })).toBeUndefined();
+  });
+});
+
+describe('failedForSignInEntries', () => {
+  it("names the command-log entries of the queries that failed for a server's sign-in: once signed in, none is a failure to point at", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const failWith = (key: string, error: Error) => client.prefetchQuery({ queryKey: [key], queryFn: () => Promise.reject(error) });
+    const command = (logEntryId: number) => ({ commandLine: 'cm find branch', exitCode: 1, output: '', logEntryId });
+    await failWith('branches', new ApiError({ message: 'Sign in', signIn: problem('acme@cloud'), command: command(7) }));
+    await failWith('labels', new ApiError({ message: 'Sign in', signIn: problem('build:8087'), command: command(8) }));
+    await failWith('shelves', new ApiError({ message: 'Sign in', signIn: problem('acme@cloud') }));
+
+    expect(failedForSignInEntries(client.getQueryCache().getAll(), 'acme@cloud')).toEqual([7]);
   });
 });

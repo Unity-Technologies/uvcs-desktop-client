@@ -46,6 +46,18 @@ export function failedForSignInTo(server: string): (query: Query) => boolean {
 }
 
 /**
+ * The command-log entries of the queries that failed for `server`'s sign-in: told by the sign-in screen, and no failure
+ * to point at once signed in (`isUnseenFailure`).
+ */
+export function failedForSignInEntries(queries: readonly Query[], server: string): number[] {
+  const failed = failedForSignInTo(server);
+  return queries.filter(failed).flatMap((query) => {
+    const error = query.state.error;
+    return error instanceof ApiError && error.command ? [error.command.logEntryId] : [];
+  });
+}
+
+/**
  * The sign-in a workspace's info couldn't be read for (its header asks the server for its branch's head), while it was
  * never read: the window shows the sign-in screen as its page (`WorkspaceGate`). None once read: a later failure keeps
  * the workspace's screen, covered.

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { samePlace, workspacePathOf, type Place } from '@shared/domain/place';
+import { ApiError } from '../../api/client';
 import { toast } from '../../ui/toast/toastStore';
+import { useCommandLogStore } from '../shell/commandLogStore';
 import { queryClient } from '../queryClient';
 import { serverOfPlace } from '../workspace/placeOrigin';
 import { useSession } from '../workspace/sessionStore';
@@ -30,6 +32,7 @@ export function refusedForSignIn(error: unknown, place: Place, refused: Pick<Ref
   const problem = signInProblemOf(error);
   if (!problem || !toldBySignInScreen(error, placeServerNow(place))) return false;
   useRefusedOperation.setState({ refused: { place, server: problem.server, ...refused } });
+  markToldByScreen(error);
   return true;
 }
 
@@ -48,7 +51,14 @@ export function offerRefusedAgain(server: string, shownPlace: Place | null): voi
  */
 export function readRefusedForSignIn(error: unknown): boolean {
   const place = useSession.getState().place;
-  return place !== null && toldBySignInScreen(error, placeServerNow(place));
+  const told = place !== null && toldBySignInScreen(error, placeServerNow(place));
+  if (told) markToldByScreen(error);
+  return told;
+}
+
+/** The screen tells a failure it covers the window for: its command is no failure to point at (`isUnseenFailure`). */
+function markToldByScreen(error: unknown): void {
+  if (error instanceof ApiError && error.command) useCommandLogStore.getState().markHandled(error.command.logEntryId);
 }
 
 export function forgetRefusedOperation(): void {

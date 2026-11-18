@@ -5,7 +5,8 @@ import { queryKeys } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { useSession } from '../workspace/sessionStore';
 import { offerRefusedAgain } from './refusedOperation';
-import { failedForSignInTo, signedInAgain } from './windowSignIn';
+import { useCommandLogStore } from '../shell/commandLogStore';
+import { failedForSignInEntries, failedForSignInTo, signedInAgain } from './windowSignIn';
 
 /** The servers that need a sign-in, app-wide: read once, then kept by main's `serverSessionsChanged`. */
 const serverSessionsQuery = queryOptions({ queryKey: queryKeys.serverSessions, queryFn: () => api.accounts.sessions(), staleTime: Infinity });
@@ -16,7 +17,8 @@ export function useServerSessions() {
 
 /**
  * Follows main's sign-in state (one per server, `ServerSessions`). A server signed in again reads once more what failed
- * for its sign-in in this window, and offers the operation it refused (`offerRefusedAgain`). Used once, by the app.
+ * for its sign-in in this window (their commands no failure to point at anymore), and offers the operation it refused
+ * (`offerRefusedAgain`). Used once, by the app.
  */
 export function useServerSessionsFromMain(): void {
   const client = useQueryClient();
@@ -24,6 +26,7 @@ export function useServerSessionsFromMain(): void {
     const before = client.getQueryData<ServerSession[]>(queryKeys.serverSessions) ?? [];
     client.setQueryData(queryKeys.serverSessions, sessions);
     for (const server of signedInAgain(before, sessions)) {
+      failedForSignInEntries(client.getQueryCache().getAll(), server).forEach(useCommandLogStore.getState().markHandled);
       void client.invalidateQueries({ predicate: failedForSignInTo(server) });
       offerRefusedAgain(server, useSession.getState().place);
     }
