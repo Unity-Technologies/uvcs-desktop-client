@@ -1,7 +1,12 @@
 // What the branch head brings a partial workspace: the items it has loaded compared with the same items on the head,
 // by item id. A partial workspace on a branch isn't at a changeset (`cm status` prints cs:-1), so there are no
 // changesets to list: its incoming changes are the items an update (`cm partial update`) would change.
+//
+// Items under an xlink belong to the xlinked repository, whose item ids are its own and collide with the workspace's
+// (an xlink's root is often item 2 or 3, as the workspace's): every item is told apart by its id within its scope, the
+// path of the xlink it lies under ('' for the workspace's own repository).
 
+import type { XlinkTarget } from '@shared/domain/explorer';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { integerValue, recordFormat, type ReadRecord } from '../cm/formatRecords';
 import { listedRevisionId } from '../cm/treeItems';
@@ -18,8 +23,8 @@ interface ComparedItem {
   isDirectory: boolean;
   /** Relative to the workspace's root with forward slashes, composed (NFC); '' for the root. */
   path: string;
-  /** Set on an xlink, whose items belong to another repository and are left out of the comparison. */
-  xlink?: true;
+  /** Set on an xlink: where it points. Its id, revision and changeset are the xlinked repository's, as its items'. */
+  xlink?: XlinkTarget;
 }
 
 /** An item as the workspace has it loaded. */
@@ -58,8 +63,73 @@ export const readHeadItem: ReadRecord<HeadItem> = ([itemid = '', revid = '', typ
 
 /** `cm ls` lists an xlink as a directory (`dir`, never `xlink`): only its name, which names its target, tells it apart. */
 function comparedItem(itemid: string, type: string, path: string, name: string): Omit<ComparedItem, 'revisionId'> {
-  const xlink = parseXlinkName(name) !== undefined;
-  return { itemId: integerValue(itemid), isDirectory: type === 'dir', path: path.normalize('NFC'), ...(xlink ? { xlink: true as const } : {}) };
+  const xlink = parseXlinkName(name);
+  return { itemId: integerValue(itemid), isDirectory: type === 'dir', path: path.normalize('NFC'), ...(xlink ? { xlink } : {}) };
+}
+
+/** The xlinks among `items`, by path. */
+export function xlinksOf(items: readonly ComparedItem[]): Map<string, XlinkTarget> {
+  return new Map(items.flatMap((item) => (item.xlink ? [[item.path, item.xlink] as const] : [])));
+}
+
+/** The deepest xlink at or above `path`: the one whose repository the item at `path` belongs to. */
+export function enclosingXlink(path: string, xlinks: ReadonlyMap<string, XlinkTarget>): { path: string; target: XlinkTarget } | undefined {
+  if (xlinks.size === 0) return undefined;
+  for (let folder = path; ; folder = parentOf(folder)) {
+    const target = xlinks.get(folder);
+    if (target) return { path: folder, target };
+    if (folder === '') return undefined;
+  }
+}
+
+/** How `cm` names an xlink's repository in a spec: `pnunit@acme@cloud`, or `pnunit` when the xlink names no server. */
+export function repositorySpec(target: Pick<XlinkTarget, 'repository' | 'server'>): string {
+  return target.server === '' ? target.repository : `${target.repository}@${target.server}`;
+}
+
+/** An item with what tells it apart from the items of other repositories. */
+interface Scoped<T extends ComparedItem> {
+  item: T;
+  /** The path of the xlink it lies under ('' for the workspace's repository); an xlink is in its own. */
+  scope: string;
+  /** Its id within its scope. */
+  key: string;
+  /** The xlinked repository it belongs to; undefined for the workspace's. */
+  repository: string | undefined;
+}
+
+function scoped<T extends ComparedItem>(items: readonly T[]): Scoped<T>[] {
+  const xlinks = xlinksOf(items);
+  return items.map((item) => {
+    const xlink = enclosingXlink(item.path, xlinks);
+    const scope = xlink?.path ?? '';
+    return { item, scope, key: scopedKey(item.itemId, scope), repository: xlink && repositorySpec(xlink.target) };
+  });
+}
+
+function scopedKey(itemId: number, scope: string): string {
+  return `${itemId}:${scope}`;
+}
+
+/** The scope of a folder's children: an xlink's own, or the folder's. */
+function childScope({ item, scope }: Scoped<ComparedItem>): string {
+  return item.xlink ? item.path : scope;
+}
+
+/** The loaded items and the head's, scoped, and how they meet. */
+interface Comparison {
+  loaded: Scoped<LoadedTreeItem>[];
+  loadedKeys: Set<string>;
+  headByKey: Map<string, Scoped<HeadItem>>;
+}
+
+function comparisonOf(loaded: readonly LoadedTreeItem[], head: readonly HeadItem[]): Comparison {
+  const loadedItems = scoped(loaded);
+  return {
+    loaded: loadedItems,
+    loadedKeys: new Set(loadedItems.map((each) => each.key)),
+    headByKey: new Map(scoped(head).map((each) => [each.key, each])),
+  };
 }
 
 /**
@@ -69,42 +139,42 @@ function comparedItem(itemid: string, type: string, path: string, name: string):
  *   with its moved folder isn't named apart: the folder stands for it, and it reads as changed only if it changed.
  * - removed: an item the head doesn't have; a removed folder stands for everything it held.
  * - added: an item new on the head in a folder the workspace loaded whole, the only kind `cm partial update` loads.
- *   One the workspace left out exists since before what it loaded: item ids grow with each item created, so a new one
- *   has a greater id than every loaded item and comes in a changeset after every loaded revision. That rule misses an
- *   older item created after the workspace loaded something else, so `existedWhenLoaded` names the items the folder
- *   held at its loaded revision (`foldersWithNewItems` says which folders to list for it). A loaded folder that holds
- *   an item that existed and was left out was loaded in part, and gets nothing added: the new items in it are left out
- *   like the rest.
+ *   `childrenWhenLoaded` holds, by the folder's loaded path, what some folders held at their loaded revision
+ *   (`changedFoldersWithUnloadedItems` says which): an item the head has there and the workspace left out existed
+ *   when it loaded the folder, which was then loaded in part and gets nothing added. Without that listing, the item
+ *   ids tell: they grow with each item created in a repository, so a new item has a greater id than every loaded
+ *   item of its repository and comes in a changeset after every loaded revision of it; one that doesn't existed
+ *   before and was left out.
  * A change conflicts when the item also changed locally (`locallyChanged`, paths as the workspace has them).
  * `head` is the branch head's listing of the loaded folders and their children, a folder listed more than once kept
- * once. Items of xlinks belong to other repositories, with ids of their own, and are left out.
+ * once. An item inside an xlink names the xlinked repository its revisions belong to (`repository`).
  * Every check is a lookup in a set or a map, by path or by id, so the work grows in step with the workspace.
  */
 export function compareWithHead(
   loaded: readonly LoadedTreeItem[],
   head: readonly HeadItem[],
   locallyChanged: ReadonlySet<string>,
-  existedWhenLoaded: ReadonlySet<number> = new Set(),
+  childrenWhenLoaded: ReadonlyMap<string, readonly HeadItem[]> = new Map(),
 ): PartialIncomingItem[] {
-  const loadedItems = withoutXlinks(loaded);
-  const headById = new Map(withoutXlinks(head).map((item) => [item.itemId, item]));
-  const changes = [...loadedChanges(loadedItems, headById, withAncestors(locallyChanged)), ...addedItems(unloadedChildrenOf(loadedItems, headById, existedWhenLoaded))];
+  const comparison = comparisonOf(loaded, head);
+  const changes = [...loadedChanges(comparison, withAncestors(locallyChanged)), ...addedItems(comparison, childrenWhenLoaded)];
   return changes.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
-function loadedChanges(loaded: readonly LoadedTreeItem[], headById: ReadonlyMap<number, HeadItem>, changedLocally: ReadonlySet<string>): PartialIncomingItem[] {
-  const loadedByPath = new Map(loaded.map((item) => [item.path, item]));
-  const removedFolders = new Set(loaded.filter((item) => item.isDirectory && !headById.has(item.itemId)).map((item) => item.path));
+function loadedChanges({ loaded, headByKey }: Comparison, changedLocally: ReadonlySet<string>): PartialIncomingItem[] {
+  const loadedByPath = new Map(loaded.map((each) => [each.item.path, each]));
+  const removedFolders = new Set(loaded.filter((each) => each.item.isDirectory && !headByKey.has(each.key)).map((each) => each.item.path));
   const changes: PartialIncomingItem[] = [];
-  for (const item of loaded) {
+  for (const { item, key, repository } of loaded) {
     if (isInsideAny(item.path, removedFolders)) continue;
-    const onHead = headById.get(item.itemId);
+    const inRepository = repository === undefined ? {} : { repository };
+    const onHead = headByKey.get(key)?.item;
     if (!onHead) {
-      changes.push({ kind: 'removed', path: item.path, isDirectory: item.isDirectory, conflict: changedLocally.has(item.path), loadedRevisionId: item.revisionId, headRevisionId: null });
+      changes.push({ kind: 'removed', path: item.path, isDirectory: item.isDirectory, conflict: changedLocally.has(item.path), loadedRevisionId: item.revisionId, headRevisionId: null, ...inRepository });
       continue;
     }
     const changed = !item.isDirectory && onHead.revisionId !== item.revisionId;
-    const moved = onHead.path !== pathAlongWithParent(item.path, loadedByPath, headById);
+    const moved = onHead.path !== pathAlongWithParent(item.path, loadedByPath, headByKey);
     if (!changed && !moved) continue;
     changes.push({
       kind: changed ? 'changed' : 'moved',
@@ -114,74 +184,92 @@ function loadedChanges(loaded: readonly LoadedTreeItem[], headById: ReadonlyMap<
       conflict: changed && changedLocally.has(item.path),
       loadedRevisionId: item.revisionId,
       headRevisionId: onHead.revisionId,
+      ...inRepository,
     });
   }
   return changes;
 }
 
 /** Where a loaded item would be on the head if it only went along with its folder: its name under the folder's head path. */
-function pathAlongWithParent(path: string, loadedByPath: ReadonlyMap<string, LoadedTreeItem>, headById: ReadonlyMap<number, HeadItem>): string {
+function pathAlongWithParent(path: string, loadedByPath: ReadonlyMap<string, Scoped<LoadedTreeItem>>, headByKey: ReadonlyMap<string, Scoped<HeadItem>>): string {
   if (path === '') return path;
   const parent = parentOf(path);
-  const parentOnHead = loadedByPath.get(parent) && headById.get(loadedByPath.get(parent)!.itemId);
+  const loadedParent = loadedByPath.get(parent);
+  const parentOnHead = loadedParent && headByKey.get(loadedParent.key)?.item;
   if (!parentOnHead) return path;
   const name = parent === '' ? path : path.slice(parent.length + 1);
   return parentOnHead.path === '' ? name : `${parentOnHead.path}/${name}`;
 }
 
-/** The head's items in the loaded folders that the workspace doesn't have, and which of them may be new on the head. */
-interface UnloadedChildren {
-  items: HeadItem[];
-  isNew: (item: HeadItem) => boolean;
-  /** Head paths of the folders loaded in part: they hold an item that existed when loaded and was left out. */
-  partlyLoaded: Set<string>;
+/** A loaded folder the head changed, and the head's items in it that the workspace doesn't have. */
+interface FolderWithUnloadedItems {
+  folder: Scoped<LoadedTreeItem>;
+  unloaded: Scoped<HeadItem>[];
 }
 
-function unloadedChildrenOf(loaded: readonly LoadedTreeItem[], headById: ReadonlyMap<number, HeadItem>, existedWhenLoaded: ReadonlySet<number>): UnloadedChildren {
-  // Loops, not `Math.max(...items)`: a spread passes every item as an argument, which overflows the call stack past
-  // about 125,000 items in Electron's main process.
-  let newestChangeset = -1;
-  let greatestItemId = -1;
-  for (const item of loaded) {
-    newestChangeset = Math.max(newestChangeset, item.changeset ?? -1);
-    greatestItemId = Math.max(greatestItemId, item.itemId);
+function foldersWithUnloadedItems({ loaded, loadedKeys, headByKey }: Comparison): FolderWithUnloadedItems[] {
+  const changedFolders = new Map<string, FolderWithUnloadedItems>();
+  for (const each of loaded) {
+    const onHead = headByKey.get(each.key)?.item;
+    if (each.item.isDirectory && onHead && onHead.revisionId !== each.item.revisionId) changedFolders.set(onHead.path, { folder: each, unloaded: [] });
   }
-  const isNew = (item: HeadItem) => item.itemId > greatestItemId && item.changeset > newestChangeset && !existedWhenLoaded.has(item.itemId);
-  const loadedIds = new Set(loaded.map((item) => item.itemId));
-  const loadedFoldersOnHead = new Set(loaded.filter((item) => item.isDirectory).flatMap((item) => headById.get(item.itemId)?.path ?? []));
-  const items = [...headById.values()].filter((item) => !loadedIds.has(item.itemId) && item.path !== '' && loadedFoldersOnHead.has(parentOf(item.path)));
-  return { items, isNew, partlyLoaded: new Set(items.filter((item) => !isNew(item)).map((item) => parentOf(item.path))) };
+  for (const each of headByKey.values()) {
+    if (each.item.path === '' || loadedKeys.has(each.key)) continue;
+    changedFolders.get(parentOf(each.item.path))?.unloaded.push(each);
+  }
+  return [...changedFolders.values()].filter((each) => each.unloaded.length > 0);
 }
 
-function addedItems({ items, isNew, partlyLoaded }: UnloadedChildren): PartialIncomingItem[] {
-  return items
-    .filter((item) => isNew(item) && !partlyLoaded.has(parentOf(item.path)))
-    .map((item) => ({ kind: 'added', path: item.path, isDirectory: item.isDirectory, conflict: false, loadedRevisionId: null, headRevisionId: item.revisionId }));
-}
-
-/**
- * The loaded folders whose content at their loaded revision `compareWithHead` needs (its `existedWhenLoaded`): those
- * that look whole but hold an item that looks new, which may have existed all along. A checkout lists no changeset to
- * list it at, and keeps the item-id rule. Few folders, and none once a folder is known to be loaded in part.
- */
-export function foldersWithNewItems(loaded: readonly LoadedTreeItem[], head: readonly HeadItem[]): LoadedTreeItem[] {
-  const loadedItems = withoutXlinks(loaded);
-  const headById = new Map(withoutXlinks(head).map((item) => [item.itemId, item]));
-  const { items, isNew, partlyLoaded } = unloadedChildrenOf(loadedItems, headById, new Set());
-  const parents = new Set(items.filter((item) => isNew(item) && !partlyLoaded.has(parentOf(item.path))).map((item) => parentOf(item.path)));
-  return loadedItems.filter((item) => {
-    const onHead = headById.get(item.itemId);
-    return item.isDirectory && item.changeset !== null && onHead !== undefined && parents.has(onHead.path);
+function addedItems(comparison: Comparison, childrenWhenLoaded: ReadonlyMap<string, readonly HeadItem[]>): PartialIncomingItem[] {
+  const isNewByIds = newItemRule(comparison.loaded);
+  return foldersWithUnloadedItems(comparison).flatMap(({ folder, unloaded }) => {
+    const listed = childrenWhenLoaded.get(folder.item.path);
+    const scope = childScope(folder);
+    const added = listed ? unlistedIfWhole(unloaded, listed, scope, comparison.loadedKeys) : unloaded.every(isNewByIds) ? unloaded : [];
+    return added.map(({ item, repository }) => ({
+      kind: 'added' as const,
+      path: item.path,
+      isDirectory: item.isDirectory,
+      conflict: false,
+      loadedRevisionId: null,
+      headRevisionId: item.revisionId,
+      ...(repository === undefined ? {} : { repository }),
+    }));
   });
 }
 
+/** `unloaded` but what `listed` (a folder's children when it was loaded) held; none if it held one the workspace left out. */
+function unlistedIfWhole(unloaded: readonly Scoped<HeadItem>[], listed: readonly HeadItem[], scope: string, loadedKeys: ReadonlySet<string>): Scoped<HeadItem>[] {
+  const listedKeys = listed.map((item) => scopedKey(item.itemId, item.xlink ? item.path : scope));
+  if (listedKeys.some((key) => !loadedKeys.has(key))) return [];
+  const existed = new Set(listedKeys);
+  return unloaded.filter((each) => !existed.has(each.key));
+}
+
+/** Whether an item may be new by its id and changeset: after every loaded item and revision of its repository. */
+function newItemRule(loaded: readonly Scoped<LoadedTreeItem>[]): (item: Scoped<HeadItem>) => boolean {
+  // Loops, not `Math.max(...items)`: a spread passes every item as an argument, which overflows the call stack past
+  // about 125,000 items in Electron's main process.
+  const greatestByScope = new Map<string, { itemId: number; changeset: number }>();
+  for (const { item, scope } of loaded) {
+    const greatest = greatestByScope.get(scope) ?? { itemId: -1, changeset: -1 };
+    greatestByScope.set(scope, { itemId: Math.max(greatest.itemId, item.itemId), changeset: Math.max(greatest.changeset, item.changeset ?? -1) });
+  }
+  return ({ item, scope }) => {
+    const greatest = greatestByScope.get(scope);
+    return greatest === undefined || (item.itemId > greatest.itemId && item.changeset > greatest.changeset);
+  };
+}
+
 /**
- * `items` without xlinks and what they hold: their items belong to another repository, and an xlink lists the item id
- * of that repository's item (its root's, often the same as the workspace's root), never one of the workspace's.
+ * The loaded folders whose content at their loaded revision `compareWithHead` needs (its `childrenWhenLoaded`): those
+ * the head changed that hold an item the workspace doesn't have, which may be new or may have been left out. A
+ * checkout lists no changeset to list it at, and keeps the item-id rule.
  */
-export function withoutXlinks<T extends ComparedItem>(items: readonly T[]): T[] {
-  const xlinks = new Set(items.filter((item) => item.xlink).map((item) => item.path));
-  return items.filter((item) => !item.xlink && !isInsideAny(item.path, xlinks));
+export function changedFoldersWithUnloadedItems(loaded: readonly LoadedTreeItem[], head: readonly HeadItem[]): LoadedTreeItem[] {
+  return foldersWithUnloadedItems(comparisonOf(loaded, head))
+    .map(({ folder }) => folder.item)
+    .filter((folder) => folder.changeset !== null);
 }
 
 /** Whether `path` is inside one of `folders` (paths relative to the root, '' the root itself). */
@@ -205,7 +293,7 @@ function withAncestors(paths: ReadonlySet<string>): Set<string> {
   return all;
 }
 
-function parentOf(path: string): string {
+export function parentOf(path: string): string {
   const slash = path.lastIndexOf('/');
   return slash === -1 ? '' : path.slice(0, slash);
 }
