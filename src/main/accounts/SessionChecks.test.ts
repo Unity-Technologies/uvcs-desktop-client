@@ -251,6 +251,16 @@ describe('SessionChecks.confirm', () => {
     expect(restarted).toEqual(['acme@cloud', 'acme@cloud']);
   });
 
+  it('restarts the shells again for a sign-in made elsewhere hours later: the session ended again since', async () => {
+    const { checks: sessionChecks, at, advance, restarts } = checks();
+
+    await sessionChecks.confirm('acme@cloud', at(), true);
+    advance(4 * 60 * 60_000);
+    await sessionChecks.confirm('acme@cloud', at(), true);
+
+    expect(restarts()).toBe(2);
+  });
+
   it("restarts no shell for a failure in a process of its own: it read the sign-in as it started", async () => {
     const { checks: sessionChecks, at, restarts } = checks();
 
