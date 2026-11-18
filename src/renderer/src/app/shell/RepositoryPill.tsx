@@ -1,7 +1,7 @@
 import { ChevronDown } from 'lucide-react';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
-import { describeServer, splitRepositorySpec } from '../../lib/servers';
 import { ToolbarPill } from '../../ui/ToolbarPill';
+import { repositoryPillText } from './repositoryPillText';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import styles from './PlacePill.module.css';
 
@@ -13,15 +13,14 @@ const TEXT_MAX_WIDTH = 200;
  * opening the switcher to go to a workspace.
  */
 export function RepositoryPill({ repository }: { repository: string }) {
-  const { name, server } = splitRepositorySpec(repository);
-  const where = describeServer(server).label;
+  const { name, where, tip } = repositoryPillText(repository);
 
   return (
     <WorkspaceSwitcher currentPath={null}>
       <ToolbarPill
         className={styles.pill}
         aria-label="Switch workspace"
-        data-tip={`${name} · ${where}`}
+        data-tip={tip}
         textMaxWidth={TEXT_MAX_WIDTH}
         icon={<RepositoryAvatar repository={repository} label={name} size={24} />}
         label={name}
