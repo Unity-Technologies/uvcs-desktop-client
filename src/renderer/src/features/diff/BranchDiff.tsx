@@ -7,7 +7,7 @@ import { ChangesetFold } from '../../components/changesetList/ChangesetFold';
 import { askedOpen, changesetFoldLabel, changesetStepsWork, listIsOpen, toggledFold } from '../../components/changesetList/changesetListFold';
 import { ChangesetStepList } from '../../components/changesetList/ChangesetStepList';
 import { changesetSpanSummary, type ChangesetSpanSummary } from '../../components/changesetList/changesetListChoice';
-import type { ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
+import { CHANGESET_LIST_MOST_ROWS, type ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
 import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
 import type { MenuHost } from '../../components/menuWords';
 import { branchWorkedOn } from '../../components/workingObject';
@@ -43,9 +43,6 @@ interface BranchDiffProps {
 
 /** The list binds no list keys: ⌘D and ⌘C reach the view under the page, ⇧⌘C copies the page's branch. */
 const BRANCH_DIFF_HOST: MenuHost = { listKeysElsewhere: true };
-
-/** The changesets shown before the rest scroll inside the list, under "All changes on …". */
-const MOST_ROWS = 6;
 
 /**
  * A branch's changes: all of them (`cm diff br:<branch> --integration`), one changeset's, or several changesets' as
@@ -139,7 +136,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
             ),
           }
         }
-        mostRows={MOST_ROWS}
+        mostRows={CHANGESET_LIST_MOST_ROWS}
         label="Changesets"
         contextMenu={(rows) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
       />

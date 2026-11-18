@@ -167,6 +167,12 @@ function placesHeight(places: number): number {
 /** The shortest the user can drag the rows: two of them, so the list never reads as gone. */
 export const CHANGESET_ROWS_MIN_HEIGHT = placesHeight(2);
 
+/**
+ * The changesets a list shows before the rest scroll inside it, every place alike (a branch's diff, a review,
+ * Incoming), until the user drags its splitter: the files under it keep their room.
+ */
+export const CHANGESET_LIST_MOST_ROWS = 6;
+
 /** The share of the window the rows can be dragged to, so the files under them always keep the rest. */
 export const CHANGESET_ROWS_MOST_SHARE = 0.5;
 
@@ -189,7 +195,7 @@ export function changesetRowsHeight(places: number | undefined, most: number, dr
 
 /**
  * The height to remember as the user drags the splitter to `result`. Every list shares it, so a list shorter than it
- * (Incoming's three changesets) keeps it while the drag stays at or past its rows, where nothing on screen moves: only
+ * (a branch of three changesets) keeps it while the drag stays at or past its rows, where nothing on screen moves: only
  * a drag that makes the list shorter than its rows is the user's new height.
  */
 export function changesetRowsDragged(result: number, places: number | undefined, most: number, dragged: number | null): number | null {
