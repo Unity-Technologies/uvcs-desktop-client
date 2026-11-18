@@ -169,14 +169,26 @@ describe('SessionChecks.confirm', () => {
     expect(asked).toEqual(['acme@cloud']);
   });
 
-  it('checks again for a command that started after the last check', async () => {
+  it('checks again for a command that started after the last check, once that one is a few seconds old', async () => {
     const { checks: sessionChecks, asked, at, advance } = checks();
 
     await sessionChecks.checkNow('acme@cloud');
-    advance(10);
+    advance(5_000);
     await sessionChecks.confirm('acme@cloud', at());
 
     expect(asked).toHaveLength(2);
+  });
+
+  it("answers failures from a server just found signed in with that answer: an xlink's sign-in costs one check, not one per read", async () => {
+    const { checks: sessionChecks, asked, at, advance } = checks();
+    await sessionChecks.checkNow('acme@cloud');
+
+    for (let read = 0; read < 5; read++) {
+      advance(100);
+      expect(await sessionChecks.confirm('acme@cloud', at())).toBeNull();
+    }
+
+    expect(asked).toHaveLength(1);
   });
 
   it('answers null when the check itself fails, so the command fails as it did', async () => {
