@@ -2,11 +2,11 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { MissingChip } from '../../components/MissingChip';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { navigationTarget } from '../../lib/listNavigation';
-import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { isRowMenuKey } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
-import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { RowActionsButton } from '../../ui/menu/RowActionsButton';
 import { missingWorkspaceMenu, workspaceMenu } from '../home/homeMenus';
 import { unlistedRecentPaths, type WorkspaceEntry } from '../home/recentWorkspaces';
 import { useDescribeWorkspace } from '../home/useDescribeWorkspace';
@@ -20,11 +20,14 @@ import styles from './WorkspaceSwitcher.module.css';
 
 /**
  * The switcher's filter and its workspaces, recent ones first: the arrows move through them from the filter, Enter
- * opens the highlighted one (in a new window with Shift: `windowAskedBy`), and the menu key opens its actions.
+ * opens the highlighted one (in a new window with Shift: `windowAskedBy`), and its "…", Tab or a right click opens its
+ * actions.
  */
 export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: string | null; onChoose: OpenWorkspaceIn }) {
   const [filter, setFilter] = useState('');
   const [highlightedPath, setHighlightedPath] = useState<string | null>(null);
+  /** The workspace whose actions are open. */
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const movedByKeyboard = useRef(false);
   const filterRef = useRef<HTMLInputElement>(null);
@@ -56,32 +59,34 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
       onChoose(flat[highlighted].workspace.path, windowAskedBy(event, flat[highlighted]));
     } else if (flat[highlighted] && isRowMenuKey(event)) {
       event.preventDefault();
-      openContextMenuOf(document.getElementById(`${listboxId}-${highlighted}`));
+      setMenuFor(flat[highlighted].workspace.path);
     }
   };
 
   // A missing workspace opens too: the workspace screen offers to locate, recreate or forget it.
   const row = (entry: WorkspaceEntry, index: number) => {
     const { workspace, missing } = entry;
+    const menuOpen = workspace.path === menuFor;
     return (
-      <ActionContextMenu
+      <div
         key={workspace.guid}
-        entries={() => (missing ? missingWorkspaceMenu(workspace, (path) => onChoose(path, 'here')) : workspaceMenu(workspace, onChoose))}
-        // Back to the filter, so typing and the arrow keys carry on.
-        onCloseAutoFocus={(event) => {
+        id={`${listboxId}-${index}`}
+        role="option"
+        aria-selected={index === highlighted}
+        className={styles.row}
+        data-highlighted={index === highlighted}
+        onMouseEnter={() => setHighlightedPath(workspace.path)}
+        onContextMenu={(event) => {
           event.preventDefault();
-          filterRef.current?.focus();
+          setHighlightedPath(workspace.path);
+          setMenuFor(workspace.path);
         }}
       >
         <button
-          id={`${listboxId}-${index}`}
-          role="option"
-          aria-selected={index === highlighted}
+          type="button"
           tabIndex={-1}
           className={styles.item}
-          data-highlighted={index === highlighted}
           data-missing={missing}
-          onMouseEnter={() => setHighlightedPath(workspace.path)}
           onClick={(event) => onChoose(workspace.path, windowAskedBy(event, { missing }))}
         >
           <RepositoryAvatar repository={entry.repository ?? entry.repositoryName} label={workspace.name} size={24} className={styles.avatar} />
@@ -95,7 +100,19 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
           </span>
           {missing ? <MissingChip /> : <WorkspaceSwitcherChips entry={entry} sameRepository={!!entry.repository && entry.repository === currentRepository} />}
         </button>
-      </ActionContextMenu>
+        {(index === highlighted || menuOpen) && (
+          <RowActionsButton
+            entries={() => (missing ? missingWorkspaceMenu(workspace, (path) => onChoose(path, 'here')) : workspaceMenu(workspace, onChoose))}
+            open={menuOpen}
+            onOpenChange={(open) => setMenuFor(open ? workspace.path : null)}
+            // Back to the filter, so typing and the arrow keys carry on.
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              filterRef.current?.focus();
+            }}
+          />
+        )}
+      </div>
     );
   };
 
