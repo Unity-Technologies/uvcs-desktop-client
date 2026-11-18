@@ -23,7 +23,7 @@ function ReadableWorkspace({ path }: { path: string }) {
   // Its header asks the server for the branch's head, so a workspace opened while its server needs a sign-in can't be
   // read: the sign-in screen says so, and the workspace opens once signed in (docs/features/accounts.md).
   const signIn = info.data ? null : signInProblemOf(info.error);
-  if (signIn) return <SignInScreen problem={signIn} underTopBar={false} />;
+  if (signIn) return <SignInScreen problem={signIn} as="page" />;
   // Keep the screen when a later refresh fails; the views report their own errors.
   if (info.error && !info.data) {
     return <BrokenWorkspace path={path} error={info.error} retrying={info.isFetching} onRetry={() => void info.refetch()} />;

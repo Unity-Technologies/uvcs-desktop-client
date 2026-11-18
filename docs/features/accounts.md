@@ -85,7 +85,10 @@ and the corner card says it can't be reached (`ConnectionProblemCard`).
 ## The sign-in screen
 
 A window whose place's server needs a sign-in (`signInCovering`) is covered by one screen under its top bar
-(`SignInCover`, `SignInScreen`): the window's buttons, Home and the place stay. It is the window's state, not a dialog:
+(`SignInCover`, `SignInScreen`): the window's buttons, Home and the place stay. The work shows through it blurred
+(`--scrim-sign-in` and a blur; opaque with reduced transparency), so the user sees it's all still there, and the message
+sits on a card. What the view draws in layers of its own (a model viewer's labels and toolbars, floating cards) stays
+under it: the covered part is a stacking context of its own (`isolation`). It is the window's state, not a dialog:
 it appears in place, moves no focus between windows, and is one however many reads failed. What it covers stays
 mounted and `inert` (nothing takes focus or clicks), so what was typed or selected (a check-in comment, a review
 draft) is there again afterwards. Only that server's windows are covered: windows on other servers and Home keep
@@ -98,7 +101,7 @@ app, a terminal), the next check notices: Check again, or coming back to the win
 
 A workspace opened while its server needs a sign-in can't be read (its header asks the server), so the same screen
 takes the window's place, as a workspace that can't be opened does (`WorkspaceGate`, `SignInScreen` with
-`underTopBar={false}`).
+`as="page"`).
 
 Once the server is signed in again, every window on it is uncovered, and reads once more each query whose last read
 failed for its sign-in (`failedForSignInTo`, `useServerSessionsFromMain`): a workspace that couldn't be opened opens.

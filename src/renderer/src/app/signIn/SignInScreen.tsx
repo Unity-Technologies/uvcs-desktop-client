@@ -12,8 +12,11 @@ import { checkSessionNow } from './useSessionCheck';
 
 interface SignInScreenProps {
   problem: SignInProblem;
-  /** Under the place's top bar (`SignInCover`); false where it takes the window's place, as a workspace that can't be opened does. */
-  underTopBar?: boolean;
+  /**
+   * A card over the place's blurred work (`SignInCover`), or the window's page where nothing could be opened under it
+   * (a workspace whose header couldn't be read: `WorkspaceGate`).
+   */
+  as: 'card' | 'page';
 }
 
 /**
@@ -21,7 +24,7 @@ interface SignInScreenProps {
  * operations ran into it, with what to do, Details (what `cm` answered), Check again and Go to Home. The sign-in itself
  * is the Unity Version Control app's until this app signs in (docs/features/accounts.md).
  */
-export function SignInScreen({ problem, underTopBar = true }: SignInScreenProps) {
+export function SignInScreen({ problem, as }: SignInScreenProps) {
   const client = useQueryClient();
   const goHome = useSession((state) => state.goHome);
   const [checking, setChecking] = useState(false);
@@ -35,7 +38,7 @@ export function SignInScreen({ problem, underTopBar = true }: SignInScreenProps)
 
   return (
     <ScreenMessage
-      underTopBar={underTopBar}
+      inCard={as === 'card'}
       icon={<KeyRound size={26} />}
       tone="warning"
       title={words.title}

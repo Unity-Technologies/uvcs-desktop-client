@@ -11,17 +11,17 @@ interface ScreenMessageProps {
   /** Quieter content under the actions, e.g. a "Look again" link or raw output. */
   footer?: ReactNode;
   /**
-   * Shown under the window's top bar, which drags the window, rather than in its place: the message's own band for
-   * dragging is left out.
+   * In a card over what it covers (the sign-in screen over a place's blurred work), rather than as the window's page:
+   * no background or band of its own.
    */
-  underTopBar?: boolean;
+  inCard?: boolean;
 }
 
 /** A whole-window message that replaces the app while something blocks it, with the ways forward. */
-export function ScreenMessage({ icon, tone = 'neutral', title, children, actions, footer, underTopBar = false }: ScreenMessageProps) {
+export function ScreenMessage({ icon, tone = 'neutral', title, children, actions, footer, inCard = false }: ScreenMessageProps) {
   return (
-    <div className={styles.screen}>
-      {!underTopBar && <div className={styles.dragRegion} />}
+    <div className={styles.screen} data-in-card={inCard || undefined}>
+      {!inCard && <div className={styles.dragRegion} />}
       <div className={styles.card}>
         <div className={styles.icon} data-tone={tone}>
           {icon}

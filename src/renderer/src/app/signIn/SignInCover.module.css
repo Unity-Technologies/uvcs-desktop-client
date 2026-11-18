@@ -15,11 +15,23 @@
   min-height: 0;
 }
 
-/* Over the place's sidebar, view and status bar; the top bar stays, with the window's buttons and the way home. */
+/* Over the place's sidebar, view and status bar, which show through blurred; the top bar stays, with the window's
+   buttons and the way home. Above all they draw: `.covered` keeps their layers (a model viewer's labels and toolbars,
+   floating cards) in its own stacking context. */
 .screen {
   position: absolute;
   inset: 0;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  background: var(--scrim-sign-in);
+  backdrop-filter: blur(6px);
+}
+
+/* Without see-through surfaces, the message takes the place's page, opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  .screen {
+    background: var(--bg-app);
+    backdrop-filter: none;
+  }
 }

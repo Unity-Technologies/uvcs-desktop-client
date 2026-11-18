@@ -8,9 +8,9 @@ import { signInCovering } from './windowSignIn';
 
 /**
  * A place's screen under its top bar: covered by the sign-in screen while the place's server needs a sign-in
- * (`signInCovering`). What it covers stays mounted, `inert` (nothing in it takes focus or clicks), so what was typed or
- * selected is there again once signed in. Checks the place's server as it opens and as the window comes forward
- * (`useWindowSessionCheck`).
+ * (`signInCovering`), a card over the work blurred, so the user sees it's still there. What it covers stays mounted,
+ * `inert` (nothing in it takes focus or clicks), so what was typed or selected is there again once signed in. Checks
+ * the place's server as it opens and as the window comes forward (`useWindowSessionCheck`).
  */
 export function SignInCover({ children }: { children: ReactNode }) {
   const { server } = useWindowSessionCheck();
@@ -26,7 +26,7 @@ export function SignInCover({ children }: { children: ReactNode }) {
       </div>
       {problem && (
         <div className={styles.screen}>
-          <SignInScreen problem={problem} />
+          <SignInScreen problem={problem} as="card" />
         </div>
       )}
     </div>
