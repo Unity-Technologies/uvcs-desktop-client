@@ -83,7 +83,7 @@ you touch:
      reads an XML list element by element the same way (`cm history`), and `queryLines()` a list of one item a line
      (`cm listusers`).
    - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
-     it arrives with no size limit but on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
+     it arrives with no size limit but one on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
      (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
      is never stopped for its size.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
@@ -314,15 +314,16 @@ and many people use the same server. Every `cm` command other than local reads (
     (`LineReader`: `cm listusers`; `cm` writes errors to stderr, and a shell's `CommandResult` line is left out), and
     never stopped for its size. Only the item still arriving is kept, so one that never ends would be kept whole: past
     `MAX_ITEM_BYTES` (16 MB, far past any real record, line or element) the reader fails the command with a `CmError`
-    (`CmItemTooLargeError`). `cm` asking which system to sign in with, its input closed, printed its question without
-    a line break until the main process ran out of memory;
+    (`CmItemTooLargeError`). `cm` asking which system to sign in with, its input closed, asks again and again without
+    a line break, which a process stops sooner ("No external tool opens by itself": `RepeatedPromptWatch`);
   - an **answer** (one small object: `whoami`, a workspace's header, an item's details) is read whole by
     `query`/`execute`, and stopped past `MAX_TEXT_OUTPUT_LENGTH` (4 MB);
   - an **operation** (a write: undo, add, checkin, update, merge, cat...) may print a line per item, so `query`/`execute`
     keep only its start and end (`TextLimit` `keepEnds`, `OutputBuffer`, the middle marked `leftOutMarker`), where
     `cm` prints its result and its error, and never stop it: stopping a checkin halfway is worse than any output.
-    What a caller needs from a long run it takes from its lines as they arrive (`onOutputLine`): a merge keeps the
-    records that tell how it ended (`mergeOutcomeRecordOf`).
+    What a caller needs from a long run it takes from its lines as they arrive (`onOutputLine`, a line past
+    `MAX_OUTPUT_LINE_LENGTH` given in pieces): a merge keeps the records that tell how it ended
+    (`mergeOutcomeRecordOf`).
 
   `query` and `execute` refuse a list and a command missing from `COMMAND_OUTPUTS` (`textOutputKind`), in `CmClient`
   and in `fakeCmClient` alike, so a new list read as text fails its first test, and a new command says how it's read
