@@ -73,6 +73,14 @@ describe('WorkspaceServers', () => {
     expect(known.serverOf(join(GAME, 'src'))).toBe('acme@cloud');
   });
 
+  it('shares one read between failures learning the same folder at once: each gets the server', async () => {
+    const { servers: known, reads } = servers('acme@cloud');
+
+    expect(await Promise.all([known.learn(GAME), known.learn(GAME)])).toEqual(['acme@cloud', 'acme@cloud']);
+
+    expect(reads).toEqual([GAME]);
+  });
+
   it('never waits on its own read: a read failing as a sign-in would asks to learn the same folder again', async () => {
     let known!: WorkspaceServers;
     let nested: string | undefined | 'unset' = 'unset';
