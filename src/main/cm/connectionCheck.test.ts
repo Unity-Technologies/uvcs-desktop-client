@@ -25,6 +25,11 @@ describe('classifyConnectionCheck', () => {
     expect(classifyConnectionCheck('Error: Proxy Authentication Required (407). Check the credentials of the proxy.')).toBeNull();
   });
 
+  it("reads a prompt only as cm prints it, a line of its own: never words of one inside another sentence", () => {
+    expect(classifyConnectionCheck('Error: The proxy asked to sign in to: proxy.acme.com, which failed')).toBeNull();
+    expect(classifyConnectionCheck('Error: Wrong User: field in the request')).toBeNull();
+  });
+
   it('takes anything else as a connection problem', () => {
     expect(classifyConnectionCheck('Error: Connection refused')).toBeNull();
     expect(classifyConnectionCheck(NO_SUCH_SERVER)).toBeNull();
