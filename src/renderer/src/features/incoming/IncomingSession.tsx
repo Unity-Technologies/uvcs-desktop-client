@@ -39,8 +39,8 @@ import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
 import { incomingFileMenu } from './incomingFileMenu';
 import { incomingSubtitle } from './incomingSubtitle';
-import { incomingFilesHeading } from './incomingFilesHeading';
-import { collidesWithLocal, firstIncomingFile, incomingFilesSummary, incomingScopeOf } from './incomingScope';
+import { incomingFilesLabel } from './incomingFilesLabel';
+import { collidesWithLocal, firstIncomingFile, incomingScopeOf } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
 import { IncomingPanes } from './IncomingPanes';
 import { UpdateBar } from './UpdateBar';
@@ -73,14 +73,15 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const { changesetsCollapsed, toggleChangesets } = useIncomingViewStore();
+  const changesetsOpen = !changesetsCollapsed;
   const changesetList = useIncomingChangesetList(incoming);
   // Picking changesets starts their files afresh; one changeset's details show until a file is picked, several open on
   // their first file, as the whole update does.
   const changesetSteps = useChangesetStepList({
     changesets: changesetList.changesets,
     focus: ALL_INCOMING_FOCUS,
-    // Collapsed, a step would change the files out of sight.
-    stepsEnabled: !changesetsCollapsed,
+    // Folded, a step would change the files out of sight.
+    stepsEnabled: changesetsOpen,
     onSelect: (picked) => {
       setShowsChangeset(selectedChangesetIds(picked).length === 1);
       setSelection(EMPTY_SELECTION);
@@ -91,6 +92,12 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const showAll = (): void => changesetSteps.select(ALL_CHANGES_SELECTION, ALL_CHANGES_KEY);
   const showAllRef = useRef(showAll);
   showAllRef.current = showAll;
+  // Folding goes back to the whole update, as a branch diff's fold does (`toggledFold`): a changeset selected out of
+  // sight would leave files the row doesn't name.
+  const toggleChangesetFold = (): void => {
+    if (changesetsOpen) showAll();
+    toggleChangesets();
+  };
   const { mergerFor, othersFor } = useFileMergers();
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
@@ -254,15 +261,14 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               changesets={changesetList.changesets}
               more={changesetList.more}
               older={changesetList.more ? { loading: changesetList.loading, onShowMore: changesetList.showMore } : undefined}
-              collapsed={changesetsCollapsed}
-              onToggleCollapsed={toggleChangesets}
+              open={changesetsOpen}
+              onToggle={toggleChangesetFold}
+              onSelectAll={showAll}
               changesetMenu={(changesets) => changesetMenu(menuContext, changesets)}
             />
             <IncomingFiles
-              heading={incomingFilesHeading(choice, scopedChangeset)}
-              onShowAll={showAll}
+              label={incomingFilesLabel(choice)}
               files={files}
-              summary={incomingFilesSummary(scope, files?.length ?? 0, files && scope.kind === 'all' ? files.filter(collides).length : 0)}
               rows={rows}
               tree={tree}
               toggleCollapsed={toggleFolder}

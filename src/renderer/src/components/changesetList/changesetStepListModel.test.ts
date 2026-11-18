@@ -8,8 +8,6 @@ import {
   CHANGESET_ROW_HEIGHT,
   changesetFilterPlaceholder,
   changesetListPlaces,
-  changesetListRowKey,
-  changesetListRows,
   changesetListSelection,
   CHANGESET_ROWS_MIN_HEIGHT,
   changesetRowsDragged,
@@ -35,26 +33,6 @@ const branch = [
   changeset(280532, 'Walk a ticket from triage to done', 'rosa'),
   changeset(280530, 'Restore CRLF line endings\nin the scripts', 'daniel'),
 ];
-
-describe('changesetListRows', () => {
-  it('stands for every changeset combined on top, then each changeset as given', () => {
-    const rows = changesetListRows(oldestFirst(branch), '');
-    expect(rows.map(changesetListRowKey)).toEqual([ALL_CHANGES_KEY, '280530', '280532', '280535', '280536']);
-  });
-
-  it('leaves the combined row out while words are typed, which match changesets only', () => {
-    expect(changesetListRows([branch[0]!], 'plugin').map(changesetListRowKey)).toEqual(['280536']);
-    expect(changesetListRows([], 'nothing')).toEqual([]);
-  });
-
-  it('leaves the combined row out when the place shows it apart, above the list (a branch diff)', () => {
-    expect(changesetListRows(oldestFirst(branch), '', { allApart: true }).map(changesetListRowKey)).toEqual(['280530', '280532', '280535', '280536']);
-  });
-
-  it('keeps the combined row for a filter of blanks', () => {
-    expect(changesetListRows([], '  ').map(changesetListRowKey)).toEqual([ALL_CHANGES_KEY]);
-  });
-});
 
 describe('filterChangesets', () => {
   it('shows every changeset for a blank filter', () => {
@@ -210,12 +188,12 @@ describe('focusRevealKey', () => {
 });
 
 describe('changesetListPlaces', () => {
-  const rows = changesetListRows(oldestFirst(branch), '');
+  const rows = oldestFirst(branch);
 
   it('counts the rows, and the line between two of them while its row shows', () => {
-    expect(changesetListPlaces(rows, undefined)).toBe(5);
-    expect(changesetListPlaces(rows, '280535')).toBe(6);
-    expect(changesetListPlaces(rows, '99')).toBe(5);
+    expect(changesetListPlaces(rows, undefined)).toBe(4);
+    expect(changesetListPlaces(rows, '280535')).toBe(5);
+    expect(changesetListPlaces(rows, '99')).toBe(4);
   });
 });
 

@@ -4,9 +4,8 @@ import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
-import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { IncomingChangesetsHeading } from './IncomingChangesetsHeading';
+import { IncomingChangesetsReading } from './IncomingChangesetsReading';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
 import { PartialIncomingSession } from './PartialIncomingSession';
@@ -45,8 +44,8 @@ export function IncomingChangesView() {
   };
   const header = headerSaying(incoming?.branch ? branchLabel(incoming.branch) : undefined);
 
-  // The panes keep their layout while reading and once up to date; not being on a branch, or failing with nothing
-  // read, takes the body.
+  // The panes keep their layout while reading. Up to date, with no update to list, not being on a branch, or failing
+  // with nothing read, takes the body.
   const state = incomingViewState(incoming, isPending, error !== null);
   useCollapseWithHost(incomingDiffs(state.kind));
   if (state.kind === 'reading') {
@@ -54,12 +53,7 @@ export function IncomingChangesView() {
       <>
         {header}
         <IncomingPanes
-          list={
-            <>
-              <IncomingChangesetsHeading count={undefined} />
-              <ListSkeleton rowHeight={28} />
-            </>
-          }
+          list={<IncomingChangesetsReading />}
           detail={null}
         />
       </>
@@ -77,11 +71,10 @@ export function IncomingChangesView() {
   }
 
   if (state.kind === 'upToDate') {
-    const upToDate = <EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />;
     return (
       <>
         {header}
-        {state.partial ? upToDate : <IncomingPanes list={<IncomingChangesetsHeading count={0} />} detail={upToDate} />}
+        <EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />
       </>
     );
   }

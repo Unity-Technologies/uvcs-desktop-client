@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useRef, type ReactNode } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { MenuEntry } from '../../lib/actions';
@@ -28,20 +28,12 @@ import {
   changesetRowsHeight,
   changesetRowsMaxHeight,
   changesetRowTip,
-  type ChangesetListRow,
 } from './changesetStepListModel';
 import type { ChangesetStepListState } from './useChangesetStepList';
 import styles from './ChangesetStepList.module.css';
 
-/** The row standing for every changeset combined: its words, fitted, and its tooltip. */
-export interface AllChangesRow {
-  label: string;
-  tip?: string;
-}
-
 interface ChangesetStepListProps {
   list: ChangesetStepListState;
-  allChanges: AllChangesRow;
   /** Rows read a step quieter (a review's changesets the user reviewed already). */
   quiet?: (changeset: Changeset) => boolean;
   /** A line with words between two rows that is no row (`DataTable`'s): "Reviewed by you", "Show 200 more". */
@@ -54,25 +46,16 @@ interface ChangesetStepListProps {
 }
 
 /**
- * Each row in one line: everything combined first, then each changeset with the author's avatar, the comment's first
- * line and how long ago, the rest in its tooltip (`changesetRowTip`: its number too, which the filter still finds; on
- * every row it said little and took the comment's room).
+ * Each changeset in one line: the author's avatar, the comment's first line and how long ago, the rest in its tooltip
+ * (`changesetRowTip`: its number too, which the filter still finds; on every row it said little and took the comment's
+ * room).
  */
-function changesetColumns(allChanges: AllChangesRow, quiet: ((changeset: Changeset) => boolean) | undefined, now: number): Column<ChangesetListRow>[] {
+function changesetColumns(quiet: ((changeset: Changeset) => boolean) | undefined, now: number): Column<Changeset>[] {
   return [
     {
       id: 'changeset',
       header: 'Changeset',
-      render: (row) => {
-        if (row.kind === 'all') {
-          return (
-            <span className={styles.row} data-tip={allChanges.tip}>
-              <Layers size={14} className={styles.allIcon} aria-hidden />
-              <span className={styles.allLabel}>{allChanges.label}</span>
-            </span>
-          );
-        }
-        const { changeset } = row;
+      render: (changeset) => {
         const tip = changesetRowTip(changeset);
         return (
           <span className={styles.row} data-quiet={quiet?.(changeset) || undefined} data-tip={tip.text} data-tip-sub={tip.sub}>
@@ -90,18 +73,18 @@ function changesetColumns(allChanges: AllChangesRow, quiet: ((changeset: Changes
 
 /**
  * Changesets to step through above the files of what's selected (a branch diff, Incoming): a filter, the buttons that
- * step to the changeset before or after (`previousChangeset`, `nextChangeset`), and the rows, oldest on top under the
- * one that stands for them all. Several selected show as one diff and read as one band (`changesetListSelection`).
- * Only the rows in view render (`DataTable`).
+ * step to the changeset before or after (`previousChangeset`, `nextChangeset`), and the rows, oldest on top, under the
+ * row that stands for them all, which the place shows above the list (`ChangesetFold`). Several selected show as one
+ * diff and read as one band (`changesetListSelection`). Only the rows in view render (`DataTable`).
  */
-export function ChangesetStepList({ list, allChanges, quiet, separator, mostRows, label, contextMenu }: ChangesetStepListProps) {
-  const { changesets, rows, query, setQuery, selection, select, revealKey, stepsTo, stepTo } = list;
+export function ChangesetStepList({ list, quiet, separator, mostRows, label, contextMenu }: ChangesetStepListProps) {
+  const { changesets, shown, query, setQuery, selection, select, revealKey, stepsTo, stepTo } = list;
   const reading = changesets === undefined;
   // How long ago, as of each time the rows change (read again, filtered): not on every step.
-  const columns = useMemo(() => changesetColumns(allChanges, quiet, Date.now()), [allChanges.label, allChanges.tip, quiet, rows]);
+  const columns = useMemo(() => changesetColumns(quiet, Date.now()), [quiet, shown]);
   const { rowsHeight: dragged, setRowsHeight } = useChangesetListHeightStore();
   const rowsRef = useRef<HTMLDivElement>(null);
-  const places = reading ? undefined : changesetListPlaces(rows, separator?.beforeKey);
+  const places = reading ? undefined : changesetListPlaces(shown, separator?.beforeKey);
   const height = changesetRowsHeight(places, mostRows, dragged);
   return (
     <div className={styles.list}>
@@ -140,13 +123,13 @@ export function ChangesetStepList({ list, allChanges, quiet, separator, mostRows
         ) : (
           <HighlightQuery query={query}>
             <DataTable
-              rows={rows}
+              rows={shown}
               columns={columns}
               rowKey={changesetListRowKey}
               selection={selection}
               // A row picked in the list is already in view; the one stepped to before isn't revealed again.
               onSelectionChange={(next) => select(next)}
-              contextMenu={(selected) => contextMenu(selected.flatMap((row) => (row.kind === 'changeset' ? [row.changeset] : [])))}
+              contextMenu={contextMenu}
               revealKey={revealKey}
               rowHeight={CHANGESET_ROW_HEIGHT}
               label={label}

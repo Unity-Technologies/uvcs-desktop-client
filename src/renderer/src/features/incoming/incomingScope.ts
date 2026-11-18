@@ -2,7 +2,6 @@ import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { spec } from '@shared/domain/specs';
 import type { ChangesetListChoice } from '../../components/changesetList/changesetListChoice';
 import type { StatusTone } from '../../components/StatusBadge';
-import { formatCount, pluralize } from '../../lib/text';
 import { isStatusGroup, statusGroup, type FileListContent, type GroupedFileListFacts, type StatusGroup } from '../../components/statusGroups';
 import { DIFF_ENTRY_FACTS, diffEntryTones } from '../diff/diffEntrySources';
 
@@ -96,19 +95,6 @@ export function incomingFileContent(files: DiffEntry[], collides: (file: DiffEnt
 /** A file's statuses for the filter's chips: what the branch did to it, and "Conflicts" when it collides with local changes. */
 export function incomingFileTones(file: DiffEntry, collides: boolean): readonly StatusTone[] {
   return collides ? [...diffEntryTones(file), 'conflict'] : diffEntryTones(file);
-}
-
-/**
- * The line under the files' header: what the update does to the workspace, "1 conflict with your changes · 13 to
- * apply", or "14 changes to apply · Your local changes stay as they are"; a changeset's files (or several's) are what it
- * did, counted.
- */
-export function incomingFilesSummary(scope: IncomingScope, fileCount: number, conflictCount: number): string {
-  if (scope.kind !== 'all') return pluralize(fileCount, 'change');
-  const toApply = fileCount - conflictCount;
-  if (conflictCount === 0) return `${pluralize(fileCount, 'change')} to apply · Your local changes stay as they are`;
-  const conflicts = pluralize(conflictCount, 'conflict with your changes', 'conflicts with your changes');
-  return toApply > 0 ? `${conflicts} · ${formatCount(toApply)} to apply` : conflicts;
 }
 
 /**

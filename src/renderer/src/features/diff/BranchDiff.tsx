@@ -1,11 +1,13 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { Check, ChevronDown, Layers } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ChangesetSpan, FocusedLines } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { ChangesetFold } from '../../components/changesetList/ChangesetFold';
+import { askedOpen, changesetFoldLabel, changesetStepsWork, listIsOpen, toggledFold } from '../../components/changesetList/changesetListFold';
 import { ChangesetStepList } from '../../components/changesetList/ChangesetStepList';
 import { changesetSpanSummary, type ChangesetSpanSummary } from '../../components/changesetList/changesetListChoice';
-import type { ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
+import { CHANGESET_LIST_MOST_ROWS, type ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
 import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
 import type { MenuHost } from '../../components/menuWords';
 import { branchWorkedOn } from '../../components/workingObject';
@@ -16,7 +18,6 @@ import { useChangesets } from '../changesets/useChangesets';
 import { branchChangesetsFilter, branchDiffFocusFor, branchStartOfChangesets, initialBranchDiffFocus, showsChangesetList } from './branchDiffChangesets';
 import { changesetMark, reviewedSeparator, type ReviewedUpTo } from './branchChangesetRows';
 import { BranchDescription } from './BranchDescription';
-import { askedOpen, changesetFoldLabel, changesetStepsWork, listIsOpen, toggledFold } from './changesetListFold';
 import { useChangesetListFoldStore } from './changesetListFoldStore';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFocusRequestContext } from './diffFocusRequest';
@@ -42,9 +43,6 @@ interface BranchDiffProps {
 
 /** The list binds no list keys: ⌘D and ⌘C reach the view under the page, ⇧⌘C copies the page's branch. */
 const BRANCH_DIFF_HOST: MenuHost = { listKeysElsewhere: true };
-
-/** The changesets shown before the rest scroll inside the list, under "All changes on …". */
-const MOST_ROWS = 6;
 
 /**
  * A branch's changes: all of them (`cm diff br:<branch> --integration`), one changeset's, or several changesets' as
@@ -77,7 +75,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     setFocus(askedFocus);
     if (askedOpen(askedFocus)) setAsked(true);
   }, [focusRequest?.seq]);
-  const list = useChangesetStepList({ changesets, focus, allApart: true, stepsEnabled: changesetStepsWork(open, changesets) });
+  const list = useChangesetStepList({ changesets, focus, stepsEnabled: changesetStepsWork(open, changesets) });
 
   // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset. The whole branch read
   // tells where it starts, for the branch diff up to a changeset.
@@ -122,7 +120,6 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     >
       <ChangesetStepList
         list={list}
-        allChanges={{ label: `All changes on ${branchLabel(branch)}`, tip: branch }}
         quiet={reviewedUpTo && quiet}
         separator={
           separator && {
@@ -138,7 +135,7 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
             ),
           }
         }
-        mostRows={MOST_ROWS}
+        mostRows={CHANGESET_LIST_MOST_ROWS}
         label="Changesets"
         contextMenu={(rows) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
       />
@@ -182,42 +179,6 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines, focusCha
     <DiffFrame description={branchDescription} toolbar={toolbar}>
       <DiffBrowserLayout aboveFiles={changesetList} />
     </DiffFrame>
-  );
-}
-
-/**
- * The changesets above the files, under the row that stands for them all, "All changes on task", which folds them
- * (its end, "Changesets ⌄", a word that stays as they're read; how many is the filter's, once open): who reviews the
- * whole branch sees that row only, selected while the diff shows all the changes, with "3 new" on a review's page
- * (`folded`). The row stays in its place as the list opens under it, and stands apart from the list (`allApart`), so
- * the filter never hides it. The list mounts only open, so folded it reads nothing.
- */
-function ChangesetFold(props: {
-  allChanges: { label: string; tip: string };
-  selected: boolean;
-  onSelectAll: () => void;
-  foldLabel: string;
-  open: boolean;
-  onToggle: () => void;
-  folded?: ReactNode;
-  children: ReactNode;
-}) {
-  const { allChanges, selected, onSelectAll, foldLabel, open, onToggle, folded, children } = props;
-  return (
-    <div className={styles.fold} data-open={open || undefined}>
-      <div className={styles.allRow} data-selected={selected || undefined}>
-        <button type="button" className={styles.allButton} aria-pressed={selected} data-tip={allChanges.tip} onClick={onSelectAll}>
-          <Layers size={14} className={styles.allIcon} aria-hidden />
-          <span className={styles.allLabel}>{allChanges.label}</span>
-        </button>
-        {!open && folded}
-        <button type="button" className={styles.foldToggle} aria-expanded={open} data-tip={foldLabel} onClick={onToggle}>
-          Changesets
-          <ChevronDown size={14} className={styles.foldChevron} aria-hidden />
-        </button>
-      </div>
-      {open && children}
-    </div>
   );
 }
 

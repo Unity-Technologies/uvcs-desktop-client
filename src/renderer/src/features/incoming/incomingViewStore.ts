@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface IncomingViewStore {
-  /** Whether Incoming's changesets are folded under their header, leaving the files all the room. */
+  /** Whether Incoming's changesets are folded under All incoming changes, leaving the files all the room. */
   changesetsCollapsed: boolean;
   toggleChangesets: () => void;
 }

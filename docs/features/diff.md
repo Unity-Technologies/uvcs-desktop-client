@@ -59,7 +59,7 @@ changeset", tried): the branch's own diff is one more row of the list, so steppi
 several to read as one diff, is there from the start instead of behind a mode few found.
 
 The list folds under its **All changes on <branch>** row, which stands apart above the list and its filter
-(`ChangesetFold` in `BranchDiff`, `changesetListFold`, the list's `allApart`) and ends in its fold, "Changesets ⌄"
+(`ChangesetFold`, `changesetListFold`) and ends in its fold, "Changesets ⌄"
 (`changesetFoldLabel`; a count there turned into a number as the changesets were read, under the pointer): folded, the page reads as the branch's whole diff did, that row selected, with no list in
 the way and no `cm find` (the list mounts only open; a review's page has read the changesets for its rounds, so its
 row says "3 new", which selects them). A header line of its own, "Changesets · 13 ›", tried, read as
@@ -69,8 +69,8 @@ page asks for changesets (what's new since a review, a changeset chip, where a c
 back to all the changes: a changeset selected out of sight would leave the diff showing what the line doesn't say.
 Always open, tried, put a list and a read in front of everyone reviewing the whole branch.
 
-The list is as tall as its rows up to six (`MOST_ROWS`, `changesetRowsHeight`), the rest scrolling inside it, so the
-files keep their room. The line under it is a splitter (`ResizeHandle` on its bottom edge): dragged, the rows take that
+Every list of changesets is as tall as its rows up to six (`CHANGESET_LIST_MOST_ROWS`, `changesetRowsHeight`), the rest
+scrolling inside it, so the files keep their room. The line under it is a splitter (`ResizeHandle` on its bottom edge): dragged, the rows take that
 height instead, from two rows (`CHANGESET_ROWS_MIN_HEIGHT`) up to half the window (`changesetRowsMaxHeight`), so the
 files keep the rest; never taller than the rows there are, so a short list leaves no gap. One height for every list of
 changesets (a branch's diff, a review, Incoming), remembered across pages and sessions (`useChangesetListHeightStore`):
@@ -85,15 +85,15 @@ The list is oldest on top (`oldestFirst`), as the branch was built, as a review'
 client lists them; stepping down goes on in time. Newest on top, as the app's other changeset lists are, was tried:
 stepping through a branch then went back in time, and the review's marks read upside down against its conversation.
 Its filter matches every word typed in a changeset's number, comment or author's name over the list already read
-(`filterChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. While words are typed
-the "All changes" row hides, as no word matches it (`changesetListRows`). A row the filter hides stays selected and
+(`filterChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. "All changes" stays,
+above the list, as no word could match it. A row the filter hides stays selected and
 shown: its diff doesn't change under the user while they type, and the next step goes on to the nearest changeset
 shown on that side (`changesetStep`). The arrows above the list, ⌥⇧↓ and ⌥⇧↑ (`nextChangeset`, `previousChangeset`,
 as Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'), step from anywhere in the page but a text
 field, where they select text (`useShortcut`'s `whileTyping`); from "All changes", down goes to the oldest. They step
-only while the list shows (`changesetStepsWork`, the list's `stepsEnabled`; Incoming's while its section is open):
-folded, a step would change the diff out of sight. In a branch diff, up from the oldest stops there: All changes is
-the row above the list, a click away, and not one of its rows (`allApart`). A branch with one changeset shows no list
+only while the list shows (`changesetStepsWork`, the list's `stepsEnabled`; Incoming's while its list is open):
+folded, a step would change the diff out of sight. Up from the oldest stops there, in every list: All changes is the
+row above the list (`ChangesetFold`), a click away, and not one of its rows. A branch with one changeset shows no list
 (`showsChangesetList`): all its changes are that changeset's.
 
 The list stays mounted as each changeset is stepped to, keeping its focus, scroll and filter: the files and the diff

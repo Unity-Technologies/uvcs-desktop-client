@@ -41,26 +41,10 @@
   color: var(--text-secondary);
 }
 
-/* In the avatar's 16px, so the words of every row start in one place. */
-.allIcon {
-  flex: none;
-  width: 16px;
-  color: var(--text-tertiary);
-}
-
 .comment {
   display: flex;
   flex: 1;
   min-width: 0;
-}
-
-/* "All changes on task": a branch's long name cut at its end, whole in the tooltip. */
-.allLabel {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .row[data-quiet] .comment :global(*) {
