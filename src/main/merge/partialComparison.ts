@@ -5,11 +5,12 @@
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { integerValue, recordFormat, type ReadRecord } from '../cm/formatRecords';
 import { listedRevisionId } from '../cm/treeItems';
+import { parseXlinkName } from '../cm/xlinkName';
 
 /** The fields `cm ls -R` prints of each loaded item, read by `readLoadedTreeItem`. */
-export const LOADED_TREE_FORMAT = `--format=${recordFormat(['itemid', 'revid', 'parentrevid', 'type', 'wkpath', 'changeset', 'checkout'])}`;
+export const LOADED_TREE_FORMAT = `--format=${recordFormat(['itemid', 'revid', 'parentrevid', 'type', 'wkpath', 'changeset', 'checkout', 'name'])}`;
 /** The fields `cm ls --tree` prints of each item on the branch head, read by `readHeadItem`. */
-export const HEAD_TREE_FORMAT = `--format=${recordFormat(['itemid', 'revid', 'type', 'path', 'changeset'])}`;
+export const HEAD_TREE_FORMAT = `--format=${recordFormat(['itemid', 'revid', 'type', 'path', 'changeset', 'name'])}`;
 
 interface ComparedItem {
   itemId: number;
@@ -37,26 +38,28 @@ export interface HeadItem extends ComparedItem {
  * A record of `LOADED_TREE_FORMAT`. A checkout lists no revision (-1) and its loaded one as `{parentrevid}`, which is
  * what the head is compared with. A private item, which has no revision, is left out.
  */
-export const readLoadedTreeItem: ReadRecord<LoadedTreeItem> = ([itemid = '', revid = '', parentrevid = '', type = '', wkPath = '', changeset = '', checkout = '']) => {
+export const readLoadedTreeItem: ReadRecord<LoadedTreeItem> = ([itemid = '', revid = '', parentrevid = '', type = '', wkPath = '', changeset = '', checkout = '', name = '']) => {
   const listed = listedRevisionId(revid);
   if (listed === undefined) return undefined;
   const checkedOut = checkout !== '';
   return {
-    ...comparedItem(itemid, type, wkPath.replaceAll('\\', '/')),
+    ...comparedItem(itemid, type, wkPath.replaceAll('\\', '/'), name),
     revisionId: checkedOut ? integerValue(parentrevid) : listed,
     changeset: checkedOut ? null : integerValue(changeset),
   };
 };
 
 /** A record of `HEAD_TREE_FORMAT`: its server path (`/Code/Ship.cs`) becomes the workspace's (`Code/Ship.cs`). */
-export const readHeadItem: ReadRecord<HeadItem> = ([itemid = '', revid = '', type = '', path = '', changeset = '']) => {
+export const readHeadItem: ReadRecord<HeadItem> = ([itemid = '', revid = '', type = '', path = '', changeset = '', name = '']) => {
   const revisionId = listedRevisionId(revid);
   if (revisionId === undefined) return undefined;
-  return { ...comparedItem(itemid, type, path.replace(/^\/+/, '')), revisionId, changeset: integerValue(changeset) };
+  return { ...comparedItem(itemid, type, path.replace(/^\/+/, ''), name), revisionId, changeset: integerValue(changeset) };
 };
 
-function comparedItem(itemid: string, type: string, path: string): Omit<ComparedItem, 'revisionId'> {
-  return { itemId: integerValue(itemid), isDirectory: type === 'dir', path: path.normalize('NFC'), ...(type === 'xlink' ? { xlink: true as const } : {}) };
+/** `cm ls` lists an xlink as a directory (`dir`, never `xlink`): only its name, which names its target, tells it apart. */
+function comparedItem(itemid: string, type: string, path: string, name: string): Omit<ComparedItem, 'revisionId'> {
+  const xlink = parseXlinkName(name) !== undefined;
+  return { itemId: integerValue(itemid), isDirectory: type === 'dir', path: path.normalize('NFC'), ...(xlink ? { xlink: true as const } : {}) };
 }
 
 /**
