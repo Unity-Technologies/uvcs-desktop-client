@@ -1,8 +1,10 @@
 import { spawn } from 'node:child_process';
 import type { CmResult } from './CmResult';
+import { waitingForInputError } from './consolePrompts';
 import { OutputBuffer } from './OutputBuffer';
 import { ANSWER_TEXT, CmOutputTooLargeError, MAX_TEXT_OUTPUT_LENGTH } from './outputLimit';
 import type { OutputReading, StreamReader } from './outputReading';
+import { RepeatedPromptWatch } from './repeatedPrompt';
 
 export interface CmProcessOptions {
   cwd?: string;
@@ -23,7 +25,9 @@ export interface CmProcessOptions {
 
 /**
  * Runs one `cm` command in its own process. Its stdin is closed, so a command that stops to ask
- * something on the console (credentials, "are you sure?") fails at once instead of hanging.
+ * something on the console (credentials, "are you sure?") fails at once instead of hanging, or, where `cm` asks again
+ * at once (which system to sign in with), is stopped as soon as its output shows it asking again and again
+ * (`RepeatedPromptWatch`): that loop prints without end and never pauses.
  */
 export function runCmProcess(cmPath: string, args: string[], options: CmProcessOptions): Promise<CmResult> {
   return new Promise((resolve, reject) => {
@@ -43,6 +47,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     const kept = new OutputBuffer(0, text.past === 'keepEnds' ? text.maxLength : undefined);
     let stopped = false;
     let pendingLine = '';
+    const promptWatch = new RepeatedPromptWatch();
 
     const stop = (error: Error): void => {
       stopped = true;
@@ -62,8 +67,21 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       pendingLine = lines.pop() ?? '';
       lines.forEach(options.onOutputLine);
     };
+    /** Stops a command asking the same question again and again; true when it did. */
+    const stopAskingAgain = (): boolean => {
+      const { prompt } = promptWatch;
+      if (prompt !== undefined) stop(waitingForInputError(prompt));
+      return prompt !== undefined;
+    };
+    const readText = (chunk: string): void => {
+      if (stopped) return;
+      promptWatch.appendText(chunk);
+      if (!stopAskingAgain()) collect(chunk);
+    };
     const readStream = (reader: StreamReader) => (chunk: Buffer): void => {
       if (stopped) return;
+      promptWatch.appendBytes(chunk);
+      if (stopAskingAgain()) return;
       try {
         reader.read(chunk);
       } catch (error) {
@@ -80,7 +98,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       child.stderr.setEncoding('utf8').on('data', collect);
     } else {
       // Decoded by the streams, so a character split between two chunks stays whole.
-      child.stdout.setEncoding('utf8').on('data', collect);
+      child.stdout.setEncoding('utf8').on('data', readText);
       child.stderr.setEncoding('utf8').on('data', collect);
     }
     child.on('error', reject);
