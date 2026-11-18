@@ -1,5 +1,5 @@
 import type { ConnectionProblem } from '@shared/domain/setup';
-import type { SignInProblem } from '@shared/domain/signIn';
+import type { SignInProblem, SignInProblemKind } from '@shared/domain/signIn';
 import type { ConnectionCheck } from '../cm/connectionCheck';
 import type { ServerSessions } from './ServerSessions';
 
@@ -27,6 +27,9 @@ export interface SessionCheckDeps {
   restartShells: () => void;
   now?: () => number;
 }
+
+/** The problems a check would only make worse, sending the refused password once more (`whenStale`). */
+const RESENDS_REFUSED_PASSWORD: ReadonlySet<SignInProblemKind> = new Set(['credentialsRefused', 'locked']);
 
 interface LastCheck {
   startedAt: number;
@@ -58,12 +61,16 @@ export class SessionChecks {
   /**
    * Checks the server unless a check started within `SESSION_CHECK_STALE_MS` answered already, which answers instead; a
    * server that needs a sign-in is checked every time, so signing in elsewhere (the Unity Version Control app, a
-   * terminal) is found as the user comes back.
+   * terminal) is found as the user comes back. But not one that refused the password or locked the account: each check
+   * sends the stored password again, and a few activations would lock a directory account; only Check again checks it
+   * (`checkNow`).
    */
   whenStale(server: string): Promise<ConnectionProblem | null> {
     const last = this.last.get(server);
+    const session = this.deps.sessions.of(server);
+    if (session.state === 'needsSignIn' && RESENDS_REFUSED_PASSWORD.has(session.problem.kind)) return Promise.resolve(last?.unreachable ?? null);
     const fresh = last !== undefined && this.now() - last.startedAt < SESSION_CHECK_STALE_MS;
-    if (fresh && this.deps.sessions.of(server).state === 'signedIn') return Promise.resolve(last.unreachable);
+    if (fresh && session.state === 'signedIn') return Promise.resolve(last.unreachable);
     return this.run(server);
   }
 

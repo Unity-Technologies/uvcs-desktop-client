@@ -75,7 +75,9 @@ using it (the provider stops renewing it), a password change or an administrator
 (`cm checkconnection`, `accounts.checkSession`, `useWindowSessionCheck`):
 
 - as the window opens its place, and **every time the window comes forward**, where main runs a check only when the
-  server's last one is older than `SESSION_CHECK_STALE_MS` (10 minutes), or while the server needs a sign-in. The
+  server's last one is older than `SESSION_CHECK_STALE_MS` (10 minutes), or while the server needs a sign-in, but for
+  a refused password or a locked account (`credentialsRefused`, `locked`): each check would send the stored password
+  again, and a few activations would lock a directory account (LDAP, Active Directory). Only Check again checks those. The
   check renews the session as a side effect, and finds a dead one as the user comes back, before they act. Activating
   a window twice within ten minutes runs nothing; alt-tabbing all day runs at most six checks an hour per server.
 - one check per server app-wide, joined by every window that asks (`SessionChecks`); never on a timer: an app nobody
