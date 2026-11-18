@@ -7,7 +7,7 @@ import { isTextEntry } from '../../lib/textEntry';
  *
  * `opener` is the element the menu opened from (its trigger). A dialog holding it was open before the menu, not opened
  * by its action: a menu on a result of Go to file, itself a dialog, gives focus back to its filter. Without one, any
- * open dialog counts as the action's.
+ * open dialog counts as the action's, which is also what happens when the trigger left the page before the menu closed.
  */
 export function focusAfterMenu(event: Event, otherwise?: (event: Event) => void, opener?: Element | null): void {
   if (dialogOpenedByAction(opener) || caretInField()) {

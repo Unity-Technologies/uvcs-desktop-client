@@ -21,6 +21,8 @@ const rowMenuLists = filesUnder(__dirname, isAppSource)
 /**
  * Every list driven from its filter offers a result's actions the same three ways: Tab (or the menu key), the "…" on
  * the highlighted row (`RowActionsButton`), and a right click on any row, which open one menu at that button.
+ * It reads the list's file and the files it imports for the button and an `onContextMenu`, not which element holds
+ * them: a guard against a list forgetting one, not a proof the right click is on its rows.
  */
 describe('lists whose results have actions', () => {
   it('include the palette, Go to file and the branch and workspace switchers', () => {
