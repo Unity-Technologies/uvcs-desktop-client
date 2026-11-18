@@ -1,4 +1,5 @@
 import type { Account, UserAccount } from '@shared/domain/account';
+import { isWildcardServer } from '@shared/domain/organizations';
 import { describeServer } from '../../lib/servers';
 import { pluralize } from '../../lib/text';
 import { profileLabel, signInMethod } from '../account/serverAccount';
@@ -42,6 +43,5 @@ function accountDetail(account: UserAccount): string {
 
 function rowServers(account: UserAccount): AccountRowServer[] {
   const servers = account.profiles.map((profile) => ({ profile, label: profileLabel(profile) }));
-  const isWildcard = (server: AccountRowServer) => server.profile.server.startsWith('*@');
-  return servers.sort((a, b) => Number(isWildcard(a)) - Number(isWildcard(b)) || a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  return servers.sort((a, b) => Number(isWildcardServer(a.profile.server)) - Number(isWildcardServer(b.profile.server)) || a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
 }

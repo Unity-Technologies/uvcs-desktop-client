@@ -1,4 +1,5 @@
 import type { UserAccount } from '@shared/domain/account';
+import { isWildcardServer } from '@shared/domain/organizations';
 import type { ServerProfile } from '@shared/domain/repository';
 import { isCloudServer } from '../../lib/servers';
 import { accountOfServer, unityAccountsOf } from '../account/userAccounts';
@@ -34,7 +35,7 @@ export function homeAccountOf(accounts: readonly UserAccount[], cues: HomeAccoun
  * email account with one organization would come before the work account with twenty.
  */
 function mainAccountOf(unity: readonly UserAccount[]): UserAccount | undefined {
-  const wildcard = unity.find((account) => account.profiles.some((profile) => profile.server.startsWith('*@')));
+  const wildcard = unity.find((account) => account.profiles.some((profile) => isWildcardServer(profile.server)));
   return wildcard ?? unity.reduce<UserAccount | undefined>((most, account) => (most && most.servers.length >= account.servers.length ? most : account), undefined);
 }
 

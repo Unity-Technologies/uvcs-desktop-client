@@ -1,8 +1,5 @@
 import type { Account, UserAccount } from './account';
-import { serverKind } from './organizations';
-
-/** `*@cloud`: the profile `cm` signs in to every cloud organization with when the organization has none of its own. */
-const WILDCARD_SERVER = /^\*@/;
+import { isWildcardServer, serverKind } from './organizations';
 
 /**
  * The accounts the profiles make (docs/features/accounts.md "Accounts"): every cloud profile of one user, whatever
@@ -18,7 +15,7 @@ export function userAccountsOf(profiles: readonly Account[]): UserAccount[] {
     const id = kind === 'cloud' ? `cloud:${profile.user.toLowerCase()}` : `server:${profile.server}`;
     const account = accounts.get(id) ?? { id, user: profile.user, kind, workingMode: profile.workingMode, servers: [], profiles: [] };
     account.profiles.push(profile);
-    if (!WILDCARD_SERVER.test(profile.server) && !account.servers.includes(profile.server)) account.servers.push(profile.server);
+    if (!isWildcardServer(profile.server) && !account.servers.includes(profile.server)) account.servers.push(profile.server);
     accounts.set(id, account);
   }
   return [...accounts.values()].sort(byKindThenName);
@@ -26,7 +23,7 @@ export function userAccountsOf(profiles: readonly Account[]): UserAccount[] {
 
 function accountKindOf(server: string): UserAccount['kind'] | undefined {
   if (!server) return undefined;
-  if (WILDCARD_SERVER.test(server)) return 'cloud';
+  if (isWildcardServer(server)) return 'cloud';
   const kind = serverKind(server);
   if (kind === 'local') return undefined;
   return kind === 'server' ? 'server' : 'cloud';

@@ -1,4 +1,5 @@
 import type { Account } from '@shared/domain/account';
+import { isWildcardServer } from '@shared/domain/organizations';
 import { cloudOrganization, describeServer, isCloudServer } from '../../lib/servers';
 
 const sameName = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
@@ -25,7 +26,7 @@ export function accountForServer(accounts: Account[], server: string): Account |
   if (!organization) return undefined;
   return (
     accounts.find((account) => organizationsIn([account.server, account.name]).some((name) => sameName(name, organization))) ??
-    accounts.find((account) => account.server.startsWith('*@'))
+    accounts.find((account) => isWildcardServer(account.server))
   );
 }
 
