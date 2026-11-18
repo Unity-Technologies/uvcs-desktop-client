@@ -1,4 +1,4 @@
-import { commandFailure, fakeApi } from '../../testing/fakeWindow';
+import { commandFailure, fakeApi, signInFailure } from '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dialogs = vi.hoisted(() => ({
@@ -24,7 +24,9 @@ import { queryClient } from '../../app/queryClient';
 import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import { splitRepositorySpec } from '../../lib/servers';
 import { answerPrompts } from '../../testing/fakeDialogs';
-import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { offerRefusedAgain } from '../../app/signIn/refusedOperation';
+import { workspacePlace } from '@shared/domain/place';
 import { useCommandLogStore } from '../../app/shell/commandLogStore';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges } from './checkinOperations';
@@ -356,6 +358,21 @@ describe('checkinChanges with "Update & check in" (updateFirst)', () => {
     await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x' });
 
     expect(useCheckinAfterUpdateStore.getState().rejected[ws]).toBeUndefined();
+  });
+
+  it("offers the whole check-in again when the read of what came in is refused for a sign-in, never just that read", async () => {
+    queryClient.setQueryData(workspaceInfoQuery(ws).queryKey, { server: 'local', repository: 'game@local' } as WorkspaceInfo);
+    fakeApi.answer('merge.incomingChanges', () => {
+      throw signInFailure('local');
+    });
+    const again = vi.fn();
+
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x', updateFirst: true, again })).toBe(false);
+    expect(shownToasts()).toEqual([]);
+    offerRefusedAgain('local', workspacePlace(ws));
+    pressToastAction('Signed in to the server on this computer');
+
+    expect(again).toHaveBeenCalledTimes(1);
   });
 });
 
