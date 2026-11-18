@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { serverAccount, unityAccount } from '../../testing/userAccounts';
-import { homeAccountOf, homeServersOf } from './homeAccount';
+import { homeAccountOf, homeServersOf, sectionAfterSwitch } from './homeAccount';
+import { WELCOME } from './homeSection';
 
 const ana = unityAccount('ana@example.com', ['acme@unity', 'codice@cloud'], { wildcard: true });
 const bo = unityAccount('bo@example.com', ['games@unity']);
@@ -72,5 +73,20 @@ describe('homeServersOf', () => {
   it('lists this computer and the servers without a Unity account', () => {
     expect(homeServersOf([build], undefined).map((profile) => profile.server)).toEqual(['local', 'build:8087']);
     expect(homeServersOf([], undefined).map((profile) => profile.server)).toEqual(['local']);
+  });
+});
+
+describe('sectionAfterSwitch', () => {
+  const boServers = homeServersOf(accounts, bo);
+
+  it("leaves the repositories of the account left for the welcome", () => {
+    expect(sectionAfterSwitch({ kind: 'server', server: 'acme@unity' }, boServers)).toEqual(WELCOME);
+  });
+
+  it('stays on repositories every account lists, and on the welcome or every workspace', () => {
+    expect(sectionAfterSwitch({ kind: 'server', server: 'build:8087' }, boServers)).toEqual({ kind: 'server', server: 'build:8087' });
+    expect(sectionAfterSwitch({ kind: 'server', server: 'local' }, boServers)).toEqual({ kind: 'server', server: 'local' });
+    expect(sectionAfterSwitch({ kind: 'all' }, boServers)).toEqual({ kind: 'all' });
+    expect(sectionAfterSwitch(WELCOME, boServers)).toEqual(WELCOME);
   });
 });

@@ -1,6 +1,7 @@
 import type { UserAccount } from '@shared/domain/account';
 import type { ServerProfile } from '@shared/domain/repository';
 import { accountOfServer, unityAccountsOf } from '../account/userAccounts';
+import { WELCOME, type HomeSection } from './homeSection';
 
 /** What decides which Unity account the home sidebar shows, the first that names one winning. */
 export interface HomeAccountCues {
@@ -35,4 +36,13 @@ const LOCAL: ServerProfile = { server: 'local', user: '', workingMode: '' };
 export function homeServersOf(accounts: readonly UserAccount[], shown: UserAccount | undefined): ServerProfile[] {
   const listed = accounts.filter((account) => account === shown || account.kind === 'server');
   return [LOCAL, ...listed.flatMap(({ servers, user, workingMode }) => servers.map((server) => ({ server, user, workingMode })))];
+}
+
+/**
+ * Where the home screen stays once the sidebar lists `servers` for another account: on the repositories it shows while
+ * they are still listed, else back on its welcome, as they belong to the account left.
+ */
+export function sectionAfterSwitch(section: HomeSection, servers: readonly ServerProfile[]): HomeSection {
+  if (section.kind !== 'server') return section;
+  return servers.some((profile) => profile.server === section.server) ? section : WELCOME;
 }
