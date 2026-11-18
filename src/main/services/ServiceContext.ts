@@ -1,3 +1,5 @@
+import type { ServerSessions } from '../accounts/ServerSessions';
+import type { SessionChecks } from '../accounts/SessionChecks';
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
 import type { DiagnosticWriter } from '../diagnostics/DiagnosticLog';
@@ -52,6 +54,8 @@ export interface ServiceContext {
   issueTrackers: IssueTrackers;
   /** The log file a user sends with a bug report (`appLog`). */
   diagnosticLog: DiagnosticWriter;
+  /** The servers' sign-in state and its checks (`trackSignIns`). */
+  signIns: SignInContext;
 }
 
 /**
@@ -60,6 +64,12 @@ export interface ServiceContext {
  */
 export interface BranchNamesContext {
   branchNames: BranchNamesCache;
+}
+
+/** The servers' sign-in state, one for the app, and the checks that keep it (`trackSignIns`). */
+export interface SignInContext {
+  sessions: ServerSessions;
+  sessionChecks: SessionChecks;
 }
 
 /** `cm profile list`, one read shared by the accounts, the servers and the setup check (`ProfileList`). */

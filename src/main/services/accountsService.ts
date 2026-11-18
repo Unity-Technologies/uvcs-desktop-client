@@ -1,7 +1,7 @@
 import type { AccountsApi } from '@shared/api/accounts';
 import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
-export function createAccountsService({ cm }: ServiceContext, { profiles }: ProfilesContext): AccountsApi {
+export function createAccountsService({ cm, signIns }: ServiceContext, { profiles }: ProfilesContext): AccountsApi {
   return {
     list: () => profiles.read(),
     remove: async (name) => {
@@ -11,5 +11,7 @@ export function createAccountsService({ cm }: ServiceContext, { profiles }: Prof
         profiles.forget();
       }
     },
+    sessions: async () => signIns.sessions.all(),
+    checkSession: (server, when) => (when === 'now' ? signIns.sessionChecks.checkNow(server) : signIns.sessionChecks.whenStale(server)),
   };
 }

@@ -83,10 +83,11 @@ export interface SignInGate {
   /** The problem that keeps server commands from `server`, or undefined when they may run. */
   refusal(server: string): SignInProblem | undefined;
   /**
-   * A command to `server` failed as a sign-in problem would: the server's problem once a check of its session confirms
-   * it (`checkSession`), else null: the failure was another server's (an xlink's) or no sign-in problem at all.
+   * A command to `server`, started at `commandStartedAt`, failed as a sign-in problem would: the server's problem once a
+   * check of its session started since confirms it (`SessionChecks.confirm`), else null: the failure was another
+   * server's (an xlink's) or no sign-in problem at all.
    */
-  confirm(server: string): Promise<SignInProblem | null>;
+  confirm(server: string, commandStartedAt: number): Promise<SignInProblem | null>;
 }
 
 /**
@@ -321,10 +322,10 @@ export class CmClient {
       const entry = log(endedWithoutExitCode(error));
       if (error instanceof CmOutputTooLargeError) throw stoppedFailure(error, entry);
       if (!(error instanceof WaitingForInputError)) throw error;
-      throw (await this.signInFailure(server, 'signInRequired', entry)) ?? stoppedFailure(error, entry);
+      throw (await this.signInFailure(server, 'signInRequired', startedAt, entry)) ?? stoppedFailure(error, entry);
     });
     const entry = log(result);
-    if (result.exitCode !== 0) throw (await this.signInFailure(server, signInFailureOf(result.output), entry)) ?? failure(result, entry);
+    if (result.exitCode !== 0) throw (await this.signInFailure(server, signInFailureOf(result.output), startedAt, entry)) ?? failure(result, entry);
     return result.output;
   }
 
@@ -346,9 +347,9 @@ export class CmClient {
    * A failure that said its server needs a sign-in, once the gate confirmed it (`SignInGate.confirm`); null when it said
    * nothing of it, the server isn't known, or the server's session turned out fine.
    */
-  private async signInFailure(server: string | undefined, kind: SignInProblemKind | null, entry: CommandLogEntry): Promise<CmSignInError | null> {
+  private async signInFailure(server: string | undefined, kind: SignInProblemKind | null, startedAt: number, entry: CommandLogEntry): Promise<CmSignInError | null> {
     if (!kind || server === undefined || !this.signInGate) return null;
-    const problem = await this.signInGate.confirm(server);
+    const problem = await this.signInGate.confirm(server, startedAt);
     return problem && new CmSignInError(problem, commandOf(entry));
   }
 

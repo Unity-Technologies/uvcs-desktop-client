@@ -34,7 +34,8 @@ export const queryKeys = {
   appInfo: ['appInfo'] as const,
   releaseNotes: (version: string) => ['releaseNotes', version] as const,
   cmSetup: ['cmSetup'] as const,
-  serverConnection: (server: string) => ['serverConnection', server] as const,
+  serverSession: (server: string) => ['serverSession', server] as const,
+  serverSessions: ['serverSessions'] as const,
   homeDirectory: ['homeDirectory'] as const,
   /** Whether this computer can create dynamic workspaces (`api.workspaces.canCreateDynamic`). */
   dynamicWorkspaces: ['dynamicWorkspaces'] as const,

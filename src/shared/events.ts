@@ -4,6 +4,7 @@ import type { OperationProgress } from './domain/operation';
 import type { PageSeed, PageWindowPage } from './domain/pageWindow';
 import type { IssueTrackerSetup } from './domain/issueTrackers';
 import type { AppSettings } from './domain/settings';
+import type { ServerSession } from './domain/signIn';
 import type { KeptAsideFile } from './domain/switchWithChanges';
 import type { WorkspaceChange } from './domain/workspaceChange';
 
@@ -63,6 +64,8 @@ export interface UvcsEvents {
   repositoryPathsFound: { searchId: string; paths: FoundPath[]; source: FoundPathsSource };
   /** A tracker was signed in to or out of, a credential stopped working, or a repository's tracker changed. */
   issueTrackersChanged: IssueTrackerSetup;
+  /** A server came to need a sign-in, or was signed in again: every server that needs one now (`ServerSessions`). */
+  serverSessionsChanged: ServerSession[];
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
   /** A workspace was picked from the OS recent documents; `system.takeRequestedPlace` tells which. */

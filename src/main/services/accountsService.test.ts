@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
-import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { SESSION_CHECK_STALE_MS } from '../accounts/SessionChecks';
 import { createAccountsService } from './accountsService';
-import { profilesContext, serviceContext } from './testing/serviceContext';
+import { profilesContext, serviceContext, signInContext } from './testing/serviceContext';
 
 describe('accounts', () => {
   it('lists the profiles with one local read in any directory, never their security config', async () => {
@@ -56,5 +57,55 @@ describe('accounts', () => {
     await service.remove('acme@cloud_ana');
 
     expect(fake.commands).toMatchObject([{ via: 'query', args: ['profile', 'delete', '--name=acme@cloud_ana'], options: { anyDirectory: true } }]);
+  });
+});
+
+describe("servers' sessions", () => {
+  /** The accounts service over `answers`, its sessions checked on a clock the test moves. */
+  function sessionsOf(answers: Record<string, CmAnswer>) {
+    let time = 0;
+    const fake = fakeCmClient(answers);
+    const service = createAccountsService(serviceContext(fake.cm, { signIns: signInContext(fake.cm, () => time) }), profilesContext(fake.cm));
+    return { ...fake, service, advance: (ms: number) => void (time += ms) };
+  }
+
+  it('checks a server as a window opens or comes forward: the first time, then only once stale', async () => {
+    const { service, lines, advance } = sessionsOf({ 'checkconnection acme@cloud': 'Test connection executed successfully\n' });
+
+    expect(await service.checkSession('acme@cloud', 'whenStale')).toBeNull();
+    advance(SESSION_CHECK_STALE_MS - 1);
+    await service.checkSession('acme@cloud', 'whenStale');
+    expect(lines()).toEqual(['checkconnection acme@cloud']);
+
+    advance(1);
+    await service.checkSession('acme@cloud', 'whenStale');
+    expect(lines()).toEqual(['checkconnection acme@cloud', 'checkconnection acme@cloud']);
+  });
+
+  it('checks at once when asked to now, as Check again does', async () => {
+    const { service, lines } = sessionsOf({ 'checkconnection acme@cloud': 'Test connection executed successfully\n' });
+
+    await service.checkSession('acme@cloud', 'whenStale');
+    await service.checkSession('acme@cloud', 'now');
+
+    expect(lines()).toHaveLength(2);
+  });
+
+  it('lists a server whose session ended, and answers a server out of reach without marking it', async () => {
+    const { service } = sessionsOf({
+      'checkconnection acme@cloud': cmFails('Error: The auth token expired. User: dev@acme.com.'),
+      'checkconnection build:8087': cmFails("Error: Can't resolve DNS entry for build"),
+    });
+
+    expect(await service.checkSession('acme@cloud', 'whenStale')).toBeNull();
+    expect(await service.checkSession('build:8087', 'whenStale')).toMatchObject({ server: 'build:8087', output: "Error: Can't resolve DNS entry for build" });
+
+    expect(await service.sessions()).toEqual([
+      {
+        server: 'acme@cloud',
+        state: 'needsSignIn',
+        problem: { kind: 'sessionEnded', server: 'acme@cloud', details: { commandLine: 'cm checkconnection acme@cloud', output: 'Error: The auth token expired. User: dev@acme.com.' } },
+      },
+    ]);
   });
 });
