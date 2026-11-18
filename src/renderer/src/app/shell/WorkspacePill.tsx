@@ -17,13 +17,15 @@ const TEXT_MAX_WIDTH = 200;
 export function WorkspacePill() {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
+  const tip = workspace && workspacePillTip(workspace);
 
   return (
     <WorkspaceSwitcher currentPath={workspacePath}>
       <ToolbarPill
         className={styles.pill}
         aria-label="Switch workspace"
-        data-tip={workspace && workspacePillTip(workspace)}
+        data-tip={tip?.text}
+        data-tip-sub={tip?.sub}
         textMaxWidth={TEXT_MAX_WIDTH}
         icon={<RepositoryAvatar repository={workspace?.repository} label={workspace?.name} size={24} />}
         label={
