@@ -1,8 +1,11 @@
 import { isSameOrInside } from '../files/pathContainment';
 import type { HeaderReaders } from './WorkspaceHeaders';
 
-/** Reads the server of the workspace holding a folder, locally (`readWorkspaceServer`); undefined when there is none. */
-export type ReadWorkspaceServer = (directory: string) => Promise<string | undefined>;
+/**
+ * Reads the root and server of the workspace holding a folder, locally (`findWorkspaceRoot`, `readWorkspaceServer`);
+ * undefined when there is none.
+ */
+export type ReadWorkspaceServer = (directory: string) => Promise<{ root: string; server: string } | undefined>;
 
 /**
  * The server of each workspace, learned from the header every window reads as it opens one (`workspaces.info`), so
@@ -40,18 +43,19 @@ export class WorkspaceServers {
   }
 
   /**
-   * The server of the workspace holding `directory`, read now when not known, and remembered: for a command there that
-   * failed for a sign-in before its workspace's header was read. A read of the same folder already under way answers
-   * undefined: the read itself failing for a sign-in never waits on itself.
+   * The server of the workspace holding `directory`, read now when not known, and remembered under the workspace's root
+   * (so its every folder knows it): for a command there that failed for a sign-in before its workspace's header was
+   * read. A read of the same folder already under way answers undefined: the read itself failing for a sign-in never
+   * waits on itself.
    */
   async learn(directory: string): Promise<string | undefined> {
     const known = this.serverOf(directory);
     if (known !== undefined || this.learning.has(directory)) return known;
     this.learning.add(directory);
     try {
-      const server = await this.readServer(directory);
-      if (server) this.servers.set(directory, server);
-      return server;
+      const read = await this.readServer(directory);
+      if (read) this.servers.set(read.root, read.server);
+      return read?.server;
     } finally {
       this.learning.delete(directory);
     }

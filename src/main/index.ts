@@ -54,7 +54,7 @@ import { WindowWrites } from './window/WindowWrites';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 import { WorkspaceServers } from './workspace/WorkspaceServers';
-import { readWorkspaceServer } from './cm/workspaceStatus';
+import { readWorkspaceOrigin } from './cm/workspaceStatus';
 
 const userData = app.getPath('userData');
 // Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
@@ -62,7 +62,7 @@ const cm = new CmClient(locateCm, join(userData, 'outside-workspaces'));
 const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it; each one's server
 // remembered as it's read, for the sign-in gate.
-const workspaceServers = new WorkspaceServers((directory) => readWorkspaceServer(cm, directory));
+const workspaceServers = new WorkspaceServers((directory) => readWorkspaceOrigin(cm, directory));
 const headers = new WorkspaceHeaders(workspaceServers.remembering(cmHeaderReaders(cm)));
 // One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
 const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));

@@ -11,12 +11,12 @@ function readers(server: string): HeaderReaders {
   return { status: async () => status, names: async () => ({ name: 'game', guid: 'g' }) };
 }
 
-/** Workspace servers whose local reads answer `server`, counted. */
+/** Workspace servers whose local reads answer `server` as `GAME`'s, counted. */
 function servers(server: string | undefined, platform: NodeJS.Platform = 'linux') {
   const reads: string[] = [];
   const readServer: ReadWorkspaceServer = async (directory) => {
     reads.push(directory);
-    return server;
+    return server === undefined ? undefined : { root: GAME, server };
   };
   return { servers: new WorkspaceServers(readServer, platform), reads };
 }
@@ -64,12 +64,21 @@ describe('WorkspaceServers', () => {
     expect(await known.learn(join('/elsewhere'))).toBeUndefined();
   });
 
+  it("remembers a server learned from a folder in the workspace under the workspace's root, for all its folders", async () => {
+    const { servers: known } = servers('acme@cloud');
+
+    await known.learn(join(GAME, 'Assets'));
+
+    expect(known.serverOf(GAME)).toBe('acme@cloud');
+    expect(known.serverOf(join(GAME, 'src'))).toBe('acme@cloud');
+  });
+
   it('never waits on its own read: a read failing as a sign-in would asks to learn the same folder again', async () => {
     let known!: WorkspaceServers;
     let nested: string | undefined | 'unset' = 'unset';
     known = new WorkspaceServers(async (directory) => {
       nested = await known.learn(directory);
-      return 'acme@cloud';
+      return { root: directory, server: 'acme@cloud' };
     }, 'linux');
 
     expect(await known.learn(GAME)).toBe('acme@cloud');

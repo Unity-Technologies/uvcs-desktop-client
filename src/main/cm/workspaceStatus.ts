@@ -1,5 +1,6 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
+import { findWorkspaceRoot } from './workspaceRoot';
 import { isOrganizationIdServer } from './organizationIds';
 import { child, integer, parseXml, text } from './parseXml';
 
@@ -66,6 +67,16 @@ async function serverByName(cm: CmClient, workspacePath: string, printedServer: 
 export async function readWorkspaceServer(cm: Pick<CmClient, 'query'>, directory: string): Promise<string | undefined> {
   const output = await cm.query(machineReadableHeaderArgs(directory), { cwd: directory }).catch(() => '');
   return parseMachineReadableHeader(output)?.server;
+}
+
+/**
+ * The root and server of the workspace holding `directory`, with two local reads (`findWorkspaceRoot`,
+ * `readWorkspaceServer`), for the sign-in gate to learn a workspace's server (`WorkspaceServers.learn`).
+ */
+export async function readWorkspaceOrigin(cm: CmClient, directory: string): Promise<{ root: string; server: string } | undefined> {
+  const root = await findWorkspaceRoot(cm, directory);
+  const server = root === null ? undefined : await readWorkspaceServer(cm, root);
+  return root !== null && server !== undefined ? { root, server } : undefined;
 }
 
 /**

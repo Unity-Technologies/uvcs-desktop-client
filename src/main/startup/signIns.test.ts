@@ -45,7 +45,7 @@ async function app() {
   // A workspace whose header wasn't read is learned with a local read (`readWorkspaceServer`), recorded as one.
   const workspaceServers = new WorkspaceServers(async (directory) => {
     ran.push('status --header --machinereadable');
-    return directory === UNREAD ? 'acme@cloud' : undefined;
+    return directory === UNREAD ? { root: UNREAD, server: 'acme@cloud' } : undefined;
   }, 'linux');
   await workspaceServers.remembering({ status: async () => ({ server: 'acme@cloud' }) as WorkspaceStatus, names: async () => ({ name: 'game', guid: 'g' }) }).status(WORKSPACE);
   const told: ServerSession[][] = [];
