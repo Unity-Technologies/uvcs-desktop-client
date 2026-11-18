@@ -83,9 +83,9 @@ you touch:
      reads an XML list element by element the same way (`cm history`), and `queryLines()` a list of one item a line
      (`cm listusers`).
    - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
-     it arrives with no size limit but one on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
-     (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
-     is never stopped for its size.
+     it arrives with no size limit but one on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past
+     `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError` (`CmOutputTooLargeError`; a session starts a new process), and an
+     operation keeps the ends of what it prints and is never stopped for its size.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log), and written to the log file ("The log file"); one that ended without an exit code
    (stopped on a prompt, `cm` not found) is logged with -1, which the log and the error dialog word as "Stopped"
