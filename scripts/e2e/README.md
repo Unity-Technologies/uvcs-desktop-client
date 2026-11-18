@@ -58,7 +58,8 @@ docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn
 - `signIn.cjs` ends a server's session (docs/features/accounts.md): `UVCS_FAKE_CM_SIGN_IN` names a file, read on every
   command, holding the server's name (and ` prompt` to have `cm` ask which system to sign in with, as it does once it
   can't renew a sign-in, instead of printing its "auth token expired" sentence). While it does, every command to that
-  server but the local ones fails so. The smoke test writes it to see one sign-in screen, no server command while it
+  server but the local ones fails so (`cm status` too, unless `--compact`, as it asks the server for the workspace's
+  header). The smoke test writes it to see one sign-in screen, no server command while it
   shows, and the views back after Check again.
 - Windows starts only executables (Node refuses a `.cmd` without a shell), so there `executable.mjs` builds `cm.exe`
   with `node --build-sea` (Node 25.5 or later) that loads `cm.cjs`; on macOS and Linux the script runs by its `#!`.

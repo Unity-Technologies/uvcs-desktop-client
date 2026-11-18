@@ -10,12 +10,18 @@ import { useSession } from '../workspace/sessionStore';
 import { signInWords } from './signInWords';
 import { checkSessionNow } from './useSessionCheck';
 
+interface SignInScreenProps {
+  problem: SignInProblem;
+  /** Under the place's top bar (`SignInCover`); false where it takes the window's place, as a workspace that can't be opened does. */
+  underTopBar?: boolean;
+}
+
 /**
  * What covers a window whose place's server needs a sign-in (`SignInCover`): one screen, however many reads and
  * operations ran into it, with what to do, Details (what `cm` answered), Check again and Go to Home. The sign-in itself
  * is the Unity Version Control app's until this app signs in (docs/features/accounts.md).
  */
-export function SignInScreen({ problem }: { problem: SignInProblem }) {
+export function SignInScreen({ problem, underTopBar = true }: SignInScreenProps) {
   const client = useQueryClient();
   const goHome = useSession((state) => state.goHome);
   const [checking, setChecking] = useState(false);
@@ -29,7 +35,7 @@ export function SignInScreen({ problem }: { problem: SignInProblem }) {
 
   return (
     <ScreenMessage
-      underTopBar
+      underTopBar={underTopBar}
       icon={<KeyRound size={26} />}
       tone="warning"
       title={words.title}

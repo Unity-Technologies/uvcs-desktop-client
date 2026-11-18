@@ -42,7 +42,11 @@ Every command goes by a gate in `CmClient` (`SignInGate`, `signInGate`, wired by
 - **A command's server** is the one it names (`CmRunOptions.server`: `cm checkconnection <server>`, `cm repository list
   <server>`, a repository's place, which `cmPlace` names) or its workspace's, which `WorkspaceServers` learned from the
   header the window read as it opened the workspace (`workspaces.info`): no command of its own. A command whose server
-  isn't known is never gated, and a failure of one is a plain `CmError`: the gate never guesses.
+  isn't known is never gated. One that fails for a sign-in learns its workspace's server with one local read
+  (`learnServerOf`, `WorkspaceServers.learn`, `readWorkspaceServer`: the machine-readable header with `--compact`),
+  as that header's own read (`cm status --header --xml`) asks the server for the branch's head, and is what fails when a
+  workspace opens while its server needs a sign-in. A folder in no workspace learns none, and the failure stays a plain
+  `CmError`: the gate never guesses.
 - **A server that needs a sign-in gets no server command**: `CmClient` refuses it before `cm` runs, with a
   `CmSignInError` carrying the problem, and logs it as not run (`notRun`, "Not run: sign in to {server} first."), so the
   command log explains itself without pointing at it as a failure (`isUnseenFailure`). No prompt, no dead credentials
@@ -52,7 +56,8 @@ Every command goes by a gate in `CmClient` (`SignInGate`, `signInGate`, wired by
   once a check of its server confirms it (`SignInGate.confirm`, `SessionChecks.confirm`): one `cm checkconnection`,
   joined by every failure that started before it, so a burst of failed reads costs one check. A false "session ended"
   would cover a healthy window, and the failure may be another server's: an xlink's sign-in fails a workspace's command
-  while the workspace's own server is fine. Then the command fails as before, with `cm`'s words.
+  while the workspace's own server is fine. Then the command fails as before, with `cm`'s words. A server already known
+  to need a sign-in is answered at once, with no check: local commands still run while it does, and fail so.
 
 The window gets the problem with the error (`RemoteError.signIn`, `ApiError.signIn`, `signInProblemOf`).
 
@@ -89,8 +94,12 @@ again"), and offers Check again, Details (`ConnectionProblemDialog`: `cm`'s word
 download where signing in again is the way forward) and Go to Home. Signed in elsewhere (the Unity Version Control
 app, a terminal), the next check notices: Check again, or coming back to the window.
 
+A workspace opened while its server needs a sign-in can't be read (its header asks the server), so the same screen
+takes the window's place, as a workspace that can't be opened does (`WorkspaceGate`, `SignInScreen` with
+`underTopBar={false}`).
+
 Once the server is signed in again, every window on it is uncovered, and reads once more each query whose last read
-failed for its sign-in (`failedForSignInTo`, `useServerSessionsFromMain`).
+failed for its sign-in (`failedForSignInTo`, `useServerSessionsFromMain`): a workspace that couldn't be opened opens.
 
 ## Operations refused
 
