@@ -219,8 +219,8 @@ update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
   (`scripts/icons/makeAppIcons.mjs`) makes the committed files in `build/` from `appIconSvg`, drawing each size from
   the vectors with the installed Electron's Chromium (`rasterize.cjs`) and writing the .icns and .ico itself, so it
   needs no other tool: `icon.icns` (macOS, 32 to 1024 pixels, the tile on Apple's icon grid: 824 of 1024 pixels, so
-  the Dock shows it the size of other apps; no 16 or 32 pixel entry at 1x, `icp4` and `icp5`, whose PNG macOS draws as
-  noise in Activity Monitor and Finder's lists, so it scales the 2x ones down), `icon.ico` (Windows, 16 to 256, edge to edge), `icons/256x256.png` and
+  the Dock shows it the size of other apps; no 1x entry for 16 or 32 pixels, as Activity Monitor draws a PNG in
+  `icp4` and `icp5` as noise, and writing them as ARGB `ic04` and `ic05` was rejected: see `ICNS_TYPES`), `icon.ico` (Windows, 16 to 256, edge to edge), `icons/256x256.png` and
   `512x512.png` (Linux), and `icon-macOS.svg`/`icon.svg`, the sources. electron-builder.yml names them per OS; the disk
   image and the Windows installer show them too. Running unpackaged, the app sets the Dock's icon itself
   (`DEVELOPMENT_DOCK_ICON`, `build/icon-macOS.png`), and a window takes the PNG where the OS reads it from the window

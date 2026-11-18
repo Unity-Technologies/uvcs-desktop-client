@@ -20,9 +20,10 @@ const BUILD = fileURLToPath(new URL('../../build/', import.meta.url));
 
 /**
  * The icns entry types that hold a PNG, by the pixels each holds (Apple's `IconFamily` types: 16 to 512 points at 2x,
- * 128 to 512 at 1x). Not `icp4` and `icp5` (16 and 32 pixels): macOS doesn't read a PNG in them and draws noise where
- * it shows the icon that small (Activity Monitor, Finder's lists); it scales the 2x entries down instead. Not `icp6`:
- * macOS reads it as 48 pixels, a size no Retina Mac asks for.
+ * 128 to 512 at 1x). Not `icp4` and `icp5` (16 and 32 pixels): Activity Monitor and `iconutil` draw a PNG in them as
+ * noise, though NSImage and ImageIO read it (Apple's `iconutil` writes those sizes as ARGB `ic04` and `ic05`, which
+ * would need raw pixels and an RLE encoder here); without them macOS scales the 2x entries down. Not `icp6`: macOS
+ * reads it as 48 pixels, a size no Retina Mac asks for.
  */
 const ICNS_TYPES = [
   ['ic11', 32],
