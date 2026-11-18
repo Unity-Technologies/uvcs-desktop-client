@@ -21,7 +21,7 @@ import styles from './WorkspaceSwitcher.module.css';
 /**
  * Quick switch to any workspace, recent ones first, without going back to the home screen. Rows read as the home
  * screen's (the repository's avatar, the branch and the server); workspaces of the same repository also show their
- * pending changes. Right-clicking the card offers the open workspace's actions. A folder `cm` doesn't list as a
+ * pending changes. Right-clicking the workspace pill offers the open workspace's actions. A folder `cm` doesn't list as a
  * workspace is opened from File ▸ Open Another Workspace… (⇧⌘O), the home screen or by dropping it on the window:
  * here, beside the workspaces listed, "Open folder…" read as showing the folder in the file manager. A repository
  * explored without a workspace (`currentPath` null) has no workspace of its own to act on: the switcher only leads

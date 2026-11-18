@@ -11,8 +11,8 @@ import { MergeInProgressItem } from './MergeInProgressItem';
 import { SidebarToggleItem } from './SidebarToggleItem';
 
 /**
- * The sidebar: the merge in progress (`MergeInProgress`) while there is one, the place's
- * views by group (`viewsOf`), then Settings and the rail toggle.
+ * The sidebar: the merge in progress (`MergeInProgress`) while there is one, the place's views by group (`viewsOf`),
+ * then Settings and the rail toggle.
  */
 export function Sidebar() {
   const place = usePlace();

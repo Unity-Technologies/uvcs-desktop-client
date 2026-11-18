@@ -8,8 +8,8 @@ import { TopBar } from './TopBar';
 import { TopBarSearch } from './TopBarSearch';
 
 /**
- * The top bar of a repository explored without a workspace: the repository after the home button, then the search, the way to make it a workspace without
- * leaving it ("Create workspace"), and the account.
+ * The top bar of a repository explored without a workspace: the repository after the home button, then the search,
+ * the way to make it a workspace without leaving it ("Create workspace"), and the account.
  */
 export function RepositoryTopBar({ repository }: { repository: string }) {
   const goHome = useSession((state) => state.goHome);
