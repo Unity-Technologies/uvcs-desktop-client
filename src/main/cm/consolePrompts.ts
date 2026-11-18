@@ -13,7 +13,13 @@ export function looksLikePrompt(line: string): boolean {
   return PROMPT_LIKE_LINE.test(line);
 }
 
-/** The failure of a command stopped as it waited for an answer to `prompt`. */
-export function waitingForInputError(prompt: string): Error {
-  return new Error(`cm is waiting for input ("${prompt.trim()}"). Check your credentials for this server.`);
+/**
+ * The failure of a command stopped as it waited for an answer to `prompt`: almost always a sign-in `cm` lacks, which
+ * `CmClient` tells as one (`CmSignInError`) once it knows the command's server.
+ */
+export class WaitingForInputError extends Error {
+  constructor(readonly prompt: string) {
+    super(`cm is waiting for input ("${prompt.trim()}"). Check your credentials for this server.`);
+    this.name = 'WaitingForInputError';
+  }
 }
