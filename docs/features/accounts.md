@@ -6,7 +6,7 @@ the command line for now: the app reads what `cm` already keeps, and never write
 ## Accounts
 
 `cm` keeps one profile per server (`cm profile list`: a name, a server, a user and how it signs in). The app shows
-accounts, as people think of them, made of those profiles (`userAccountsOf`, `main/cm/userAccounts.ts`;
+accounts, as people think of them, made of those profiles (`userAccountsOf`, `shared/domain/userAccounts.ts`;
 `UserAccount` in `shared/domain/account.ts`):
 
 - **A Unity account**: every cloud profile of one user, whatever the case of the email (`acme@unity`, `acme@cloud`),
@@ -19,10 +19,16 @@ accounts, as people think of them, made of those profiles (`userAccountsOf`, `ma
 Unity accounts come first, by user, then servers' by server. An account's id (`cloud:<user in lower case>`,
 `server:<server>`) stays the same from one read to the next, so a choice made by it (the account Home shows) holds.
 
-The accounts come from the one profiles read the servers and the setup check share (`ProfileList`, docs/ARCHITECTURE.md
-"Windows"): `api.accounts.accounts()` runs no command of its own, and the home screen asks for it with the servers as
-it starts (`readFirstScreen`, `prefetchStartupQueries`), so both take one `cm profile list`. In the renderer they are
-`userAccountsQuery`, kept under the `profiles` key: what reads the servers again (removing a profile) reads them too.
+A window derives the accounts from the profiles it reads anyway (`useUserAccounts`: `accountsQuery` with
+`userAccountsOf` as its `select`), so they cost no command of their own. In main, the profiles, the servers and the
+setup check share one `cm profile list` (`ProfileList`, docs/ARCHITECTURE.md "Windows"), and the home screen asks for
+the profiles with the servers as it starts (`readFirstScreen`, `prefetchStartupQueries`), so both take that one
+command. The accounts are as fresh as the profiles: read again when the window regains focus a minute after the last
+read, so an account added with the official client or the command line shows up then, and after a profile is removed.
+
+Which account a server belongs to is decided in one place for every view (`accountOfServer`, over
+`accountForServer`): its own profile by server or by name, an organization by its name or its genesis id on
+`@cloud` or `@unity`, else the account holding `*@cloud`.
 
 ## Home
 
@@ -35,20 +41,23 @@ there are two or more (`accountSwitchCommands`), on the home screen only.
 - **Which account shows** (`homeAccountOf`), the first that names one: the account holding the repositories on screen
   (a link may open another account's organization), the one picked in this window since it came to the home screen,
   the account of the workspace the window left (from the workspace's info the window read while it showed it, never
-  read again for this), the one last picked in any window (`AppSettings.homeAccount`), else the main one: the account holding the `*@cloud` profile, else the one with the
-  most organizations (`mainAccountOf`), never merely the first by name, which may be an email account with one.
+  read again for this), the one last picked in any window (`AppSettings.homeAccount`), else the main one: the
+  account holding the `*@cloud` profile, else the one with the most organizations (`mainAccountOf`), never merely the
+  first by name, which may be an email account with one. A home screen where nothing was picked follows the account
+  last picked in another window as it's picked: the choice is one for the app, not per window.
 - **What it lists** (`homeServersOf`): this computer, the shown account's organizations, and every server's account,
   a server's entry showing its user (`serverEntryDetail`), as a server is an account of its own.
 - **Picking an account only shows it** (`showHomeAccount`): it changes nothing in `cm`, and is remembered in the app's
   own settings, never `cm`'s. Repositories of the account left give way to the welcome (`sectionAfterSwitch`). The
   official client rewrote the server's profile on every pick; with one profile per server, two accounts in one
-  organization overwrote each other.
+  organization overwrote each other. A link that writes a server in another case (`Games@unity`) keeps its
+  repositories on screen, as servers are matched whatever their case.
 
 ## Settings
 
 Settings › Accounts has one row per account (`accountRowsOf`): its user, then "Unity · 3 organizations" or the server
 and how it signs in; the account signing in to the window's place first, marked "This workspace". A Unity account's
-row opens to its organizations, then its `*@cloud` profile ("Any cloud organization"), each removed apart with
+row opens to its organizations, by their readable names (`organizationName`, never a genesis id), then its `*@cloud` profile ("Any cloud organization"), each removed apart with
 `cm profile delete`; a server's row removes its one profile itself. Removing a whole account at once isn't offered:
 `cm profile delete` leaves the account's sign-in behind, so a loop of them signs nothing out. This computer's profile
 isn't listed, as it belongs to no account. The account menu's count is the rows'.

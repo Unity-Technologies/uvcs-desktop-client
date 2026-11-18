@@ -774,7 +774,7 @@ each email address shown, and the user decides whether it leaves the machine.
   (`isEmailAddress`).
 - **Asked once, when people show**: the first avatar of someone named by an email address marks people as shown in
   the window (`notePersonShown`, from `avatarImageFor`); the user's own account (the top bar, the account menu,
-  Settings' accounts, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
+  Settings' accounts, Home's account switcher, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
   a card in the toast corner (`GravatarPrompt` on `CornerCard`, `asksAboutGravatar`) asks "Show profile pictures?"
   with "Show pictures" and "Not now". While a dialog opened with `openDialog` or `askDialog` is open (`useDialogStore`:
   Settings, About, confirmations...; the command palette isn't one) it waits, so it never sits over the dialog's
@@ -979,7 +979,7 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    ms), wires the services and, as it loads, before Electron is ready (`cm` needs neither that nor a window), starts
    the `cm shell`s of the workspace the first window reopens (or of the home folder, for the home screen) and that
    screen's first reads (`readFirstScreenAhead`, `readFirstScreen`): `cm version` and the workspace's info and
-   pending changes, or the home screen's workspaces, servers and accounts (one profiles read for both). Their commands run while Electron gets ready (50-60
+   pending changes, or the home screen's workspaces, servers and profiles (the last two one `cm profile list`). Their commands run while Electron gets ready (50-60
    ms) and the window and its page load; the page's identical calls take the answers (`EarlyCalls`, in
    `registerApi`; one nobody takes goes 5 s after the window opened, `EARLY_ANSWER_MS`, `expireUntaken`). A launch
    that names a folder on Windows and Linux (`launchNamesAFolder`, known as the module loads) reads ahead only
