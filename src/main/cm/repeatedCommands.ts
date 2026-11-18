@@ -6,6 +6,8 @@ import { commandLineForLog } from './hideSecrets';
  * (it only greets the server, but for its header: ARCHITECTURE.md "`cm status` asks the server for its header");
  * everything else asks the server.
  */
+// Two copies follow this list and `needsSignIn`, as the e2e fake can't import the app's code: `isLocal` in
+// scripts/e2e/fakeCm/signIn.cjs and `LOCAL_COMMAND` in scripts/e2e/smoke.mjs. Change them together.
 const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
 
 export function isServerCommand(args: readonly string[]): boolean {
