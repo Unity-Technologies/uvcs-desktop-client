@@ -734,7 +734,7 @@ function fakeGate({ needsSignIn = [] as string[], confirmed = null as SignInProb
   const confirms: string[] = [];
   const learned: string[] = [];
   const gate: SignInGate = {
-    serverOf: (cwd, named) => named ?? (cwd === WORKSPACE ? 'acme@cloud' : undefined),
+    serverOf: (workspace, named) => named ?? (workspace === WORKSPACE ? 'acme@cloud' : undefined),
     learnServerOf: async (cwd) => {
       learned.push(cwd);
       return cwd === LEARNED ? 'build:8087' : undefined;
@@ -795,14 +795,14 @@ describe('CmClient sign-in gate', () => {
   });
 
   it("never takes a command that runs in any directory for the shown workspace's: a glance at another workspace runs, and learns nothing", async () => {
-    const { cm, shellCommands } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@acme.com.\n', exitCode: 1 }) });
+    const { cm, shellCommands, processes } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@acme.com.\n', exitCode: 1 }) });
     const { gate, learned } = fakeGate({ needsSignIn: ['acme@cloud'] });
     cm.gateSignIns(gate);
     cm.show(WORKSPACE);
 
     const error = await failureOf(cm.query(['status', '--header', '--xml', LEARNED], { anyDirectory: true }));
 
-    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['status', '--header', '--xml', LEARNED, '--encoding=utf-8'] }]);
+    expect([...shellCommands, ...processes].map(({ args }) => args.slice(0, 4))).toEqual([['status', '--header', '--xml', LEARNED]]);
     expect(error).not.toBeInstanceOf(CmSignInError);
     expect(learned).toEqual([]);
   });

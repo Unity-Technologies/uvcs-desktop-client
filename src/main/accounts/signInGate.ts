@@ -10,7 +10,7 @@ import type { SessionChecks } from './SessionChecks';
  */
 export function signInGate({ sessions, checks, workspaceServers }: { sessions: ServerSessions; checks: SessionChecks; workspaceServers: WorkspaceServers }): SignInGate {
   return {
-    serverOf: (cwd, named) => named ?? workspaceServers.serverOf(cwd),
+    serverOf: (workspace, named) => named ?? (workspace === undefined ? undefined : workspaceServers.serverOf(workspace)),
     learnServerOf: (cwd) => workspaceServers.learn(cwd),
     passes: (args) => args[0] === 'checkconnection',
     refusal: (server) => {

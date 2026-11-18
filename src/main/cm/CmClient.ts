@@ -53,6 +53,12 @@ export interface CmRunOptions {
   onOutputLine?: (line: string) => void;
 }
 
+/** Where a command runs (`directoryOf`), and the folder it was given (its workspace's, for the sign-in gate), if any. */
+interface Placed {
+  cwd: string;
+  givenCwd: string | undefined;
+}
+
 /** How a command whose list is streamed runs: as any other, but with no output lines to report. */
 export type CmRecordsOptions = Omit<CmRunOptions, 'onOutputLine'>;
 
@@ -76,8 +82,11 @@ type CommandStartedListener = (command: { args: readonly string[]; cwd: string; 
  * docs/features/accounts.md "The gate").
  */
 export interface SignInGate {
-  /** The server a command works with: the one it names (`CmRunOptions.server`), or its workspace's; undefined when unknown. */
-  serverOf(cwd: string, named: string | undefined): string | undefined;
+  /**
+   * The server a command works with: the one it names (`CmRunOptions.server`), or the workspace's of the folder it was
+   * given (`workspace`: its `cwd`, never a folder it runs in by chance, `anyDirectory`); undefined when unknown.
+   */
+  serverOf(workspace: string | undefined, named: string | undefined): string | undefined;
   /**
    * The server of the workspace holding `cwd`, read now (a local read) for a command there that failed for a sign-in
    * before the gate knew it (`WorkspaceServers.learn`); undefined when `cwd` is in no workspace.
@@ -252,9 +261,9 @@ export class CmClient {
     this.shellPool.disposeAll();
   }
 
-  /** The options with the directory the command runs in (`directoryOf`). */
-  private placed<T extends CmRunOptions>(options: T): T & { cwd: string } {
-    return { ...options, cwd: this.directoryOf(options) };
+  /** The options with the directory the command runs in (`directoryOf`), and the one it was given, if any. */
+  private placed<T extends CmRunOptions>(options: T): T & Placed {
+    return { ...options, cwd: this.directoryOf(options), givenCwd: options.cwd };
   }
 
   /**
@@ -291,7 +300,7 @@ export class CmClient {
    * Runs a command whose output is text, kept as its kind says (`textOutputKind`), which refuses a list before it runs.
    * `useShell` is asked only then: a refused command warms no session up.
    */
-  private async runText(args: string[], options: CmRunOptions, useShell: () => boolean): Promise<string> {
+  private async runText(args: string[], options: CmRunOptions & Placed, useShell: () => boolean): Promise<string> {
     const reading: OutputReading = { text: textLimitOf(textOutputKind(args)) };
     return this.run(args, options, useShell(), reading);
   }
@@ -300,7 +309,7 @@ export class CmClient {
    * Runs the command with its stdout read by `reader` as it arrives. What it printed besides (its stderr, text after
    * the last item) is its output, which explains its failure and is no item.
    */
-  private async runStreamed<T>(args: string[], reader: StreamReader & { finish(): T[] }, options: CmRecordsOptions, useShell: boolean): Promise<T[]> {
+  private async runStreamed<T>(args: string[], reader: StreamReader & { finish(): T[] }, options: CmRecordsOptions & Placed, useShell: boolean): Promise<T[]> {
     await this.run(args, options, useShell, { stream: reader });
     return reader.finish();
   }
@@ -309,11 +318,13 @@ export class CmClient {
    * Runs `cm <args>`, logs it and fails on an exit code other than 0; its output read as `reading` says. A server command
    * to a server that needs a sign-in doesn't run, and a sign-in problem it runs into fails as one (`SignInGate`).
    */
-  private async run(requested: string[], options: CmRunOptions, useShell: boolean, reading: OutputReading): Promise<string> {
-    const cwd = options.cwd ?? homedir();
+  private async run(requested: string[], options: CmRunOptions & Placed, useShell: boolean, reading: OutputReading): Promise<string> {
+    const { cwd } = options;
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
     const gate = this.signInGate && !this.signInGate.passes(args) ? this.signInGate : null;
-    const server = gate?.serverOf(cwd, options.server);
+    // Only a folder the command was given tells its workspace: one run in any directory (`anyDirectory`) runs in the
+    // shown workspace's by chance, and may be about another (a glance at another workspace's header).
+    const server = gate?.serverOf(options.givenCwd, options.server);
     const refused = server !== undefined && needsSignIn(args) ? gate?.refusal(server) : undefined;
     if (refused) throw this.notRun(args, cwd, refused);
 
@@ -322,7 +333,8 @@ export class CmClient {
     const signInFailure = async (kind: SignInProblemKind | null, entry: CommandLogEntry): Promise<CmSignInError | null> => {
       if (!gate || !kind) return null;
       // Its server, or else its workspace's, learned only now that it failed for a sign-in.
-      return this.signInFailure(gate, server ?? (await gate.learnServerOf(cwd)), startedAt, useShell, entry);
+      const learned = server === undefined && options.givenCwd !== undefined ? await gate.learnServerOf(options.givenCwd) : undefined;
+      return this.signInFailure(gate, server ?? learned, startedAt, useShell, entry);
     };
     const finished = useShell ? this.shellPool.run(cwd, args, reading) : this.runProcess(args, cwd, options, reading);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
