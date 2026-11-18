@@ -11,7 +11,7 @@ The left pane is the incoming changesets above the files, as every list of chang
 
 - **The changesets** (`IncomingChangesetList`) are listed as a branch diff lists its own (`ChangesetFold`,
   `ChangesetStepList`: docs/features/diff.md "A branch's diff" says how its fold, rows, filter, steps, ⌥⇧↓ ⌥⇧↑, height
-  and selection work): "All incoming changes" stands apart above them (`allApart`), the whole update, and folds them
+  and selection work): "All incoming changes" stands apart above them, the whole update, and folds them
   at its end ("Changesets ⌄"); under it, one line each, oldest on top. Why the same as a branch diff: both are a set of
   changesets read all together or one by one, and a header of its own over the list ("Changesets 3") was tried in both
   and read as a section's title, too quiet for what decides what the files are. Unlike a branch diff's, the list starts

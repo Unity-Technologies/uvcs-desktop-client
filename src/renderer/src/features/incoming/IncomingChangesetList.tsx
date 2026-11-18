@@ -14,7 +14,7 @@ import { IncomingShowMore } from './IncomingShowMore';
 import { showMoreLanding } from './showMoreLanding';
 
 interface IncomingChangesetListProps {
-  /** The list's state (`useChangesetStepList`, `allApart`), over the changesets read so far, newest first. */
+  /** The list's state (`useChangesetStepList`), over the changesets read so far, newest first. */
   list: ChangesetStepListState;
   /** The changesets read so far, newest first. */
   changesets: Changeset[];

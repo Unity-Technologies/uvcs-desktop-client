@@ -13,7 +13,8 @@ export interface AllChangesRow {
  * which folds them at its end ("Changesets ⌄", a word that stays as they're read; how many is the filter's, once open).
  * Folded, that row is all there is, selected while it's what the files show, with what the place adds after it
  * (`folded`: a review's "3 new"). The row stays in its place as the list opens under it, and stands
- * apart from the list (`allApart`), so the filter never hides it. The list mounts only open; what the place reads while it's folded, it decides (a branch diff reads no changesets).
+ * apart from the list, so the filter never hides it. The list mounts only open; what the place reads while it's
+ * folded, it decides (a branch diff reads no changesets).
  */
 export function ChangesetFold(props: {
   allChanges: AllChangesRow;
