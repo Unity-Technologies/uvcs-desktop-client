@@ -3,7 +3,9 @@ import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse } from '@shared/ipc';
 import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
+import type { SignInProblem } from '@shared/domain/signIn';
 import { CmError } from '../cm/CmError';
+import { CmSignInError } from '../cm/CmSignInError';
 import { callerId, currentCaller } from './caller';
 import { apiMethods } from './apiMethods';
 import { EarlyCalls } from './EarlyCalls';
@@ -53,6 +55,14 @@ describe('registerApi', () => {
     });
 
     expect(await invoke('workspaces.switchTo')).toEqual({ ok: false, error: { message: 'The branch does not exist.', command: FAILED_COMMAND } });
+  });
+
+  it('sends a command refused for a sign-in with the server and why, so the window shows its sign-in screen instead', async () => {
+    const problem: SignInProblem = { kind: 'sessionEnded', server: 'acme@cloud', details: { commandLine: 'cm checkconnection acme@cloud', output: 'Error: The auth token expired. User: dev@acme.com.' } };
+    const notRun = { commandLine: 'cm find branch', exitCode: -1, output: 'Not run: sign in to acme@cloud first.', logEntryId: 13 };
+    const invoke = served({ branches: { list: async () => Promise.reject(new CmSignInError(problem, notRun)) } });
+
+    expect(await invoke('branches.list')).toEqual({ ok: false, error: { message: 'Sign in to acme@cloud to continue.', command: notRun, signIn: problem } });
   });
 
   it('sends a long failed command clipped as the command log clips it, the end of its output kept', async () => {
