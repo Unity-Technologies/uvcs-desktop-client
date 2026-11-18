@@ -1127,8 +1127,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   itself in the same place (`RepositoryPill`, `RepositoryTopBar`). The home screen adds nothing. The workspace
   comes before the branch because the branch belongs to it, the order the official client shows; a workspace card in
   the sidebar, under the branch, read backwards. In a window 1100px wide or less the workspace pill shrinks to
-  its avatar (`PlacePill.module.css`), its tooltip saying the rest (`workspacePillTip`), so the branch keeps the
-  room. Sidebars (`ui/nav/SidebarNav`) have no title band of their own, nor a workspace card.
+  its avatar (`PlacePill.module.css`), its tooltip saying the rest and, below, the workspace's folder
+  (`workspacePillTip`), so the branch keeps the room. Sidebars (`ui/nav/SidebarNav`) have no title band of their
+  own, nor a workspace card.
   - Home is one click (or ⇧⌘H, `app.home`, File ▸ Home) from anywhere: in a workspace it leaves for the home
     screen, on the home screen it goes back to its welcome (`WELCOME`), where the house is lit. It sits in the top
     bar, not the sidebar, so it stays put whether the sidebar is folded or not and costs no sidebar entry. It is a
