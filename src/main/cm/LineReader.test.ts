@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LineReader } from './LineReader';
+import { CmItemTooLargeError } from './outputLimit';
 
 /** The output read in chunks cut at every byte: the items, then the rest. */
 function readByteByByte(output: string): { rows: string[]; rest: string } {
@@ -34,5 +35,19 @@ describe('LineReader', () => {
     reader.read(Buffer.from('#skip\nkeep\n', 'utf8'));
     reader.takeRest();
     expect(reader.finish()).toEqual(['keep']);
+  });
+
+  it('fails a line still arriving past its limit: an output that never ends one (cm asking to sign in, again and again) would be kept whole', () => {
+    const reader = new LineReader((line) => line, 1000);
+    reader.read(Buffer.from('x'.repeat(600)));
+    expect(() => reader.read(Buffer.from('x'.repeat(600)))).toThrow(CmItemTooLargeError);
+  });
+
+  it('reads a line as long as its limit, arriving in chunks', () => {
+    const reader = new LineReader((line) => line, 1000);
+    reader.read(Buffer.from('x'.repeat(1000)));
+    reader.read(Buffer.from('\nnext\n'));
+    reader.takeRest();
+    expect(reader.finish()).toEqual(['x'.repeat(1000), 'next']);
   });
 });
