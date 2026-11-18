@@ -88,8 +88,10 @@ A check that finds the server signed in after it needed a sign-in restarts the p
 (`CmClient.restartShells`, `CmShellPool.restartSessions`), as a session keeps the sign-in it read as it started. So
 does a check that finds the server fine after a pooled session's read failed for a sign-in: the user signed in again
 elsewhere before any check found the session ended, and the sessions still hold the old sign-in. Only that server's
-sessions restart (its workspaces' folders, `WorkspaceServers`, and those whose server isn't known), and once until its
-state changes: a failure after a restart that didn't help (an xlink's sign-in, which none mends) restarts nothing. A
+sessions restart (its workspaces' folders, `WorkspaceServers`, and those whose server isn't known), once a burst: a
+failure within `SHELL_RESTART_SPACING_MS` (10 minutes) of a restart that didn't help (an xlink's sign-in, which none
+mends) restarts nothing, and one later restarts them again (the session ended again, and was signed in again
+elsewhere). A
 server out of reach changes no state: it may need no sign-in at all, a window on it keeps working with what's local,
 and the corner card says it can't be reached (`ConnectionProblemCard`).
 

@@ -16,6 +16,12 @@ export const SESSION_CHECK_STALE_MS = 10 * 60_000;
  */
 export const CONFIRMED_REACHED_MS = 5_000;
 
+/**
+ * How long after restarting a server's shells their failures restart them again: sooner, the restart didn't help (an
+ * xlink's sign-in); later, the session may have ended and been signed in again elsewhere since.
+ */
+export const SHELL_RESTART_SPACING_MS = SESSION_CHECK_STALE_MS;
+
 export interface SessionCheckDeps {
   /** `cm checkconnection <server>` (`checkConnection`). */
   check: (server: string) => Promise<ConnectionCheck>;
@@ -47,10 +53,11 @@ export class SessionChecks {
   private readonly running = new Map<string, Promise<ConnectionProblem | null>>();
   private readonly last = new Map<string, LastCheck>();
   /**
-   * The servers whose shells started again since their state last changed: a burst of failures restarts them once, and
-   * failures after a restart that didn't help (an xlink's sign-in, which no restart mends) restart nothing more.
+   * When each server's shells last started again: a burst of failures restarts them once, failures soon after a restart
+   * that didn't help (an xlink's sign-in, which no restart mends) restart nothing more, and one long after (the session
+   * ended again, and was signed in again elsewhere) restarts them again (`SHELL_RESTART_SPACING_MS`).
    */
-  private readonly shellsRestarted = new Set<string>();
+  private readonly shellsRestartedAt = new Map<string, number>();
   private readonly now: () => number;
 
   constructor(private readonly deps: SessionCheckDeps) {
@@ -101,12 +108,13 @@ export class SessionChecks {
     }
     const session = this.deps.sessions.of(server);
     if (session.state === 'needsSignIn') return session.problem;
-    if (ranInShell && !this.shellsRestarted.has(server)) this.restartShells(server);
+    const restartedAt = this.shellsRestartedAt.get(server);
+    if (ranInShell && (restartedAt === undefined || commandStartedAt > restartedAt + SHELL_RESTART_SPACING_MS)) this.restartShells(server);
     return null;
   }
 
   private restartShells(server: string): void {
-    this.shellsRestarted.add(server);
+    this.shellsRestartedAt.set(server, this.now());
     this.deps.restartShells(server);
   }
 
@@ -130,7 +138,7 @@ export class SessionChecks {
   private apply(server: string, check: ConnectionCheck): ConnectionProblem | null {
     if (check.kind === 'needsSignIn') {
       this.deps.sessions.needsSignIn(check.problem);
-      this.shellsRestarted.delete(server);
+      this.shellsRestartedAt.delete(server);
     }
     if (check.kind === 'reached' && this.deps.sessions.signedIn(server)) this.restartShells(server);
     return check.kind === 'unreachable' ? check.problem : null;
