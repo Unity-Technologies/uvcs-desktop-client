@@ -46,7 +46,7 @@ Every command goes by a gate in `CmClient` (`SignInGate`, `signInGate`, wired by
   header the window read as it opened the workspace (`workspaces.info`): no command of its own. Only a folder the
   command was given counts: one run in any directory (`anyDirectory`: `whoami`, a glance at another workspace's
   header) runs in the shown workspace's folder by chance, so it isn't gated. A command whose server isn't known is
-  never gated. One that fails for a sign-in learns its workspace's server with one local read
+  never gated. One that fails for a sign-in learns its workspace's server with two local reads
   (`learnServerOf`, `WorkspaceServers.learn`, `readWorkspaceOrigin`: its root, and the machine-readable header with
   `--compact`; remembered under the root, for all its folders),
   as that header's own read (`cm status --header --xml`) asks the server for the branch's head, and is what fails when a
