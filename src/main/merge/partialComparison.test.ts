@@ -162,6 +162,14 @@ describe('what the branch head brings a partial workspace', () => {
       expect(changedFoldersWithUnloadedItems(SANDBOX_LOADED, head('3|40|dir|/|3', '22|41|dir|/Code|3'))).toEqual([]);
     });
 
+    it("adds nothing to a folder whose listing misses an item the workspace loaded in it: the folder kept an older revision", () => {
+      // A partial workspace keeps the root at the revision it was created with (changeset 0, empty) while it loads
+      // folders into it: `cm ls / --tree=cs:0` lists the root alone, not Code, so it can't tell what the root held.
+      const emptyRoot = new Map([['', [] as HeadItem[]]]);
+      const withNew = head('3|40|dir|/|6', '22|41|dir|/Code|3', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1', '70|71|txt|/README.md|6');
+      expect(compareWithHead(SANDBOX_LOADED, withNew, new Set(), emptyRoot)).toEqual([]);
+    });
+
     it('is not looked for in a checked-out folder, which has no loaded changeset to list it at', () => {
       const checkedOut = loaded('3|-1|5|dir||-1|CO', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Engine.cs|1|', '28|16|-1|txt|Code\\Ship.cs|1|');
       expect(changedFoldersWithUnloadedItems(checkedOut, withBig)).toEqual([]);
