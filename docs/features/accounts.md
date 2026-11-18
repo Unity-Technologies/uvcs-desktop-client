@@ -103,7 +103,11 @@ sits on a card. What the view draws in layers of its own (a model viewer's label
 under it: the covered part is a stacking context of its own (`isolation`). It is the window's state, not a dialog:
 it appears in place, moves no focus between windows, and is one however many reads failed. What it covers stays
 mounted and `inert` (nothing takes focus or clicks), so what was typed or selected (a check-in comment, a review
-draft) is there again afterwards. Only that server's windows are covered: windows on other servers and Home keep
+draft) is there again afterwards. Nothing works on the place while it's covered: the keys of what it covers are off
+(`PlaceCoveredContext`, read by `useShortcut`), and so are the place's commands, from their shortcuts, the palette and
+the app menu (`commandsWhileCovered`, `useSignInCover`): only the app's own (`app.…`: Home, Settings, a new window,
+About) and the screen's buttons work. Menus a covered view opened close as it covers it (a press outside them), but a
+dialog stays, with what was typed in it. Only that server's windows are covered: windows on other servers and Home keep
 working.
 
 Today it says what happened, that the sign-in is the Unity Version Control app's ("Sign in there again, then check

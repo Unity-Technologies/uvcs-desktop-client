@@ -343,13 +343,12 @@ try {
     const signInScreen = window.getByRole('heading', { name: 'Your session for this computer ended' });
     await signInScreen.waitFor();
     if ((await signInScreen.count()) !== 1) throw new Error(`${await signInScreen.count()} sign-in screens`);
-    // Every view the window goes to now (its shortcuts still work) asks the server nothing: the gate refuses its reads
-    // before `cm` runs.
+    // Covered, the place's shortcuts are off (going to a view, Refresh): the window stays on Branches, and asks the
+    // server nothing.
     const before = commandsRun().length;
-    for (const [view, key] of [['Changesets', '5'], ['Labels', '7'], ['Shelves', '8']]) {
-      await window.keyboard.press(`ControlOrMeta+${key}`);
-      await main.getByRole('heading', { level: 1, name: view, exact: true }).waitFor();
-    }
+    for (const key of ['5', '7', '8', 'R']) await window.keyboard.press(`ControlOrMeta+${key}`);
+    await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
+    if (await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).isVisible()) throw new Error('a view shortcut ran while covered');
     const serverCommands = commandsRun().slice(before).filter((line) => !LOCAL_COMMAND.test(line));
     if (serverCommands.length > 0) throw new Error(`server commands ran while signed out: ${serverCommands.join('; ')}`);
   });
@@ -357,7 +356,7 @@ try {
     writeFileSync(signInFile, '');
     await window.getByRole('button', { name: 'Check again' }).click();
     await window.getByRole('heading', { name: 'Your session for this computer ended' }).waitFor({ state: 'detached' });
-    await main.getByRole('heading', { level: 1, name: 'Shelves', exact: true }).waitFor();
+    await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
     await settled();
   });
   await step('Explore a repository', async () => {

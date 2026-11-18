@@ -1,5 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { isModalDialogOpen } from '../../lib/modalDialog';
+import { PlaceCoveredContext } from '../../lib/placeCovered';
+import { useSignInCover } from './coveredCommands';
 import { forgetRefusedOperation } from './refusedOperation';
 import { SignInScreen } from './SignInScreen';
 import styles from './SignInCover.module.css';
@@ -22,6 +24,11 @@ export function SignInCover({ children, offersHome = true }: { children: ReactNo
   const screen = useRef<HTMLDivElement>(null);
   // An operation refused here is offered again only while the window shows this place.
   useEffect(() => forgetRefusedOperation, []);
+  // Covered, the place's commands are off: its shortcuts, palette commands and app menu items (`commandsWhileCovered`).
+  useEffect(() => {
+    useSignInCover.setState({ covered: covers });
+    return () => useSignInCover.setState({ covered: false });
+  }, [covers]);
   // A menu, popover or card a covered view opened lives outside it, in the page's body, above the screen: a press on
   // the screen closes them, as a click outside them would (Radix's layers and the app's cards listen for it). Not while
   // a dialog is open: a press outside closes it too, and what was typed in it with it. In a task of its own: closing a
@@ -35,7 +42,7 @@ export function SignInCover({ children, offersHome = true }: { children: ReactNo
   return (
     <div className={styles.cover}>
       <div className={styles.covered} inert={covers}>
-        {children}
+        <PlaceCoveredContext.Provider value={covers}>{children}</PlaceCoveredContext.Provider>
       </div>
       {problem && (
         <div ref={screen} className={styles.screen}>

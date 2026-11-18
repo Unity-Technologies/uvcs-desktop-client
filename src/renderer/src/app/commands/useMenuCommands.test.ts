@@ -3,6 +3,7 @@ import { useCommandStore, type Command } from './commandStore';
 import { menuCommandTarget, runMenuCommand } from './useMenuCommands';
 import { useNavigation } from '../navigation/navigationStore';
 import { useSession } from '../workspace/sessionStore';
+import { useSignInCover } from '../signIn/coveredCommands';
 import type { Page } from '../navigation/pages';
 
 const noDialog = { querySelector: () => null };
@@ -17,7 +18,10 @@ function registered(owner: string, ...commands: Partial<Command>[]): ReturnType<
   return runs;
 }
 
-afterEach(() => useCommandStore.setState({ commandsByOwner: new Map() }));
+afterEach(() => {
+  useCommandStore.setState({ commandsByOwner: new Map() });
+  useSignInCover.setState({ covered: false });
+});
 
 describe('runMenuCommand', () => {
   it("shows the list of the view a page window asked for, never the pages that view was left with", () => {
@@ -53,6 +57,21 @@ describe('runMenuCommand', () => {
     runMenuCommand('branches.create', noDialog);
 
     expect(checkin).not.toHaveBeenCalled();
+  });
+
+  it("runs only the app's own commands while the sign-in screen covers the place, and shows no view's list", () => {
+    const [checkin, settings] = registered('view', { id: 'changes.checkin' }, { id: 'app.settings' });
+    useSession.getState().openWorkspace('/ws');
+    useNavigation.setState({ view: 'changes', pages: [] });
+    useSignInCover.setState({ covered: true });
+
+    runMenuCommand('changes.checkin', noDialog);
+    runMenuCommand('app.settings', noDialog);
+    runMenuCommand('goto.locks.list', noDialog);
+
+    expect(checkin).not.toHaveBeenCalled();
+    expect(settings).toHaveBeenCalledTimes(1);
+    expect(useNavigation.getState().view).toBe('changes');
   });
 
   it('does nothing behind a modal dialog', () => {

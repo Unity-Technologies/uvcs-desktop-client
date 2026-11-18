@@ -3,6 +3,7 @@ import { windowShortcutMayRun } from '../../lib/modalDialog';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { isTextEntry } from '../../lib/textEntry';
 import { useCommandPalette } from './commandPaletteStore';
+import { commandsWhileCovered, useSignInCover } from '../signIn/coveredCommands';
 import { allCommands } from './commandStore';
 import { belongsToField, copiesSelectedText, yieldsToCommentField } from './typingKeys';
 import { inCommentField } from '../../components/commentEditor/commentFieldScope';
@@ -13,7 +14,8 @@ function isTyping(event: KeyboardEvent): boolean {
 }
 
 /**
- * Runs registered commands when their shortcut is pressed, never behind a modal dialog; one pressed in the palette
+ * Runs registered commands when their shortcut is pressed, never behind a modal dialog, and only the app's own while the
+ * sign-in screen covers the place (`commandsWhileCovered`); one pressed in the palette
  * closes it first. Keys that belong to a field typed into are left to it, keys something already took (Esc
  * closing a menu) to that, and ⌘C with text selected on the page to copying it.
  */
@@ -25,7 +27,8 @@ export function CommandShortcuts() {
       if (yieldsToCommentField(event, inCommentField(event.target))) return;
       if (copiesSelectedText(event, window.getSelection()?.toString() ?? '')) return;
 
-      const command = allCommands().find((candidate) => candidate.shortcut && !candidate.disabled && matchesShortcut(event, candidate.shortcut));
+      const commands = commandsWhileCovered(allCommands(), useSignInCover.getState().covered);
+      const command = commands.find((candidate) => candidate.shortcut && !candidate.disabled && matchesShortcut(event, candidate.shortcut));
       if (!command) return;
       event.preventDefault();
       useCommandPalette.getState().setOpen(false);

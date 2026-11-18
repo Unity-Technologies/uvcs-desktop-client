@@ -8,6 +8,7 @@ import { Spinner } from '../../ui/Spinner';
 import { useSession } from '../workspace/sessionStore';
 import { newWindowRunOf } from '../workspace/workspaceWindowChoice';
 import { useCommandPalette } from './commandPaletteStore';
+import { useSignInCover } from '../signIn/coveredCommands';
 import { commandResult, commandSearchText, paletteCommands } from './commandResults';
 import { useCommandStore } from './commandStore';
 import { PaletteFooter } from './PaletteFooter';
@@ -63,7 +64,8 @@ function OpenPalette({ close }: { close: () => void }) {
   const typedScope = parseScope(query).scope;
   useFocusBackOnClose();
 
-  const commands = useMemo(() => paletteCommands(commandsByOwner), [commandsByOwner]);
+  const covered = useSignInCover((state) => state.covered);
+  const commands = useMemo(() => paletteCommands(commandsByOwner, covered), [commandsByOwner, covered]);
   const commandIndex = useMemo(() => createFuzzyIndex(commands.map(commandSearchText)), [commands]);
   const { groups: objectGroups, isLoading } = usePaletteSearch(place, text, scope);
   const workspaceGroup = useWorkspaceResults(workspacePath, text);
