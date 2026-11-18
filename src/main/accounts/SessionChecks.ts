@@ -10,6 +10,12 @@ import type { ServerSessions } from './ServerSessions';
  */
 export const SESSION_CHECK_STALE_MS = 10 * 60_000;
 
+/**
+ * A check this recent answers the sign-in failures that follow it (`confirm`): a failing read of an xlinked server's,
+ * which `cm` doesn't tell from the workspace's own, costs one check a burst, not one per read.
+ */
+export const CONFIRMED_REACHED_MS = 5_000;
+
 export interface SessionCheckDeps {
   /** `cm checkconnection <server>` (`checkConnection`). */
   check: (server: string) => Promise<ConnectionCheck>;
@@ -58,14 +64,16 @@ export class SessionChecks {
 
   /**
    * A command that started at `commandStartedAt` failed as a sign-in problem would: whether the server needs a sign-in,
-   * from a check started since (the one running, or a new one), so a burst of failures costs one check. A server known
-   * to need one answers at once: the failure is what that state says (a local command still runs, and fails so).
+   * from a check started since (the one running, or a new one), or within `CONFIRMED_REACHED_MS`, so a burst of
+   * failures costs one check. A server known to need one answers at once: the failure is what that state says (a local
+   * command still runs, and fails so).
    */
   async confirm(server: string, commandStartedAt: number): Promise<SignInProblem | null> {
     const known = this.deps.sessions.of(server);
     if (known.state === 'needsSignIn') return known.problem;
     const last = this.last.get(server);
-    if (this.running.has(server) || last === undefined || last.startedAt < commandStartedAt) {
+    const answered = last !== undefined && (last.startedAt >= commandStartedAt || this.now() - last.startedAt < CONFIRMED_REACHED_MS);
+    if (this.running.has(server) || !answered) {
       try {
         await this.run(server);
       } catch {

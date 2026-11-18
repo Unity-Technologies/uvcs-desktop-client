@@ -3,7 +3,7 @@ import type { ConnectionProblem } from '@shared/domain/setup';
 import type { SignInProblem } from '@shared/domain/signIn';
 import type { ConnectionCheck } from '../cm/connectionCheck';
 import { ServerSessions } from './ServerSessions';
-import { SESSION_CHECK_STALE_MS, SessionChecks } from './SessionChecks';
+import { CONFIRMED_REACHED_MS, SESSION_CHECK_STALE_MS, SessionChecks } from './SessionChecks';
 
 const ENDED: SignInProblem = { kind: 'sessionEnded', server: 'acme@cloud', details: { commandLine: 'cm checkconnection acme@cloud', output: 'Error: The auth token expired. User: dev@acme.com.' } };
 const REFUSED: ConnectionProblem = { server: 'acme@cloud', commandLine: 'cm checkconnection acme@cloud', output: 'Error: Connection refused' };
@@ -173,7 +173,7 @@ describe('SessionChecks.confirm', () => {
     const { checks: sessionChecks, asked, at, advance } = checks();
 
     await sessionChecks.checkNow('acme@cloud');
-    advance(5_000);
+    advance(CONFIRMED_REACHED_MS);
     await sessionChecks.confirm('acme@cloud', at());
 
     expect(asked).toHaveLength(2);

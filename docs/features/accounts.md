@@ -57,7 +57,8 @@ Every command goes by a gate in `CmClient` (`SignInGate`, `signInGate`, wired by
   server for its branch's head (`needsSignIn`): the pending changes (`--compact`) still read.
 - **A command that runs into a sign-in problem** (`signInFailureOf`, or a prompt it was stopped at) fails as one only
   once a check of its server confirms it (`SignInGate.confirm`, `SessionChecks.confirm`): one `cm checkconnection`,
-  joined by every failure that started before it, so a burst of failed reads costs one check. A false "session ended"
+  joined by every failure that started before it, and answering those that follow it within `CONFIRMED_REACHED_MS`
+  (5 s), so a burst of failed reads costs one check, an xlink's too. A false "session ended"
   would cover a healthy window, and the failure may be another server's: an xlink's sign-in fails a workspace's command
   while the workspace's own server is fine. Then the command fails as before, with `cm`'s words. A server already known
   to need a sign-in is answered at once, with no check: local commands still run while it does, and fail so.
