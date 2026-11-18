@@ -1,4 +1,3 @@
-import { Ellipsis } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { goToFileKey } from '../../components/goToFileKeys';
@@ -11,7 +10,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { KeyHints } from '../../ui/KeyHints';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { RowActionsButton } from '../../ui/menu/RowActionsButton';
 import { SearchField } from '../../ui/SearchField';
 import { changeStatus } from '../pendingChanges/changeTone';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
@@ -20,7 +19,6 @@ import { fileMenu } from './fileMenu';
 import { itemDecoration } from './itemDecoration';
 import { PendingChangesIndex } from './itemStatus';
 import { useWorkspacePaths } from './useWorkspacePaths';
-import styles from './GoToFileDialog.module.css';
 
 const MAX_RESULTS = 60;
 
@@ -92,20 +90,21 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
         loading={isLoading}
         note={!isLoading && results.length === 0 ? `No files match “${query}”.` : null}
         row={(path) => <ResultRow path={path} isDirectory={directories.has(path)} matches={fuzzyMatchPositions(path, query)} pendingIndex={pendingIndex} />}
-        highlightedExtra={(path) => (
-          <ActionDropdownMenu
-            entries={actionsFor?.path === path ? actions(actionsFor) : []}
+        actionsOpenFor={actionsFor?.path ?? null}
+        onOpenActions={(index) => {
+          setHighlighted(index);
+          void openActions(results[index]!);
+        }}
+        actions={(path) => (
+          <RowActionsButton
+            entries={actionsFor?.path === path ? () => actions(actionsFor) : []}
             open={actionsFor?.path === path}
             onOpenChange={(open) => (open ? void openActions(path) : setActionsFor(null))}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               inputRef.current?.focus();
             }}
-          >
-            <button type="button" tabIndex={-1} className={styles.actions} aria-label="Actions" data-tip="Actions" data-tip-shortcut={hotkey('rowActions')}>
-              <Ellipsis size={15} />
-            </button>
-          </ActionDropdownMenu>
+          />
         )}
       />
       <KeyHints hints={[{ keys: hotkey('rowActions'), label: 'actions' }]} />
