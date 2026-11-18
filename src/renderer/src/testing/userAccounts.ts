@@ -1,6 +1,6 @@
 import type { UserAccount } from '@shared/domain/account';
 
-/** A Unity account as `api.accounts.accounts` answers it: `user`'s organizations, and its `*@cloud` profile if `wildcard`. */
+/** A Unity account as `userAccountsOf` makes it from the profiles: `user`'s organizations, and its `*@cloud` profile if `wildcard`. */
 export function unityAccount(user: string, servers: string[], { wildcard = false } = {}): UserAccount {
   return {
     id: `cloud:${user.toLowerCase()}`,

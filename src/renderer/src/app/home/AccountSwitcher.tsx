@@ -1,6 +1,5 @@
 import { ChevronsUpDown } from 'lucide-react';
 import type { UserAccount } from '@shared/domain/account';
-import type { Icon } from '../../lib/actions';
 import { Avatar } from '../../ui/Avatar';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { useInRail } from '../../ui/nav/SidebarNav';
@@ -25,7 +24,7 @@ export function AccountSwitcher({ accounts, shown }: AccountSwitcherProps) {
     accountSwitcherMenu(accounts, shown, {
       show: (account) => showHomeAccount(account, accounts),
       manage: () => openSettingsDialogAt('accounts'),
-      avatarOf: avatarIcon,
+      avatarOf: (user) => (props) => <AccountAvatar user={user} {...props} />,
     });
 
   return (
@@ -39,9 +38,7 @@ export function AccountSwitcher({ accounts, shown }: AccountSwitcherProps) {
   );
 }
 
-/** A menu entry's icon that is an account's avatar, at the size the menu draws icons. */
-function avatarIcon(user: string): Icon {
-  return function AccountAvatar({ size = 14 }) {
-    return <Avatar user={user} size={size + 2} tip={null} ownAccount />;
-  };
+/** An account's avatar in a menu entry's icon place, a little larger than the size the menu draws icons at. */
+function AccountAvatar({ user, size = 14 }: { user: string; size?: number }) {
+  return <Avatar user={user} size={size + 2} tip={null} ownAccount />;
 }
