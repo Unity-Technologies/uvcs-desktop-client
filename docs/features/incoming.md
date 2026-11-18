@@ -89,12 +89,13 @@ loaded, as `cm partial update` would bring them.
   workspace loaded something else (a folder Big, never loaded, reads as new), so a loaded folder the head changed
   that holds an item the workspace doesn't have (`changedFoldersWithUnloadedItems`) is listed as it was at its loaded
   changeset (`readChildrenWhenLoaded`: `cm ls <folders…> --tree=cs:<N>`, one per changeset, `treeListingArgs`): an
-  item it held then existed, so the folder was loaded in part and nothing in it is added. Nor is anything added when
+  item it held then existed, so the folder was loaded in part and nothing in it is added. A folder listed with its
+  parent is one of the parent's children too, though `cm` prints it again as itself. Nor is anything added when
   that listing misses an item the workspace loaded in the folder: the folder kept an older revision than what it
   loaded (a partial workspace keeps its root at the one it was created with, changeset 0, empty), so the listing
   can't tell what it held (`unlistedIfWhole`). `cm ls -R` can print one item id for two loaded files, which the head
   lists apart: the one at the head's path stands for it, and neither reads as moved (`pathsByKey`).
-  **Xlinks** are followed: the head lists the folders inside one through the workspace's branch, at their workspace
+- **Xlinks** are followed: the head lists the folders inside one through the workspace's branch, at their workspace
   paths, and its items belong to the xlinked repository. Their item ids say nothing about the workspace's (an xlink
   lists its target's root id, often the workspace root's own), so items are matched by id within their repository
   (`byScopedKey`, `enclosingXlink`), and each item inside an xlink names that repository (`PartialIncomingItem.repository`,
@@ -102,7 +103,8 @@ loaded, as `cm partial update` would bring them.
   at a changeset of the xlinked repository, so what it held then is listed there, at the path the xlink shows
   (`loadedListingOf`: `--tree=cs:<N>@<repository>`), and read back at its workspace path (`workspacePathOf`). `cm ls`
   lists an xlink as a folder (`dir`), never as an xlink, so both formats ask its `{name}`, which names its target
-  (`parseXlinkName`), to tell it apart. A loaded folder the head no longer has fails its listing, though `cm` lists
+  (`parseXlinkName`), to tell it apart.
+- **A folder the head no longer has** fails its listing, though `cm` lists
   the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head moved it, its parent's listing
   shows it at its new path, which a next pass lists (`movedFolderPaths`, never into another repository); otherwise it
   reads as removed.

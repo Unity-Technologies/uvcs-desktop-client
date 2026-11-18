@@ -102,7 +102,17 @@ async function readChildrenWhenLoaded(
     for (const args of treeListingArgs([...serverPaths].sort(), listing.tree)) rows.push(...(await listHead(cm, workspacePath, args)));
     const inWorkspace = rows.map((row) => ({ ...row, path: workspacePathOf(row.path, listing) }));
     for (const row of inWorkspace) if (row.isDirectory && requested.has(row.path) && !children.has(row.path)) children.set(row.path, []);
-    for (const row of inWorkspace) if (!requested.has(row.path)) children.get(parentOf(row.path))?.push(row);
+    // A requested folder is printed as its own row and, when its parent is requested too, as one of its children:
+    // every row lands once in its parent's children, so a parent keeps the subfolders it held.
+    const placed = new Set<string>();
+    for (const row of inWorkspace) {
+      const parent = parentOf(row.path);
+      if (parent === row.path || placed.has(row.path)) continue;
+      const siblings = children.get(parent);
+      if (siblings === undefined) continue;
+      siblings.push(row);
+      placed.add(row.path);
+    }
   }
   return children;
 }
