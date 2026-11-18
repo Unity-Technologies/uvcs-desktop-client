@@ -25,6 +25,17 @@ export function serverGroups(servers: readonly ServerProfile[]): ServerGroup[] {
   );
 }
 
+/**
+ * The quiet text after a server's entry: a server's user, as a server is an account of its own, listed under every
+ * Unity account. An organization's needs none, as the switcher names its account and its group its kind; folded, where
+ * groups are only rules and the text goes to the tooltip (`navItemTip`), the kind: `acme · Unity organization`.
+ */
+export function serverEntryDetail({ server, user }: ServerProfile, rail: boolean): string | undefined {
+  const kind = serverKind(server);
+  if (kind === 'server') return user || undefined;
+  return rail ? describeServer(server).detail : undefined;
+}
+
 function byPlace(a: ServerProfile, b: ServerProfile): number {
   if (a.server === 'local' || b.server === 'local') return Number(b.server === 'local') - Number(a.server === 'local');
   return describeServer(a.server).label.localeCompare(describeServer(b.server).label, undefined, { sensitivity: 'base' });
