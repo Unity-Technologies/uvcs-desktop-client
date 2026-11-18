@@ -112,6 +112,12 @@ describe('what the branch head brings a partial workspace', () => {
     expect(compareWithHead(twice, onHead, new Set())).toEqual([]);
   });
 
+  it('names an item the workspace lists at two paths changed once, at the path the head keeps', () => {
+    const twice = loaded('3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Notes.md|1|', '24|25|-1|dir|Docs|1|', '27|15|-1|txt|Docs\\Notes.md|1|');
+    const onHead = head('3|5|dir|/|0', '22|23|dir|/Code|1', '27|30|txt|/Code/Notes.md|2', '24|25|dir|/Docs|1', '28|16|txt|/Docs/Notes.md|1');
+    expect(compareWithHead(twice, onHead, new Set())).toEqual([item({ kind: 'changed', path: 'Code/Notes.md', loadedRevisionId: 15, headRevisionId: 30 })]);
+  });
+
   it('names a removed item, and a removed folder alone, not each item it held', () => {
     const withoutCode = head('3|40|dir|/|3');
     expect(compareWithHead(SANDBOX_LOADED, withoutCode, new Set())).toEqual([
