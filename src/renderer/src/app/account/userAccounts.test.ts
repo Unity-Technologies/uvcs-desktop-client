@@ -23,6 +23,16 @@ describe('accountOfServer', () => {
     expect(accountOfServer([bo], 'other@unity')).toBeUndefined();
   });
 
+  it('finds an organization by its name or its genesis id, on `@cloud` or `@unity`, before the `*@cloud` profile', () => {
+    const genesis = { name: '1375488836673@cloud', server: 'tools@unity', user: 'cy@example.com', workingMode: 'SSOWorkingMode' };
+    const cy = { ...unityAccount('cy@example.com', ['tools@unity']), profiles: [genesis] };
+
+    expect(accountOfServer([ana, cy], 'tools@unity')).toBe(cy);
+    expect(accountOfServer([ana, cy], 'tools@cloud')).toBe(cy);
+    expect(accountOfServer([ana, cy], '1375488836673@unity')).toBe(cy);
+    expect(accountOfServer([ana, cy], '1375488836673@cloud')).toBe(cy);
+  });
+
   it('finds none for a server no account lists, nor for this computer', () => {
     expect(accountOfServer([ana, build], 'art:8087')).toBeUndefined();
     expect(accountOfServer([ana, build], 'local')).toBeUndefined();

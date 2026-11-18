@@ -1,7 +1,5 @@
 import type { UserAccount } from '@shared/domain/account';
-import { isCloudServer } from '../../lib/servers';
-
-const sameServer = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
+import { accountForServer } from './serverAccount';
 
 /** The Unity accounts, which the home screen switches between; a server's account is listed under every one. */
 export function unityAccountsOf(accounts: readonly UserAccount[]): UserAccount[] {
@@ -9,11 +7,13 @@ export function unityAccountsOf(accounts: readonly UserAccount[]): UserAccount[]
 }
 
 /**
- * The account `cm` signs in to `server` with: the one listing it, else, for a cloud organization no account lists,
- * the Unity account whose `*@cloud` profile signs in to every organization without one of its own.
+ * The account `cm` signs in to `server` with: the one holding the profile `accountForServer` resolves, so every place
+ * agrees on it (an organization by its name or its genesis id, on `@cloud` or `@unity`; else the `*@cloud` profile).
  */
 export function accountOfServer(accounts: readonly UserAccount[], server: string): UserAccount | undefined {
-  const listing = accounts.find((account) => account.servers.some((listed) => sameServer(listed, server)));
-  if (listing || !isCloudServer(server)) return listing;
-  return accounts.find((account) => account.profiles.some((profile) => profile.server.startsWith('*@')));
+  const profile = accountForServer(
+    accounts.flatMap((account) => account.profiles),
+    server,
+  );
+  return profile && accounts.find((account) => account.profiles.includes(profile));
 }
