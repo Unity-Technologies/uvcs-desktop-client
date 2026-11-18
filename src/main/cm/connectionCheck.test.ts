@@ -19,6 +19,13 @@ describe('classifyConnectionCheck', () => {
     expect(classifyConnectionCheck('Error: The maximum number of licensed users has been exceeded.')).toBe('noLicense');
   });
 
+  it("takes a secure connection or a proxy that fails for a connection problem, whatever words of authentication it holds", () => {
+    // .NET's words when the TLS handshake fails: no sign-in is at stake, and a false one would cover every window.
+    expect(classifyConnectionCheck('Error: Authentication failed because the remote party has closed the transport stream.')).toBeNull();
+    expect(classifyConnectionCheck('Error: The remote certificate is invalid according to the validation procedure.')).toBeNull();
+    expect(classifyConnectionCheck('Error: Proxy Authentication Required (407). Check the credentials of the proxy.')).toBeNull();
+  });
+
   it('takes anything else as a connection problem', () => {
     expect(classifyConnectionCheck('Error: Connection refused')).toBeNull();
     expect(classifyConnectionCheck(NO_SUCH_SERVER)).toBeNull();
