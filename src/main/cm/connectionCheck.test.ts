@@ -7,10 +7,9 @@ const NO_SUCH_SERVER = "Error: Can't resolve DNS entry for nowhere.invalid";
 const SIGN_IN_PROMPT = 'Getting organization providers...\nSelect the system you want to use to sign in to: acme@cloud\n0 - Okta\n1 - Unity ID';
 
 describe('classifyConnectionCheck', () => {
-  it('spots the sign-in prompt of a server without credentials, and credentials the server rejects', () => {
+  it('spots the sign-in prompt of a server without credentials, and a check stopped at it', () => {
     expect(classifyConnectionCheck(SIGN_IN_PROMPT)).toBe('signInRequired');
     expect(classifyConnectionCheck('User: ')).toBe('signInRequired');
-    expect(classifyConnectionCheck('Error: The user is not authenticated')).toBe('signInRequired');
     expect(classifyConnectionCheck('cm is waiting for input ("Select your system [0-1]"). Check your credentials for this server.')).toBe('signInRequired');
   });
 

@@ -7,10 +7,8 @@ import { signInFailureOf } from './signInFailure';
 /** Long enough for a slow VPN, short enough not to leave the user waiting on a stuck check. */
 const CHECK_TIMEOUT_MS = 10_000;
 
-/** `cm` asks for a sign-in method or credentials instead of failing. */
+/** `cm` asks for a sign-in method or credentials instead of failing (also how a check stopped there is told). */
 const SIGN_IN_PROMPT = /sign in to:|select your system|^\s*(user|password):/im;
-/** Loose, as `cm checkconnection` prints nothing of the user's (no file, no comment) that could hold these words. */
-const REJECTED_CREDENTIALS = /credentials|not authenticated|authentication failed|invalid user|password is not valid/i;
 
 /** What `cm checkconnection <server>` found: the server answered, needs a sign-in, or couldn't be reached. */
 export type ConnectionCheck =
@@ -19,13 +17,13 @@ export type ConnectionCheck =
   | { kind: 'unreachable'; problem: ConnectionProblem };
 
 /**
- * What a failed (or stopped) `cm checkconnection` means: a sign-in problem (`signInFailureOf`, or the words of one it
- * doesn't know), or null for a connection problem.
+ * What a failed (or stopped) `cm checkconnection` means: a sign-in problem (`signInFailureOf`, or a prompt it was
+ * stopped at), or null for a connection problem. Never loose words: a secure connection that fails says
+ * "Authentication failed because the remote party has closed the transport stream", a proxy asks for its own
+ * credentials, and a false sign-in would cover every window on the server.
  */
 export function classifyConnectionCheck(output: string): SignInProblemKind | null {
-  const known = signInFailureOf(output);
-  if (known) return known;
-  return SIGN_IN_PROMPT.test(output) || REJECTED_CREDENTIALS.test(output) ? 'signInRequired' : null;
+  return signInFailureOf(output) ?? (SIGN_IN_PROMPT.test(output) ? 'signInRequired' : null);
 }
 
 /**

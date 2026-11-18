@@ -5,8 +5,8 @@ import type { SignInProblemKind } from '@shared/domain/signIn';
  * whole on a line of its own, after `Error: ` or not. `{0}` in `cm`'s text is a name: `[^\n]+?` here.
  *
  * Whole sentences, never loose words: an update's progress names files (`credentials.txt`) and a failed check-in can
- * quote its comment ("reset the password"). Only `cm checkconnection`, which prints nothing of the user's, is read
- * more loosely (`classifyConnectionCheck`).
+ * quote its comment ("reset the password"), and a secure connection that fails says "Authentication failed".
+ * `cm checkconnection` adds only the prompts it is stopped at (`classifyConnectionCheck`).
  */
 const SENTENCES: readonly (readonly [SignInProblemKind, RegExp])[] = [
   // `cm` asks on its console: it has no sign-in for that server. A stopped prompt pads its line with spaces.

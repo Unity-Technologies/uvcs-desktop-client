@@ -30,8 +30,9 @@ console (a user, a password, which system to sign in with), which the app stops 
 (`main/cm/signInFailure.ts`) is the one place that reads `cm`'s words about signing in: whole English sentences, each on
 a line of its own (an expired token, a refused password or user, a deactivated license, no seat left, a locked
 account, the prompts), never loose words, as an update's progress names files (`credentials.txt`) and a failed
-check-in can quote its comment. `cm checkconnection`, which prints nothing of the user's, is read more loosely
-(`classifyConnectionCheck`): any words of a prompt or of refused credentials mean a sign-in.
+check-in can quote its comment. `cm checkconnection` is read the same way, and a prompt it was stopped at means a
+sign-in too (`classifyConnectionCheck`); never loose words such as "authentication failed", which a secure connection
+that fails prints ("…because the remote party has closed the transport stream"): the server is out of reach then.
 
 `cm` doesn't say which server a sign-in failure is about, so a failure alone never marks a server (see "The gate").
 
