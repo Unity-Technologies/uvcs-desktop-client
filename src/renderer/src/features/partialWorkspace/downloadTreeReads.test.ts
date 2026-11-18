@@ -52,8 +52,12 @@ describe('downloadTreeReads', () => {
 
 describe('canApply', () => {
   it('applies only a change, and not while one is applying', () => {
-    expect(canApply([rule], false)).toBe(true);
-    expect(canApply([], false)).toBe(false);
-    expect(canApply([rule], true)).toBe(false);
+    expect(canApply([rule], false, false)).toBe(true);
+    expect(canApply([], false, false)).toBe(false);
+    expect(canApply([rule], true, false)).toBe(false);
+  });
+
+  it('waits for the folders above a choice to be read', () => {
+    expect(canApply([rule], false, true)).toBe(false);
   });
 });
