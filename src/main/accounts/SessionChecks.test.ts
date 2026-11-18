@@ -91,6 +91,21 @@ describe('SessionChecks', () => {
     expect(restarts()).toBe(1);
   });
 
+  it.each(['credentialsRefused', 'locked'] as const)(
+    "doesn't check a server whose %s on activation: each check sends the refused password again, toward a lockout",
+    async (kind) => {
+      const { checks: sessionChecks, asked } = checks({ kind: 'needsSignIn', problem: { ...ENDED, kind } });
+
+      await sessionChecks.whenStale('acme@cloud');
+      await sessionChecks.whenStale('acme@cloud');
+      await sessionChecks.whenStale('acme@cloud');
+      expect(asked).toHaveLength(1);
+
+      await sessionChecks.checkNow('acme@cloud');
+      expect(asked).toHaveLength(2);
+    },
+  );
+
   it('restarts the shells only when a server signs in again, not on every check that finds it signed in', async () => {
     const { checks: sessionChecks, restarts } = checks();
 
