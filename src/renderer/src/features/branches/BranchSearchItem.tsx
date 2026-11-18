@@ -11,14 +11,13 @@ import styles from './BranchSearchList.module.css';
 interface BranchSearchItemProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   branch: Branch;
   current: boolean;
-  highlighted: boolean;
   /** After the name: its review's chip (`BranchSearchList`'s `mergeRequests`). */
   badge?: ReactNode;
 }
 
 /** A branch in the list: its name, and its review's chip where the list shows them, over the first line of its comment, and when it was created. */
 export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemProps>(function BranchSearchItem(
-  { branch, current, highlighted, badge, ...rest },
+  { branch, current, badge, ...rest },
   ref,
 ) {
   const comment = branch.comment.trim();
@@ -26,7 +25,7 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
   const multiline = firstLine !== comment;
 
   return (
-    <button ref={ref} type="button" className={styles.item} data-highlighted={highlighted} data-current={current} {...rest}>
+    <button ref={ref} type="button" className={styles.item} data-current={current} {...rest}>
       <GitBranch size={14} className={styles.icon} />
       <span className={styles.text}>
         <span className={styles.nameLine}>
