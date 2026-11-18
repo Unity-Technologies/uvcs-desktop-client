@@ -54,14 +54,14 @@ describe('labels', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
-  it('replaces a comment outside any workspace, by specs that name the repository', async () => {
+  it('replaces a comment outside any workspace, by specs that name the repository, naming its server to the sign-in gate', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = labels({ 'label create': answer });
 
     await service.editComment(IN_WORKSPACE, { name: 'v1.0', changeset: 12, repository: 'game@local' }, 'New\ncomment');
 
     expect(commands).toMatchObject([{ via: 'query', args: ['label', 'create', 'lb:v1.0@game@local', 'cs:12@game@local', `-commentsfile=${seen.file}`] }]);
-    expect(commands[0]?.options).toEqual({ outsideWorkspaces: true });
+    expect(commands[0]?.options).toEqual({ outsideWorkspaces: true, server: 'local' });
     expect(seen.content).toBe('New\ncomment');
   });
 
