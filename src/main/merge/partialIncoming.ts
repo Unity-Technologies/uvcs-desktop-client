@@ -7,7 +7,7 @@ import type { CmClient } from '../cm/CmClient';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { notInTreePaths } from '../cm/missingItem';
 import { readPendingChanges } from '../workspace/readPendingChanges';
-import { compareWithHead, foldersWithNewItems, HEAD_TREE_FORMAT, isInsideAny, LOADED_TREE_FORMAT, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
+import { compareWithHead, foldersWithNewItems, HEAD_TREE_FORMAT, isInsideAny, LOADED_TREE_FORMAT, readHeadItem, readLoadedTreeItem, withoutXlinks, type HeadItem, type LoadedTreeItem } from './partialComparison';
 
 /** What updating the partial workspace on `branch` to its head would change in the folders it loaded. */
 export async function readPartialIncomingItems(cm: CmClient, workspacePath: string, branch: string): Promise<PartialIncomingItem[]> {
@@ -57,10 +57,11 @@ function serverPath(path: string): string {
 
 /**
  * The server paths still to list: the loaded folders the listings so far found somewhere they weren't listed, because
- * the head moved them (or the folder they went along with), sorted.
+ * the head moved them (or the folder they went along with), sorted. An xlink on the head is never where a folder went:
+ * it lists another repository's item ids.
  */
 export function movedFolderPaths(folders: readonly LoadedTreeItem[], head: readonly HeadItem[], listed: ReadonlySet<string>): string[] {
-  const headById = new Map(head.map((item) => [item.itemId, item]));
+  const headById = new Map(withoutXlinks(head).map((item) => [item.itemId, item]));
   const paths = folders.flatMap((folder) => {
     const onHead = headById.get(folder.itemId);
     return onHead && !listed.has(serverPath(onHead.path)) ? [serverPath(onHead.path)] : [];

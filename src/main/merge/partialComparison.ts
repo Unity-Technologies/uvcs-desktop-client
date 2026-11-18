@@ -175,7 +175,11 @@ export function foldersWithNewItems(loaded: readonly LoadedTreeItem[], head: rea
   });
 }
 
-function withoutXlinks<T extends ComparedItem>(items: readonly T[]): T[] {
+/**
+ * `items` without xlinks and what they hold: their items belong to another repository, and an xlink lists the item id
+ * of that repository's item (its root's, often the same as the workspace's root), never one of the workspace's.
+ */
+export function withoutXlinks<T extends ComparedItem>(items: readonly T[]): T[] {
   const xlinks = new Set(items.filter((item) => item.xlink).map((item) => item.path));
   return items.filter((item) => !item.xlink && !isInsideAny(item.path, xlinks));
 }
