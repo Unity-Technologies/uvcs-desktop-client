@@ -18,22 +18,31 @@ interface HighlightProps {
   text: string;
   /** Exact character positions to highlight (e.g. of a fuzzy match); otherwise the words of the surrounding `HighlightQuery`. */
   positions?: readonly number[];
+  /** Marks what a move changed in the diff's colors instead of a match (`PathMoveLines`). */
+  tint?: MarkTint;
 }
 
+/** The diff's colors: what a move removed from a path, or added to it. */
+export type MarkTint = 'removed' | 'added';
+
 /** `text` with the parts matching the current filter marked, so users see why a row matched. */
-export function Highlight({ text, positions }: HighlightProps) {
+export function Highlight({ text, positions, tint }: HighlightProps) {
   const query = useHighlightQuery();
   const ranges = positions ? positionRanges(positions) : wordMatchRanges(text, query);
   if (ranges.length === 0) return <>{text}</>;
-  return <>{renderRanges(text, ranges)}</>;
+  return <>{renderRanges(text, ranges, tint)}</>;
 }
 
-function renderRanges(text: string, ranges: TextRange[]): ReactNode[] {
+function renderRanges(text: string, ranges: TextRange[], tint: MarkTint | undefined): ReactNode[] {
   const parts: ReactNode[] = [];
   let cursor = 0;
   for (const [start, end] of ranges) {
     if (start > cursor) parts.push(text.slice(cursor, start));
-    parts.push(<HighlightMark key={start}>{text.slice(start, end)}</HighlightMark>);
+    parts.push(
+      <HighlightMark key={start} tint={tint}>
+        {text.slice(start, end)}
+      </HighlightMark>,
+    );
     cursor = end;
   }
   if (cursor < text.length) parts.push(text.slice(cursor));
@@ -41,6 +50,10 @@ function renderRanges(text: string, ranges: TextRange[]): ReactNode[] {
 }
 
 /** Text the filter matched, marked as `Highlight` marks it: for text drawn in parts of its own (a colored command line). */
-export function HighlightMark({ children }: { children: ReactNode }) {
-  return <mark className={styles.match}>{children}</mark>;
+export function HighlightMark({ children, tint }: { children: ReactNode; tint?: MarkTint }) {
+  return (
+    <mark className={styles.match} data-tint={tint}>
+      {children}
+    </mark>
+  );
 }

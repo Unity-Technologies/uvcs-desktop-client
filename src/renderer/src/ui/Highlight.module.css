@@ -3,3 +3,18 @@
   background: var(--bg-match);
   color: inherit;
 }
+
+/* What a move changed, tinted as its hover tints it (`PathMoveLines`): drawn around the text, so it measures the same. */
+.match[data-tint] {
+  box-shadow: 0 0 0 1px var(--mark-tint);
+  background: var(--mark-tint);
+  color: var(--text-primary);
+}
+
+.match[data-tint='removed'] {
+  --mark-tint: var(--diff-removed-strong);
+}
+
+.match[data-tint='added'] {
+  --mark-tint: var(--diff-added-strong);
+}
