@@ -17,13 +17,17 @@ interface GoToFileListProps {
   actionsOpenFor?: string | null;
   /** A right click on a result: opens its actions, as its "…" and Tab do. */
   onOpenActions?: (index: number) => void;
+  /** A control before each result, outside the button that picks it (Choose what to download's checkbox). */
+  lead?: (path: string) => ReactNode;
+  /** What shows at each result's end (Choose what to download's Download or Remove pill). */
+  end?: (path: string) => ReactNode;
   loading: boolean;
   /** What shows instead of results, or beside the first ones (none, the dialog having nothing to say). */
   note: string | null;
 }
 
 /** Go to file's results, a workspace's or a repository's: the highlighted one picked with Enter (`goToFileKey`) or a click. */
-export function GoToFileList({ paths, highlighted, onHighlight, onPick, row, actions, actionsOpenFor, onOpenActions, loading, note }: GoToFileListProps) {
+export function GoToFileList({ paths, highlighted, onHighlight, onPick, row, actions, actionsOpenFor, onOpenActions, lead, end, loading, note }: GoToFileListProps) {
   return (
     <div className={styles.results}>
       {loading && <CenteredSpinner />}
@@ -42,9 +46,11 @@ export function GoToFileList({ paths, highlighted, onHighlight, onPick, row, act
             })
           }
         >
+          {lead && <span className={styles.lead}>{lead(path)}</span>}
           <button type="button" className={styles.result} onClick={() => onPick(path)}>
             {row(path)}
           </button>
+          {end?.(path)}
           {showsRowActions({ highlighted: index === highlighted, menuOpen: path === actionsOpenFor }) && actions?.(path)}
         </div>
       ))}

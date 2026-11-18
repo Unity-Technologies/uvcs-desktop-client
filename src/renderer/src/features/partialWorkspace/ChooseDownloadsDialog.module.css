@@ -1,6 +1,15 @@
+/* The tree, what the search finds and the message standing in for them share one height, tall enough to browse a
+   repository comfortably: the dialog keeps its size whatever it shows, rather than shrinking to a few top-level
+   folders and growing as they open. Below 1,040 px of window height it gives way to the window (the dialog's own
+   cap is 76vh). */
+.tree,
+.found,
+.message {
+  height: min(480px, 46vh);
+}
+
 /* The repository's files and folders as a tree, scrolling inside the dialog on a big repository. */
 .tree {
-  max-height: 360px;
   overflow-y: auto;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -107,7 +116,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 120px;
   color: var(--text-secondary);
 }
 
@@ -124,8 +132,9 @@
   margin-bottom: var(--space-2);
 }
 
-/* What the search finds stands where the tree was, in the same frame. */
+/* What the search finds stands where the tree was, in the same frame, its list filling it (`--go-to-file-height`). */
 .found {
+  --go-to-file-height: 100%;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-2);

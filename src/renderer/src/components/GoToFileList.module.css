@@ -1,7 +1,8 @@
+/* A frame holding the list can set its height (`--go-to-file-height`): Choose what to download fills its own. */
 .results {
   display: flex;
   flex-direction: column;
-  height: 340px;
+  height: var(--go-to-file-height, 340px);
   margin: 0 calc(-1 * var(--space-2));
   overflow: auto;
 }
@@ -30,6 +31,15 @@
   border: none;
   background: none;
   text-align: left;
+}
+
+.lead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  margin-inline-start: var(--space-2);
 }
 
 .empty {
