@@ -12,12 +12,13 @@ export class CmSignInError extends CmError {
     readonly problem: SignInProblem,
     command: FailedCommand,
   ) {
-    super(signInMessage(problem.server), command);
+    super(SIGN_IN_MESSAGE, command);
     this.name = 'CmSignInError';
   }
 }
 
-/** The error's own words, for what shows it anyway (a log, a window with no sign-in screen for the server). */
-function signInMessage(server: string): string {
-  return `Sign in to ${server} to continue.`;
-}
+/**
+ * The error's own words, for what shows it anyway (Home's lists, an xlinked server's read): naming no server, as `cm`
+ * names them (`local`, an organization's id) and the window names them apart (This computer, its name).
+ */
+const SIGN_IN_MESSAGE = 'Sign in to this server again to continue.';

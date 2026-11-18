@@ -62,7 +62,7 @@ describe('registerApi', () => {
     const notRun = { commandLine: 'cm find branch', exitCode: -1, output: 'Not run: sign in to acme@cloud first.', logEntryId: 13 };
     const invoke = served({ branches: { list: async () => Promise.reject(new CmSignInError(problem, notRun)) } });
 
-    expect(await invoke('branches.list')).toEqual({ ok: false, error: { message: 'Sign in to acme@cloud to continue.', command: notRun, signIn: problem } });
+    expect(await invoke('branches.list')).toEqual({ ok: false, error: { message: 'Sign in to this server again to continue.', command: notRun, signIn: problem } });
   });
 
   it('sends a long failed command clipped as the command log clips it, the end of its output kept', async () => {
