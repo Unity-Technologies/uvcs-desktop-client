@@ -133,6 +133,16 @@ Every command goes by a gate in `CmClient` (`SignInGate`, `signInGate`, wired by
 
 The window gets the problem with the error (`RemoteError.signIn`, `ApiError.signIn`, `signInProblemOf`).
 
+## Options that stick to a shell
+
+A `cm shell` keeps a command's global options for every later command of its session: `--server`, `--username`,
+`--password`, `--token`, `--workingmode`, the files it reads its sign-in from (`--clientconf`, `--tokensconf`,
+`--cloudregionsconf`, `--unityorgsconf`), `--cacheserver` and `-wks`. A pooled shell runs every quick read of its folder,
+so one command carrying one would change who all the others sign in as. The app never sends them through a shell:
+`CmClient`'s quick commands refuse them as a programming error (`STICKY_SHELL_OPTIONS`, `refuseStickyShellOptions`, in
+`fakeCmClient` too), and no main-process source passes them at all (`noStickyShellOptions.test.ts`). A command that
+needs one runs with `execute()`, in a process of its own, where it ends with the command.
+
 ## Keeping sessions alive
 
 A sign-in lasts while it is used: `cm` renews it by itself on the next command, and what ends a session is mostly not
