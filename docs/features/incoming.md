@@ -92,7 +92,8 @@ loaded, as `cm partial update` would bring them.
   item it held then existed, so the folder was loaded in part and nothing in it is added. Nor is anything added when
   that listing misses an item the workspace loaded in the folder: the folder kept an older revision than what it
   loaded (a partial workspace keeps its root at the one it was created with, changeset 0, empty), so the listing
-  can't tell what it held (`unlistedIfWhole`).
+  can't tell what it held (`unlistedIfWhole`). `cm ls -R` can print one item id for two loaded files, which the head
+  lists apart: the one at the head's path stands for it, and neither reads as moved (`pathsByKey`).
   **Xlinks** are followed: the head lists the folders inside one through the workspace's branch, at their workspace
   paths, and its items belong to the xlinked repository. Their item ids say nothing about the workspace's (an xlink
   lists its target's root id, often the workspace root's own), so items are matched by id within their repository

@@ -169,6 +169,7 @@ export function compareWithHead(
 function loadedChanges({ loaded, headByKey }: Comparison, changedLocally: ReadonlySet<string>): PartialIncomingItem[] {
   const loadedByPath = new Map(loaded.map((each) => [each.item.path, each]));
   const removedFolders = new Set(loaded.filter((each) => each.item.isDirectory && !headByKey.has(each.key)).map((each) => each.item.path));
+  const loadedPathsByKey = pathsByKey(loaded);
   const changes: PartialIncomingItem[] = [];
   for (const { item, key, repository } of loaded) {
     if (isInsideAny(item.path, removedFolders)) continue;
@@ -180,6 +181,8 @@ function loadedChanges({ loaded, headByKey }: Comparison, changedLocally: Readon
     }
     const changed = !item.isDirectory && onHead.revisionId !== item.revisionId;
     const moved = onHead.path !== pathAlongWithParent(item.path, loadedByPath, headByKey);
+    // `cm ls -R` can print one item id for two loaded files: the one at the head's path stands for it.
+    if (onHead.path !== item.path && loadedPathsByKey.get(key)?.has(onHead.path)) continue;
     if (!changed && !moved) continue;
     changes.push({
       kind: changed ? 'changed' : 'moved',
@@ -193,6 +196,17 @@ function loadedChanges({ loaded, headByKey }: Comparison, changedLocally: Readon
     });
   }
   return changes;
+}
+
+/** The paths each scoped key is loaded at: one, unless `cm ls -R` printed one item id for several files. */
+function pathsByKey(loaded: readonly Scoped<LoadedTreeItem>[]): Map<string, Set<string>> {
+  const byKey = new Map<string, Set<string>>();
+  for (const { item, key } of loaded) {
+    const paths = byKey.get(key) ?? new Set<string>();
+    paths.add(item.path);
+    byKey.set(key, paths);
+  }
+  return byKey;
 }
 
 /** Where a loaded item would be on the head if it only went along with its folder: its name under the folder's head path. */
