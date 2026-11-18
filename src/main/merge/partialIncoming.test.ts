@@ -108,6 +108,24 @@ describe('incoming in a partial workspace', () => {
     expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code'], ['/'], ['/Src'], ['/Code']]);
   });
 
+  it('never takes an xlink for a loaded folder the head moved, though it shares the item id of the root', async () => {
+    // An xlink lists the item id of the xlinked repository's root, 3 here as for the workspace's own root: it is not
+    // where the root went, so nothing is listed through it and nothing reads as moved.
+    const xlinkOnHead = ['3', '90', 'dir', '/Lib', '7', 'Lib -> wxlink -> / 7@lib@ [relative] acme@cloud'];
+    const { cm, commands } = partialWorkspace(formatOutput(...ROOT_ON_HEAD, xlinkOnHead, ...CODE_ON_HEAD));
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    expect(changes).toMatchObject({
+      items: [
+        item({ kind: 'added', path: 'Code/Hull.cs', headRevisionId: 38 }),
+        item({ kind: 'changed', path: 'Code/Ship.cs', conflict: true, loadedRevisionId: 16, headRevisionId: 34 }),
+      ],
+    });
+    const headListings = commands.filter((command) => command.args.some((arg) => arg === '--tree=br:/main'));
+    expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code']]);
+  });
+
   it('rethrows a failure that names no folder', async () => {
     const { cm } = partialWorkspace(cmFails('The server is unreachable'));
 
