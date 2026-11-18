@@ -58,9 +58,12 @@ export class SessionChecks {
 
   /**
    * A command that started at `commandStartedAt` failed as a sign-in problem would: whether the server needs a sign-in,
-   * from a check started since (the one running, or a new one), so a burst of failures costs one check.
+   * from a check started since (the one running, or a new one), so a burst of failures costs one check. A server known
+   * to need one answers at once: the failure is what that state says (a local command still runs, and fails so).
    */
   async confirm(server: string, commandStartedAt: number): Promise<SignInProblem | null> {
+    const known = this.deps.sessions.of(server);
+    if (known.state === 'needsSignIn') return known.problem;
     const last = this.last.get(server);
     if (this.running.has(server) || last === undefined || last.startedAt < commandStartedAt) {
       try {

@@ -139,6 +139,16 @@ describe('SessionChecks.confirm', () => {
     expect(sessions.of('acme@cloud').state).toBe('needsSignIn');
   });
 
+  it('checks nothing for a server already known to need a sign-in: a local command that fails so costs no check', async () => {
+    const { checks: sessionChecks, asked, at, advance } = checks({ kind: 'needsSignIn', problem: ENDED });
+    await sessionChecks.checkNow('acme@cloud');
+    advance(10);
+
+    expect(await sessionChecks.confirm('acme@cloud', at())).toEqual(ENDED);
+
+    expect(asked).toHaveLength(1);
+  });
+
   it("answers null when the server's session is fine: the failure was another server's", async () => {
     const { checks: sessionChecks, at } = checks();
 
