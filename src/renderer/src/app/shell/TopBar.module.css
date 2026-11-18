@@ -25,3 +25,10 @@
   flex: 1;
   -webkit-app-region: drag;
 }
+
+/* The breadcrumb's step between the place and its branch: quiet, the pills carry it. */
+.topBar > .step {
+  flex: none;
+  margin: 0 calc(-1 * var(--space-1));
+  color: var(--text-tertiary);
+}

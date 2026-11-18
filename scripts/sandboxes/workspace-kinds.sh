@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds one workspace of each kind on the same repository: standard, partial (only some folders loaded) and, where
-# cm can make one (Windows), dynamic. The home screen, the switcher and the sidebar mark the partial and dynamic ones.
+# cm can make one (Windows), dynamic. The home screen, the switcher and the top bar mark the partial and dynamic ones.
 # Usage: scripts/sandboxes/workspace-kinds.sh   → repo workspace-kinds@local, workspaces /tmp/uvcs-kinds-{standard,partial,dynamic}
 set -euo pipefail
 REPO=workspace-kinds@local

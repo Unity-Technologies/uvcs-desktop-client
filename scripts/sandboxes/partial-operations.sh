@@ -2,7 +2,7 @@
 # Builds a partial workspace (only some folders loaded) to update, switch and check in, which the app does with
 # `cm partial`: it is two changesets behind on /main, a task branch is there to switch to, and a label and a
 # changeset, which a partial workspace can't switch to, are there to be refused until the whole branch is downloaded
-# (the workspace card's menu), which makes it standard. A file it loads is changed, pending.
+# (the workspace pill's menu), which makes it standard. A file it loads is changed, pending.
 # Usage: scripts/sandboxes/partial-operations.sh   → repo partial-operations@local, workspace /tmp/uvcs-partial-operations
 set -euo pipefail
 REPO=partial-operations@local

@@ -25,8 +25,15 @@ export function workspaceKindChip(kind: WorkspaceKind | undefined): WorkspaceKin
   return kind === undefined || kind === 'standard' ? null : WORKSPACE_KIND_WORDS[kind];
 }
 
-/** The collapsed sidebar's tooltip of the workspace card: its name and repository, and its kind when not standard. */
-export function workspaceCardTip(workspace: { name: string; repository: string; kind?: WorkspaceKind }): string {
+/**
+ * The tooltip of the top bar's workspace (`WorkspacePill`), all it shows in a narrow window: its name and repository,
+ * and its kind when not standard; below, where it is on disk.
+ */
+export function workspacePillTip(workspace: { name: string; repository: string; path: string; kind?: WorkspaceKind }): {
+  text: string;
+  sub: string;
+} {
   const chip = workspaceKindChip(workspace.kind);
-  return [workspace.name, workspace.repository, chip && `${chip.label} workspace`].filter(Boolean).join(' · ');
+  const text = [workspace.name, workspace.repository, chip && `${chip.label} workspace`].filter(Boolean).join(' · ');
+  return { text, sub: workspace.path };
 }

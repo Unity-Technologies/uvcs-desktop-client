@@ -945,7 +945,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
   repository with one local `cm status` each, only while it's open (`workspaces.glance`).
-- A workspace reads the same everywhere it shows (the home screen, the switcher, the sidebar's workspace button): the
+- A workspace reads the same everywhere it shows (the home screen, the switcher, the top bar's workspace pill): the
   repository's avatar (`components/RepositoryAvatar`: a white initial on a solid `--avatar-*` fill, picked by
   `avatarColor` from the repository's short name, the workspace's own until it's known; a neutral square while
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
@@ -1120,13 +1120,20 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Top bar**: one bar across the window on every screen (`app/shell/TopBar`), the sidebar under it: the window's
-  buttons, the home button (`HomeButton`), then what the screen adds. A workspace adds its branch pill and
-  incoming chip, the search and the account at the end (`WorkspaceTopBar`); the home screen adds nothing. Sidebars
-  (`ui/nav/SidebarNav`) have no title band of their own.
+  buttons, the home button (`HomeButton`), then what the screen adds. A workspace adds a breadcrumb, outer to inner:
+  the workspace (`WorkspacePill`: its repository's avatar, name and kind chip, the repository under them; it opens
+  the switcher, and a right-click its menu, `currentWorkspaceMenu`), a chevron, its branch pill and incoming chip;
+  then the search and the account at the end (`WorkspaceTopBar`). A repository opened without a workspace shows
+  itself in the same place (`RepositoryPill`, `RepositoryTopBar`). The home screen adds nothing. The workspace
+  comes before the branch because the branch belongs to it, the order the official client shows; a workspace card in
+  the sidebar, under the branch, read backwards. In a window 1100px wide or less the workspace pill shrinks to
+  its avatar (`PlacePill.module.css`), its tooltip saying the rest and, below, the workspace's folder
+  (`workspacePillTip`), so the branch keeps the room. Sidebars (`ui/nav/SidebarNav`) have no title band of their
+  own, nor a workspace card.
   - Home is one click (or ⇧⌘H, `app.home`, File ▸ Home) from anywhere: in a workspace it leaves for the home
     screen, on the home screen it goes back to its welcome (`WELCOME`), where the house is lit. It sits in the top
     bar, not the sidebar, so it stays put whether the sidebar is folded or not and costs no sidebar entry. It is a
-    borderless icon button, the bar's 8px gap on each side and nothing between it and the branch pill: a separator
+    borderless icon button, the bar's 8px gap on each side and nothing between it and the first pill: a separator
     there, or a bordered square like the pill's, both looked off balance. It replaced the app's mark and name, which
     opened About: the welcome shows those, and the status bar's version opens About.
   - The way back: on the home screen, after the house, "‹ <workspace>" returns to the workspace the window left
