@@ -74,6 +74,33 @@ describe('incoming in a partial workspace', () => {
     ]);
   });
 
+  it('adds what is new in a folder whose loaded listing also lists a subfolder it lists as loaded', async () => {
+    // Code and Code/Sub each hold an item the workspace doesn't have, so both are listed as loaded, in one listing that
+    // prints Sub twice: as Code's child and as itself. Sub is still one of Code's children, which Code held then.
+    const loaded = formatOutput(['3', '5', '-1', 'dir', '', '0', ''], ['22', '23', '-1', 'dir', 'Code', '1', ''], ['27', '15', '-1', 'txt', 'Code\\Engine.cs', '1', ''], ['30', '31', '-1', 'dir', 'Code\\Sub', '1', ''], ['32', '33', '-1', 'txt', 'Code\\Sub\\A.cs', '1', '']);
+    const onHead = formatOutput(
+      ['3', '5', 'dir', '/', '0'],
+      ['22', '41', 'dir', '/Code', '3'],
+      ['27', '15', 'txt', '/Code/Engine.cs', '1'],
+      ['60', '50', 'txt', '/Code/Hull.cs', '3'],
+      ['30', '42', 'dir', '/Code/Sub', '3'],
+      ['32', '33', 'txt', '/Code/Sub/A.cs', '1'],
+      ['61', '51', 'txt', '/Code/Sub/Deep.cs', '3'],
+    );
+    const whenLoaded = formatOutput(['22', '23', 'dir', '/Code', '1'], ['27', '15', 'txt', '/Code/Engine.cs', '1'], ['30', '31', 'dir', '/Code/Sub', '1'], ['30', '31', 'dir', '/Code/Sub', '1'], ['32', '33', 'txt', '/Code/Sub/A.cs', '1']);
+    const { cm } = fakeCmClient({
+      'status --header --xml': statusHeader('/main', { changeset: -1 }),
+      'status --controlledchanged --changed': pendingStatus(WORKSPACE),
+      'ls -R': loaded,
+      ls: ({ args }) => (args.includes('--tree=cs:1') ? whenLoaded : onHead),
+      'find changeset': formatOutput([3]),
+    });
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    expect(changes).toMatchObject({ items: [item({ kind: 'added', path: 'Code/Hull.cs', headRevisionId: 50 }), item({ kind: 'added', path: 'Code/Sub/Deep.cs', headRevisionId: 51 })] });
+  });
+
   it('lists the head again without a loaded folder it no longer has, which reads as removed', async () => {
     const answer: CmAnswer = ({ args }) =>
       args.includes('/Code')
