@@ -33,7 +33,7 @@ export interface PrintedWorkspaceStatus extends Omit<WorkspaceStatus, 'server'> 
 /** What the workspace is loaded from, read with `cm status --header --xml`, its server by name (`serverByName`). */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
   const { printedServer, ...status } = await readStatusHeader(cm, workspacePath);
-  return { ...status, server: await serverByName(cm, workspacePath, printedServer, { cwd: workspacePath }) };
+  return { ...status, server: await serverByName(cm, workspacePath, printedServer) };
 }
 
 /**
@@ -52,12 +52,20 @@ async function readStatusHeader(cm: CmClient, workspacePath: string): Promise<Pr
 /**
  * The workspace's server as `cm` names it everywhere but in `cm status --xml`, which prints a Unity organization's by
  * its id (ARCHITECTURE.md "Unity organizations"). Only then is the workspace's machine-readable header read, a local
- * read that names it, run from `cwd`. Should it fail, the id stays.
+ * read that names it (`readWorkspaceServer`). Should it fail, the id stays.
  */
-async function serverByName(cm: CmClient, workspacePath: string, printedServer: string, { cwd }: { cwd: string }): Promise<string> {
+async function serverByName(cm: CmClient, workspacePath: string, printedServer: string): Promise<string> {
   if (!isOrganizationIdServer(printedServer)) return printedServer;
-  const output = await cm.query(machineReadableHeaderArgs(workspacePath), { cwd }).catch(() => '');
-  return parseMachineReadableHeader(output)?.server ?? printedServer;
+  return (await readWorkspaceServer(cm, workspacePath)) ?? printedServer;
+}
+
+/**
+ * The server of the workspace holding `directory`, by name, from its machine-readable header: a local read that asks no
+ * server, so it answers while the server needs a sign-in. Undefined when `directory` is in no workspace, or `cm` fails.
+ */
+export async function readWorkspaceServer(cm: Pick<CmClient, 'query'>, directory: string): Promise<string | undefined> {
+  const output = await cm.query(machineReadableHeaderArgs(directory), { cwd: directory }).catch(() => '');
+  return parseMachineReadableHeader(output)?.server;
 }
 
 /**

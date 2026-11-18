@@ -78,6 +78,11 @@ type CommandStartedListener = (command: { args: readonly string[]; cwd: string; 
 export interface SignInGate {
   /** The server a command works with: the one it names (`CmRunOptions.server`), or its workspace's; undefined when unknown. */
   serverOf(cwd: string, named: string | undefined): string | undefined;
+  /**
+   * The server of the workspace holding `cwd`, read now (a local read) for a command there that failed for a sign-in
+   * before the gate knew it (`WorkspaceServers.learn`); undefined when `cwd` is in no workspace.
+   */
+  learnServerOf(cwd: string): Promise<string | undefined>;
   /** Whether a command goes by the gate unasked: the session check itself (`cm checkconnection`). */
   passes(args: readonly string[]): boolean;
   /** The problem that keeps server commands from `server`, or undefined when they may run. */
@@ -307,12 +312,18 @@ export class CmClient {
   private async run(requested: string[], options: CmRunOptions, useShell: boolean, reading: OutputReading): Promise<string> {
     const cwd = options.cwd ?? homedir();
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
-    const server = this.gatedServer(args, cwd, options);
-    const refused = server !== undefined && isServerCommand(args) ? this.signInGate?.refusal(server) : undefined;
+    const gate = this.signInGate && !this.signInGate.passes(args) ? this.signInGate : null;
+    const server = gate?.serverOf(cwd, options.server);
+    const refused = server !== undefined && isServerCommand(args) ? gate?.refusal(server) : undefined;
     if (refused) throw this.notRun(args, cwd, refused);
 
     const startedAt = Date.now();
     const log = (result: CmResult): CommandLogEntry => this.log(args, cwd, startedAt, result, useShell);
+    const signInFailure = async (kind: SignInProblemKind | null, entry: CommandLogEntry): Promise<CmSignInError | null> => {
+      if (!gate || !kind) return null;
+      // Its server, or else its workspace's, learned only now that it failed for a sign-in.
+      return this.signInFailure(gate, server ?? (await gate.learnServerOf(cwd)), startedAt, entry);
+    };
     const finished = useShell ? this.shellPool.run(cwd, args, reading) : this.runProcess(args, cwd, options, reading);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
@@ -322,18 +333,11 @@ export class CmClient {
       const entry = log(endedWithoutExitCode(error));
       if (error instanceof CmOutputTooLargeError) throw stoppedFailure(error, entry);
       if (!(error instanceof WaitingForInputError)) throw error;
-      throw (await this.signInFailure(server, 'signInRequired', startedAt, entry)) ?? stoppedFailure(error, entry);
+      throw (await signInFailure('signInRequired', entry)) ?? stoppedFailure(error, entry);
     });
     const entry = log(result);
-    if (result.exitCode !== 0) throw (await this.signInFailure(server, signInFailureOf(result.output), startedAt, entry)) ?? failure(result, entry);
+    if (result.exitCode !== 0) throw (await signInFailure(signInFailureOf(result.output), entry)) ?? failure(result, entry);
     return result.output;
-  }
-
-  /** The server whose sign-in a command goes by (`SignInGate.serverOf`); none without a gate, or for the check itself. */
-  private gatedServer(args: string[], cwd: string, options: CmRunOptions): string | undefined {
-    const gate = this.signInGate;
-    if (!gate || gate.passes(args)) return undefined;
-    return gate.serverOf(cwd, options.server);
   }
 
   /** A command its server's sign-in keeps from running, logged as not run (`notRun`) so the command log explains itself. */
@@ -344,12 +348,11 @@ export class CmClient {
   }
 
   /**
-   * A failure that said its server needs a sign-in, once the gate confirmed it (`SignInGate.confirm`); null when it said
-   * nothing of it, the server isn't known, or the server's session turned out fine.
+   * A failure that said its server needs a sign-in, once the gate confirmed it (`SignInGate.confirm`); null when its
+   * server can't be known (never guessed: `learnServerOf`), or its session turned out fine.
    */
-  private async signInFailure(server: string | undefined, kind: SignInProblemKind | null, startedAt: number, entry: CommandLogEntry): Promise<CmSignInError | null> {
-    if (!kind || server === undefined || !this.signInGate) return null;
-    const problem = await this.signInGate.confirm(server, startedAt);
+  private async signInFailure(gate: SignInGate, server: string | undefined, startedAt: number, entry: CommandLogEntry): Promise<CmSignInError | null> {
+    const problem = server === undefined ? null : await gate.confirm(server, startedAt);
     return problem && new CmSignInError(problem, commandOf(entry));
   }
 

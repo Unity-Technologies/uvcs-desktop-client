@@ -726,11 +726,19 @@ describe('CmClient sessions', () => {
 
 const ENDED: SignInProblem = { kind: 'sessionEnded', server: 'acme@cloud', details: { commandLine: 'cm checkconnection acme@cloud', output: 'Error: The auth token expired. User: dev@acme.com.' } };
 
-/** A gate that knows `WORKSPACE` is on acme@cloud, refuses the servers in `needsSignIn`, and confirms with `confirmed`. */
+/**
+ * A gate that knows `WORKSPACE` is on acme@cloud, learns `LEARNED` is on build:8087 when asked, refuses the servers in
+ * `needsSignIn`, and confirms with `confirmed`.
+ */
 function fakeGate({ needsSignIn = [] as string[], confirmed = null as SignInProblem | null } = {}) {
   const confirms: string[] = [];
+  const learned: string[] = [];
   const gate: SignInGate = {
     serverOf: (cwd, named) => named ?? (cwd === WORKSPACE ? 'acme@cloud' : undefined),
+    learnServerOf: async (cwd) => {
+      learned.push(cwd);
+      return cwd === LEARNED ? 'build:8087' : undefined;
+    },
     passes: (args) => args[0] === 'checkconnection',
     refusal: (server) => (needsSignIn.includes(server) ? { ...ENDED, server } : undefined),
     confirm: async (server) => {
@@ -738,8 +746,10 @@ function fakeGate({ needsSignIn = [] as string[], confirmed = null as SignInProb
       return confirmed;
     },
   };
-  return { gate, confirms };
+  return { gate, confirms, learned };
 }
+
+const LEARNED = join(homedir(), 'wkspaces', 'level');
 
 describe('CmClient sign-in gate', () => {
   it("runs no server command to a server that needs a sign-in, and logs it as not run so the log explains itself", async () => {
@@ -828,16 +838,39 @@ describe('CmClient sign-in gate', () => {
     expect(await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }))).toBeInstanceOf(CmSignInError);
   });
 
+  it("learns a workspace's server with a local read when a command there fails for a sign-in before its header was read", async () => {
+    const { cm } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@acme.com.\n', exitCode: 1 }) });
+    const { gate, confirms, learned } = fakeGate({ confirmed: { ...ENDED, server: 'build:8087' } });
+    cm.gateSignIns(gate);
+
+    const error = await failureOf(cm.query(['status', '--header', '--xml'], { cwd: LEARNED }));
+
+    expect(learned).toEqual([LEARNED]);
+    expect(confirms).toEqual(['build:8087']);
+    expect((error as CmSignInError).problem.server).toBe('build:8087');
+  });
+
+  it('learns nothing for a failure that says nothing of signing in', async () => {
+    const { cm } = fakeClient({ answer: () => ({ output: 'Error: The branch does not exist.\n', exitCode: 1 }) });
+    const { gate, learned } = fakeGate();
+    cm.gateSignIns(gate);
+
+    await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: LEARNED }));
+
+    expect(learned).toEqual([]);
+  });
+
   it('fails a command stopped at a prompt of a server it knows nothing of with the command, never guessing a server', async () => {
     const { cm, logged } = fakeClient({
       answer: () => {
         throw new WaitingForInputError('Password:');
       },
     });
-    const { gate, confirms } = fakeGate({ confirmed: ENDED });
+    const { gate, confirms, learned } = fakeGate({ confirmed: ENDED });
     cm.gateSignIns(gate);
 
     const error = await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: join(homedir(), 'elsewhere') }));
+    expect(learned).toEqual([join(homedir(), 'elsewhere')]);
 
     expect(error).not.toBeInstanceOf(CmSignInError);
     expect(error).toMatchObject({ message: 'cm is waiting for input ("Password:"). Check your credentials for this server.', command: { exitCode: -1, logEntryId: logged[0]?.id } });
