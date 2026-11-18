@@ -6,6 +6,13 @@ import { ANSWER_TEXT, CmOutputTooLargeError, MAX_TEXT_OUTPUT_LENGTH } from './ou
 import type { OutputReading, StreamReader } from './outputReading';
 import { RepeatedPromptWatch } from './repeatedPrompt';
 
+/**
+ * The longest line an operation's progress (`onOutputLine`) is given: a line still arriving past it is reported as it
+ * is and the rest follows as the next. No real line comes near it; one that never ends (a question asked again and
+ * again that `RepeatedPromptWatch` doesn't know) would otherwise be kept whole, and joined again with every chunk.
+ */
+export const MAX_OUTPUT_LINE_LENGTH = 1024 * 1024;
+
 export interface CmProcessOptions {
   cwd?: string;
   signal?: AbortSignal;
@@ -65,7 +72,11 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       // A progress line rewritten in place (`\r`) counts as a line of its own.
       const lines = (pendingLine + chunk).split(/\r\n|\r|\n/);
       pendingLine = lines.pop() ?? '';
-      lines.forEach(options.onOutputLine);
+      for (const line of lines) inPieces(line).forEach(options.onOutputLine);
+      // The line still arriving keeps no more than its last piece.
+      const pieces = inPieces(pendingLine);
+      pendingLine = pieces.pop() ?? '';
+      pieces.forEach(options.onOutputLine);
     };
     /** Stops a command asking the same question again and again; true when it did. */
     const stopAskingAgain = (): boolean => {
@@ -111,4 +122,12 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       resolve({ output, exitCode: code ?? -1 });
     });
   });
+}
+
+/** A line as `onOutputLine` is given it: in pieces of at most `MAX_OUTPUT_LINE_LENGTH`, an empty line as itself. */
+function inPieces(line: string): string[] {
+  if (line.length <= MAX_OUTPUT_LINE_LENGTH) return [line];
+  const pieces: string[] = [];
+  for (let start = 0; start < line.length; start += MAX_OUTPUT_LINE_LENGTH) pieces.push(line.slice(start, start + MAX_OUTPUT_LINE_LENGTH));
+  return pieces;
 }
