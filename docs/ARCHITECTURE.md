@@ -63,7 +63,9 @@ you touch:
      first command, so until one in that directory has, the query runs as a process of its own (the first window's
      start as the app loads: `readFirstScreenAhead`). A workspace write that may run long (`runsLong`: more than `MAX_QUICK_WRITE_PATHS`
      paths, recursive, or a transfer) runs as a process of its own too, so it never holds a session every read of the
-     workspace would wait behind.
+     workspace would wait behind. No quick command carries an option a `cm shell` keeps for its whole
+     session (`--username`, `--server`, `-path`…: `STICKY_SHELL_OPTIONS`; docs/features/accounts.md "Options that stick
+     to a shell").
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
    - A command that takes a process runs in a `cm shell` of its own, which reads its command line and exits after

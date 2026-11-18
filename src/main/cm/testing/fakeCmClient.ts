@@ -1,6 +1,7 @@
 import type { CmClient, CmRecordsOptions, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
 import { textOutputKind } from '../commandOutputs';
+import { refuseStickyShellOptions } from '../stickyShellOptions';
 import { extractErrorMessage } from '../errorMessage';
 import { RecordReader, type ReadRecord } from '../formatRecords';
 import { LineReader, type ReadLine } from '../LineReader';
@@ -80,6 +81,8 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}, readsRecords = false): Promise<string> {
     const command: FakeCmCommand = { via, args, line: args.join(' '), options, readsRecords };
     if (!readsRecords) textOutputKind(args);
+    // As `CmClient`, a quick command never carries an option a pooled `cm shell` would keep (`STICKY_SHELL_OPTIONS`).
+    if (via === 'query') refuseStickyShellOptions(args);
     commands.push(command);
     if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (take it from an output that names it): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));

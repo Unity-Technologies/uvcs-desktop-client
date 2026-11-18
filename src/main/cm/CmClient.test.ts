@@ -751,6 +751,70 @@ function fakeGate({ needsSignIn = [] as string[], confirmed = null as SignInProb
 
 const LEARNED = join(homedir(), 'wkspaces', 'level');
 
+/**
+ * `cm shell` keeps a command's global options for every later command of the session: these would change who a pooled
+ * shell signs in as, or the files it reads its sign-in from.
+ */
+const STICKY = [
+  '--server=acme@cloud',
+  '--username=ana',
+  '--password=secret',
+  '--token=t0k',
+  '--workingmode=UPWorkingMode',
+  '--clientconf=/c.conf',
+  '-clientconf=/c.conf',
+  '--tokensconf=/t.conf',
+  '--cloudregionsconf=/r.conf',
+  '--unityorgsconf=/u.conf',
+  '--cacheserver=cache:8085',
+  '-cacheserver=cache:8085',
+  '--encryptmethod=AES256',
+  '--encryptpassword=k3y',
+  '--encryptserver=acme@cloud',
+  '-wks=/wk',
+  '-path=/elsewhere',
+  // In any case, and bare, with its value in the next argument.
+  '--UserName=ana',
+  '--server',
+];
+
+describe('CmClient options that stick to a cm shell', () => {
+  it.each(STICKY)('refuses a quick command carrying %s before any shell runs it', async (option) => {
+    const { cm, shellCommands, processes } = fakeClient();
+
+    await expect(cm.query(['fileinfo', 'a.cs', '--xml', option], { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+    await expect(cm.queryRecords(['find', 'branch', '--format={name}', option], (fields) => fields, { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+    await expect(cm.queryXmlElements(['history', 'a.cs', '--xml', option], 'Revision', (element) => element, { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+    await expect(cm.queryLines(['listusers', 'acme@cloud', option], (line) => line, { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+
+    expect([...shellCommands, ...processes]).toEqual([]);
+  });
+
+  it('runs the same command in a process of its own, where the option ends with it', async () => {
+    const { cm, processes } = fakeClient();
+
+    await cm.execute(['fileinfo', 'a.cs', '--xml', '--username=ana'], { cwd: WORKSPACE });
+
+    expect(processes).toHaveLength(1);
+  });
+
+  it("refuses no longer an option cm doesn't have", async () => {
+    const { cm, shellCommands } = fakeClient();
+
+    await cm.query(['fileinfo', 'a.cs', '--xml', '--cachesrv=cache:8085'], { cwd: WORKSPACE });
+
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('runs quick commands whose values only look like those options', async () => {
+    const { cm, shellCommands } = fakeClient();
+
+    await cm.query(['fileinfo', 'docs/--server=notes.txt', '--xml'], { cwd: WORKSPACE });
+
+    expect(shellCommands).toHaveLength(1);
+  });
+});
+
 describe('CmClient sign-in gate', () => {
   it("runs no server command to a server that needs a sign-in, and logs it as not run so the log explains itself", async () => {
     const { cm, processes, shellCommands, logged } = fakeClient();

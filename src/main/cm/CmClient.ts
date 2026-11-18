@@ -22,6 +22,7 @@ import { needsSignIn } from './repeatedCommands';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
 import { isSignInPrompt, signInFailureOf } from './signInFailure';
+import { refuseStickyShellOptions } from './stickyShellOptions';
 import { LineReader, type ReadLine } from './LineReader';
 import { isShellResultLine, shellCommandResult } from './shellResultLine';
 import { withUtf8Output } from './utf8Output';
@@ -184,9 +185,11 @@ export class CmClient {
    * Runs a quick, non-interactive command (reads, small writes) in a pooled `cm shell`. A command that may run long
    * anyway (`runsLong`: a workspace write of many files) gets a process of its own, as does one before the pool is warm.
    * Its text is an answer's, whole, or an operation's, by its ends (`textOutputKind`); a list is refused: it takes
-   * `queryRecords`.
+   * `queryRecords`. So is an option a `cm shell` would keep for its whole session (`refuseStickyShellOptions`), as in
+   * every quick read below.
    */
-  query(args: string[], options: CmRunOptions = {}): Promise<string> {
+  async query(args: string[], options: CmRunOptions = {}): Promise<string> {
+    refuseStickyShellOptions(args);
     const placed = this.placed(options);
     return this.runText(args, placed, () => this.runsInPooledShell(args, placed));
   }
@@ -201,7 +204,8 @@ export class CmClient {
    * into what `readRecord` builds of its fields as it arrives (`RecordReader`): the output is never held whole, so a
    * big answer costs about what its rows weigh, and nothing stops it for its size. Fails as `query` does.
    */
-  queryRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+  async queryRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+    refuseStickyShellOptions(args);
     const placed = this.placed(options);
     return this.runStreamed(args, new RecordReader(readRecord), placed, this.runsInPooledShell(args, placed));
   }
@@ -216,7 +220,8 @@ export class CmClient {
    * named `element` as it arrives (`XmlElementReader`) into what `readElement` builds of it, as `queryRecords` reads
    * records.
    */
-  queryXmlElements<T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+  async queryXmlElements<T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+    refuseStickyShellOptions(args);
     const placed = this.placed(options);
     return this.runStreamed(args, new XmlElementReader(element, readElement), placed, this.runsInPooledShell(args, placed));
   }
@@ -225,7 +230,8 @@ export class CmClient {
    * Runs a quick command whose list comes one item a line with no `--format` (`cm listusers`), where `query` would,
    * and reads each line as it arrives (`LineReader`) into what `readLine` builds of it, as `queryRecords` reads records.
    */
-  queryLines<T>(args: string[], readLine: ReadLine<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+  async queryLines<T>(args: string[], readLine: ReadLine<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+    refuseStickyShellOptions(args);
     const placed = this.placed(options);
     return this.runStreamed(args, new LineReader(readLine), placed, this.runsInPooledShell(args, placed));
   }

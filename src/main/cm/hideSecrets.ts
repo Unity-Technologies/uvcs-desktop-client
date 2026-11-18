@@ -10,8 +10,11 @@ const HIDDEN_SECRET = '•••';
  */
 const TRACKER_TOKENS = /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|ATATT[A-Za-z0-9_\-=]{20,})/g;
 
-/** Options whose value is a secret (`cm sync ... git --pwd=`). Add any new one the app passes. */
-const SECRET_OPTIONS = ['--pwd='];
+/**
+ * Options whose value is a secret (`cm sync ... git --pwd=`, and a sign-in's or encryption's, which only a process of its
+ * own may carry: `STICKY_SHELL_OPTIONS`). Add any new one the app passes.
+ */
+const SECRET_OPTIONS = ['--pwd=', '--password=', '--token=', '--encryptpassword='];
 
 /**
  * The command line as the command log, a `CmError` and the `[server budget]` warning show it: every command is logged
