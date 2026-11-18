@@ -225,6 +225,18 @@ describe('SessionChecks.confirm', () => {
     expect(restarts()).toBe(1);
   });
 
+  it("doesn't restart the shells again when the restart didn't help: an xlink's sign-in fails them however fresh", async () => {
+    const { checks: sessionChecks, at, advance, restarts } = checks();
+
+    await sessionChecks.confirm('acme@cloud', at(), true);
+    advance(CONFIRMED_REACHED_MS);
+    await sessionChecks.confirm('acme@cloud', at(), true);
+    advance(CONFIRMED_REACHED_MS);
+    await sessionChecks.confirm('acme@cloud', at(), true);
+
+    expect(restarts()).toBe(1);
+  });
+
   it("restarts no shell for a failure in a process of its own: it read the sign-in as it started", async () => {
     const { checks: sessionChecks, at, restarts } = checks();
 
