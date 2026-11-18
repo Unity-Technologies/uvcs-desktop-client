@@ -25,6 +25,8 @@ setup check share one `cm profile list` (`ProfileList`, docs/ARCHITECTURE.md "Wi
 the profiles with the servers as it starts (`readFirstScreen`, `prefetchStartupQueries`), so both take that one
 command. The accounts are as fresh as the profiles: read again when the window regains focus a minute after the last
 read, so an account added with the official client or the command line shows up then, and after a profile is removed.
+The servers the home screen, the server pickers and links read (`serversQuery`) keep the same freshness
+(`PROFILES_STALE_MS`), so they refetch on the same focus and share that one command.
 
 Which account a server belongs to is decided in one place for every view (`accountOfServer`, over
 `accountForServer`): its own profile by server or by name, an organization by its name or its genesis id on
@@ -43,12 +45,14 @@ there are two or more (`accountSwitchCommands`), on the home screen only.
   the account of the workspace the window left (from the workspace's info the window read while it showed it, never
   read again for this), the one last picked in any window (`AppSettings.homeAccount`), else the main one: the
   account holding the `*@cloud` profile, else the one with the most organizations (`mainAccountOf`), never merely the
-  first by name, which may be an email account with one. A home screen where nothing was picked follows the account
-  last picked in another window as it's picked: the choice is one for the app, not per window.
+  first by name, which may be an email account with one. A home screen where nothing was picked, and that no workspace it
+  left names an account for, follows the account last picked in another window as it's picked: the choice is one for
+  the app, not per window.
 - **What it lists** (`homeServersOf`): this computer, the shown account's organizations, and every server's account,
   a server's entry showing its user (`serverEntryDetail`), as a server is an account of its own.
 - **Picking an account only shows it** (`showHomeAccount`): it changes nothing in `cm`, and is remembered in the app's
-  own settings, never `cm`'s. Repositories of the account left give way to the welcome (`sectionAfterSwitch`). The
+  own settings, never `cm`'s. Repositories of the account left give way to the welcome (`sectionAfterSwitch`, by the same `accountOfServer`:
+  the repositories of an organization the account holds by any of its names stay). The
   official client rewrote the server's profile on every pick; with one profile per server, two accounts in one
   organization overwrote each other. A link that writes a server in another case (`Games@unity`) keeps its
   repositories on screen, as servers are matched whatever their case.
@@ -58,7 +62,7 @@ there are two or more (`accountSwitchCommands`), on the home screen only.
 Settings › Accounts has one row per account (`accountRowsOf`): its user, then "Unity · 3 organizations" or the server
 and how it signs in; the account signing in to the window's place first, marked "This workspace". A Unity account's
 row opens to its organizations, by their readable names (`organizationName`, never a genesis id), then its `*@cloud` profile ("Any cloud organization"), each removed apart with
-`cm profile delete`; a server's row removes its one profile itself. Removing a whole account at once isn't offered:
+`cm profile delete` (its question names it as the row does, `profileLabel`); a server's row removes its one profile itself. Removing a whole account at once isn't offered:
 `cm profile delete` leaves the account's sign-in behind, so a loop of them signs nothing out. This computer's profile
 isn't listed, as it belongs to no account. The account menu's count is the rows'.
 
