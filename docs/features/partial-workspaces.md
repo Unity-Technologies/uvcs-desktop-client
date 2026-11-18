@@ -86,12 +86,14 @@ read. It searches what the tree shows, and its notes name it so (`downloadSearch
 branch, the branch's head, named by the branch. A pick opens the folders above it and selects it in the tree (`revealedDownload`).
 
 Each result has its checkbox and pill too, so a file found can be chosen without leaving the search
-(`downloadSearch.ts`). Its checkbox shows once whether it's loaded is known (`isLoadKnown`, `downloadSearchCheck`): the
+(`downloadSearch.ts`). Its checkbox shows once whether it's loaded is known (`isLoadKnown`, `downloadSearchRow`): the
 folders above the results have their loaded items read (`foldersAboveResults`, local), kept for as long as the dialog
 is open so typing on doesn't read them again. Ticking a result opens the folders above it in the tree, as a pick does,
 so they're read: the rules walk the tree from its root and would leave out a choice in a folder not read yet, so Apply
 waits for them (`choicesAwaitReads`, `canApply`). The repository's listings are read only on a tick, never for what a
-search merely shows.
+search merely shows. A result below a folder that couldn't be read says so in place of its checkbox, and Apply doesn't
+wait for that folder. The checkboxes take clicks only: the search field keeps the keyboard, where Space is part of a
+name, so Enter shows the item in the tree, where Space ticks it.
 
 The tree, the results and the message standing in for them share one height (`ChooseDownloadsDialog.module.css`), so
 the dialog keeps its size whatever it shows. A workspace on a shelve has no search, as it has no tree.
