@@ -3,10 +3,11 @@ import { countCalls } from '@shared/testing/countCalls';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { compareWithHead, foldersWithNewItems, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
 
-// `cm ls -R --format={itemid}|{revid}|{parentrevid}|{type}|{wkpath}|{changeset}|{checkout}` in the workspace: what it
-// has loaded. The sandbox's (`partial-operations.sh`): the root and Code, two files.
+// `cm ls -R --format={itemid}|{revid}|{parentrevid}|{type}|{wkpath}|{changeset}|{checkout}|{name}` in the workspace:
+// what it has loaded. The sandbox's (`partial-operations.sh`): the root and Code, two files. `{name}` is left out where
+// it only repeats the path's last part: it tells an xlink alone.
 const loaded = (...records: string[]): LoadedTreeItem[] => records.map((record) => readLoadedTreeItem(record.split('|'))!);
-// `cm ls / /Code --tree=br:/main --format={itemid}|{revid}|{type}|{path}|{changeset}`: each folder and its children.
+// `cm ls / /Code --tree=br:/main --format={itemid}|{revid}|{type}|{path}|{changeset}|{name}`: each folder and its children.
 const head = (...records: string[]): HeadItem[] => records.map((record) => readHeadItem(record.split('|'))!);
 
 const SANDBOX_LOADED = loaded('3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Engine.cs|1|', '28|16|-1|txt|Code\\Ship.cs|1|');
@@ -172,9 +173,29 @@ describe('what the branch head brings a partial workspace', () => {
   });
 
   it("leaves out an xlink's items, which belong to another repository with ids of its own", () => {
-    const withXlink = loaded(...['3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '30|31|-1|xlink|Lib|1|', '5|9|-1|txt|Lib\\Math.cs|1|']);
-    const headWithXlink = head('3|40|dir|/|3', '22|41|dir|/Code|3', '30|31|xlink|/Lib|1', '5|12|txt|/Lib/Math.cs|7', '60|61|txt|/Lib/New.cs|8');
-    expect(compareWithHead(withXlink, headWithXlink, new Set())).toEqual([]);
+    // `cm ls` lists an xlink as a folder (`dir`) named after its target, holding the other repository's items: its
+    // root is that repository's (item 3 here too) and its files reuse ids the workspace's repository gives others.
+    const withXlink = loaded(
+      ...['3|5|-1|dir||0||.', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Engine.cs|1|', '28|16|-1|txt|Code\\Ship.cs|1|'],
+      '3|31|30|dir|Lib|9||Lib -> wxlink -> / 9@lib@ [relative] local',
+      '27|33|-1|txt|Lib\\Math.cs|9|',
+    );
+    const headWithXlink = head(
+      '3|40|dir|/|3|.',
+      '22|41|dir|/Code|3',
+      '27|15|txt|/Code/Engine.cs|1',
+      '28|34|txt|/Code/Ship.cs|2',
+      '3|35|dir|/Lib|12|Lib -> wxlink -> / 12@lib@ [relative] local',
+      '27|36|txt|/Lib/Math.cs|12',
+      '60|61|txt|/Lib/New.cs|12',
+    );
+    expect(compareWithHead(withXlink, headWithXlink, new Set())).toEqual([item({ kind: 'changed', path: 'Code/Ship.cs', loadedRevisionId: 16, headRevisionId: 34 })]);
+  });
+
+  it('reads an xlink as `cm ls` lists it: a folder named after its target, read-only or writable', () => {
+    expect(readLoadedTreeItem(['2', '850279', '849994', 'dir', '03pnunit', '27890', '', '03pnunit -> wxlink -> / 27894@pnunit@ [relative] codice@cloud'])?.xlink).toBe(true);
+    expect(readHeadItem(['2', '446043', 'dir', '/04licensetools', '6782', '04licensetools -> xlink -> / 7649@licensetools@acme@cloud'])?.xlink).toBe(true);
+    expect(readHeadItem(['22', '41', 'dir', '/Code', '3', 'Code'])?.xlink).toBeUndefined();
   });
 
   it('does work in step with the workspace, however many local changes, removed folders and xlinks it holds', () => {
