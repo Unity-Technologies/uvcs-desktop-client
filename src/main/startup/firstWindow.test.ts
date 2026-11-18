@@ -67,7 +67,7 @@ describe('the first window', () => {
       'warm up the home folder',
       'read workspaces.list []',
       'read repositories.servers []',
-      'read accounts.accounts []',
+      'read accounts.list []',
       'Electron ready',
       ...OPENED,
     ]);

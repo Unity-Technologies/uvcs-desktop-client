@@ -1,5 +1,5 @@
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
-import { userAccountsQuery } from '../account/accounts';
+import { accountsQuery } from '../account/accounts';
 import { queryClient } from '../queryClient';
 import { settingsQuery } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
@@ -18,7 +18,7 @@ export async function prefetchStartupQueries(): Promise<void> {
   await Promise.all([
     queryClient.prefetchQuery(settingsQuery),
     queryClient.prefetchQuery(cmVersionQuery),
-    ...(workspacePath ? [prefetchWorkspaceQueries(workspacePath)] : [queryClient.prefetchQuery(workspaceListQuery), queryClient.prefetchQuery(serversQuery), queryClient.prefetchQuery(userAccountsQuery)]),
+    ...(workspacePath ? [prefetchWorkspaceQueries(workspacePath)] : [queryClient.prefetchQuery(workspaceListQuery), queryClient.prefetchQuery(serversQuery), queryClient.prefetchQuery(accountsQuery)]),
   ]);
 }
 
