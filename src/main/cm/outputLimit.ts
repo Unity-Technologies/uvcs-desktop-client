@@ -38,6 +38,23 @@ export class CmOutputTooLargeError extends Error {
   }
 }
 
+/**
+ * The most bytes a list's item still arriving may take (`RecordReader`, `LineReader`, `XmlElementReader`): far past any
+ * real record, line or element, so only an output that never ends one reaches it. `cm` asking which system to sign in
+ * with, its input closed, asks again and again, without a line break, until stopped: kept whole, that filled the main
+ * process's memory within minutes.
+ */
+export const MAX_ITEM_BYTES = 16 * 1024 * 1024;
+
+/** A list item that grew past `MAX_ITEM_BYTES` without ending: the command is stopped, and fails as one too large. */
+export class CmItemTooLargeError extends CmOutputTooLargeError {
+  constructor(maxBytes: number) {
+    super(maxBytes);
+    this.message = `The command printed more than ${describeLength(maxBytes)} without ending an item of its list, too much to read, and was stopped.`;
+    this.name = 'CmItemTooLargeError';
+  }
+}
+
 function describeLength(length: number): string {
   return length >= MEGABYTE ? `${Math.round(length / MEGABYTE)} MB` : `${length} characters`;
 }

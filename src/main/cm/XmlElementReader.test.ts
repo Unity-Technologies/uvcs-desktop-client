@@ -79,7 +79,7 @@ describe('XmlElementReader', () => {
 
   it('reads an element as long as its limit, arriving in chunks', () => {
     const reader = new XmlElementReader('Revision', () => 'read', 1000);
-    const element = `<Revision>${'x'.repeat(1000 - '<Revision></Revision>'.length)}</Revision>`;
+    const element = `<Revision><Comment>${'x'.repeat(1000 - '<Revision><Comment></Comment></Revision>'.length)}</Comment></Revision>`;
     reader.read(Buffer.from(element.slice(0, -1)));
     reader.read(Buffer.from(element.slice(-1)));
     expect(reader.finish()).toEqual(['read']);

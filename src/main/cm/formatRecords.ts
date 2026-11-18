@@ -1,3 +1,4 @@
+import { CmItemTooLargeError, MAX_ITEM_BYTES } from './outputLimit';
 import type { StreamReader } from './outputReading';
 
 /** Control characters, which never appear in names, paths or comments: records split without ambiguity. */
@@ -49,8 +50,13 @@ export class RecordReader<T> implements StreamReader {
   private readonly rows: T[] = [];
   /** The bytes after the last record separator: the record still arriving, or text that is no record at all. */
   private incomplete: Buffer[] = [];
+  private incompleteBytes = 0;
 
-  constructor(private readonly readRecord: ReadRecord<T>) {}
+  /** `maxItemBytes`: past it, a record still arriving fails the command (`CmItemTooLargeError`). */
+  constructor(
+    private readonly readRecord: ReadRecord<T>,
+    private readonly maxItemBytes = MAX_ITEM_BYTES,
+  ) {}
 
   /** How many records were read so far: what a caller (a test) checks to tell records are read as they arrive. */
   get count(): number {
@@ -63,7 +69,7 @@ export class RecordReader<T> implements StreamReader {
     let end = chunk.indexOf(RECORD_SEPARATOR_BYTE);
     if (end >= 0 && this.incomplete.length > 0) {
       const record = Buffer.concat([...this.incomplete, chunk.subarray(0, end)]);
-      this.incomplete = [];
+      this.forgetIncomplete();
       this.readRecordIn(record, 0, record.length);
       start = end + 1;
       end = chunk.indexOf(RECORD_SEPARATOR_BYTE, start);
@@ -72,7 +78,7 @@ export class RecordReader<T> implements StreamReader {
       this.readRecordIn(chunk, start, end);
       start = end + 1;
     }
-    if (start < chunk.length) this.incomplete.push(start === 0 ? chunk : chunk.subarray(start));
+    if (start < chunk.length) this.keepIncomplete(start === 0 ? chunk : chunk.subarray(start));
   }
 
   /**
@@ -82,7 +88,7 @@ export class RecordReader<T> implements StreamReader {
    */
   takeRest(): string {
     const bytes = Buffer.concat(this.incomplete);
-    this.incomplete = [];
+    this.forgetIncomplete();
     return withLf(bytes.toString('utf8', lineBreakLength(bytes, 0, bytes.length)));
   }
 
@@ -92,6 +98,18 @@ export class RecordReader<T> implements StreamReader {
    */
   finish(): T[] {
     return this.rows;
+  }
+
+  /** Keeps the start of the record still arriving, which fails past `maxItemBytes`: an output that never ends one. */
+  private keepIncomplete(bytes: Buffer): void {
+    this.incompleteBytes += bytes.length;
+    if (this.incompleteBytes > this.maxItemBytes) throw new CmItemTooLargeError(this.maxItemBytes);
+    this.incomplete.push(bytes);
+  }
+
+  private forgetIncomplete(): void {
+    this.incomplete = [];
+    this.incompleteBytes = 0;
   }
 
   /** Reads the record between `start` and its separator at `end`; an empty one is no record. */
