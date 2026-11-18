@@ -1,5 +1,5 @@
-import type { Account, UserAccount } from '@shared/domain/account';
-import { serverKind } from '@shared/domain/organizations';
+import type { Account, UserAccount } from './account';
+import { serverKind } from './organizations';
 
 /** `*@cloud`: the profile `cm` signs in to every cloud organization with when the organization has none of its own. */
 const WILDCARD_SERVER = /^\*@/;
