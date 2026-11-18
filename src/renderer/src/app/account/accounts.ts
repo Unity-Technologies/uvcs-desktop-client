@@ -9,8 +9,13 @@ import { queryClient } from '../queryClient';
 import { usePlaceServer, useWindowServer } from '../workspace/useWorkspace';
 import { accountForServer, profileLabel } from './serverAccount';
 
-/** Refreshed when the window regains focus after a minute: signing in with the official client adds or changes one. */
-export const accountsQuery = queryOptions({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: 60_000 });
+/**
+ * How long the profiles read stay fresh, and the servers made of them (`serversQuery`): refreshed when the window
+ * regains focus after a minute, as signing in with the official client adds or changes one.
+ */
+export const PROFILES_STALE_MS = 60_000;
+
+export const accountsQuery = queryOptions({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: PROFILES_STALE_MS });
 
 /** The user `cm` signs in as where no account is set up (client.conf's default user); it changes only by hand. */
 const defaultUserQuery = queryOptions({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
