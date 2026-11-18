@@ -9,8 +9,15 @@ const build = serverAccount('build:8087');
 const accounts = [ana, bo, build];
 
 describe('homeAccountOf', () => {
-  it('shows the first Unity account when nothing names one', () => {
-    expect(homeAccountOf(accounts, {})).toBe(ana);
+  it('shows the account signing in to every other organization (`*@cloud`) when nothing names one', () => {
+    const many = unityAccount('cy@example.com', ['a@unity', 'b@unity', 'c@unity']);
+    expect(homeAccountOf([bo, many, ana], {})).toBe(ana);
+  });
+
+  it('else shows the one holding the most organizations, the first of them on a tie', () => {
+    const many = unityAccount('cy@example.com', ['a@unity', 'b@unity']);
+    expect(homeAccountOf([bo, many, build], {})).toBe(many);
+    expect(homeAccountOf([bo, unityAccount('dee@example.com', ['d@unity'])], {})).toBe(bo);
     expect(homeAccountOf([build, bo], {})).toBe(bo);
   });
 

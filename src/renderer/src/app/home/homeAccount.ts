@@ -17,14 +17,24 @@ export interface HomeAccountCues {
 
 /**
  * The Unity account whose organizations the home sidebar lists (docs/features/accounts.md "Home"): the one holding
- * the repositories shown, the one picked here, the workspace's this window left, the one last picked, else the first.
- * None without a Unity account.
+ * the repositories shown, the one picked here, the workspace's this window left, the one last picked, else the main one
+ * (`mainAccountOf`). None without a Unity account.
  */
 export function homeAccountOf(accounts: readonly UserAccount[], cues: HomeAccountCues): UserAccount | undefined {
   const unity = unityAccountsOf(accounts);
   const byServer = (server: string | undefined) => (server ? accountOfServer(unity, server) : undefined);
   const byId = (id: string | undefined) => (id ? unity.find((account) => account.id === id) : undefined);
-  return byServer(cues.shownServer) ?? byId(cues.picked) ?? byServer(cues.openedFrom) ?? byId(cues.remembered) ?? unity[0];
+  return byServer(cues.shownServer) ?? byId(cues.picked) ?? byServer(cues.openedFrom) ?? byId(cues.remembered) ?? mainAccountOf(unity);
+}
+
+/**
+ * The account a home screen shows when nothing names one: the one `cm` signs in to every other organization with
+ * (`*@cloud`), else the one holding the most organizations, the first of them on a tie. Not the first by name: an
+ * email account with one organization would come before the work account with twenty.
+ */
+function mainAccountOf(unity: readonly UserAccount[]): UserAccount | undefined {
+  const wildcard = unity.find((account) => account.profiles.some((profile) => profile.server.startsWith('*@')));
+  return wildcard ?? unity.reduce<UserAccount | undefined>((most, account) => (most && most.servers.length >= account.servers.length ? most : account), undefined);
 }
 
 const LOCAL: ServerProfile = { server: 'local', user: '', workingMode: '' };

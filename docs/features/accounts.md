@@ -35,7 +35,8 @@ there are two or more (`accountSwitchCommands`), on the home screen only.
 - **Which account shows** (`homeAccountOf`), the first that names one: the account holding the repositories on screen
   (a link may open another account's organization), the one picked in this window since it came to the home screen,
   the account of the workspace the window left (from the workspace's info the window read while it showed it, never
-  read again for this), the one last picked in any window (`AppSettings.homeAccount`), else the first.
+  read again for this), the one last picked in any window (`AppSettings.homeAccount`), else the main one: the account holding the `*@cloud` profile, else the one with the
+  most organizations (`mainAccountOf`), never merely the first by name, which may be an email account with one.
 - **What it lists** (`homeServersOf`): this computer, the shown account's organizations, and every server's account,
   a server's entry showing its user (`serverEntryDetail`), as a server is an account of its own.
 - **Picking an account only shows it** (`showHomeAccount`): it changes nothing in `cm`, and is remembered in the app's
