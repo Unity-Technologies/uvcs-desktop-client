@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe('showHomeAccount', () => {
   it("shows the account in this window and remembers it for the next home screen, asking `cm` nothing", () => {
-    fakeApi.answer('settings.update', (changes) => ({ ...DEFAULT_SETTINGS, ...changes }));
+    fakeApi.answer('settings.update', () => ({ ...DEFAULT_SETTINGS, homeAccount: bo.id }));
 
     showHomeAccount(bo, accounts);
 
