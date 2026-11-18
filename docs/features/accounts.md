@@ -51,7 +51,8 @@ Every command goes by a gate in `CmClient` (`SignInGate`, `signInGate`, wired by
   `CmSignInError` carrying the problem, and logs it as not run (`notRun`, "Not run: sign in to {server} first."), so the
   command log explains itself without pointing at it as a failure (`isUnseenFailure`). No prompt, no dead credentials
   repeated against the server's throttle of failed sign-ins, no pile of errors. Local commands (`LOCAL_COMMANDS`) and the
-  check itself (`cm checkconnection`) still run.
+  check itself (`cm checkconnection`) still run, but a `cm status` that works out the workspace's header, which asks the
+  server for its branch's head (`needsSignIn`): the pending changes (`--compact`) still read.
 - **A command that runs into a sign-in problem** (`signInFailureOf`, or a prompt it was stopped at) fails as one only
   once a check of its server confirms it (`SignInGate.confirm`, `SessionChecks.confirm`): one `cm checkconnection`,
   joined by every failure that started before it, so a burst of failed reads costs one check. A false "session ended"

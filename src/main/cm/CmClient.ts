@@ -18,7 +18,7 @@ import { runsLong } from './longCommands';
 import { CmOutputTooLargeError, textLimitOf } from './outputLimit';
 import type { OutputReading, StreamReader } from './outputReading';
 import { processCommand } from './processCommand';
-import { isServerCommand } from './repeatedCommands';
+import { needsSignIn } from './repeatedCommands';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
 import { signInFailureOf } from './signInFailure';
@@ -314,7 +314,7 @@ export class CmClient {
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
     const gate = this.signInGate && !this.signInGate.passes(args) ? this.signInGate : null;
     const server = gate?.serverOf(cwd, options.server);
-    const refused = server !== undefined && isServerCommand(args) ? gate?.refusal(server) : undefined;
+    const refused = server !== undefined && needsSignIn(args) ? gate?.refusal(server) : undefined;
     if (refused) throw this.notRun(args, cwd, refused);
 
     const startedAt = Date.now();

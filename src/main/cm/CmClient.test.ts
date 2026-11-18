@@ -779,11 +779,19 @@ describe('CmClient sign-in gate', () => {
     const { cm, shellCommands, processes } = fakeClient();
     cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
 
-    await cm.query(['status', '--header', '--xml'], { cwd: WORKSPACE });
+    await cm.query(['status', '--header', '--machinereadable', '--compact'], { cwd: WORKSPACE });
     await cm.query(['fileinfo', 'a.cs', '--xml'], { outsideWorkspaces: true, server: 'build.acme.com:8087' });
     await cm.execute(['checkconnection', 'acme@cloud'], { server: 'acme@cloud' });
 
     expect([...shellCommands, ...processes].map(({ args }) => args[0])).toEqual(['status', 'fileinfo', 'checkconnection']);
+  });
+
+  it("refuses a workspace header that asks the server for its branch's head", async () => {
+    const { cm, shellCommands } = fakeClient();
+    cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
+
+    expect(await failureOf(cm.query(['status', '--header', '--xml'], { cwd: WORKSPACE }))).toBeInstanceOf(CmSignInError);
+    expect(shellCommands).toEqual([]);
   });
 
   it('runs every command of a server it knows nothing of', async () => {

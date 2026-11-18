@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import type { CmClient } from './CmClient';
-import { isServerCommand, RepeatedCommandDetector, warnOnRepeatedServerCommands } from './repeatedCommands';
+import { isServerCommand, needsSignIn, RepeatedCommandDetector, warnOnRepeatedServerCommands } from './repeatedCommands';
 
 describe('isServerCommand', () => {
   it('tells server queries from reads of this machine', () => {
@@ -11,6 +11,17 @@ describe('isServerCommand', () => {
     expect(isServerCommand(['status', '--header', '--xml'])).toBe(false);
     expect(isServerCommand(['getworkspacefrompath', '/wk'])).toBe(false);
     expect(isServerCommand(['workspace', 'list'])).toBe(false);
+  });
+});
+
+describe('needsSignIn', () => {
+  it('takes every server command, and a status that works out the header, which asks the server for its branch head', () => {
+    expect(needsSignIn(['find', 'branch', '--xml'])).toBe(true);
+    expect(needsSignIn(['status', '--header', '--xml'])).toBe(true);
+    expect(needsSignIn(['status', '--machinereadable', '--compact'])).toBe(false);
+    expect(needsSignIn(['status', '--cset'])).toBe(false);
+    expect(needsSignIn(['profile', 'list'])).toBe(false);
+    expect(needsSignIn(['wi', '/wk', '--machinereadable'])).toBe(false);
   });
 });
 

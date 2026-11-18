@@ -14,6 +14,17 @@ export function isServerCommand(args: readonly string[]): boolean {
   return !LOCAL_COMMANDS.has(command);
 }
 
+/**
+ * Whether a command needs a sign-in to the server: every server command, and `cm status` unless told not to work out
+ * the workspace's header (`--compact`, `--cset`, `--format`), as it then asks the server for the branch's head
+ * (ARCHITECTURE.md "`cm status` asks the server for its header"). The sign-in gate refuses these while the server needs
+ * a sign-in (`SignInGate`); the budget counts only server commands, as such a header is one quick round trip.
+ */
+export function needsSignIn(args: readonly string[]): boolean {
+  if (args[0] !== 'status') return isServerCommand(args);
+  return !args.some((arg) => arg === '--compact' || arg.startsWith('--cset') || arg.startsWith('--format'));
+}
+
 /** The development budget: the same server command more often than this within the window is probably a regression. */
 const REPEATED_COMMAND_BUDGET = { maxRuns: 2, windowMs: 10_000 };
 
