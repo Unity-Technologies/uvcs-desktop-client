@@ -217,6 +217,45 @@ describe('CmShellPool', () => {
     expect(pool.shownDirectory()).toBe('/wk');
   });
 
+  it('restarts the sessions: an idle one goes now, a busy one once its command is done, and later commands start new ones', async () => {
+    const running = pool.run('/wk', ['status']);
+    pool.warmUp('/wk');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    const [busy, idle] = FakeSession.created;
+    await settle();
+
+    pool.restartSessions();
+    expect(idle!.disposed).toBe(true);
+    expect(busy!.disposed).toBe(false);
+    busy!.finish('status');
+    await expect(running).resolves.toMatchObject({ output: 'status' });
+    await settle();
+    expect(busy!.disposed).toBe(true);
+
+    pool.run('/wk', ['find', 'branch']).catch(() => {});
+    expect(FakeSession.created.at(-1)!.ran).toEqual(['find branch']);
+    expect([busy, idle]).not.toContain(FakeSession.created.at(-1));
+  });
+
+  it("starts a shown directory's new sessions as it restarts them, and runs what waited there", async () => {
+    pool.show('/wk');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    await settle();
+    void pool.run('/wk', ['status']);
+    void pool.run('/wk', ['status', '--header']);
+    const waiting = pool.run('/wk', ['find', 'branch']);
+    const before = [...FakeSession.created];
+
+    pool.restartSessions();
+    const fresh = FakeSession.created.filter((session) => !before.includes(session));
+    expect(fresh.map((session) => session.cwd)).toEqual(['/wk', '/wk']);
+    fresh.forEach((session) => session.answerFirstCommand());
+    await settle();
+    expect(fresh.flatMap((session) => session.ran)).toEqual(['find branch']);
+    fresh.find((session) => session.ran.length > 0)!.finish('find branch');
+    await expect(waiting).resolves.toMatchObject({ output: 'find branch' });
+  });
+
   it("keeps a released workspace's sessions when a command comes before they are done", async () => {
     void pool.run('/wk', ['status']);
     const [session] = FakeSession.created;
