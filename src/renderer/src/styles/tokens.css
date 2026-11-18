@@ -235,8 +235,10 @@
   --border-subtle: #eaeef2;
   --border-default: #d0d7de;
   --border-strong: #afb8c1;
-  /* The indent guides of a tree of files: a hairline under each chevron. */
-  --tree-guide: var(--border-subtle);
+  /* The indent guides of a tree of files: a hairline under each chevron. Translucent, the subtle border's shade on
+     the surface, so it darkens what it crosses: an opaque guide showed as a pale cut through a selected row and its
+     focus ring. */
+  --tree-guide: rgba(31, 35, 40, 0.08);
   /* A review comment in the code and the line it's on, outlined as a pair (`LineBands`, `.thread[data-in-code]`). */
   --border-comment: var(--border-default);
   --text-primary: #1f2328;
@@ -376,8 +378,9 @@
   --border-subtle: #212830;
   --border-default: #30363d;
   --border-strong: #484f58;
-  /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. */
-  --tree-guide: var(--border-default);
+  /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. Translucent, the
+     default border's shade on the surface (see the light theme's). */
+  --tree-guide: rgba(240, 246, 252, 0.12);
   /* A shade up from the light theme's: over the dark added and removed tints, the default border all but disappears. */
   --border-comment: var(--border-strong);
   --text-primary: #e6edf3;
