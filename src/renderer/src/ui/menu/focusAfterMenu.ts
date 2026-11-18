@@ -4,13 +4,22 @@ import { isTextEntry } from '../../lib/textEntry';
  * What a closing menu or popover does with focus: when its action opened a dialog, focus stays in the dialog (on the
  * field it autofocused) instead of going back to the menu's trigger or the list underneath; when its action put the
  * caret in a field (the check-in comment, by "Check in this changelist"), it stays there.
+ *
+ * `opener` is the element the menu opened from (its trigger). A dialog holding it was open before the menu, not opened
+ * by its action: a menu on a result of Go to file, itself a dialog, gives focus back to its filter. Without one, any
+ * open dialog counts as the action's.
  */
-export function focusAfterMenu(event: Event, otherwise?: (event: Event) => void): void {
-  if (document.querySelector('[role="dialog"][data-state="open"]') || caretInField()) {
+export function focusAfterMenu(event: Event, otherwise?: (event: Event) => void, opener?: Element | null): void {
+  if (dialogOpenedByAction(opener) || caretInField()) {
     event.preventDefault();
     return;
   }
   otherwise?.(event);
+}
+
+function dialogOpenedByAction(opener: Element | null | undefined): boolean {
+  const openDialogs = [...document.querySelectorAll('[role="dialog"][data-state="open"]')];
+  return openDialogs.some((dialog) => !opener || !dialog.contains(opener));
 }
 
 /**

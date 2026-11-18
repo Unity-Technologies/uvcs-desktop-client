@@ -18,16 +18,21 @@ function hostOf(inside: FakeElement): FakeElement {
   return host;
 }
 
-/** The page as the menu closes: what has focus, and whether a dialog is open. */
-function page({ activeElement = null as FakeElement | null, dialogOpen = false } = {}): void {
-  vi.stubGlobal('document', { activeElement, querySelector: () => (dialogOpen ? {} : null) });
+/** An open dialog, holding the elements given. */
+function dialogHolding(...elements: FakeElement[]): { contains: (element: FakeElement) => boolean } {
+  return { contains: (element) => elements.includes(element) };
+}
+
+/** The page as the menu closes: what has focus, and the dialogs open. */
+function page({ activeElement = null as FakeElement | null, dialogs = [] as ReturnType<typeof dialogHolding>[] } = {}): void {
+  vi.stubGlobal('document', { activeElement, querySelectorAll: () => dialogs });
 }
 
 /** What the menu does with focus as it closes: keeps it where it is, or gives it back (to its trigger, or `otherwise`). */
-function closeMenu(): 'kept' | 'givenBack' {
+function closeMenu(opener?: FakeElement): 'kept' | 'givenBack' {
   const event = new Event('focusScope.autoFocusOnUnmount', { cancelable: true });
   let givenBack = false;
-  focusAfterMenu(event, () => (givenBack = true));
+  focusAfterMenu(event, () => (givenBack = true), opener as unknown as Element | undefined);
   return event.defaultPrevented || !givenBack ? 'kept' : 'givenBack';
 }
 
@@ -41,8 +46,21 @@ describe('focusAfterMenu', () => {
   });
 
   it('leaves it in a dialog the action opened', () => {
-    page({ dialogOpen: true });
+    page({ dialogs: [dialogHolding()] });
     expect(closeMenu()).toBe('kept');
+    expect(closeMenu(new FakeElement('BUTTON'))).toBe('kept');
+  });
+
+  it('gives it back in the dialog the menu opened in (a result of Go to file: back to its filter)', () => {
+    const trigger = new FakeElement('BUTTON');
+    page({ dialogs: [dialogHolding(trigger)] });
+    expect(closeMenu(trigger)).toBe('givenBack');
+  });
+
+  it('leaves it in a dialog the action opened over the one the menu opened in', () => {
+    const trigger = new FakeElement('BUTTON');
+    page({ dialogs: [dialogHolding(trigger), dialogHolding()] });
+    expect(closeMenu(trigger)).toBe('kept');
   });
 
   it('leaves the caret in the field the action put it in ("Check in this changelist": the comment)', () => {

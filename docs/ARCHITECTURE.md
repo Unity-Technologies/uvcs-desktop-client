@@ -1283,7 +1283,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
   a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
-  the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
+  the action runs first, `runAfterMenuCloses`). A dialog holding the trigger was open before the menu and doesn't
+  count: a result's menu in Go to file gives focus back to its filter. Views keep their list's selection while away (`useViewSelection`).
   Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container. The keyboard
   ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
   once a key was pressed (and before any input at all), and a clicked button at the next key, so focus the app moves on
