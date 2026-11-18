@@ -314,7 +314,7 @@ describe('reading the bytes of a model companion', () => {
 
   it('reads a companion under an xlink by its revision in the xlinked repository, as the listing names it', async () => {
     const { answer } = catWriting('META');
-    const { service, lines } = content({ cat: answer, ls: treeListingOutput({ path: 'Assets/Shared', type: 'xlink', revid: 3 }, { path: 'Assets/Shared/Hero.fbx.meta', type: 'txt', revid: 77, repository: 'art@local' }) });
+    const { service, lines } = content({ cat: answer, ls: treeListingOutput({ path: 'Assets/Shared', type: 'dir', revid: 3 }, { path: 'Assets/Shared/Hero.fbx.meta', type: 'txt', revid: 77, repository: 'art@local' }) });
     expect(await service.readBytes(workspacePlace(await newWorkspace()), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:3', repository: 'art@local' })).not.toBeNull();
     expect(lines()[1]).toMatch(/^cat revid:77@art@local --file=/);
   });
