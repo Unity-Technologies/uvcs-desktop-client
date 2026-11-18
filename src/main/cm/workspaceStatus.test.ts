@@ -1,5 +1,7 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadedChangesetOf, parseWorkspaceStatus, selectorName } from './workspaceStatus';
+import { fakeCmClient } from './testing/fakeCmClient';
+import { loadedChangesetOf, parseWorkspaceStatus, readWorkspaceOrigin, selectorName } from './workspaceStatus';
 
 describe('selectorName', () => {
   it('removes the repository spec even when the name repeats in the server', () => {
@@ -166,5 +168,30 @@ describe('loadedChangesetOf', () => {
   it("takes -1 on a label as a partial workspace's, whose changeset the label names but cm doesn't print", () => {
     expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeNull();
     expect(loadedChangesetOf(-2, { kind: 'label', name: 'v1' })).toBeUndefined();
+  });
+});
+
+describe('readWorkspaceOrigin', () => {
+  const ROOT = join('/wkspaces', 'game');
+
+  it("reads a workspace's root and server with two local reads that name their folder and run in any directory", async () => {
+    const { cm, commands } = fakeCmClient({
+      'getworkspacefrompath': `${ROOT}\n`,
+      'status --header --machinereadable': 'STATUS|12|game|acme@cloud\n',
+    });
+
+    expect(await readWorkspaceOrigin(cm, join(ROOT, 'Assets'))).toEqual({ root: ROOT, server: 'acme@cloud' });
+
+    // No folder given: a failure of these never asks to learn a server, so learning never waits on itself.
+    expect(commands.map(({ args, options }) => [args[0], options])).toEqual([
+      ['getworkspacefrompath', { anyDirectory: true }],
+      ['status', { anyDirectory: true }],
+    ]);
+  });
+
+  it('reads none for a folder in no workspace', async () => {
+    const { cm } = fakeCmClient({ getworkspacefrompath: '' });
+
+    expect(await readWorkspaceOrigin(cm, '/elsewhere')).toBeUndefined();
   });
 });
