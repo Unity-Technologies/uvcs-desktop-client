@@ -1,5 +1,4 @@
 import { Command as Cmdk } from 'cmdk';
-import { Ellipsis } from 'lucide-react';
 import { useRef, type MouseEvent } from 'react';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { PathLabel } from '../../components/PathLabel';
@@ -7,7 +6,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { runningFirst } from '../../lib/actions';
 import { Highlight } from '../../ui/Highlight';
 import { Kbd } from '../../ui/Kbd';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { RowActionsButton } from '../../ui/menu/RowActionsButton';
 import type { SearchResult } from './searchResults';
 import styles from './CommandPalette.module.css';
 
@@ -80,7 +79,8 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
       {result.status && <StatusBadge tone={result.status.tone} title={result.status.title} />}
       {result.shortcut && <Kbd keys={result.shortcut} />}
       {showsActions && (
-        <ActionDropdownMenu
+        <RowActionsButton
+          ref={actionsRef}
           entries={runningFirst(result.menu!(), onLeave, KEEP_OPEN)}
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
@@ -88,20 +88,7 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
             event.preventDefault();
             onMenuClosed();
           }}
-        >
-          <button
-            ref={actionsRef}
-            type="button"
-            tabIndex={-1}
-            className={styles.actions}
-            aria-label="Actions"
-            data-tip="Actions (Tab)"
-            // The row runs on click; its actions button must not.
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Ellipsis size={15} />
-          </button>
-        </ActionDropdownMenu>
+        />
       )}
     </Cmdk.Item>
   );
