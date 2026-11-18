@@ -794,6 +794,19 @@ describe('CmClient sign-in gate', () => {
     expect(shellCommands).toEqual([]);
   });
 
+  it("never takes a command that runs in any directory for the shown workspace's: a glance at another workspace runs, and learns nothing", async () => {
+    const { cm, shellCommands } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@acme.com.\n', exitCode: 1 }) });
+    const { gate, learned } = fakeGate({ needsSignIn: ['acme@cloud'] });
+    cm.gateSignIns(gate);
+    cm.show(WORKSPACE);
+
+    const error = await failureOf(cm.query(['status', '--header', '--xml', LEARNED], { anyDirectory: true }));
+
+    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['status', '--header', '--xml', LEARNED, '--encoding=utf-8'] }]);
+    expect(error).not.toBeInstanceOf(CmSignInError);
+    expect(learned).toEqual([]);
+  });
+
   it('runs every command of a server it knows nothing of', async () => {
     const { cm, shellCommands } = fakeClient();
     cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
