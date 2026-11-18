@@ -9,8 +9,8 @@ const MAIN_DIRECTORY = join(__dirname, '..');
 /** A string literal starting with one of the options: what a command's arguments would hold. */
 const STICKY_LITERAL = new RegExp(`['"\`](${STICKY_SHELL_OPTIONS.join('|')})\\b`);
 
-/** The one file that names them: the list itself. */
-const ALLOWED_FILES = new Set([join('cm', 'stickyShellOptions.ts')]);
+/** The files that name them: the list itself, and the secrets the logs hide (`SECRET_OPTIONS`), which never run them. */
+const ALLOWED_FILES = new Set([join('cm', 'stickyShellOptions.ts'), join('cm', 'hideSecrets.ts')]);
 
 /**
  * A `cm shell` keeps these options for every later command of its session (`STICKY_SHELL_OPTIONS`): `CmClient` refuses

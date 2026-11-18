@@ -185,7 +185,8 @@ export class CmClient {
    * Runs a quick, non-interactive command (reads, small writes) in a pooled `cm shell`. A command that may run long
    * anyway (`runsLong`: a workspace write of many files) gets a process of its own, as does one before the pool is warm.
    * Its text is an answer's, whole, or an operation's, by its ends (`textOutputKind`); a list is refused: it takes
-   * `queryRecords`.
+   * `queryRecords`. So is an option a `cm shell` would keep for its whole session (`refuseStickyShellOptions`), as in
+   * every quick read below.
    */
   async query(args: string[], options: CmRunOptions = {}): Promise<string> {
     refuseStickyShellOptions(args);
