@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { CenteredSpinner } from '../ui/Spinner';
+import { showsRowActions } from '../lib/rowMenu';
 import styles from './GoToFileList.module.css';
 
 interface GoToFileListProps {
@@ -44,7 +45,7 @@ export function GoToFileList({ paths, highlighted, onHighlight, onPick, row, act
           <button type="button" className={styles.result} onClick={() => onPick(path)}>
             {row(path)}
           </button>
-          {(index === highlighted || path === actionsOpenFor) && actions?.(path)}
+          {showsRowActions({ highlighted: index === highlighted, menuOpen: path === actionsOpenFor }) && actions?.(path)}
         </div>
       ))}
     </div>

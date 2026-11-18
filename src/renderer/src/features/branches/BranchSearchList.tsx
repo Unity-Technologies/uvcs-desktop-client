@@ -5,7 +5,7 @@ import type { Branch } from '@shared/domain/branch';
 import type { Place } from '@shared/domain/place';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
-import { isRowMenuKey } from '../../lib/rowMenu';
+import { isRowMenuKey, showsRowActions } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
@@ -164,7 +164,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
                     tabIndex={-1}
                     onClick={() => onPick(row.branch)}
                   />
-                  {menu && (row.index === highlighted || menuOpen) && (
+                  {menu && showsRowActions({ highlighted: row.index === highlighted, menuOpen }) && (
                     <RowActionsButton
                       entries={() => menu(row.branch)}
                       open={menuOpen}

@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { MissingChip } from '../../components/MissingChip';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { navigationTarget } from '../../lib/listNavigation';
-import { isRowMenuKey } from '../../lib/rowMenu';
+import { isRowMenuKey, showsRowActions } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
@@ -100,7 +100,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
           </span>
           {missing ? <MissingChip /> : <WorkspaceSwitcherChips entry={entry} sameRepository={!!entry.repository && entry.repository === currentRepository} />}
         </button>
-        {(index === highlighted || menuOpen) && (
+        {showsRowActions({ highlighted: index === highlighted, menuOpen }) && (
           <RowActionsButton
             entries={() => (missing ? missingWorkspaceMenu(workspace, (path) => onChoose(path, 'here')) : workspaceMenu(workspace, onChoose))}
             open={menuOpen}
