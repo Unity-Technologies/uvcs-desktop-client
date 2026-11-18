@@ -91,7 +91,7 @@ shown: its diff doesn't change under the user while they type, and the next step
 shown on that side (`changesetStep`). The arrows above the list, ⌥⇧↓ and ⌥⇧↑ (`nextChangeset`, `previousChangeset`,
 as Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'), step from anywhere in the page but a text
 field, where they select text (`useShortcut`'s `whileTyping`); from "All changes", down goes to the oldest. They step
-only while the list shows (`changesetStepsWork`, the list's `stepsEnabled`; Incoming's while its section is open):
+only while the list shows (`changesetStepsWork`, the list's `stepsEnabled`; Incoming's while its list is open):
 folded, a step would change the diff out of sight. In a branch diff, up from the oldest stops there: All changes is
 the row above the list, a click away, and not one of its rows (`allApart`). A branch with one changeset shows no list
 (`showsChangesetList`): all its changes are that changeset's.

@@ -9,34 +9,40 @@ its card) is ARCHITECTURE.md "Refresh"; this is the view.
 The left pane is the incoming changesets above the files, as every list of changed files shows them (ARCHITECTURE.md
 "Lists of changed files"). The files are what Incoming is for:
 
-- **The changesets' section** (`IncomingChangesetList`) lists them as a branch diff does (`ChangesetStepList`:
-  docs/features/diff.md "A branch's diff" says how its rows, filter, steps, ⌥⇧↓ ⌥⇧↑ and selection work): oldest on
-  top, under "All incoming changes", one line each. It shows that row and three changesets, then scrolls inside itself
-  (`INCOMING_ROWS_SHOWN`), so the files always start right below; the splitter under it sizes it as a branch diff's.
-  It closes, and stays closed across sessions
-  (`useIncomingViewStore`); closed, its header sums the changesets up: "3 changesets · Ana, Luis"
-  (`changesetsSummary`). Each row is what the list of changesets read (comment, author, date): nothing is asked of `cm`
-  per row, and no row counts its files. It holds the changesets read so far, 200 at a time
-  (`useIncomingChangesetList`), the newest first: while older ones remain, "Show 200 more" (`IncomingShowMore`) sits
-  above the oldest shown, where the older ones it reads go (`showMoreBeforeKey`, a `DataTable` separator), and the
-  counts say "200+" (ARCHITECTURE.md "Server budget"). Pressed from the keyboard, the selection lands on the newest of
-  the page read, right above (`showMoreLanding`), so ↑ goes on back in time.
+- **The changesets** (`IncomingChangesetList`) are listed as a branch diff lists its own (`ChangesetFold`,
+  `ChangesetStepList`: docs/features/diff.md "A branch's diff" says how its fold, rows, filter, steps, ⌥⇧↓ ⌥⇧↑, height
+  and selection work): "All incoming changes" stands apart above them (`allApart`), the whole update, and folds them
+  at its end ("Changesets ⌄"); under it, one line each, oldest on top. Why the same as a branch diff: both are a set of
+  changesets read all together or one by one, and a header of its own over the list ("Changesets 3") was tried in both
+  and read as a section's title, too quiet for what decides what the files are. Unlike a branch diff's, the list starts
+  open, since what came in, and from whom, is what Incoming is for; folded, it stays folded across sessions
+  (`useIncomingViewStore`), the row naming who made them: "from Ana, Luis" (`foldedChangesetsAuthors`; how many, the
+  view's header says). Folding goes back to the whole update. Nor does it hide with one changeset, as a branch diff's
+  does (`showsChangesetList`): that changeset's comment and author are the news. While Incoming checks, the row and the
+  list's skeleton hold their places (`IncomingChangesetsReading`). Each row is what the list of changesets read
+  (comment, author, date): nothing is asked of `cm` per row, and no row counts its files. It holds the changesets read
+  so far, 200 at a time (`useIncomingChangesetList`), the newest first: while older ones remain, "Show 200 more"
+  (`IncomingShowMore`) sits above the oldest shown, where the older ones it reads go (`showMoreBeforeKey`, a
+  `DataTable` separator), and the counts say "200+" (ARCHITECTURE.md "Server budget"). Pressed from the keyboard, the
+  selection lands on the newest of the page read, right above (`showMoreLanding`), so ↑ goes on back in time.
 - **"All incoming changes"**, where Incoming opens, lists the whole update: the diff from the loaded changeset to the
   head that Incoming reads anyway. The files that collide with local changes (changed on both sides, or changed
   locally and deleted, moved or replaced on the branch, diff.md "A path replaced": `collidesWithLocal`) are a group of their own, "Conflicts with your
   changes", before "Changes to apply" (`incomingFileContent`), in the merge page's words: an update with conflicts is
   a merge. A file whose permissions alone changed on the branch has no content to merge, so it is never a conflict
-  (diff.md "Only the permissions changed"). With no conflicts there are no groups. The line under the header says what updating does to the workspace:
-  "1 conflict with your changes · 13 to apply", or "14 changes to apply · Your local changes stay as they are"
-  (`incomingFilesSummary`). The "!" chip filters the conflicts ("Conflicts with your changes", `INCOMING_TONE_LABELS`).
+  (diff.md "Only the permissions changed"). With no conflicts there are no groups. No header over the files
+  names them, as in a branch diff: the row selected above does, the update bar says what updating does to the
+  workspace (`updateBarMessage`), the filter counts the files and the groups their conflicts (`incomingFilesLabel`
+  names them for screen readers). A header of their own, "All incoming changes" over "14 changes to apply · Your local
+  changes stay as they are", tried, said again what the row and the bar above it said. The "!" chip filters the conflicts ("Conflicts with your changes", `INCOMING_TONE_LABELS`).
 - **A changeset** lists the files it changed and shows its details as History does (`ChangesetDetails` without its
   own files: they are the list). Its files are its diff, read once its row stays selected (`useSettledValue`) and kept
   for good: the very query its details panel elsewhere reads (`useDiffEntries`, one `cm diff cs:N`), so arrowing
-  through changesets reads none of those it passes, and coming back to one reads nothing. ✕ in the files' header goes
-  back to all of them.
+  through changesets reads none of those it passes, and coming back to one reads nothing. "All incoming changes", a
+  click above, goes back to all of them.
 - **Several changesets** (Shift or ⌘/Ctrl-click, Shift+↓/↑) list what they did together: their own range diff, from
   the oldest one's parent to the newest (`IncomingScope` `span`, `incomingScopeOf`; one `cm diff cs:A cs:B`, cached
-  as immutable), "3 changesets · cs:6 to cs:8" over the files (`incomingFilesHeading`), opened on the first file
+  as immutable), opened on the first file
   (`firstIncomingFile`). Like a changeset's, those files are what the changesets did, without the conflict groups: only
   the whole update merges, and its files are the incoming changes' own read, which a range can't stand in for.
 
@@ -91,8 +97,8 @@ loaded, as `cm partial update` would bring them.
   filtered, its folders closing), in the groups of `partialItemGroups` (conflicts first, then changed, moved, removed,
   added; `partialItemTreeGroups`). Each row ends with its letter (`partialItemStatus`, its `partialItemDetail` line as
   the tooltip), and a file selected diffs the loaded revision against the head's (`partialItemDiffEntry`; a folder has
-  none). Up to date, it says so alone, with no changesets' heading: the workspace is at no one changeset
-  (`incomingViewState`'s `partial`).
+  none). Up to date, it says so alone, as a workspace on a changeset does
+  (`incomingViewState`'s `upToDate`).
 - **The chip** shows the 'items' state (`incomingChipState`) and its card the first items (`cardItems`,
   `PartialIncomingCard`).
 - **Choosing what to bring**: every item, folder and group has a checkbox, all checked to start (`partialItemChecked`,
