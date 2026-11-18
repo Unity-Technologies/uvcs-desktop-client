@@ -199,7 +199,7 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
     <Dialog
       title="Choose what to download"
       description={chooseDownloadsNote(info?.kind)}
-      width={520}
+      width={640}
       onClose={close}
       footer={
         <>
