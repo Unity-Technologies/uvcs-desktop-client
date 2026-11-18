@@ -44,6 +44,7 @@ describe('listenForTooltips', () => {
     page.document.dispatchEvent(new Event('mouseover'));
     unwire();
     page.document.dispatchEvent(new Event('mouseover'));
+    page.document.dispatchEvent(mouseOut(null));
     page.document.dispatchEvent(new Event('pointerdown'));
     expect(handlers.move).toHaveBeenCalledTimes(1);
     expect(handlers.over).toHaveBeenCalledTimes(1);
