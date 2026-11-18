@@ -2,13 +2,12 @@ import type { ConnectionProblem } from '@shared/domain/setup';
 import type { SignInProblem, SignInProblemKind } from '@shared/domain/signIn';
 import type { CmClient } from './CmClient';
 import { CmError } from './CmError';
-import { signInFailureOf } from './signInFailure';
+import { promptOfWaitingFailure } from './consolePrompts';
+import { isSignInPrompt, signInFailureOf } from './signInFailure';
 
 /** Long enough for a slow VPN, short enough not to leave the user waiting on a stuck check. */
 const CHECK_TIMEOUT_MS = 10_000;
 
-/** `cm` asks for a sign-in method or credentials instead of failing (also how a check stopped there is told). */
-const SIGN_IN_PROMPT = /sign in to:|select your system|^\s*(user|password):/im;
 
 /** What `cm checkconnection <server>` found: the server answered, needs a sign-in, or couldn't be reached. */
 export type ConnectionCheck =
@@ -23,7 +22,8 @@ export type ConnectionCheck =
  * credentials, and a false sign-in would cover every window on the server.
  */
 export function classifyConnectionCheck(output: string): SignInProblemKind | null {
-  return signInFailureOf(output) ?? (SIGN_IN_PROMPT.test(output) ? 'signInRequired' : null);
+  const stoppedAt = promptOfWaitingFailure(output);
+  return signInFailureOf(output) ?? (stoppedAt !== undefined && isSignInPrompt(stoppedAt) ? 'signInRequired' : null);
 }
 
 /**
@@ -38,7 +38,7 @@ export async function checkConnection(cm: CmClient, server: string): Promise<Con
   const lines: string[] = [];
   const onOutputLine = (line: string): void => {
     lines.push(line);
-    if (SIGN_IN_PROMPT.test(line)) controller.abort();
+    if (isSignInPrompt(line)) controller.abort();
   };
   const failed = (output: string): ConnectionCheck => {
     const commandLine = `cm ${args.join(' ')}`;

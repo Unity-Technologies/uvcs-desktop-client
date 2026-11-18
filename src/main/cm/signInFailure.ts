@@ -32,6 +32,15 @@ const SENTENCES: readonly (readonly [SignInProblemKind, RegExp])[] = [
 const ERROR_PREFIX = /^Error:\s*/;
 
 /**
+ * Whether a line is `cm` asking how to sign in (which system, a user, a password, a browser), as it prints it on a line
+ * of its own: what stops a check at once (`checkConnection`), and what tells a stalled command's prompt for a sign-in
+ * (`WaitingForInputError`) from any other question (a certificate to trust).
+ */
+export function isSignInPrompt(line: string): boolean {
+  return signInFailureOf(line) === 'signInRequired';
+}
+
+/**
  * What a failed command's output says about signing in: the kind of sign-in problem, or null when it says nothing of
  * it (most failures). The only place that reads `cm`'s words about signing in.
  */

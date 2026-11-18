@@ -882,6 +882,19 @@ describe('CmClient sign-in gate', () => {
     expect(learned).toEqual([]);
   });
 
+  it('tells a command stopped at another question (a certificate to trust) as no sign-in problem, asking no check', async () => {
+    const { cm } = fakeClient({
+      answer: () => {
+        throw new WaitingForInputError('Do you want to trust the server certificate? (Y)es / (N)o / (C)ancel:');
+      },
+    });
+    const { gate, confirms } = fakeGate({ confirmed: ENDED });
+    cm.gateSignIns(gate);
+
+    expect(await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }))).not.toBeInstanceOf(CmSignInError);
+    expect(confirms).toEqual([]);
+  });
+
   it('fails a command stopped at a prompt of a server it knows nothing of with the command, never guessing a server', async () => {
     const { cm, logged } = fakeClient({
       answer: () => {

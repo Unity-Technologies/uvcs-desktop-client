@@ -19,7 +19,18 @@ export function looksLikePrompt(line: string): boolean {
  */
 export class WaitingForInputError extends Error {
   constructor(readonly prompt: string) {
-    super(`cm is waiting for input ("${prompt.trim()}"). Check your credentials for this server.`);
+    super(waitingForInputMessage(prompt));
     this.name = 'WaitingForInputError';
   }
+}
+
+const WAITING_FOR_INPUT = /^cm is waiting for input \("(.*)"\)\. Check your credentials for this server\.$/m;
+
+function waitingForInputMessage(prompt: string): string {
+  return `cm is waiting for input ("${prompt.trim()}"). Check your credentials for this server.`;
+}
+
+/** The prompt a command was stopped at, from the output its failure logged (`WaitingForInputError`); undefined if none. */
+export function promptOfWaitingFailure(output: string): string | undefined {
+  return WAITING_FOR_INPUT.exec(output)?.[1];
 }

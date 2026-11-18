@@ -21,7 +21,7 @@ import { processCommand } from './processCommand';
 import { needsSignIn } from './repeatedCommands';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
-import { signInFailureOf } from './signInFailure';
+import { isSignInPrompt, signInFailureOf } from './signInFailure';
 import { LineReader, type ReadLine } from './LineReader';
 import { isShellResultLine, shellCommandResult } from './shellResultLine';
 import { withUtf8Output } from './utf8Output';
@@ -346,7 +346,7 @@ export class CmClient {
       const entry = log(endedWithoutExitCode(error));
       if (error instanceof CmOutputTooLargeError) throw stoppedFailure(error, entry);
       if (!(error instanceof WaitingForInputError)) throw error;
-      throw (await signInFailure('signInRequired', entry)) ?? stoppedFailure(error, entry);
+      throw (await signInFailure(isSignInPrompt(error.prompt) ? 'signInRequired' : null, entry)) ?? stoppedFailure(error, entry);
     });
     const entry = log(result);
     if (result.exitCode !== 0) throw (await signInFailure(signInFailureOf(result.output), entry)) ?? failure(result, entry);
