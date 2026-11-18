@@ -83,7 +83,7 @@ you touch:
      reads an XML list element by element the same way (`cm history`), and `queryLines()` a list of one item a line
      (`cm listusers`).
    - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
-     it arrives with no size limit, an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
+     it arrives with no size limit but on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
      (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
      is never stopped for its size.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
@@ -312,7 +312,10 @@ and many people use the same server. Every `cm` command other than local reads (
     organization's members) is read as it arrives, `queryRecords`/`executeRecords` for `--format` records,
     `queryXmlElements` for an XML list (`XmlElementReader`), `queryLines` for one item a line with no `--format`
     (`LineReader`: `cm listusers`; `cm` writes errors to stderr, and a shell's `CommandResult` line is left out), and
-    never stopped for its size;
+    never stopped for its size. Only the item still arriving is kept, so one that never ends would be kept whole: past
+    `MAX_ITEM_BYTES` (16 MB, far past any real record, line or element) the reader fails the command with a `CmError`
+    (`CmItemTooLargeError`). `cm` asking which system to sign in with, its input closed, printed its question without
+    a line break until the main process ran out of memory;
   - an **answer** (one small object: `whoami`, a workspace's header, an item's details) is read whole by
     `query`/`execute`, and stopped past `MAX_TEXT_OUTPUT_LENGTH` (4 MB);
   - an **operation** (a write: undo, add, checkin, update, merge, cat...) may print a line per item, so `query`/`execute`
@@ -577,7 +580,12 @@ and the app keeps the decision. An editor or a terminal opens only on the user's
   (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
   only by `mergeToolsService` (which also runs Unity's Smart Merge through it, headless, before the tool the user
   asked for: docs/features/merge.md).
-- `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
+- `cm` processes run with stdin closed, so a console prompt fails instead of hanging. Some questions `cm` asks again at
+  once when the answer it reads is empty (which system to sign in with, `Select your system [0-4]`), printing it again
+  and again without a line break or a pause: `runCmProcess` stops such a command as soon as the end of its stdout is
+  one question repeated (`RepeatedPromptWatch`), with the same "cm is waiting for input" failure a `cm shell` session
+  gives a stalled prompt (`waitingForInputError`, `main/cm/consolePrompts.ts`). A session's stdin stays open, so there
+  `cm` waits for the answer, and the pause shows the prompt (`CmShellSession.watchForPrompt`).
 
 ## Secrets
 
