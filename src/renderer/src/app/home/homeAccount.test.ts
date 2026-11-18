@@ -90,6 +90,10 @@ describe('sectionAfterSwitch', () => {
     expect(sectionAfterSwitch({ kind: 'server', server: 'acme@unity' }, boServers)).toEqual(WELCOME);
   });
 
+  it('stays on repositories the new account lists, whatever the case a link wrote them in', () => {
+    expect(sectionAfterSwitch({ kind: 'server', server: 'Games@Unity' }, boServers)).toEqual({ kind: 'server', server: 'Games@Unity' });
+  });
+
   it('stays on repositories every account lists, and on the welcome or every workspace', () => {
     expect(sectionAfterSwitch({ kind: 'server', server: 'build:8087' }, boServers)).toEqual({ kind: 'server', server: 'build:8087' });
     expect(sectionAfterSwitch({ kind: 'server', server: 'local' }, boServers)).toEqual({ kind: 'server', server: 'local' });

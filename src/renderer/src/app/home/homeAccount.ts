@@ -54,5 +54,7 @@ export function homeServersOf(accounts: readonly UserAccount[], shown: UserAccou
  */
 export function sectionAfterSwitch(section: HomeSection, servers: readonly ServerProfile[]): HomeSection {
   if (section.kind !== 'server') return section;
-  return servers.some((profile) => profile.server === section.server) ? section : WELCOME;
+  // Whatever its case, as an account is found for a server (`accountOfServer`): a link may write `Games@unity`.
+  const shown = section.server.toLowerCase();
+  return servers.some((profile) => profile.server.toLowerCase() === shown) ? section : WELCOME;
 }
