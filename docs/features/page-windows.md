@@ -52,6 +52,9 @@ window" is what browsers and the official client say.
   reads its page again (`pageWindowCommands`, `refreshCommand`) and leaves the workspace window where it is. The Window
   menu lists each page window under its workspace window.
 - **Its commands show in its workspace window's command log** (`commandLogOf`).
+- **A sign-in its server needs covers it** as it covers its workspace window (`SignInCover`, docs/features/accounts.md
+  "The sign-in screen"), with no Go to Home: the page window has no home screen. Every window that shows a place's
+  views or pages is covered so (`placesCoveredBySignIn.test.ts`).
 - **Its diff expands** (Expand Diff, diff.md "Expanding the diff"): the page's files go out of sight under its top bar,
   and following the selection to another object keeps it expanded, as the page is replaced at the same depth.
 - **A reload keeps Follow selection**: main holds whether a page window follows, and tells a page loaded again, the

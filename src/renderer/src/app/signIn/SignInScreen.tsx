@@ -17,6 +17,8 @@ interface SignInScreenProps {
    * (a workspace whose header couldn't be read: `WorkspaceGate`).
    */
   as: 'card' | 'page';
+  /** Go to Home is offered: not in a page window, which has no home screen. */
+  offersHome?: boolean;
 }
 
 /**
@@ -24,7 +26,7 @@ interface SignInScreenProps {
  * operations ran into it, with what to do, Details (what `cm` answered), Check again and Go to Home. The sign-in itself
  * is the Unity Version Control app's until this app signs in (docs/features/accounts.md).
  */
-export function SignInScreen({ problem, as }: SignInScreenProps) {
+export function SignInScreen({ problem, as, offersHome = true }: SignInScreenProps) {
   const client = useQueryClient();
   const goHome = useSession((state) => state.goHome);
   const [checking, setChecking] = useState(false);
@@ -48,9 +50,11 @@ export function SignInScreen({ problem, as }: SignInScreenProps) {
             {checking ? 'Checking…' : 'Check again'}
           </Button>
           <Button onClick={showDetails}>Details</Button>
-          <Button variant="ghost" icon={<House size={14} />} onClick={goHome}>
-            Go to Home
-          </Button>
+          {offersHome && (
+            <Button variant="ghost" icon={<House size={14} />} onClick={goHome}>
+              Go to Home
+            </Button>
+          )}
         </>
       }
     >

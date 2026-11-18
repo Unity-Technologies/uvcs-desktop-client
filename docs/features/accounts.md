@@ -85,7 +85,10 @@ and the corner card says it can't be reached (`ConnectionProblemCard`).
 ## The sign-in screen
 
 A window whose place's server needs a sign-in (`signInCovering`) is covered by one screen under its top bar
-(`SignInCover`, `SignInScreen`): the window's buttons, Home and the place stay. The work shows through it blurred
+(`SignInCover`, `SignInScreen`): the window's buttons, Home and the place stay. A page window (a diff, a history in a
+window of its own) is covered the same way, without Go to Home (docs/features/page-windows.md); every window showing a
+place's views or pages is (`placesCoveredBySignIn.test.ts`), as the failures of what the server refused raise no toast
+in them. The work shows through it blurred
 (`--scrim-sign-in` and a blur; opaque with reduced transparency), so the user sees it's all still there, and the message
 sits on a card. What the view draws in layers of its own (a model viewer's labels and toolbars, floating cards) stays
 under it: the covered part is a stacking context of its own (`isolation`). It is the window's state, not a dialog:
