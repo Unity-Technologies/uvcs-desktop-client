@@ -5,7 +5,7 @@ import type { FailedCommand } from '@shared/ipc';
 import type { SignInProblem, SignInProblemKind } from '@shared/domain/signIn';
 import { CmError } from './CmError';
 import { CmSignInError } from './CmSignInError';
-import { WaitingForInputError } from './consolePrompts';
+import { CmStoppedAtPromptError, WaitingForInputError } from './consolePrompts';
 import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
@@ -346,7 +346,7 @@ export class CmClient {
       const entry = log(endedWithoutExitCode(error));
       if (error instanceof CmOutputTooLargeError) throw stoppedFailure(error, entry);
       if (!(error instanceof WaitingForInputError)) throw error;
-      throw (await signInFailure(isSignInPrompt(error.prompt) ? 'signInRequired' : null, entry)) ?? stoppedFailure(error, entry);
+      throw (await signInFailure(isSignInPrompt(error.prompt) ? 'signInRequired' : null, entry)) ?? new CmStoppedAtPromptError(error.prompt, commandOf(entry));
     });
     const entry = log(result);
     if (result.exitCode !== 0) throw (await signInFailure(signInFailureOf(result.output), entry)) ?? failure(result, entry);
@@ -417,8 +417,8 @@ function commandOf(entry: CommandLogEntry): FailedCommand {
 }
 
 /**
- * A command the app stopped for a reason of its own (`CmOutputTooLargeError`, or a prompt it never answers:
- * `WaitingForInputError`), reported with its details as any failure.
+ * A command the app stopped for a reason of its own (`CmOutputTooLargeError`), reported with its details as any
+ * failure.
  */
 function stoppedFailure(error: Error, entry: CommandLogEntry): CmError {
   return new CmError(error.message, commandOf(entry));

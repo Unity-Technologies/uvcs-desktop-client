@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { checkConnection, classifyConnectionCheck } from './connectionCheck';
+import { CmStoppedAtPromptError } from './consolePrompts';
 import { cmFails, fakeCmClient, type FakeCmCommand } from './testing/fakeCmClient';
 
 // Outputs of `cm checkconnection <server>` (cm 11.0.16) for a server that doesn't exist and a cloud one without a sign-in.
@@ -10,7 +11,8 @@ describe('classifyConnectionCheck', () => {
   it('spots the sign-in prompt of a server without credentials, and a check stopped at it', () => {
     expect(classifyConnectionCheck(SIGN_IN_PROMPT)).toBe('signInRequired');
     expect(classifyConnectionCheck('User: ')).toBe('signInRequired');
-    expect(classifyConnectionCheck('cm is waiting for input ("Select your system [0-1]"). Check your credentials for this server.')).toBe('signInRequired');
+    expect(classifyConnectionCheck('cm is waiting for input ("Select your system [0-1]"). Check your credentials for this server.', 'Select your system [0-1]')).toBe('signInRequired');
+    expect(classifyConnectionCheck('cm is waiting for input ("Trust it? (Y/N)"). Check your credentials for this server.', 'Trust it? (Y/N)')).toBeNull();
   });
 
   it("tells what kind of sign-in problem cm's own sentences name", () => {
@@ -81,6 +83,17 @@ describe('checkConnection', () => {
         details: { commandLine: 'cm checkconnection acme@cloud', output: 'Getting organization providers...\nSelect the system you want to use to sign in to: acme@cloud' },
       },
     });
+  });
+
+  it('tells a check its session stopped at a sign-in prompt by the prompt it carries', async () => {
+    const stopped = { commandLine: 'cm checkconnection acme@cloud', exitCode: -1, output: 'cm is waiting for input', logEntryId: 1 };
+    const { cm } = fakeCmClient({
+      'checkconnection acme@cloud': () => {
+        throw new CmStoppedAtPromptError('Select your system [0-1]:', stopped);
+      },
+    });
+
+    expect(await checkConnection(cm, 'acme@cloud')).toMatchObject({ kind: 'needsSignIn', problem: { kind: 'signInRequired' } });
   });
 
   it('tells a session that ended from what cm printed', async () => {

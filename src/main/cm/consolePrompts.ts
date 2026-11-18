@@ -1,3 +1,6 @@
+import type { FailedCommand } from '@shared/ipc';
+import { CmError } from './CmError';
+
 /**
  * Questions `cm` asks on its console (typically credentials: which system to sign in with, a user, a password), which
  * the app never answers: a command that asks one is stopped (`CmShellSession`, `runCmProcess`).
@@ -24,13 +27,17 @@ export class WaitingForInputError extends Error {
   }
 }
 
-const WAITING_FOR_INPUT = /^cm is waiting for input \("(.*)"\)\. Check your credentials for this server\.$/m;
-
 function waitingForInputMessage(prompt: string): string {
   return `cm is waiting for input ("${prompt.trim()}"). Check your credentials for this server.`;
 }
 
-/** The prompt a command was stopped at, from the output its failure logged (`WaitingForInputError`); undefined if none. */
-export function promptOfWaitingFailure(output: string): string | undefined {
-  return WAITING_FOR_INPUT.exec(output)?.[1];
+/** A command stopped at a prompt, reported as any failed command, with the prompt it waited at (`WaitingForInputError`). */
+export class CmStoppedAtPromptError extends CmError {
+  constructor(
+    readonly prompt: string,
+    command: FailedCommand,
+  ) {
+    super(waitingForInputMessage(prompt), command);
+    this.name = 'CmStoppedAtPromptError';
+  }
 }

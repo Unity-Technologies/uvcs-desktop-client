@@ -2,7 +2,7 @@ import type { ConnectionProblem } from '@shared/domain/setup';
 import type { SignInProblem, SignInProblemKind } from '@shared/domain/signIn';
 import type { CmClient } from './CmClient';
 import { CmError } from './CmError';
-import { promptOfWaitingFailure } from './consolePrompts';
+import { CmStoppedAtPromptError } from './consolePrompts';
 import { isSignInPrompt, signInFailureOf } from './signInFailure';
 
 /** Long enough for a slow VPN, short enough not to leave the user waiting on a stuck check. */
@@ -21,8 +21,7 @@ export type ConnectionCheck =
  * "Authentication failed because the remote party has closed the transport stream", a proxy asks for its own
  * credentials, and a false sign-in would cover every window on the server.
  */
-export function classifyConnectionCheck(output: string): SignInProblemKind | null {
-  const stoppedAt = promptOfWaitingFailure(output);
+export function classifyConnectionCheck(output: string, stoppedAt?: string): SignInProblemKind | null {
   return signInFailureOf(output) ?? (stoppedAt !== undefined && isSignInPrompt(stoppedAt) ? 'signInRequired' : null);
 }
 
@@ -40,9 +39,9 @@ export async function checkConnection(cm: CmClient, server: string): Promise<Con
     lines.push(line);
     if (isSignInPrompt(line)) controller.abort();
   };
-  const failed = (output: string): ConnectionCheck => {
+  const failed = (output: string, stoppedAt?: string): ConnectionCheck => {
     const commandLine = `cm ${args.join(' ')}`;
-    const kind = classifyConnectionCheck(output);
+    const kind = classifyConnectionCheck(output, stoppedAt);
     if (kind) return { kind: 'needsSignIn', problem: { kind, server, details: { commandLine, output } } };
     return { kind: 'unreachable', problem: { server, commandLine, output: output || `No answer after ${CHECK_TIMEOUT_MS / 1000} seconds.` } };
   };
@@ -51,6 +50,7 @@ export async function checkConnection(cm: CmClient, server: string): Promise<Con
     await cm.execute(args, { signal: controller.signal, killSignal: 'SIGKILL', onOutputLine, server });
     return { kind: 'reached' };
   } catch (error) {
+    if (error instanceof CmStoppedAtPromptError) return failed(error.command.output, error.prompt);
     if (error instanceof CmError) return failed(error.command.output);
     if (controller.signal.aborted) return failed(stoppedOutput(lines));
     throw error;
