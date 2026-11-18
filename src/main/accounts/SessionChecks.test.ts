@@ -16,7 +16,7 @@ function checks(first: ConnectionCheck = { kind: 'reached' }) {
   const asked: string[] = [];
   const pending: (() => void)[] = [];
   let holding = false;
-  let restarts = 0;
+  const restarted: string[] = [];
   const sessions = new ServerSessions();
   const sessionChecks = new SessionChecks({
     check: (server) => {
@@ -26,14 +26,15 @@ function checks(first: ConnectionCheck = { kind: 'reached' }) {
       return new Promise((resolve) => pending.push(() => resolve(answered)));
     },
     sessions,
-    restartShells: () => void restarts++,
+    restartShells: (server) => void restarted.push(server),
     now: () => time,
   });
   return {
     checks: sessionChecks,
     sessions,
     asked,
-    restarts: () => restarts,
+    restarts: () => restarted.length,
+    restarted,
     answer: (check: ConnectionCheck) => void (answer = check),
     advance: (ms: number) => void (time += ms),
     at: () => time,
@@ -235,6 +236,19 @@ describe('SessionChecks.confirm', () => {
     await sessionChecks.confirm('acme@cloud', at(), true);
 
     expect(restarts()).toBe(1);
+  });
+
+  it("restarts the shells of the server it checked, and again once that server's state changed", async () => {
+    const { checks: sessionChecks, restarted, at, advance, answer } = checks();
+    await sessionChecks.confirm('acme@cloud', at(), true);
+    answer({ kind: 'needsSignIn', problem: ENDED });
+    advance(CONFIRMED_REACHED_MS);
+    await sessionChecks.checkNow('acme@cloud');
+    answer({ kind: 'reached' });
+
+    await sessionChecks.checkNow('acme@cloud');
+
+    expect(restarted).toEqual(['acme@cloud', 'acme@cloud']);
   });
 
   it("restarts no shell for a failure in a process of its own: it read the sign-in as it started", async () => {

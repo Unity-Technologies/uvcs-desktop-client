@@ -237,6 +237,17 @@ describe('CmShellPool', () => {
     expect([busy, idle]).not.toContain(FakeSession.created.at(-1));
   });
 
+  it('restarts only the directories it is told to', async () => {
+    pool.warmUp('/acme');
+    pool.warmUp('/build');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    await settle();
+
+    pool.restartSessions((cwd) => cwd === '/acme');
+
+    expect(FakeSession.created.filter((session) => session.disposed).map((session) => session.cwd)).toEqual(['/acme', '/acme']);
+  });
+
   it("starts a shown directory's new sessions as it restarts them, and runs what waited there", async () => {
     pool.show('/wk');
     FakeSession.created.forEach((session) => session.answerFirstCommand());

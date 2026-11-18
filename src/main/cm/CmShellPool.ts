@@ -115,12 +115,13 @@ export class CmShellPool {
   }
 
   /**
-   * Replaces every session: an idle one goes now, a busy one once its command is done (`disposeWhenIdle`). What waits,
-   * and every later command, runs in new sessions; a shown directory's start now. A session keeps the sign-in it read
-   * as it started (`CmClient.restartShells`).
+   * Replaces the sessions of the directories `restarts` picks (every one by default): an idle one goes now, a busy one
+   * once its command is done (`disposeWhenIdle`). What waits, and every later command, runs in new sessions; a shown
+   * directory's start now. A session keeps the sign-in it read as it started (`CmClient.restartShells`).
    */
-  restartSessions(): void {
+  restartSessions(restarts: (cwd: string) => boolean = () => true): void {
     for (const [cwd, replaced] of [...this.directories]) {
+      if (!restarts(cwd)) continue;
       this.directories.delete(cwd);
       if (replaced.idleTimer) clearTimeout(replaced.idleTimer);
       replaced.sessions.forEach(disposeWhenIdle);

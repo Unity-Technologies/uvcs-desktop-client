@@ -11,6 +11,8 @@ import { trackSignIns } from './signIns';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const EXPIRED = 'Error: The auth token expired. User: dev@acme.com.\n';
+/** A workspace on build:8087, whose header its window read: its shells hold that server's sign-in. */
+const OTHER = join(tmpdir(), 'wkspaces', 'tools');
 /** A workspace on acme@cloud whose header no window read yet. */
 const UNREAD = join(tmpdir(), 'wkspaces', 'level');
 
@@ -38,7 +40,7 @@ async function app() {
       warmUp: () => undefined,
       release: () => undefined,
       disposeAll: () => undefined,
-      restartSessions: () => void ran.push('(shells restarted)'),
+      restartSessions: (restarts = () => true) => void ran.push(`(shells restarted: ${[WORKSPACE, OTHER].filter(restarts).length === 1 ? 'its workspace' : 'all'})`),
     }),
   };
   const cm = new CmClient(() => 'cm', join(tmpdir(), 'outside-workspaces'), 'linux', runners);
@@ -48,6 +50,7 @@ async function app() {
     return directory === UNREAD ? { root: UNREAD, server: 'acme@cloud' } : undefined;
   }, 'linux');
   await workspaceServers.remembering({ status: async () => ({ server: 'acme@cloud' }) as WorkspaceStatus, names: async () => ({ name: 'game', guid: 'g' }) }).status(WORKSPACE);
+  await workspaceServers.remembering({ status: async () => ({ server: 'build:8087' }) as WorkspaceStatus, names: async () => ({ name: 'tools', guid: 't' }) }).status(OTHER);
   const told: ServerSession[][] = [];
   const signIns = trackSignIns(cm, workspaceServers, (sessions) => told.push(sessions));
   const read = (args: string[], options = { cwd: WORKSPACE }) => cm.query(args, options).catch((error: unknown) => error);
@@ -99,7 +102,7 @@ describe('one sign-in state per server', () => {
     await signIns.sessionChecks.whenStale('acme@cloud');
     expect(await read(['fileinfo', 'a.cs', '--xml'])).toBe('Test connection executed successfully\n');
 
-    expect(ran).toEqual(['checkconnection acme@cloud', '(shells restarted)', 'fileinfo a.cs --xml']);
+    expect(ran).toEqual(['checkconnection acme@cloud', '(shells restarted: its workspace)', 'fileinfo a.cs --xml']);
     expect(told.at(-1)).toEqual([]);
   });
 });

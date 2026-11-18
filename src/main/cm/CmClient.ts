@@ -162,11 +162,12 @@ export class CmClient {
   }
 
   /**
-   * Starts new `cm shell` sessions as the ones running finish their commands, in the same directories: a session keeps
-   * the sign-in it read when it started, so after signing in again the old ones would still fail.
+   * Starts new `cm shell` sessions as the ones running finish their commands, in the directories `restarts` picks
+   * (every one by default): a session keeps the sign-in it read when it started, so after signing in again the old
+   * ones would still fail.
    */
-  restartShells(): void {
-    this.shellPool.restartSessions();
+  restartShells(restarts?: (cwd: string) => boolean): void {
+    this.shellPool.restartSessions(restarts);
   }
 
   onCommandLogged(listener: CommandLogListener): () => void {
