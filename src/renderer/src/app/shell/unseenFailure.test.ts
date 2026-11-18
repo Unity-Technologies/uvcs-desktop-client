@@ -16,4 +16,8 @@ describe('isUnseenFailure', () => {
   it('ignores failures an operation dealt with, like a rejected checkin it retried', () => {
     expect(isUnseenFailure({ id: 5, exitCode: 1 }, 4, new Set([5]))).toBe(false);
   });
+
+  it('ignores a command refused for a sign-in: the sign-in screen already says', () => {
+    expect(isUnseenFailure({ id: 5, exitCode: -1, notRun: true }, 4, none)).toBe(false);
+  });
 });

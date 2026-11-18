@@ -17,6 +17,11 @@ export interface CommandLogEntry {
   viaShell: boolean;
   /** It ran in the app's folder outside every workspace: for a repository explored without one (`CmRunOptions.outsideWorkspaces`). */
   outsideWorkspaces?: true;
+  /**
+   * Refused before it ran: its server needs a sign-in (`SignInGate`), as its output says. Not a failure to point at: the
+   * window shows the sign-in screen instead.
+   */
+  notRun?: true;
   /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
   /**
