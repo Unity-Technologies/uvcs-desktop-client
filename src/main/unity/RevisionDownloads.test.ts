@@ -81,7 +81,7 @@ describe('RevisionDownloads', () => {
     const { fake, downloads, text } = await setUp();
     const place = repositoryPlace('eco@local');
     expect(await Promise.all([text(downloads.read(place, file(1, 'Art/same.png', md5('bark v1'), 7))), text(downloads.read(place, file(2)))])).toEqual(['bark v1', 'leaves v2']);
-    expect(fake.commands.map((command) => [command.via, command.args.length, command.options])).toEqual([['execute', 3, { outsideWorkspaces: true }]]);
+    expect(fake.commands.map((command) => [command.via, command.args.length, command.options])).toEqual([['execute', 3, { outsideWorkspaces: true, server: 'local' }]]);
   });
 
   it('keeps at least twice what one fetch may download ahead: what a look fetched is still kept as it reads it', () => {

@@ -31,7 +31,7 @@ export function createRepositoriesService({ cm }: ServiceContext, { profiles }: 
   }
 
   async function listOnce(server: string, withProjects: boolean): Promise<RepositoryListing> {
-    const records = await cm.executeRecords(repositoryListArgs(server, { withProjects }), readFields, { signal: AbortSignal.timeout(LIST_TIMEOUT_MS) });
+    const records = await cm.executeRecords(repositoryListArgs(server, { withProjects }), readFields, { signal: AbortSignal.timeout(LIST_TIMEOUT_MS), server });
     return repositoryListingOf(records, server, { withProjects });
   }
 

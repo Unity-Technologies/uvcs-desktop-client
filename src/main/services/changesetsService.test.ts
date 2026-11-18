@@ -156,7 +156,7 @@ describe('a comment edit naming change requests', () => {
 
 describe('changesets of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
-  const OUTSIDE = { outsideWorkspaces: true };
+  const OUTSIDE = { outsideWorkspaces: true, server: 'local' };
 
   it("finds another repository's changeset for a comment's chip with one find: quick on the place's server, in a process of its own on another", async () => {
     const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(4)) });

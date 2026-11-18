@@ -30,8 +30,8 @@ describe('readBranchNames', () => {
     await readBranchNames(cm, repositoryPlace('game@local'));
 
     expect(commands.map(({ args, options }) => [args[2], options])).toEqual([
-      ["on repository 'game@local'", { outsideWorkspaces: true }],
-      ["where hidden = 'true' on repository 'game@local'", { outsideWorkspaces: true }],
+      ["on repository 'game@local'", { outsideWorkspaces: true, server: 'local' }],
+      ["where hidden = 'true' on repository 'game@local'", { outsideWorkspaces: true, server: 'local' }],
     ]);
   });
 });

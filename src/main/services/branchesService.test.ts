@@ -236,7 +236,7 @@ describe('branch writes', () => {
 
 describe('branches of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
-  const OUTSIDE = { outsideWorkspaces: true };
+  const OUTSIDE = { outsideWorkspaces: true, server: 'local' };
 
   it('lists them with the same finds, naming the repository last, run outside every workspace', async () => {
     const { service, commands, branchNames } = branches({ 'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1), recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });

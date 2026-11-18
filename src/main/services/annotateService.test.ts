@@ -49,7 +49,7 @@ describe('annotate', () => {
 
     await service.file(repositoryPlace('game@local'), 'src/player.cs', 'serverpath:/src/player.cs#cs:12');
 
-    expect(commands.map(({ args, options }) => [args[1], options])).toEqual([['serverpath:/src/player.cs#cs:12@game@local', { outsideWorkspaces: true }]]);
+    expect(commands.map(({ args, options }) => [args[1], options])).toEqual([['serverpath:/src/player.cs#cs:12@game@local', { outsideWorkspaces: true, server: 'local' }]]);
   });
 
   it("can't annotate the file as it is with no workspace: a bug told as one", async () => {
