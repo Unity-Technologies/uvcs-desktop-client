@@ -5,6 +5,7 @@ import { queryClient } from '../queryClient';
 import { serverOfPlace } from '../workspace/placeOrigin';
 import { useSession } from '../workspace/sessionStore';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
+import { serverInSentence } from './signInWords';
 import { signInProblemOf, toldBySignInScreen } from './windowSignIn';
 
 /** The last operation or action the sign-in screen's server refused, to offer once signed in again. */
@@ -38,7 +39,7 @@ export function offerRefusedAgain(server: string, shownPlace: Place | null): voi
   if (!refused || refused.server !== server) return;
   useRefusedOperation.setState({ refused: null });
   if (!shownPlace || !samePlace(shownPlace, refused.place)) return;
-  toast.success(`Signed in to ${server}`, refused.detail, { label: 'Try again', run: refused.again });
+  toast.success(`Signed in to ${serverInSentence(server).inside}`, refused.detail, { label: 'Try again', run: refused.again });
 }
 
 /**

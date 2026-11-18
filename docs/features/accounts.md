@@ -11,7 +11,8 @@ sign-in holds its `SignInProblem` (`shared/domain/signIn.ts`): the kind, the ser
 found it (Details). Every window hears each change (`serverSessionsChanged`) and reads the list once as it starts
 (`accounts.sessions`, `useServerSessions`). The same problem told again changes nothing, so no event repeats.
 
-The kinds (`SignInProblemKind`) and what the screen says of each (`signInWords`):
+The kinds (`SignInProblemKind`) and what the screen says of each (`signInWords`), the server named as the rest of the
+app names it (`describeServer`: an organization by its name, the local server as this computer):
 
 | Kind                 | Words                                                  |
 | -------------------- | ------------------------------------------------------ |

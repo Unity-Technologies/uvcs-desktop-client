@@ -58,7 +58,7 @@ describe('an operation refused for a sign-in', () => {
 
     offerRefusedAgain('acme@cloud', PLACE);
 
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme@cloud', detail: "Checking in didn't run.", action: 'Try again' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme', detail: "Checking in didn't run.", action: 'Try again' }]);
     expect(checkin.runs()).toBe(1);
   });
 
@@ -67,7 +67,7 @@ describe('an operation refused for a sign-in', () => {
     await checkin.run();
     offerRefusedAgain('acme@cloud', PLACE);
 
-    pressToastAction('Signed in to acme@cloud');
+    pressToastAction('Signed in to acme');
     expect(checkin.runs()).toBe(2);
   });
 
@@ -78,7 +78,7 @@ describe('an operation refused for a sign-in', () => {
     offerRefusedAgain('acme@cloud', PLACE);
     offerRefusedAgain('acme@cloud', PLACE);
 
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme@cloud', detail: "Couldn't create the label", action: 'Try again' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme', detail: "Couldn't create the label", action: 'Try again' }]);
   });
 
   it('offers nothing once the window left the place, or for another server', async () => {
