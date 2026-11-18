@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFileContent, incomingFilesSummary, incomingFileTones, incomingScopeOf, scopeDiffToRead, scopeKey } from './incomingScope';
+import { collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFileContent, incomingFileTones, incomingScopeOf, scopeDiffToRead, scopeKey } from './incomingScope';
 
 const file = (path: string, extra: Partial<DiffEntry> = {}): DiffEntry => ({ path, status: 'changed', itemType: 'file', ...extra }) as DiffEntry;
 
@@ -44,26 +44,6 @@ describe('incomingFileTones', () => {
   it('offers a file that collides under the Conflicts chip too, keeping what the branch did to it', () => {
     expect(incomingFileTones(file('a.ts', { status: 'added' }), true)).toEqual(['added', 'conflict']);
     expect(incomingFileTones(file('a.ts', { status: 'added' }), false)).toEqual(['added']);
-  });
-});
-
-describe('incomingFilesSummary', () => {
-  const all = { kind: 'all' } as const;
-
-  it('says what the update does to the workspace: the conflicts with local changes, then what applies', () => {
-    expect(incomingFilesSummary(all, 14, 1)).toBe('1 conflict with your changes · 13 to apply');
-    expect(incomingFilesSummary(all, 14, 2)).toBe('2 conflicts with your changes · 12 to apply');
-    expect(incomingFilesSummary(all, 2, 2)).toBe('2 conflicts with your changes');
-  });
-
-  it('says the local changes stay as they are when nothing conflicts', () => {
-    expect(incomingFilesSummary(all, 14, 0)).toBe('14 changes to apply · Your local changes stay as they are');
-    expect(incomingFilesSummary(all, 1, 0)).toBe('1 change to apply · Your local changes stay as they are');
-  });
-
-  it("only counts a changeset's files: they are what it did, not what updating does", () => {
-    expect(incomingFilesSummary({ kind: 'changeset', id: 3 }, 5, 1)).toBe('5 changes');
-    expect(incomingFilesSummary({ kind: 'span', target: span }, 5, 1)).toBe('5 changes');
   });
 });
 

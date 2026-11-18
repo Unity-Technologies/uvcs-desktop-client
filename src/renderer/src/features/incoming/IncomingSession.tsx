@@ -40,8 +40,8 @@ import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
 import { incomingFileMenu } from './incomingFileMenu';
 import { incomingSubtitle } from './incomingSubtitle';
-import { incomingFilesHeading } from './incomingFilesHeading';
-import { collidesWithLocal, firstIncomingFile, incomingFilesSummary, incomingScopeOf } from './incomingScope';
+import { incomingFilesLabel } from './incomingFilesLabel';
+import { collidesWithLocal, firstIncomingFile, incomingScopeOf } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
 import { IncomingPanes } from './IncomingPanes';
 import { UpdateBar } from './UpdateBar';
@@ -269,10 +269,8 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               changesetMenu={(changesets) => changesetMenu(menuContext, changesets)}
             />
             <IncomingFiles
-              heading={incomingFilesHeading(choice, scopedChangeset)}
-              onShowAll={showAll}
+              label={incomingFilesLabel(choice)}
               files={files}
-              summary={incomingFilesSummary(scope, files?.length ?? 0, files && scope.kind === 'all' ? files.filter(collides).length : 0)}
               rows={rows}
               tree={tree}
               toggleCollapsed={toggleFolder}
