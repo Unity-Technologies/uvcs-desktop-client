@@ -31,7 +31,7 @@
 
 /*
  * Folded, the rail's tiles are icons: the avatar alone, centered, its user in the tooltip, with no card. `:is(button)`
- * matches the card's own hover and open rules (ToolbarControl), so the rail's win over them.
+ * matches the card's own hover, press and open rules (ToolbarControl), so the rail's win over them.
  */
 .switcher[data-rail='true']:is(button) {
   justify-content: center;
@@ -42,6 +42,7 @@
 }
 
 .switcher[data-rail='true']:is(button):hover:not(:disabled),
+.switcher[data-rail='true']:is(button):active:not(:disabled),
 .switcher[data-rail='true']:is(button)[data-state='open'] {
   border-color: transparent;
   background: var(--bg-hover);
