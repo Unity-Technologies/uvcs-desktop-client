@@ -15,9 +15,10 @@ describe('signInWords', () => {
     expect(signInWords(problem(kind)).title).toBe(title);
   });
 
-  it('names the server as the rest of the app does: an organization by its name, the local server as this computer', () => {
-    expect(signInWords(problem('sessionEnded', 'local')).title).toBe('Your session for this computer ended');
-    expect(signInWords(problem('locked', 'local')).title).toBe('This computer locked this account for now');
+  it('names the server as the rest of the app does: an organization by its name, the local server as the one on this computer', () => {
+    // Never "this computer" alone: it would read as the computer's own session.
+    expect(signInWords(problem('sessionEnded', 'local')).title).toBe('Your session for the server on this computer ended');
+    expect(signInWords(problem('locked', 'local')).title).toBe('The server on this computer locked this account for now');
     expect(signInWords(problem('sessionEnded', 'AcmeStudio@unity')).title).toBe('Your session for AcmeStudio ended');
     expect(signInWords(problem('credentialsRefused', 'acme@cloud')).title).toBe("acme didn't accept your user or password");
   });
