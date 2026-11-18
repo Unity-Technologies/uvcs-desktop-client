@@ -3,6 +3,7 @@ import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { createAccountsService } from './accountsService';
+import { createRepositoriesService } from './repositoriesService';
 import { profilesContext, serviceContext } from './testing/serviceContext';
 
 describe('accounts', () => {
@@ -19,6 +20,35 @@ describe('accounts', () => {
     const service = createAccountsService(serviceContext(fake.cm), profilesContext(fake.cm));
 
     expect((await service.list()).map((account) => account.server)).toEqual(['*@cloud', 'build.example.com:8087']);
+  });
+
+  it('groups the profiles into accounts, from the same one local read', async () => {
+    const fake = fakeCmClient({
+      'profile list': [
+        formatOutput(['*@cloud', '*@cloud', 'ana@example.com', 'SSOWorkingMode']),
+        formatOutput(['acme@unity', 'acme@unity', 'ana@example.com', 'SSOWorkingMode']),
+        formatOutput(['build:8087', 'build:8087', 'jsmith', 'UPWorkingMode']),
+        formatOutput(['local', 'local', 'ana@example.com', 'SSOWorkingMode']),
+      ].join(''),
+    });
+    const service = createAccountsService(serviceContext(fake.cm), profilesContext(fake.cm));
+
+    expect((await service.accounts()).map(({ id, servers }) => [id, servers])).toEqual([
+      ['cloud:ana@example.com', ['acme@unity']],
+      ['server:build:8087', ['build:8087']],
+    ]);
+    expect(fake.commands).toMatchObject([{ via: 'query', args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
+  });
+
+  it('answers the accounts, the profiles and the servers asked together with one command', async () => {
+    const fake = fakeCmClient({ 'profile list': formatOutput(['acme@unity', 'acme@unity', 'ana@example.com', 'SSOWorkingMode']) });
+    const profiles = profilesContext(fake.cm);
+    const accounts = createAccountsService(serviceContext(fake.cm), profiles);
+    const repositories = createRepositoriesService(serviceContext(fake.cm), profiles);
+
+    await Promise.all([accounts.accounts(), accounts.list(), repositories.servers()]);
+
+    expect(fake.commands).toHaveLength(1);
   });
 
   it('lists the profiles again after removing one, never sharing a read that started before the removal', async () => {
