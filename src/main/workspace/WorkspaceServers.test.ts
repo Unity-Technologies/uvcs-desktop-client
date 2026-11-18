@@ -1,9 +1,11 @@
-import { join } from 'node:path';
+import { posix } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { WorkspaceStatus } from '../cm/workspaceStatus';
 import type { HeaderReaders } from './WorkspaceHeaders';
 import { WorkspaceServers, type ReadWorkspaceServer } from './WorkspaceServers';
 
+// The workspaces are Linux ones (`servers`' default platform), so their paths are too, on every OS's runner.
+const { join } = posix;
 const GAME = join('/wkspaces', 'game');
 
 function readers(server: string): HeaderReaders {
