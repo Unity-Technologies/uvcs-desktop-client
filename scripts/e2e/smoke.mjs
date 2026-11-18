@@ -100,7 +100,7 @@ function commandsRun() {
  * Commands that need no sign-in (`needsSignIn` in main/cm/repeatedCommands.ts): those that only read this machine, and
  * a `cm status` told not to work out the workspace's header, which would ask the server for its branch's head.
  */
-const LOCAL_COMMAND = /^(ok |ERR)((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
+const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
 /** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
 async function settled() {
