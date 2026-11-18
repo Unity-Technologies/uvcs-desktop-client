@@ -3,6 +3,7 @@ import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { createAccountsService } from './accountsService';
+import { createRepositoriesService } from './repositoriesService';
 import { profilesContext, serviceContext } from './testing/serviceContext';
 
 describe('accounts', () => {
@@ -19,6 +20,17 @@ describe('accounts', () => {
     const service = createAccountsService(serviceContext(fake.cm), profilesContext(fake.cm));
 
     expect((await service.list()).map((account) => account.server)).toEqual(['*@cloud', 'build.example.com:8087']);
+  });
+
+  it('answers the profiles (and so the accounts made of them) and the servers asked together with one command', async () => {
+    const fake = fakeCmClient({ 'profile list': formatOutput(['acme@unity', 'acme@unity', 'ana@example.com', 'SSOWorkingMode']) });
+    const profiles = profilesContext(fake.cm);
+    const accounts = createAccountsService(serviceContext(fake.cm), profiles);
+    const repositories = createRepositoriesService(serviceContext(fake.cm), profiles);
+
+    await Promise.all([accounts.list(), repositories.servers()]);
+
+    expect(fake.commands).toHaveLength(1);
   });
 
   it('lists the profiles again after removing one, never sharing a read that started before the removal', async () => {

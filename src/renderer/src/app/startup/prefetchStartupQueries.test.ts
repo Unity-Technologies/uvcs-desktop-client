@@ -19,10 +19,11 @@ describe('prefetchStartupQueries', () => {
   it('asks for what the home screen shows when the window starts there', async () => {
     fakeApi.answer('workspaces.list', () => []);
     fakeApi.answer('repositories.servers', () => []);
+    fakeApi.answer('accounts.list', () => []);
 
     await prefetchStartupQueries();
 
-    expect(fakeApi.methods().sort()).toEqual(['repositories.servers', 'settings.get', 'system.cmVersion', 'workspaces.list']);
+    expect(fakeApi.methods().sort()).toEqual(['accounts.list', 'repositories.servers', 'settings.get', 'system.cmVersion', 'workspaces.list']);
   });
 
   it("asks for what a workspace's Changes view shows when the window starts on it, not for the home screen's lists", async () => {

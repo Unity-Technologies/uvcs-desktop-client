@@ -112,9 +112,14 @@
   white-space: nowrap;
 }
 
+/* At most half the row, cut short: a server's user may be a long email, and the label comes first. */
 .detail {
+  max-width: 50%;
+  overflow: hidden;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .badge {

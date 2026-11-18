@@ -6,8 +6,9 @@ import type { EarlyCalls } from '../ipc/EarlyCalls';
  * commands then run while the window and its page load (a few hundred ms at start-up), and the page's own calls take
  * their answers (`EarlyCalls`). They are the calls `prefetchStartupQueries` makes in the page, with the arguments it
  * makes them with; one that differs is simply read again. The workspace's (`workspacePath`): its info and pending
- * changes, filtered as the settings say; the home screen's: the workspaces and the servers. `cm version`, which every
- * screen asks too, is no screen's: `readFirstScreenAhead` starts it.
+ * changes, filtered as the settings say; the home screen's: the workspaces, the servers and the profiles its accounts are
+ * made of (both one `cm profile list`, `ProfileList`). `cm version`, which every screen asks too, is no screen's:
+ * `readFirstScreenAhead` starts it.
  */
 export function readFirstScreen(early: Pick<EarlyCalls, 'start'>, settings: AppSettings, workspacePath: string | undefined): void {
   if (workspacePath) {
@@ -16,5 +17,6 @@ export function readFirstScreen(early: Pick<EarlyCalls, 'start'>, settings: AppS
   } else {
     early.start('workspaces.list', []);
     early.start('repositories.servers', []);
+    early.start('accounts.list', []);
   }
 }

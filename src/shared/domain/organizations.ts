@@ -6,6 +6,14 @@
 const UNITY_ORGANIZATION = /^[^@]+@unity$/i;
 const CLOUD_ORGANIZATION = /^[^@*]+@cloud$/i;
 
+/**
+ * Whether the server is a wildcard profile's (`*@cloud`): the one `cm` signs in to every cloud organization with when
+ * the organization has no profile of its own. It names no place to browse.
+ */
+export function isWildcardServer(server: string): boolean {
+  return server.startsWith('*@');
+}
+
 /** What kind of place a server is, as the home screen groups them. */
 export type ServerKind = 'local' | 'unityOrganization' | 'cloudOrganization' | 'server';
 
