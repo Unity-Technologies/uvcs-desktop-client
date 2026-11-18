@@ -276,8 +276,8 @@ describe('what the branch head brings a partial workspace', () => {
   });
 
   it("names an xlink's repository with its server, or alone when the xlink names none", () => {
-    expect(repositorySpec({ writable: true, path: '/', changeset: 9, repository: 'lib', server: 'local' })).toBe('lib@local');
-    expect(repositorySpec({ writable: true, path: '/', changeset: 9, repository: 'lib', server: '' })).toBe('lib');
+    expect(repositorySpec({ repository: 'lib', server: 'local' })).toBe('lib@local');
+    expect(repositorySpec({ repository: 'lib', server: '' })).toBe('lib');
   });
 
   it('does work in step with the workspace, however many local changes, removed folders and xlinks it holds', () => {

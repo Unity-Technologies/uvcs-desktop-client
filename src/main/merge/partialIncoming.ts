@@ -1,13 +1,29 @@
 // The reads behind what the branch head brings a partial workspace (`compareWithHead`): the items it has loaded, the
-// same folders on the head, and its local changes. Two listings and a status, whatever the head's distance: a partial
-// workspace isn't at a changeset, so there is no changeset range to diff.
+// same folders on the head, and its local changes; then, for the folders the head changed that hold items the
+// workspace doesn't have, what they held when loaded. A partial workspace isn't at a changeset, so there is no
+// changeset range to diff. A folder inside an xlink was loaded at a changeset of the xlinked repository, so what it
+// held is read there (`cs:N@repository`).
 
 import type { PartialIncomingItem } from '@shared/domain/incoming';
 import type { CmClient } from '../cm/CmClient';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { notInTreePaths } from '../cm/missingItem';
 import { readPendingChanges } from '../workspace/readPendingChanges';
-import { compareWithHead, foldersWithNewItems, HEAD_TREE_FORMAT, isInsideAny, LOADED_TREE_FORMAT, readHeadItem, readLoadedTreeItem, withoutXlinks, type HeadItem, type LoadedTreeItem } from './partialComparison';
+import {
+  byScopedKey,
+  changedFoldersWithUnloadedItems,
+  compareWithHead,
+  enclosingXlink,
+  HEAD_TREE_FORMAT,
+  LOADED_TREE_FORMAT,
+  parentOf,
+  readHeadItem,
+  readLoadedTreeItem,
+  repositorySpec,
+  xlinksOf,
+  type HeadItem,
+  type LoadedTreeItem,
+} from './partialComparison';
 
 /** What updating the partial workspace on `branch` to its head would change in the folders it loaded. */
 export async function readPartialIncomingItems(cm: CmClient, workspacePath: string, branch: string): Promise<PartialIncomingItem[]> {
@@ -17,37 +33,86 @@ export async function readPartialIncomingItems(cm: CmClient, workspacePath: stri
     readPendingChanges(cm, workspacePath, ['--controlledchanged', '--changed']),
   ]);
   const head = await readHeadOfFolders(cm, workspacePath, loadedFolders(loaded), branch);
-  const existedWhenLoaded = await readItemsWhenLoaded(cm, workspacePath, foldersWithNewItems(loaded, head));
-  return compareWithHead(loaded, head, new Set(changes.map((change) => change.path)), existedWhenLoaded);
+  const childrenWhenLoaded = await readChildrenWhenLoaded(cm, workspacePath, loaded, changedFoldersWithUnloadedItems(loaded, head));
+  return compareWithHead(loaded, head, new Set(changes.map((change) => change.path)), childrenWhenLoaded);
+}
+
+/** Where a loaded folder is listed as it was loaded. */
+export interface LoadedListing {
+  /** The tree it was loaded from: `cs:5`, or `cs:27890@pnunit@acme@cloud` inside an xlink. */
+  tree: string;
+  /** Its server path in that tree. */
+  serverPath: string;
+  /** The workspace path of the xlink it lies under; '' outside any. */
+  xlinkPath: string;
+  /** The server path the xlink shows at its workspace path: '/' outside any xlink. */
+  xlinkTargetPath: string;
+}
+
+/** Where `folder`, loaded at `changeset`, is listed as it was loaded: in its own repository, at its path there. */
+export function loadedListingOf(folder: Pick<LoadedTreeItem, 'path'>, changeset: number, xlinks: ReturnType<typeof xlinksOf>): LoadedListing {
+  const xlink = enclosingXlink(folder.path, xlinks);
+  if (!xlink) return { tree: `cs:${changeset}`, serverPath: serverPath(folder.path), xlinkPath: '', xlinkTargetPath: '/' };
+  const below = folder.path === xlink.path ? '' : folder.path.slice(xlink.path.length + 1);
+  return {
+    tree: `cs:${changeset}@${repositorySpec(xlink.target)}`,
+    serverPath: joinServerPath(xlink.target.path, below),
+    xlinkPath: xlink.path,
+    xlinkTargetPath: xlink.target.path,
+  };
 }
 
 /**
- * The ids of the items `folders` held at the changesets the workspace loaded them at: one listing per changeset, and
- * none when no loaded folder seems to get something new. An item among them existed already, though the workspace
- * left it out.
+ * A path a loaded listing printed, as the workspace path it is at. `readHeadItem` reads it relative to the root of
+ * its repository ('' the root, `test/carnagetest`), as the xlink's target path is taken here too.
  */
-async function readItemsWhenLoaded(cm: CmClient, workspacePath: string, folders: readonly LoadedTreeItem[]): Promise<Set<number>> {
-  const byChangeset = new Map<number, string[]>();
+export function workspacePathOf(path: string, { xlinkPath, xlinkTargetPath }: LoadedListing): string {
+  const target = xlinkTargetPath.replace(/^\/+|\/+$/g, '');
+  const below = path === target ? '' : target === '' ? path : path.slice(target.length + 1);
+  if (xlinkPath === '') return below;
+  return below === '' ? xlinkPath : `${xlinkPath}/${below}`;
+}
+
+/**
+ * What `folders` held at the changesets the workspace loaded them at, keyed by their workspace path, with the paths
+ * as the workspace has them: one listing per tree (a changeset of a repository). A folder that doesn't list gets no
+ * entry, and keeps the item-id rule (`compareWithHead`).
+ */
+async function readChildrenWhenLoaded(
+  cm: CmClient,
+  workspacePath: string,
+  loaded: readonly LoadedTreeItem[],
+  folders: readonly LoadedTreeItem[],
+): Promise<Map<string, HeadItem[]>> {
+  const xlinks = xlinksOf(loaded);
+  const byTree = new Map<string, { listing: LoadedListing; serverPaths: Set<string>; requested: Set<string> }>();
   for (const folder of folders) {
     if (folder.changeset === null) continue;
-    byChangeset.set(folder.changeset, [...(byChangeset.get(folder.changeset) ?? []), serverPath(folder.path)]);
+    const listing = loadedListingOf(folder, folder.changeset, xlinks);
+    // Two xlinks of one repository at one changeset show it at different paths: listed apart, to read each back.
+    const key = `${listing.xlinkPath}|${listing.tree}`;
+    const group = byTree.get(key) ?? { listing, serverPaths: new Set<string>(), requested: new Set<string>() };
+    group.serverPaths.add(listing.serverPath);
+    group.requested.add(folder.path);
+    byTree.set(key, group);
   }
-  const ids = new Set<number>();
-  for (const [changeset, paths] of byChangeset) {
-    for (const args of treeListingArgs(paths.sort(), `cs:${changeset}`)) {
-      for (const item of await listHead(cm, workspacePath, args)) ids.add(item.itemId);
-    }
+  const children = new Map<string, HeadItem[]>();
+  for (const { listing, serverPaths, requested } of byTree.values()) {
+    const rows: HeadItem[] = [];
+    for (const args of treeListingArgs([...serverPaths].sort(), listing.tree)) rows.push(...(await listHead(cm, workspacePath, args)));
+    const inWorkspace = rows.map((row) => ({ ...row, path: workspacePathOf(row.path, listing) }));
+    for (const row of inWorkspace) if (row.isDirectory && requested.has(row.path) && !children.has(row.path)) children.set(row.path, []);
+    for (const row of inWorkspace) if (!requested.has(row.path)) children.get(parentOf(row.path))?.push(row);
   }
-  return ids;
+  return children;
 }
 
 /**
- * The loaded folders, the ones `cm partial update` brings new items into. An xlink and what it holds belong to another
- * repository, so they aren't listed.
+ * The loaded folders, the ones `cm partial update` brings new items into: xlinks and the folders inside them too,
+ * which the head lists through the workspace's branch at their workspace paths.
  */
 export function loadedFolders(loaded: readonly LoadedTreeItem[]): LoadedTreeItem[] {
-  const xlinks = new Set(loaded.filter((item) => item.xlink).map((item) => item.path));
-  return loaded.filter((item) => item.isDirectory && !item.xlink && !isInsideAny(item.path, xlinks));
+  return loaded.filter((item) => item.isDirectory);
 }
 
 /** A workspace path ('' the root, `Code`) as the server path `cm ls --tree` takes ('/', `/Code`). */
@@ -55,15 +120,21 @@ function serverPath(path: string): string {
   return `/${path}`;
 }
 
+/** The server path of `below` (relative to it; '' for itself) inside the server path `folder` ('/', `/src`). */
+function joinServerPath(folder: string, below: string): string {
+  if (below === '') return folder;
+  return folder.endsWith('/') ? `${folder}${below}` : `${folder}/${below}`;
+}
+
 /**
  * The server paths still to list: the loaded folders the listings so far found somewhere they weren't listed, because
- * the head moved them (or the folder they went along with), sorted. An xlink on the head is never where a folder went:
- * it lists another repository's item ids.
+ * the head moved them (or the folder they went along with), sorted. A folder is matched by its id within its scope
+ * (`byScopedKey`): an xlink lists another repository's item ids, so it is never where a folder of the workspace went.
  */
 export function movedFolderPaths(folders: readonly LoadedTreeItem[], head: readonly HeadItem[], listed: ReadonlySet<string>): string[] {
-  const headById = new Map(withoutXlinks(head).map((item) => [item.itemId, item]));
-  const paths = folders.flatMap((folder) => {
-    const onHead = headById.get(folder.itemId);
+  const headByKey = byScopedKey(head);
+  const paths = [...byScopedKey(folders).keys()].flatMap((key) => {
+    const onHead = headByKey.get(key);
     return onHead && !listed.has(serverPath(onHead.path)) ? [serverPath(onHead.path)] : [];
   });
   return [...new Set(paths)].sort();

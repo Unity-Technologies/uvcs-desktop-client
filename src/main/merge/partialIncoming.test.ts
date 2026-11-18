@@ -3,7 +3,7 @@ import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { change, formatOutput, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { readIncomingChanges } from './incoming';
-import { treeListingArgs } from './partialIncoming';
+import { loadedListingOf, treeListingArgs, workspacePathOf } from './partialIncoming';
 
 const WORKSPACE = '/work';
 
@@ -225,5 +225,32 @@ describe('incoming in a partial workspace', () => {
     expect(batches.length).toBeGreaterThan(1);
     expect(batches.flatMap((args) => args.filter((arg) => arg.startsWith('/')))).toEqual(folders);
     expect(batches.every((args) => args[0] === 'ls' && args.includes('--tree=br:/main'))).toBe(true);
+  });
+});
+
+describe('loadedListingOf', () => {
+  // `Libs` shows `/vendor` of the `thirdparty` repository: its folders are listed there, and read back under `Libs`.
+  const xlinks = new Map([['Libs', { writable: true, path: '/vendor', changeset: 12, repository: 'thirdparty', server: 'acme@cloud' }]]);
+
+  it('lists a folder outside every xlink in the repository of the workspace, at its own path', () => {
+    const listing = loadedListingOf({ path: 'Code' }, 5, xlinks);
+
+    expect(listing).toMatchObject({ tree: 'cs:5', serverPath: '/Code' });
+    expect(workspacePathOf('Code/Ship.cs', listing)).toBe('Code/Ship.cs');
+  });
+
+  it('lists a folder inside an xlink in the xlinked repository, below the folder the xlink shows', () => {
+    const listing = loadedListingOf({ path: 'Libs/zlib/src' }, 40, xlinks);
+
+    expect(listing).toMatchObject({ tree: 'cs:40@thirdparty@acme@cloud', serverPath: '/vendor/zlib/src' });
+    expect(workspacePathOf('vendor/zlib/src/inflate.c', listing)).toBe('Libs/zlib/src/inflate.c');
+  });
+
+  it('lists the xlink itself at the folder it shows', () => {
+    const listing = loadedListingOf({ path: 'Libs' }, 40, xlinks);
+
+    expect(listing).toMatchObject({ tree: 'cs:40@thirdparty@acme@cloud', serverPath: '/vendor' });
+    expect(workspacePathOf('vendor', listing)).toBe('Libs');
+    expect(workspacePathOf('vendor/README', listing)).toBe('Libs/README');
   });
 });

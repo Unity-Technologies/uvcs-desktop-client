@@ -107,6 +107,11 @@ function scoped<T extends ComparedItem>(items: readonly T[]): Scoped<T>[] {
   });
 }
 
+/** `items` by their id within their scope, the key that matches a loaded item with the head's. */
+export function byScopedKey<T extends ComparedItem>(items: readonly T[]): Map<string, T> {
+  return new Map(scoped(items).map((each) => [each.key, each.item]));
+}
+
 function scopedKey(itemId: number, scope: string): string {
   return `${itemId}:${scope}`;
 }
