@@ -2,7 +2,7 @@ import { Users } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
 import { serverAccount, unityAccount } from '../../testing/userAccounts';
-import { accountSwitchCommands, accountSwitcherMenu } from './accountSwitcher';
+import { accountSwitchCommands, accountSwitcherMenu } from './accountSwitcherMenu';
 
 const ana = unityAccount('ana@example.com', ['acme@unity']);
 const bo = unityAccount('bo@example.com', ['games@unity']);
