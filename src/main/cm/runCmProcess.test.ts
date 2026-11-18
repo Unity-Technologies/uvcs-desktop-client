@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RecordReader } from './formatRecords';
 import { textLimitOf } from './outputLimit';
-import { runCmProcess } from './runCmProcess';
+import { MAX_OUTPUT_LINE_LENGTH, runCmProcess } from './runCmProcess';
 import { formatOutput } from './testing/cmOutput';
 
 /** Runs a Node script standing in for `cm`. */
@@ -20,6 +20,14 @@ describe('runCmProcess', () => {
     const result = await runScript("process.stdout.write('a\\r\\nb\\rc\\nd')", (line) => lines.push(line));
     expect(lines).toEqual(['a', 'b', 'c', 'd']);
     expect(result.exitCode).toBe(0);
+  });
+
+  it('reports a line that never ends in pieces of at most MAX_OUTPUT_LINE_LENGTH, instead of keeping it whole', async () => {
+    const length = MAX_OUTPUT_LINE_LENGTH * 2 + 10;
+    const lines: string[] = [];
+    await runScript(`process.stdout.write('x'.repeat(${length}) + 'y\\n')`, (line) => lines.push(line));
+    expect(Math.max(...lines.map((line) => line.length))).toBeLessThanOrEqual(MAX_OUTPUT_LINE_LENGTH);
+    expect(lines.join('')).toBe(`${'x'.repeat(length)}y`);
   });
 
   it("gives Windows line breaks as the app's, and leaves the \\r of a rewritten line", async () => {
