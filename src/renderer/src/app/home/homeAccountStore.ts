@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { UserAccount } from '@shared/domain/account';
 import { saveSettings } from '../settings/useSettings';
-import { homeServersOf, sectionAfterSwitch } from './homeAccount';
+import { sectionAfterSwitch } from './homeAccount';
 import { useHomeSection } from './homeSectionStore';
 
 interface HomeAccountPick {
@@ -23,6 +23,6 @@ export const useHomeAccountPick = create<HomeAccountPick>()((set) => ({
 export function showHomeAccount(account: UserAccount, accounts: readonly UserAccount[]): void {
   useHomeAccountPick.setState({ picked: account.id });
   const { section, show } = useHomeSection.getState();
-  show(sectionAfterSwitch(section, homeServersOf(accounts, account)));
+  show(sectionAfterSwitch(section, account, accounts));
   void saveSettings({ homeAccount: account.id });
 }

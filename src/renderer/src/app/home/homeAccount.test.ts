@@ -84,20 +84,32 @@ describe('homeServersOf', () => {
 });
 
 describe('sectionAfterSwitch', () => {
-  const boServers = homeServersOf(accounts, bo);
-
-  it("leaves the repositories of the account left for the welcome", () => {
-    expect(sectionAfterSwitch({ kind: 'server', server: 'acme@unity' }, boServers)).toEqual(WELCOME);
+  it('leaves the repositories of the account left for the welcome', () => {
+    expect(sectionAfterSwitch({ kind: 'server', server: 'acme@unity' }, bo, accounts)).toEqual(WELCOME);
   });
 
-  it('stays on repositories the new account lists, whatever the case a link wrote them in', () => {
-    expect(sectionAfterSwitch({ kind: 'server', server: 'Games@Unity' }, boServers)).toEqual({ kind: 'server', server: 'Games@Unity' });
+  it('stays on repositories the new account holds, whatever the case a link wrote them in', () => {
+    expect(sectionAfterSwitch({ kind: 'server', server: 'Games@Unity' }, bo, accounts)).toEqual({ kind: 'server', server: 'Games@Unity' });
   });
 
-  it('stays on repositories every account lists, and on the welcome or every workspace', () => {
-    expect(sectionAfterSwitch({ kind: 'server', server: 'build:8087' }, boServers)).toEqual({ kind: 'server', server: 'build:8087' });
-    expect(sectionAfterSwitch({ kind: 'server', server: 'local' }, boServers)).toEqual({ kind: 'server', server: 'local' });
-    expect(sectionAfterSwitch({ kind: 'all' }, boServers)).toEqual({ kind: 'all' });
-    expect(sectionAfterSwitch(WELCOME, boServers)).toEqual(WELCOME);
+  it('stays on an organization named by its genesis id when the account holds it by name', () => {
+    const genesis = { name: '1375488836673@cloud', server: 'tools@unity', user: 'cy@example.com', workingMode: 'SSOWorkingMode' };
+    const cy = { ...unityAccount('cy@example.com', ['tools@unity']), profiles: [genesis] };
+    const section = { kind: 'server', server: '1375488836673@unity' } as const;
+
+    expect(homeAccountOf([ana, cy], { shownServer: section.server })).toBe(cy);
+    expect(sectionAfterSwitch(section, cy, [ana, cy])).toEqual(section);
+  });
+
+  it('stays when the shown account is picked again, an organization it reaches through `*@cloud` too', () => {
+    expect(sectionAfterSwitch({ kind: 'server', server: 'other@cloud' }, ana, accounts)).toEqual({ kind: 'server', server: 'other@cloud' });
+    expect(sectionAfterSwitch({ kind: 'server', server: 'other@cloud' }, bo, accounts)).toEqual(WELCOME);
+  });
+
+  it('stays on this computer, a server, the welcome or every workspace', () => {
+    expect(sectionAfterSwitch({ kind: 'server', server: 'build:8087' }, bo, accounts)).toEqual({ kind: 'server', server: 'build:8087' });
+    expect(sectionAfterSwitch({ kind: 'server', server: 'local' }, bo, accounts)).toEqual({ kind: 'server', server: 'local' });
+    expect(sectionAfterSwitch({ kind: 'all' }, bo, accounts)).toEqual({ kind: 'all' });
+    expect(sectionAfterSwitch(WELCOME, bo, accounts)).toEqual(WELCOME);
   });
 });

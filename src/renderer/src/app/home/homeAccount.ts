@@ -1,5 +1,6 @@
 import type { UserAccount } from '@shared/domain/account';
 import type { ServerProfile } from '@shared/domain/repository';
+import { isCloudServer } from '../../lib/servers';
 import { accountOfServer, unityAccountsOf } from '../account/userAccounts';
 import { WELCOME, type HomeSection } from './homeSection';
 
@@ -49,12 +50,11 @@ export function homeServersOf(accounts: readonly UserAccount[], shown: UserAccou
 }
 
 /**
- * Where the home screen stays once the sidebar lists `servers` for another account: on the repositories it shows while
- * they are still listed, else back on its welcome, as they belong to the account left.
+ * Where the home screen stays once it shows `account`: on the repositories on screen while they are this computer's,
+ * a server's (listed under every account) or `account`'s own, as `accountOfServer` resolves them (by name or genesis
+ * id, whatever the case, or through `*@cloud`); else back on its welcome, as they belong to the account left.
  */
-export function sectionAfterSwitch(section: HomeSection, servers: readonly ServerProfile[]): HomeSection {
-  if (section.kind !== 'server') return section;
-  // Whatever its case, as an account is found for a server (`accountOfServer`): a link may write `Games@unity`.
-  const shown = section.server.toLowerCase();
-  return servers.some((profile) => profile.server.toLowerCase() === shown) ? section : WELCOME;
+export function sectionAfterSwitch(section: HomeSection, account: UserAccount, accounts: readonly UserAccount[]): HomeSection {
+  if (section.kind !== 'server' || !isCloudServer(section.server)) return section;
+  return accountOfServer(unityAccountsOf(accounts), section.server) === account ? section : WELCOME;
 }
