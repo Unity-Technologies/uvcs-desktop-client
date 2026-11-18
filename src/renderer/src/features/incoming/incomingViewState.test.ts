@@ -47,7 +47,7 @@ describe('incomingViewState', () => {
   });
 
   it('is up to date with nothing new on the branch, and lists what came in otherwise', () => {
-    expect(incomingViewState(upToDate, false, false)).toEqual({ kind: 'upToDate', partial: false });
+    expect(incomingViewState(upToDate, false, false)).toEqual({ kind: 'upToDate' });
     expect(incomingViewState(behind, false, false)).toEqual({ kind: 'incoming', incoming: behind });
   });
 });
@@ -61,7 +61,7 @@ describe('incomingViewState in a partial workspace', () => {
   });
 
   it('is up to date once no loaded item differs from the head, at no one changeset to count changesets from', () => {
-    expect(incomingViewState({ ...partial, items: [] }, false, false)).toEqual({ kind: 'upToDate', partial: true });
+    expect(incomingViewState({ ...partial, items: [] }, false, false)).toEqual({ kind: 'upToDate' });
   });
 });
 

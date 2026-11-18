@@ -4,6 +4,7 @@ import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { ALL_CHANGES_KEY, ALL_CHANGES_SELECTION, selectedChangesetIds, type ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
+import { toggledFold } from '../../components/changesetList/changesetListFold';
 import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
@@ -73,14 +74,17 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const { changesetsCollapsed, toggleChangesets } = useIncomingViewStore();
+  const changesetsOpen = !changesetsCollapsed;
   const changesetList = useIncomingChangesetList(incoming);
   // Picking changesets starts their files afresh; one changeset's details show until a file is picked, several open on
   // their first file, as the whole update does.
   const changesetSteps = useChangesetStepList({
     changesets: changesetList.changesets,
     focus: ALL_INCOMING_FOCUS,
-    // Collapsed, a step would change the files out of sight.
-    stepsEnabled: !changesetsCollapsed,
+    // "All incoming changes" stands apart above the list, which folds under it, as a branch diff's does.
+    allApart: true,
+    // Folded, a step would change the files out of sight.
+    stepsEnabled: changesetsOpen,
     onSelect: (picked) => {
       setShowsChangeset(selectedChangesetIds(picked).length === 1);
       setSelection(EMPTY_SELECTION);
@@ -91,6 +95,11 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const showAll = (): void => changesetSteps.select(ALL_CHANGES_SELECTION, ALL_CHANGES_KEY);
   const showAllRef = useRef(showAll);
   showAllRef.current = showAll;
+  // Folding goes back to the whole update: a changeset selected out of sight would leave files the row doesn't name.
+  const toggleChangesetFold = (): void => {
+    if (toggledFold({ remembered: changesetsOpen, asked: false }).showsAll) showAll();
+    toggleChangesets();
+  };
   const { mergerFor, othersFor } = useFileMergers();
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
@@ -254,8 +263,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               changesets={changesetList.changesets}
               more={changesetList.more}
               older={changesetList.more ? { loading: changesetList.loading, onShowMore: changesetList.showMore } : undefined}
-              collapsed={changesetsCollapsed}
-              onToggleCollapsed={toggleChangesets}
+              open={changesetsOpen}
+              onToggle={toggleChangesetFold}
+              onSelectAll={showAll}
               changesetMenu={(changesets) => changesetMenu(menuContext, changesets)}
             />
             <IncomingFiles
