@@ -40,7 +40,7 @@ updating it.
 **Choose what to download…** opens `ChooseDownloadsDialog`. It's offered on a partial workspace, and on a standard
 one on a branch (`choosesDownloads`, "Making a standard workspace partial"):
 
-- the current workspace card's menu (`currentWorkspaceMenu`, the `chooseDownloads` action);
+- the current workspace pill's menu (`currentWorkspaceMenu`, a right-click on the top bar's workspace, the `chooseDownloads` action);
 - the command palette (`useWorkspaceCommands`);
 - Files: a button in its header, only in a partial workspace (`showsChooseDownloadsButton`): there choosing folders
   is everyday work, while in a standard one it makes the workspace partial, a rare step kept in the menu and the
@@ -114,7 +114,7 @@ picks the update command, refreshes as after any update (`isAffectedByCheckinOrU
 
 **Download the whole branch…** makes a partial workspace standard, so it can switch to a changeset, label, shelve or
 another repository, and merge. It's offered on a partial workspace on a branch (`downloadsWholeBranch`): the current
-workspace card's menu (`currentWorkspaceMenu`, the `downloadWholeBranch` action) and the command palette
+workspace pill's menu (`currentWorkspaceMenu`, the `downloadWholeBranch` action) and the command palette
 (`useWorkspaceCommands`, `workspace.downloadWholeBranch`). A switch the partial workspace refuses says to download the
 whole branch first (`PARTIAL_REFUSED` in `switchWithChanges.ts`), so the way back is named where it's needed.
 

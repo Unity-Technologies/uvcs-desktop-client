@@ -18,7 +18,7 @@ export interface CurrentWorkspace {
 }
 
 /**
- * The workspace card's menu: choosing what the workspace downloads (`choosesDownloads`: a standard one on a branch
+ * The workspace pill's menu: choosing what the workspace downloads (`choosesDownloads`: a standard one on a branch
  * becomes partial) and downloading the whole branch (`downloadsWholeBranch`: a partial one becomes standard again),
  * starting work next to the open workspace, and opening its folder in other apps.
  */
