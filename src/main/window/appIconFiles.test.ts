@@ -55,10 +55,10 @@ describe('the app icons', () => {
     expect(readText(join(BUILD, 'icon.svg'))).toBe(appIconSvg('edgeToEdge'));
   });
 
-  it('give macOS every size from 16 to 512 points, at 1x and 2x', () => {
+  // No `icp4` or `icp5` (16 and 32 pixels at 1x): macOS doesn't read a PNG in them and draws noise wherever it shows the
+  // icon that small, as Activity Monitor and Finder's lists do. It scales the 2x entries down instead.
+  it('give macOS every size from 16 to 512 points at 2x, and from 128 at 1x, all in entries macOS reads as PNG', () => {
     expect(icnsEntries(readFileSync(join(BUILD, 'icon.icns')))).toEqual([
-      ['icp4', 16],
-      ['icp5', 32],
       ['ic11', 32],
       ['ic12', 64],
       ['ic07', 128],
