@@ -1,9 +1,11 @@
 import { useEffect, type RefObject } from 'react';
 import { restoredFocusMover } from '../../components/diffExpansion';
 import { isDiffExpanded } from '../../components/diffExpansionStore';
+import type { FocusMover } from '../../lib/focusRing';
 import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { useNavigation } from '../navigation/navigationStore';
 import { isAimedAtMainList } from './mainFocusKeys';
+import { mainFocusMover, type MainFocusReason } from './mainFocusMover';
 
 /** How long a view may take to show its list (until its data shows) before focus stops waiting for it. */
 const WAIT_MS = 5000;
@@ -18,10 +20,10 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     let stopWaiting = (): void => {};
 
-    const focusSoon = (): void => {
+    const focusSoon = (reason: MainFocusReason): void => {
       stopWaiting();
       const root = contentRef.current;
-      if (root) stopWaiting = waitToFocusMain(root);
+      if (root) stopWaiting = waitToFocusMain(root, mainFocusMover(reason));
     };
 
     const focusIfLost = (): void => {
@@ -48,10 +50,10 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
     portals.observe(document.body, { childList: true });
 
     const unsubscribe = useNavigation.subscribe((state, previous) => {
-      if (state.view !== previous.view || state.pages !== previous.pages) focusSoon();
+      if (state.view !== previous.view || state.pages !== previous.pages) focusSoon('navigated');
     });
     window.addEventListener('keydown', onKeyDownCapture, true);
-    focusSoon();
+    focusSoon('workspaceOpened');
 
     return () => {
       stopWaiting();
@@ -64,9 +66,10 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
 
 /**
  * Focuses the main list under `root` as soon as it shows (when the view's data arrives), giving up after
- * `WAIT_MS`, once the user clicks, or once focus goes anywhere else. Returns what stops waiting.
+ * `WAIT_MS`, once the user clicks, or once focus goes anywhere else. `mover` decides its ring (`focusAs`). Returns what
+ * stops waiting.
  */
-function waitToFocusMain(root: HTMLElement): () => void {
+function waitToFocusMain(root: HTMLElement, mover: FocusMover): () => void {
   const observer = new MutationObserver(() => attempt());
   const stop = (): void => {
     observer.disconnect();
@@ -81,7 +84,7 @@ function waitToFocusMain(root: HTMLElement): () => void {
   };
   const attempt = (): void => {
     if (isKeyboardTaken()) return stop();
-    if (focusMain(root)) stop();
+    if (focusMain(root, mover)) stop();
   };
   const frame = requestAnimationFrame(attempt);
   const timeout = setTimeout(stop, WAIT_MS);
