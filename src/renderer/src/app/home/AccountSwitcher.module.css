@@ -1,27 +1,18 @@
-/* The account above the sidebar's groups: one row as tall as two entries, so it reads as what the list below belongs to. */
+/*
+ * The account above the sidebar's groups: one row as tall as two entries, so it reads as what the list below belongs
+ * to, on the same card as the top bar's workspace and branch pills.
+ */
 .switcher {
+  composes: control from '../../ui/ToolbarControl.module.css';
+
   display: flex;
   flex: none;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  height: 36px;
   margin-bottom: var(--space-4);
   padding: 0 var(--space-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--bg-subtle);
-  color: var(--text-primary);
   text-align: left;
-}
-
-.switcher:hover {
-  border-color: var(--border-default);
-  background: var(--bg-hover);
-}
-
-.switcher[data-state='open'] {
-  border-color: var(--border-strong);
 }
 
 .user {
@@ -38,19 +29,29 @@
   color: var(--text-tertiary);
 }
 
-/* Folded, the rail's tiles are icons: the avatar alone, centered, its user in the tooltip. */
-.switcher[data-rail='true'] {
+/*
+ * Folded, the rail's tiles are icons: the avatar alone, centered, its user in the tooltip, with no card. `:is(button)`
+ * matches the card's own hover and open rules (ToolbarControl), so the rail's win over them.
+ */
+.switcher[data-rail='true']:is(button) {
   justify-content: center;
   padding: 0;
   border-color: transparent;
   background: none;
+  box-shadow: none;
 }
 
-.switcher[data-rail='true']:hover {
+.switcher[data-rail='true']:is(button):hover:not(:disabled),
+.switcher[data-rail='true']:is(button)[data-state='open'] {
+  border-color: transparent;
   background: var(--bg-hover);
 }
 
 .switcher[data-rail='true'] .user,
 .switcher[data-rail='true'] .chevron {
   display: none;
+}
+
+.switcher[data-rail='true']:is(button):focus-visible {
+  box-shadow: var(--focus-ring-visible);
 }
