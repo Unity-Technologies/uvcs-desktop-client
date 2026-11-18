@@ -6,6 +6,7 @@ import { useProjects, useServers } from '../workspace/workspaceQueries';
 import { TopBar } from '../shell/TopBar';
 import { BackToWorkspaceButton } from './BackToWorkspaceButton';
 import { homeLink } from './homeLink';
+import { useHomeAccountPick } from './homeAccountStore';
 import { HomeSidebar } from './HomeSidebar';
 import { WELCOME } from './homeSection';
 import { useHomeSection } from './homeSectionStore';
@@ -28,6 +29,9 @@ export function HomeScreen() {
   const goHome = useCallback(() => setSection(WELCOME), [setSection]);
   // The home screen starts on its welcome each time a window comes back to it, as it did when it held its own state.
   useEffect(() => goHome, [goHome]);
+  // So does the account it shows: the one the next workspace left names, or the one last picked (`homeAccountOf`).
+  const forgetPickedAccount = useHomeAccountPick((state) => state.forget);
+  useEffect(() => forgetPickedAccount, [forgetPickedAccount]);
   const shownServer = section.kind === 'server' ? section.server : '';
   const { data: projects = NO_PROJECTS } = useProjects(section.kind === 'server' ? section.server : null);
   const project = shownProject(useProjectPickStore((state) => state.picks[shownServer]), projects);

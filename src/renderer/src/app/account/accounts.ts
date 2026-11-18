@@ -1,5 +1,5 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import type { Account, UserAccount } from '@shared/domain/account';
+import type { Account } from '@shared/domain/account';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { describeServer } from '../../lib/servers';
@@ -27,13 +27,6 @@ export const userAccountsQuery = queryOptions({ queryKey: queryKeys.userAccounts
 
 export function useUserAccounts() {
   return useQuery(userAccountsQuery);
-}
-
-const NO_ACCOUNTS: UserAccount[] = [];
-
-/** The accounts once read, none meanwhile. */
-export function useUserAccountList(): UserAccount[] {
-  return useUserAccounts().data ?? NO_ACCOUNTS;
 }
 
 /**
