@@ -1,4 +1,4 @@
-import { FilePlus, FolderDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
+import { FolderDown, RefreshCw, Search } from 'lucide-react';
 import { NO_ROW_REVEAL, revealAsked, type RowReveal } from '../../ui/table/rowReveal';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { workspacePlace } from '@shared/domain/place';
@@ -22,11 +22,11 @@ import { LineLinksContext } from '../diff/viewer/lineLinks';
 import { usePendingLocks } from '../pendingChanges/locks/usePendingLocks';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
-import { fileMenu, FILE_SHORTCUTS } from './fileMenu';
+import { fileMenu } from './fileMenu';
 import { useCutItems } from './cutItemsStore';
 import { directoryListingQuery } from './directoryListing';
 import { CutHint } from './CutHint';
-import { createItem, openItem, targetDirectoryFor } from './fileOperations';
+import { openItem } from './fileOperations';
 import { useFilesViewStore, useRevealRequest } from './filesViewStore';
 import { FileTreeSkeleton, FileTreeTable } from './FileTreeTable';
 import { FILE_TREE_WIDTH } from './fileTreeWidth';
@@ -99,8 +99,6 @@ export function FilesView() {
     setReveal((previous) => revealAsked(previous, path));
   };
 
-  const createInSelection = (kind: 'file' | 'directory'): void => void createItem(workspacePath, targetDirectoryFor(focused), kind);
-
   const header = (
     <ViewHeader
       title="Files"
@@ -109,8 +107,6 @@ export function FilesView() {
       actions={
         <>
           <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={() => openGoToFile()} />
-          <IconButton icon={<FilePlus size={14} />} label="New file" shortcut={FILE_SHORTCUTS.newFile} onClick={() => createInSelection('file')} />
-          <IconButton icon={<FolderPlus size={14} />} label="New folder" shortcut={FILE_SHORTCUTS.newFolder} onClick={() => createInSelection('directory')} />
           {showsChooseDownloadsButton(workspace?.kind) && (
             <IconButton icon={<FolderDown size={14} />} label="Choose what to download…" onClick={() => openChooseDownloads(workspacePath)} />
           )}
