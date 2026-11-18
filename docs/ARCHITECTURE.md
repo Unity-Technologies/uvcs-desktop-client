@@ -38,6 +38,7 @@ you touch:
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
+| `features/accounts.md`                  | Sign-in state, one per server: how `cm` says a server needs a sign-in, the gate that keeps commands from it, keeping sessions alive, the sign-in screen, operations refused and offered again |
 
 ## How a request flows
 
@@ -184,6 +185,9 @@ and many people use the same server. Every `cm` command other than local reads (
   down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
   per halving, never one per read; when both halves fail, they all fail.
 
+- **Sign-in**: a window coming forward checks its server's session (`cm checkconnection`) only when the last check is
+  ten minutes old, one per server app-wide, which keeps the session alive; and a server that needs a sign-in gets no
+  command at all until signed in again (docs/features/accounts.md "The gate").
 - **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset "... order by changesetid desc
   limit 101" --format={changesetid}{owner}` a minute (every five behind other apps, none while hidden). It takes the
   branch and loaded changeset from the workspace info, which follows `.plastic`, instead of asking `cm status`. It
@@ -585,8 +589,10 @@ and the app keeps the decision. An editor or a terminal opens only on the user's
   once when the answer it reads is empty (which system to sign in with, `Select your system [0-4]`), printing it again
   and again without a line break or a pause: `runCmProcess` stops such a command as soon as the end of its stdout is
   one question repeated (`RepeatedPromptWatch`), with the same "cm is waiting for input" failure a `cm shell` session
-  gives a stalled prompt (`waitingForInputError`, `main/cm/consolePrompts.ts`). A session's stdin stays open, so there
-  `cm` waits for the answer, and the pause shows the prompt (`CmShellSession.watchForPrompt`).
+  gives a stalled prompt (`WaitingForInputError`, `main/cm/consolePrompts.ts`). A session's stdin stays open, so there
+  `cm` waits for the answer, and the pause shows the prompt (`CmShellSession.watchForPrompt`). `CmClient` tells such a
+  failure as a sign-in its server needs once a check confirms it, else as a `CmError` with its command
+  (docs/features/accounts.md "The gate").
 
 ## Secrets
 
@@ -903,10 +909,12 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
   without any. The server of the window's place is checked as
-  it opens, `cm checkconnection <server>` (`checkConnection`, once per server until it answers): a workspace's once its
-  info names it, a repository's explored without one from its spec (`serverOfPlace`). A server out of reach or a failed
-  sign-in show in a corner card naming it (`ConnectionProblemCard`, `connectionProblemShown`), while a workspace works
-  with what's local. Checking the default
+  it opens and as the window comes forward, `cm checkconnection <server>` (`accounts.checkSession`,
+  `useWindowSessionCheck`; at most once every ten minutes per server app-wide, docs/features/accounts.md "Keeping
+  sessions alive"): a workspace's once its info names it, a repository's explored without one from its spec
+  (`serverOfPlace`). A server out of reach shows in a corner card naming it (`ConnectionProblemCard`,
+  `connectionProblemShown`), while a workspace works with what's local; one that needs a sign-in covers the window with
+  the sign-in screen (`SignInCover`). Checking the default
   server at start-up, and stopping the app on its failure, was dropped: it left a user offline unable to open even the
   home screen, and named no server, as `cm checkconnection` prints none.
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
@@ -1005,7 +1013,7 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    earlier still.
 6. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
-   (`useConnectionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
+   (`useWindowSessionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
    avatars when rows show them, the menu bar (built by the first window opening, then once per burst of window
    changes: `appMenuInstaller`), the top bar's merge request (one `cm find review` of the workspace's branch, asked
    once the pending changes are read: `asksForBranchReviews`).

@@ -99,8 +99,9 @@ menu bar (`REPOSITORY_MENU_COMMANDS`: only the command log), editing or discardi
 nothing (`keyboardMergeSource`), and a merge page reached anyway says it needs a workspace instead of opening
 (`showsPage`, in `PageFrame`).
 
-A server out of reach, or wanting a sign-in, shows in the corner card as a workspace's does, the repository's server
-read from its spec (`serverOfPlace`); Settings ▸ Accounts lists its account first.
+A server out of reach shows in the corner card as a workspace's does, and one that needs a sign-in covers the window
+with the sign-in screen (docs/features/accounts.md), the repository's server read from its spec (`serverOfPlace`, and
+`cmPlace` names it to the sign-in gate); Settings ▸ Accounts lists its account first.
 
 ## Create workspace
 
