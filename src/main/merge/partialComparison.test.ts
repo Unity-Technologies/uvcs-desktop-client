@@ -107,7 +107,7 @@ describe('what the branch head brings a partial workspace', () => {
   it("doesn't take an item the workspace lists at two paths for one moved onto the other", () => {
     // `cm ls -R` can print one item id and revision for two loaded files, which the head lists apart: the one still at
     // its path isn't moved, and the other, whose own id the workspace doesn't name, isn't either.
-    const twice = loaded('3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\Notes.md|1|', '24|25|-1|dir|Docs|1|', '27|15|-1|txt|Docs\Notes.md|1|');
+    const twice = loaded('3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Notes.md|1|', '24|25|-1|dir|Docs|1|', '27|15|-1|txt|Docs\\Notes.md|1|');
     const onHead = head('3|5|dir|/|0', '22|23|dir|/Code|1', '27|15|txt|/Code/Notes.md|1', '24|25|dir|/Docs|1', '28|16|txt|/Docs/Notes.md|1');
     expect(compareWithHead(twice, onHead, new Set())).toEqual([]);
   });
