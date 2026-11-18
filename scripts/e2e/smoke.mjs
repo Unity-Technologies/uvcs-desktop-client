@@ -96,8 +96,11 @@ function commandsRun() {
   return existsSync(cmLog) ? readFileSync(cmLog, 'utf8').split('\n').filter(Boolean) : [];
 }
 
-/** Commands that only read this machine (`LOCAL_COMMANDS` in main/cm/repeatedCommands.ts); every other one asks a server. */
-const LOCAL_COMMAND = /^(ok |ERR)(status|getworkspacefrompath|wi|profile|version|changelist|workspace list)\b/;
+/**
+ * Commands that need no sign-in (`needsSignIn` in main/cm/repeatedCommands.ts): those that only read this machine, and
+ * a `cm status` told not to work out the workspace's header, which would ask the server for its branch's head.
+ */
+const LOCAL_COMMAND = /^(ok |ERR)((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
 /** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
 async function settled() {
