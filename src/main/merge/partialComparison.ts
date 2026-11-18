@@ -227,10 +227,12 @@ function foldersWithUnloadedItems({ loaded, loadedKeys, headByKey }: Comparison)
 
 function addedItems(comparison: Comparison, childrenWhenLoaded: ReadonlyMap<string, readonly HeadItem[]>): PartialIncomingItem[] {
   const isNewByIds = newItemRule(comparison.loaded);
+  const loadedChildKeys = loadedChildKeysByFolder(comparison.loaded);
   return foldersWithUnloadedItems(comparison).flatMap(({ folder, unloaded }) => {
     const listed = childrenWhenLoaded.get(folder.item.path);
     const scope = childScope(folder);
-    const added = listed ? unlistedIfWhole(unloaded, listed, scope, comparison.loadedKeys) : unloaded.every(isNewByIds) ? unloaded : [];
+    const loadedChildren = loadedChildKeys.get(folder.item.path) ?? [];
+    const added = listed ? unlistedIfWhole(unloaded, listed, scope, comparison.loadedKeys, loadedChildren) : unloaded.every(isNewByIds) ? unloaded : [];
     return added.map(({ item, repository }) => ({
       kind: 'added' as const,
       path: item.path,
@@ -243,12 +245,36 @@ function addedItems(comparison: Comparison, childrenWhenLoaded: ReadonlyMap<stri
   });
 }
 
-/** `unloaded` but what `listed` (a folder's children when it was loaded) held; none if it held one the workspace left out. */
-function unlistedIfWhole(unloaded: readonly Scoped<HeadItem>[], listed: readonly HeadItem[], scope: string, loadedKeys: ReadonlySet<string>): Scoped<HeadItem>[] {
+/**
+ * `unloaded` but what `listed` (a folder's children when it was loaded) held. None if it held one the workspace left
+ * out, or if it misses one the workspace loaded in it: the folder kept an older revision than what it loaded (a
+ * partial workspace keeps its root at the one it was created with, changeset 0), so the listing can't tell.
+ */
+function unlistedIfWhole(
+  unloaded: readonly Scoped<HeadItem>[],
+  listed: readonly HeadItem[],
+  scope: string,
+  loadedKeys: ReadonlySet<string>,
+  loadedChildren: readonly string[],
+): Scoped<HeadItem>[] {
   const listedKeys = listed.map((item) => scopedKey(item.itemId, item.xlink ? item.path : scope));
   if (listedKeys.some((key) => !loadedKeys.has(key))) return [];
   const existed = new Set(listedKeys);
+  if (loadedChildren.some((key) => !existed.has(key))) return [];
   return unloaded.filter((each) => !existed.has(each.key));
+}
+
+/** The scoped keys of the loaded items in each loaded folder, by the folder's path. */
+function loadedChildKeysByFolder(loaded: readonly Scoped<LoadedTreeItem>[]): Map<string, string[]> {
+  const byFolder = new Map<string, string[]>();
+  for (const { item, key } of loaded) {
+    if (item.path === '') continue;
+    const parent = parentOf(item.path);
+    const keys = byFolder.get(parent) ?? [];
+    keys.push(key);
+    byFolder.set(parent, keys);
+  }
+  return byFolder;
 }
 
 /** Whether an item may be new by its id and changeset: after every loaded item and revision of its repository. */
