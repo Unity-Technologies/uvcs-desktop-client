@@ -51,6 +51,27 @@ describe('runCmProcess', () => {
   });
 });
 
+/**
+ * A Node script standing in for `cm` asking which system to sign in with, as it does when the user's session expired:
+ * with its input closed, each answer it reads is empty, so it asks again, and again, without pausing.
+ */
+const ASKING_TO_SIGN_IN = [
+  "process.stdout.write('Select the system you want to use to sign in to: codice@cloud\\n0 - Okta Unity\\n1 - Unity ID\\n');",
+  "const ask = () => process.stdout.write('Select your system [0-1] '.repeat(50), ask);",
+  'ask();',
+].join(' ');
+
+describe('runCmProcess when cm asks to sign in', () => {
+  it('stops an answer asking again and again, and says cm waits for input', async () => {
+    await expect(runCmProcess(process.execPath, ['-e', ASKING_TO_SIGN_IN], {})).rejects.toThrow('cm is waiting for input ("Select your system [0-1]")');
+  });
+
+  it('stops a list asking again and again, which no record would ever end', async () => {
+    const reading = { stream: new RecordReader((fields) => fields) };
+    await expect(runCmProcess(process.execPath, ['-e', ASKING_TO_SIGN_IN], { reading })).rejects.toThrow('cm is waiting for input ("Select your system [0-1]")');
+  });
+});
+
 describe('runCmProcess reading records', () => {
   /** A Node script standing in for `cm`, printing `output` in two writes cut at byte `cut`, then exiting with `exitCode`. */
   const printing = (output: string, cut: number, exitCode = 0): string =>
