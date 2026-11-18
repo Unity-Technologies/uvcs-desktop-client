@@ -81,15 +81,4 @@ describe('WorkspaceServers', () => {
     expect(reads).toEqual([GAME]);
   });
 
-  it('never waits on its own read: a read failing as a sign-in would asks to learn the same folder again', async () => {
-    let known!: WorkspaceServers;
-    let nested: string | undefined | 'unset' = 'unset';
-    known = new WorkspaceServers(async (directory) => {
-      nested = await known.learn(directory);
-      return { root: directory, server: 'acme@cloud' };
-    }, 'linux');
-
-    expect(await known.learn(GAME)).toBe('acme@cloud');
-    expect(nested).toBeUndefined();
-  });
 });

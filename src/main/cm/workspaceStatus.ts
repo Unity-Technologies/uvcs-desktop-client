@@ -1,5 +1,5 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
-import type { CmClient } from './CmClient';
+import type { CmClient, CmRunOptions } from './CmClient';
 import { findWorkspaceRoot } from './workspaceRoot';
 import { isOrganizationIdServer } from './organizationIds';
 import { child, integer, parseXml, text } from './parseXml';
@@ -64,8 +64,8 @@ async function serverByName(cm: CmClient, workspacePath: string, printedServer: 
  * The server of the workspace holding `directory`, by name, from its machine-readable header: a local read that asks no
  * server, so it answers while the server needs a sign-in. Undefined when `directory` is in no workspace, or `cm` fails.
  */
-export async function readWorkspaceServer(cm: Pick<CmClient, 'query'>, directory: string): Promise<string | undefined> {
-  const output = await cm.query(machineReadableHeaderArgs(directory), { cwd: directory }).catch(() => '');
+export async function readWorkspaceServer(cm: Pick<CmClient, 'query'>, directory: string, options: CmRunOptions = { cwd: directory }): Promise<string | undefined> {
+  const output = await cm.query(machineReadableHeaderArgs(directory), options).catch(() => '');
   return parseMachineReadableHeader(output)?.server;
 }
 
@@ -75,7 +75,8 @@ export async function readWorkspaceServer(cm: Pick<CmClient, 'query'>, directory
  */
 export async function readWorkspaceOrigin(cm: CmClient, directory: string): Promise<{ root: string; server: string } | undefined> {
   const root = await findWorkspaceRoot(cm, directory);
-  const server = root === null ? undefined : await readWorkspaceServer(cm, root);
+  // Both name their folder and run in any directory: a failure of theirs never asks to learn a server itself.
+  const server = root === null ? undefined : await readWorkspaceServer(cm, root, { anyDirectory: true });
   return root !== null && server !== undefined ? { root, server } : undefined;
 }
 

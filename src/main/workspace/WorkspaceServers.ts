@@ -15,7 +15,7 @@ export type ReadWorkspaceServer = (directory: string) => Promise<{ root: string;
  */
 export class WorkspaceServers {
   private readonly servers = new Map<string, string>();
-  private readonly learning = new Set<string>();
+  private readonly learning = new Map<string, Promise<string | undefined>>();
 
   constructor(
     private readonly readServer: ReadWorkspaceServer,
@@ -45,19 +45,22 @@ export class WorkspaceServers {
   /**
    * The server of the workspace holding `directory`, read now when not known, and remembered under the workspace's root
    * (so its every folder knows it): for a command there that failed for a sign-in before its workspace's header was
-   * read. A read of the same folder already under way answers undefined: the read itself failing for a sign-in never
-   * waits on itself.
+   * read. Failures learning the same folder at once share one read. Its reads name the folder and run in any directory
+   * (`readWorkspaceOrigin`), so they never learn themselves.
    */
-  async learn(directory: string): Promise<string | undefined> {
+  learn(directory: string): Promise<string | undefined> {
     const known = this.serverOf(directory);
-    if (known !== undefined || this.learning.has(directory)) return known;
-    this.learning.add(directory);
-    try {
-      const read = await this.readServer(directory);
-      if (read) this.servers.set(read.root, read.server);
-      return read?.server;
-    } finally {
-      this.learning.delete(directory);
-    }
+    if (known !== undefined) return Promise.resolve(known);
+    const running = this.learning.get(directory);
+    if (running) return running;
+    const learning = this.readServer(directory)
+      .then((read) => {
+        if (read) this.servers.set(read.root, read.server);
+        return read?.server;
+      })
+      .finally(() => this.learning.delete(directory));
+    this.learning.set(directory, learning);
+    return learning;
   }
+
 }
