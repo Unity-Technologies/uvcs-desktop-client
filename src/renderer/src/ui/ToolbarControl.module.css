@@ -1,4 +1,7 @@
-/* The top bar's bordered controls (the branch pill and the segments next to it): a quiet field that firms up on hover. */
+/*
+ * The bordered controls of the top bar (the branch pill and the segments next to it) and of the home sidebar (the
+ * account switcher): a quiet field that firms up on hover.
+ */
 .control {
   height: 36px;
   border: 1px solid var(--border-default);
