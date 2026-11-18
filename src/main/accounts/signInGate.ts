@@ -17,6 +17,6 @@ export function signInGate({ sessions, checks, workspaceServers }: { sessions: S
       const session = sessions.of(server);
       return session.state === 'needsSignIn' ? session.problem : undefined;
     },
-    confirm: (server, commandStartedAt) => checks.confirm(server, commandStartedAt),
+    confirm: (server, commandStartedAt, ranInShell) => checks.confirm(server, commandStartedAt, ranInShell),
   };
 }

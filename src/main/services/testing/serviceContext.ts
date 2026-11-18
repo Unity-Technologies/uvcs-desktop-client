@@ -28,7 +28,7 @@ export function serviceContext(cm: CmClient, parts: Partial<ServiceContext> = {}
 /** The servers' sign-in state, checked with `cm checkconnection` through the test's `cm`. */
 export function signInContext(cm: CmClient, now?: () => number): SignInContext {
   const sessions = new ServerSessions();
-  return { sessions, sessionChecks: new SessionChecks({ check: (server) => checkConnection(cm, server), sessions, signedInAgain: () => cm.restartShells(), now }) };
+  return { sessions, sessionChecks: new SessionChecks({ check: (server) => checkConnection(cm, server), sessions, restartShells: () => cm.restartShells(), now }) };
 }
 
 /** The profiles read the accounts, the servers and the setup check share, over the test's `cm`. */

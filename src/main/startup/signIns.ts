@@ -13,7 +13,7 @@ import type { SignInContext } from '../services/ServiceContext';
  */
 export function trackSignIns(cm: CmClient, workspaceServers: WorkspaceServers, tell: (sessions: ServerSession[]) => void): SignInContext {
   const sessions = new ServerSessions();
-  const sessionChecks = new SessionChecks({ check: (server) => checkConnection(cm, server), sessions, signedInAgain: () => cm.restartShells() });
+  const sessionChecks = new SessionChecks({ check: (server) => checkConnection(cm, server), sessions, restartShells: () => cm.restartShells() });
   cm.gateSignIns(signInGate({ sessions, checks: sessionChecks, workspaceServers }));
   sessions.onChange(tell);
   return { sessions, sessionChecks };

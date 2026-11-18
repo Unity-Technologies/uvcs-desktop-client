@@ -741,8 +741,8 @@ function fakeGate({ needsSignIn = [] as string[], confirmed = null as SignInProb
     },
     passes: (args) => args[0] === 'checkconnection',
     refusal: (server) => (needsSignIn.includes(server) ? { ...ENDED, server } : undefined),
-    confirm: async (server) => {
-      confirms.push(server);
+    confirm: async (server, _startedAt, ranInShell) => {
+      confirms.push(ranInShell ? `${server} (shell)` : server);
       return confirmed;
     },
   };
@@ -810,7 +810,8 @@ describe('CmClient sign-in gate', () => {
 
     const error = await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }));
 
-    expect(confirms).toEqual(['acme@cloud']);
+    // A pooled shell's: the gate restarts the shells should the server turn out signed in.
+    expect(confirms).toEqual(['acme@cloud (shell)']);
     expect(error).toBeInstanceOf(CmSignInError);
     expect(error.command).toMatchObject({ exitCode: 1, output: 'Error: The auth token expired. User: dev@acme.com.', logEntryId: logged[0]?.id });
   });
@@ -854,7 +855,7 @@ describe('CmClient sign-in gate', () => {
     const error = await failureOf(cm.query(['status', '--header', '--xml'], { cwd: LEARNED }));
 
     expect(learned).toEqual([LEARNED]);
-    expect(confirms).toEqual(['build:8087']);
+    expect(confirms).toEqual(['build:8087 (shell)']);
     expect((error as CmSignInError).problem.server).toBe('build:8087');
   });
 

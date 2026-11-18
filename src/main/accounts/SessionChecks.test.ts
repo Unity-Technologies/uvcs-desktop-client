@@ -26,7 +26,7 @@ function checks(first: ConnectionCheck = { kind: 'reached' }) {
       return new Promise((resolve) => pending.push(() => resolve(answered)));
     },
     sessions,
-    signedInAgain: () => void restarts++,
+    restartShells: () => void restarts++,
     now: () => time,
   });
   return {
@@ -133,7 +133,7 @@ describe('SessionChecks.confirm', () => {
   it("confirms a command's sign-in failure with one check, which marks the server", async () => {
     const { checks: sessionChecks, sessions, asked, at } = checks({ kind: 'needsSignIn', problem: ENDED });
 
-    expect(await sessionChecks.confirm('acme@cloud', at())).toEqual(ENDED);
+    expect(await sessionChecks.confirm('acme@cloud', at(), false)).toEqual(ENDED);
 
     expect(asked).toEqual(['acme@cloud']);
     expect(sessions.of('acme@cloud').state).toBe('needsSignIn');
@@ -144,7 +144,7 @@ describe('SessionChecks.confirm', () => {
     await sessionChecks.checkNow('acme@cloud');
     advance(10);
 
-    expect(await sessionChecks.confirm('acme@cloud', at())).toEqual(ENDED);
+    expect(await sessionChecks.confirm('acme@cloud', at(), false)).toEqual(ENDED);
 
     expect(asked).toHaveLength(1);
   });
@@ -152,7 +152,7 @@ describe('SessionChecks.confirm', () => {
   it("answers null when the server's session is fine: the failure was another server's", async () => {
     const { checks: sessionChecks, at } = checks();
 
-    expect(await sessionChecks.confirm('acme@cloud', at())).toBeNull();
+    expect(await sessionChecks.confirm('acme@cloud', at(), false)).toBeNull();
   });
 
   it('confirms a burst of failures with one check: those that started before a check took it', async () => {
@@ -161,10 +161,10 @@ describe('SessionChecks.confirm', () => {
     advance(10);
     hold();
 
-    const confirming = [sessionChecks.confirm('acme@cloud', startedAt), sessionChecks.confirm('acme@cloud', startedAt)];
+    const confirming = [sessionChecks.confirm('acme@cloud', startedAt, false), sessionChecks.confirm('acme@cloud', startedAt, false)];
     release();
     expect(await Promise.all(confirming)).toEqual([ENDED, ENDED]);
-    expect(await sessionChecks.confirm('acme@cloud', startedAt)).toEqual(ENDED);
+    expect(await sessionChecks.confirm('acme@cloud', startedAt, false)).toEqual(ENDED);
 
     expect(asked).toEqual(['acme@cloud']);
   });
@@ -174,7 +174,7 @@ describe('SessionChecks.confirm', () => {
 
     await sessionChecks.checkNow('acme@cloud');
     advance(CONFIRMED_REACHED_MS);
-    await sessionChecks.confirm('acme@cloud', at());
+    await sessionChecks.confirm('acme@cloud', at(), false);
 
     expect(asked).toHaveLength(2);
   });
@@ -185,7 +185,7 @@ describe('SessionChecks.confirm', () => {
 
     for (let read = 0; read < 5; read++) {
       advance(100);
-      expect(await sessionChecks.confirm('acme@cloud', at())).toBeNull();
+      expect(await sessionChecks.confirm('acme@cloud', at(), false)).toBeNull();
     }
 
     expect(asked).toHaveLength(1);
@@ -193,8 +193,28 @@ describe('SessionChecks.confirm', () => {
 
   it('answers null when the check itself fails, so the command fails as it did', async () => {
     const sessions = new ServerSessions();
-    const sessionChecks = new SessionChecks({ check: () => Promise.reject(new Error('cm not found')), sessions, signedInAgain: () => undefined });
+    const sessionChecks = new SessionChecks({ check: () => Promise.reject(new Error('cm not found')), sessions, restartShells: () => undefined });
 
-    expect(await sessionChecks.confirm('acme@cloud', 0)).toBeNull();
+    expect(await sessionChecks.confirm('acme@cloud', 0, false)).toBeNull();
+  });
+
+  it("restarts the shells once when a shell's reads fail for a sign-in the check finds fine: made elsewhere since they started", async () => {
+    const { checks: sessionChecks, asked, at, advance, restarts } = checks();
+    const startedAt = at();
+    advance(10);
+
+    expect(await sessionChecks.confirm('acme@cloud', startedAt, true)).toBeNull();
+    expect(await sessionChecks.confirm('acme@cloud', startedAt, true)).toBeNull();
+
+    expect(asked).toHaveLength(1);
+    expect(restarts()).toBe(1);
+  });
+
+  it("restarts no shell for a failure in a process of its own: it read the sign-in as it started", async () => {
+    const { checks: sessionChecks, at, restarts } = checks();
+
+    await sessionChecks.confirm('acme@cloud', at(), false);
+
+    expect(restarts()).toBe(0);
   });
 });

@@ -20,8 +20,11 @@ export interface SessionCheckDeps {
   /** `cm checkconnection <server>` (`checkConnection`). */
   check: (server: string) => Promise<ConnectionCheck>;
   sessions: ServerSessions;
-  /** A server signed in again: the `cm shell` sessions read their sign-in again (`CmClient.restartShells`). */
-  signedInAgain: () => void;
+  /**
+   * The `cm shell` sessions start again, reading the sign-in again (`CmClient.restartShells`): once a server is signed
+   * in again, and once a shell's read failed for a sign-in the server's check found fine (made elsewhere meanwhile).
+   */
+  restartShells: () => void;
   now?: () => number;
 }
 
@@ -39,6 +42,8 @@ interface LastCheck {
 export class SessionChecks {
   private readonly running = new Map<string, Promise<ConnectionProblem | null>>();
   private readonly last = new Map<string, LastCheck>();
+  /** When the shells last started again: a burst of failures from the shells they replaced restarts them once. */
+  private shellsRestartedAt = Number.NEGATIVE_INFINITY;
   private readonly now: () => number;
 
   constructor(private readonly deps: SessionCheckDeps) {
@@ -66,9 +71,11 @@ export class SessionChecks {
    * A command that started at `commandStartedAt` failed as a sign-in problem would: whether the server needs a sign-in,
    * from a check started since (the one running, or a new one), or within `CONFIRMED_REACHED_MS`, so a burst of
    * failures costs one check. A server known to need one answers at once: the failure is what that state says (a local
-   * command still runs, and fails so).
+   * command still runs, and fails so). A pooled `cm shell`'s failure (`ranInShell`) the check finds signed in restarts
+   * the shells, once: a shell keeps the sign-in it read as it started, so one made since (in the Unity Version Control
+   * app, before any check found the session ended) would never reach it.
    */
-  async confirm(server: string, commandStartedAt: number): Promise<SignInProblem | null> {
+  async confirm(server: string, commandStartedAt: number, ranInShell: boolean): Promise<SignInProblem | null> {
     const known = this.deps.sessions.of(server);
     if (known.state === 'needsSignIn') return known.problem;
     const last = this.last.get(server);
@@ -82,7 +89,14 @@ export class SessionChecks {
       }
     }
     const session = this.deps.sessions.of(server);
-    return session.state === 'needsSignIn' ? session.problem : null;
+    if (session.state === 'needsSignIn') return session.problem;
+    if (ranInShell && this.shellsRestartedAt < commandStartedAt) this.restartShells();
+    return null;
+  }
+
+  private restartShells(): void {
+    this.shellsRestartedAt = this.now();
+    this.deps.restartShells();
   }
 
   private run(server: string): Promise<ConnectionProblem | null> {
@@ -104,7 +118,7 @@ export class SessionChecks {
   /** What a check found, told to `ServerSessions`; the server out of reach, or null. */
   private apply(server: string, check: ConnectionCheck): ConnectionProblem | null {
     if (check.kind === 'needsSignIn') this.deps.sessions.needsSignIn(check.problem);
-    if (check.kind === 'reached' && this.deps.sessions.signedIn(server)) this.deps.signedInAgain();
+    if (check.kind === 'reached' && this.deps.sessions.signedIn(server)) this.restartShells();
     return check.kind === 'unreachable' ? check.problem : null;
   }
 }
