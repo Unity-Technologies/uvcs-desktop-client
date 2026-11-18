@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { choicesAwaitReads, downloadSearchCheck, foldersAboveResults, isLoadKnown } from './downloadSearch';
+import { choicesAwaitReads, downloadSearchRow, foldersAboveResults, foldersOfResultsSoFar, isLoadKnown } from './downloadSearch';
 import { downloadRules, toggled, type DownloadItem, type DownloadTree, type DownloadedChoices } from './downloadSelection';
 
 const file = (path: string): DownloadItem => ({ path, isDirectory: false, iconType: 'file' });
@@ -17,6 +17,7 @@ function tree(loadedIn: Record<string, string[]>, read: string[]): DownloadTree 
 }
 
 const none: DownloadedChoices = new Map();
+const noFailures: ReadonlyMap<string, string> = new Map();
 
 describe('isLoadKnown', () => {
   it('waits for each loaded folder above the item to be read', () => {
@@ -46,43 +47,80 @@ describe('foldersAboveResults', () => {
   });
 });
 
-describe('downloadSearchCheck', () => {
-  it('shows nothing until whether the result is loaded is known', () => {
-    expect(downloadSearchCheck('Code/main.cs', tree({ '': ['Code'] }, ['']), none)).toBeUndefined();
+describe('foldersOfResultsSoFar', () => {
+  it('adds the folders above new results to those already known', () => {
+    const known = new Set(['Code']);
+    expect([...foldersOfResultsSoFar(known, ['Assets/hero.fbx', 'Code/main.cs'])].sort()).toEqual(['Assets', 'Code']);
   });
 
-  it('ticks a loaded result and unticks one that is not, with no change to apply', () => {
-    const loaded = tree({ '': ['Code'], Code: ['Code/main.cs'] }, ['']);
-    expect(downloadSearchCheck('Code/main.cs', loaded, none)).toEqual({ check: true, change: 'kept' });
-    expect(downloadSearchCheck('Assets/hero.fbx', loaded, none)).toEqual({ check: false, change: 'none' });
-  });
-
-  it('shows what Apply does once the user ticks or unticks a result', () => {
-    const loaded = tree({ '': ['Code'], Code: ['Code/main.cs'] }, ['']);
-    expect(downloadSearchCheck('Code/main.cs', loaded, toggled('Code/main.cs', loaded, none))).toEqual({ check: false, change: 'unload' });
-    expect(downloadSearchCheck('Assets/hero.fbx', loaded, toggled('Assets/hero.fbx', loaded, none))).toEqual({ check: true, change: 'load' });
-  });
-
-  it('ticks a loaded folder found by the search though its items are not read, as the tree does', () => {
-    expect(downloadSearchCheck('Assets/Textures', tree({ '': ['Assets'], Assets: ['Assets/Textures'] }, ['']), none)).toEqual({
-      check: true,
-      change: 'kept',
-    });
+  it('keeps the same set when the results add no folder, so nothing is read again', () => {
+    const known = new Set(['Assets', 'Code']);
+    expect(foldersOfResultsSoFar(known, ['Code/main.cs', 'readme.md'])).toBe(known);
   });
 });
 
+describe('downloadSearchRow', () => {
+  const loaded = tree({ '': ['Code'], Code: ['Code/main.cs'] }, ['']);
+
+  it('shows a spinner until whether the result is loaded is known', () => {
+    expect(downloadSearchRow('Code/main.cs', tree({ '': ['Code'] }, ['']), none, noFailures)).toEqual({ kind: 'loading' });
+  });
+
+  it('ticks a loaded result and unticks one that is not, named by its last name, with no change to apply', () => {
+    expect(downloadSearchRow('Code/main.cs', loaded, none, noFailures)).toEqual({
+      kind: 'check',
+      check: true,
+      label: 'main.cs',
+      change: 'kept',
+      marker: undefined,
+    });
+    expect(downloadSearchRow('Assets/hero.fbx', loaded, none, noFailures)).toMatchObject({ check: false, change: 'none', marker: undefined });
+  });
+
+  it('shows what Apply does once the user ticks or unticks a result', () => {
+    expect(downloadSearchRow('Code/main.cs', loaded, toggled('Code/main.cs', loaded, none), noFailures)).toMatchObject({
+      check: false,
+      marker: 'Remove',
+    });
+    expect(downloadSearchRow('Assets/hero.fbx', loaded, toggled('Assets/hero.fbx', loaded, none), noFailures)).toMatchObject({
+      check: true,
+      marker: 'Download',
+    });
+  });
+
+  it('ticks a loaded folder found by the search though its items are not read, as the tree does', () => {
+    const folderLoaded = tree({ '': ['Assets'], Assets: ['Assets/Textures'] }, ['']);
+    expect(downloadSearchRow('Assets/Textures', folderLoaded, none, noFailures)).toMatchObject({ check: true, change: 'kept' });
+  });
+
+  it('says why a result below a folder that could not be read cannot be chosen', () => {
+    const failures = new Map([['Code', "Couldn't read this folder."]]);
+    expect(downloadSearchRow('Code/main.cs', tree({ '': ['Code'] }, ['']), none, failures)).toEqual({
+      kind: 'failed',
+      failure: "Couldn't read this folder.",
+    });
+  });
+});
 describe('choicesAwaitReads', () => {
   it('waits while a folder above a choice is not read, then makes its rule', () => {
     const unread = tree({ '': [] }, ['']);
     const choices = toggled('Assets/Textures/a.png', unread, none);
-    expect(choicesAwaitReads(unread, choices)).toBe(true);
+    expect(choicesAwaitReads(unread, choices, noFailures)).toBe(true);
 
     const read = tree({ '': [] }, ['', 'Assets', 'Assets/Textures']);
-    expect(choicesAwaitReads(read, choices)).toBe(false);
+    expect(choicesAwaitReads(read, choices, noFailures)).toBe(false);
     expect(downloadRules(read, choices)).toEqual([{ path: 'Assets/Textures/a.png', load: true }]);
   });
 
   it('waits for nothing without choices', () => {
-    expect(choicesAwaitReads(tree({}, []), none)).toBe(false);
+    expect(choicesAwaitReads(tree({}, []), none, noFailures)).toBe(false);
+  });
+
+  it('stops waiting for a folder that could not be read, whose choices make no rule', () => {
+    const unread = tree({ '': [] }, ['', 'Assets']);
+    const choices = toggled('Assets/Textures/a.png', unread, none);
+    const failures = new Map([['Assets/Textures', "Couldn't read this folder."]]);
+    expect(choicesAwaitReads(unread, choices, failures)).toBe(false);
+    expect(downloadRules(unread, choices)).toEqual([]);
   });
 });
