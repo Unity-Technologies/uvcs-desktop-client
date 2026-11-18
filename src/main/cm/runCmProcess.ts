@@ -1,8 +1,17 @@
 import { spawn } from 'node:child_process';
 import type { CmResult } from './CmResult';
+import { waitingForInputError } from './consolePrompts';
 import { OutputBuffer } from './OutputBuffer';
 import { ANSWER_TEXT, CmOutputTooLargeError, MAX_TEXT_OUTPUT_LENGTH } from './outputLimit';
 import type { OutputReading, StreamReader } from './outputReading';
+import { RepeatedPromptWatch } from './repeatedPrompt';
+
+/**
+ * The longest line an operation's progress (`onOutputLine`) is given: a line still arriving past it is reported as it
+ * is and the rest follows as the next. No real line comes near it; one that never ends (a question asked again and
+ * again that `RepeatedPromptWatch` doesn't know) would otherwise be kept whole, and joined again with every chunk.
+ */
+export const MAX_OUTPUT_LINE_LENGTH = 1024 * 1024;
 
 export interface CmProcessOptions {
   cwd?: string;
@@ -23,7 +32,9 @@ export interface CmProcessOptions {
 
 /**
  * Runs one `cm` command in its own process. Its stdin is closed, so a command that stops to ask
- * something on the console (credentials, "are you sure?") fails at once instead of hanging.
+ * something on the console (credentials, "are you sure?") fails at once instead of hanging, or, where `cm` asks again
+ * at once (which system to sign in with), is stopped as soon as its output shows it asking again and again
+ * (`RepeatedPromptWatch`): that loop prints without end and never pauses.
  */
 export function runCmProcess(cmPath: string, args: string[], options: CmProcessOptions): Promise<CmResult> {
   return new Promise((resolve, reject) => {
@@ -43,6 +54,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     const kept = new OutputBuffer(0, text.past === 'keepEnds' ? text.maxLength : undefined);
     let stopped = false;
     let pendingLine = '';
+    const promptWatch = new RepeatedPromptWatch();
 
     const stop = (error: Error): void => {
       stopped = true;
@@ -60,10 +72,27 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       // A progress line rewritten in place (`\r`) counts as a line of its own.
       const lines = (pendingLine + chunk).split(/\r\n|\r|\n/);
       pendingLine = lines.pop() ?? '';
-      lines.forEach(options.onOutputLine);
+      for (const line of lines) inPieces(line).forEach(options.onOutputLine);
+      // The line still arriving keeps no more than its last piece.
+      const pieces = inPieces(pendingLine);
+      pendingLine = pieces.pop() ?? '';
+      pieces.forEach(options.onOutputLine);
+    };
+    /** Stops a command asking the same question again and again; true when it did. */
+    const stopAskingAgain = (): boolean => {
+      const { prompt } = promptWatch;
+      if (prompt !== undefined) stop(waitingForInputError(prompt));
+      return prompt !== undefined;
+    };
+    const readText = (chunk: string): void => {
+      if (stopped) return;
+      promptWatch.appendText(chunk);
+      if (!stopAskingAgain()) collect(chunk);
     };
     const readStream = (reader: StreamReader) => (chunk: Buffer): void => {
       if (stopped) return;
+      promptWatch.appendBytes(chunk);
+      if (stopAskingAgain()) return;
       try {
         reader.read(chunk);
       } catch (error) {
@@ -80,7 +109,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       child.stderr.setEncoding('utf8').on('data', collect);
     } else {
       // Decoded by the streams, so a character split between two chunks stays whole.
-      child.stdout.setEncoding('utf8').on('data', collect);
+      child.stdout.setEncoding('utf8').on('data', readText);
       child.stderr.setEncoding('utf8').on('data', collect);
     }
     child.on('error', reject);
@@ -93,4 +122,12 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       resolve({ output, exitCode: code ?? -1 });
     });
   });
+}
+
+/** A line as `onOutputLine` is given it: in pieces of at most `MAX_OUTPUT_LINE_LENGTH`, an empty line as itself. */
+function inPieces(line: string): string[] {
+  if (line.length <= MAX_OUTPUT_LINE_LENGTH) return [line];
+  const pieces: string[] = [];
+  for (let start = 0; start < line.length; start += MAX_OUTPUT_LINE_LENGTH) pieces.push(line.slice(start, start + MAX_OUTPUT_LINE_LENGTH));
+  return pieces;
 }

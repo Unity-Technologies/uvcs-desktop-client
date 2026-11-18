@@ -3,6 +3,7 @@ import { FIELD_SEPARATOR, layoutReader, RecordReader, recordFormat, RECORD_SEPAR
 import { formatOutput, recordsIn } from './testing/cmOutput';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { countBytesRead } from './testing/countBytesRead';
+import { CmItemTooLargeError } from './outputLimit';
 
 describe('recordFormat', () => {
   it('ends each field with the field separator and the record with the record separator', () => {
@@ -154,5 +155,18 @@ describe('RecordReader', () => {
     // of an unfinished record joined again with each chunk, reads each one many times.
     expect((bytesRead + charactersRead) / output.length).toBeLessThan(6);
     expect(reader.count).toBe(printed.length);
+  });
+
+  it('fails a record still arriving past its limit: an output that never ends one (cm asking to sign in, again and again) would be kept whole', () => {
+    const reader = new RecordReader((fields) => fields, 1000);
+    reader.read(Buffer.from('x'.repeat(600)));
+    expect(() => reader.read(Buffer.from('x'.repeat(600)))).toThrow(CmItemTooLargeError);
+  });
+
+  it('reads a record as long as its limit, arriving in chunks', () => {
+    const reader = new RecordReader((fields) => fields, 1000);
+    reader.read(Buffer.from('x'.repeat(1000)));
+    reader.read(Buffer.from(`${RECORD_SEPARATOR}\n`));
+    expect(reader.finish()).toEqual([['x'.repeat(1000)]]);
   });
 });

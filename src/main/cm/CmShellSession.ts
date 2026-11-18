@@ -1,15 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
+import { looksLikePrompt, MAX_PROMPT_LENGTH, waitingForInputError } from './consolePrompts';
 import { ANSWER_TEXT, CmOutputTooLargeError } from './outputLimit';
 import type { OutputReading } from './outputReading';
 import { StreamOutput, TextOutput, type OutputStream, type ShellCommandOutput } from './ShellCommandOutput';
 import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 import { resultLineAtEnd } from './shellResultLine';
-/** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
-const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
-/** Longer last lines are output (e.g. `--format` records), not a question. */
-const MAX_PROMPT_LENGTH = 300;
 const PROMPT_STALL_MS = 1500;
 const READ_TIMEOUT_MS = 120_000;
 /** A write of few paths can still touch a whole tree (removing or moving a folder); a stalled prompt is caught long before either timeout. */
@@ -177,7 +174,7 @@ export class CmShellSession {
     const newline = tail.lastIndexOf('\n');
     if (newline < 0 && length > MAX_PROMPT_LENGTH) return;
     const lastLine = tail.slice(newline + 1);
-    if (!lastLine || !PROMPT_LIKE_TAIL.test(lastLine)) return;
+    if (!lastLine || !looksLikePrompt(lastLine)) return;
 
     // Output that just paused mid-line on a `:` (a date, a path) is not a prompt. When the main process was busy,
     // the timer can fire before the output that came meanwhile is read: `setImmediate` reads it first.
@@ -187,7 +184,7 @@ export class CmShellSession {
         setImmediate(() =>
           this.guarded(() => {
             if (this.received !== receivedBefore || !this.running) return;
-            this.abortRunning(new Error(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`));
+            this.abortRunning(waitingForInputError(lastLine));
           }),
         ),
       this.promptStallMs,

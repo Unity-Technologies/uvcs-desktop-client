@@ -1,3 +1,4 @@
+import { CmItemTooLargeError, MAX_ITEM_BYTES } from './outputLimit';
 import type { StreamReader } from './outputReading';
 import { isShellResultLine } from './shellResultLine';
 
@@ -19,10 +20,15 @@ export class LineReader<T> implements StreamReader {
   private readonly rows: T[] = [];
   /** The bytes after the last line break: the line still arriving. */
   private incomplete: Buffer[] = [];
+  private incompleteBytes = 0;
   /** The last whole line, read once another follows it, or at the end unless it's a shell's result line. */
   private held: string | undefined;
 
-  constructor(private readonly readLine: ReadLine<T>) {}
+  /** `maxItemBytes`: past it, a line still arriving fails the command (`CmItemTooLargeError`). */
+  constructor(
+    private readonly readLine: ReadLine<T>,
+    private readonly maxItemBytes = MAX_ITEM_BYTES,
+  ) {}
 
   /** How many items were read so far: what a caller (a test) checks to tell lines are read as they arrive. */
   get count(): number {
@@ -33,11 +39,11 @@ export class LineReader<T> implements StreamReader {
     let start = 0;
     for (let end = chunk.indexOf(LF); end >= 0; end = chunk.indexOf(LF, start)) {
       const line = this.incomplete.length > 0 ? Buffer.concat([...this.incomplete, chunk.subarray(start, end)]) : chunk.subarray(start, end);
-      this.incomplete = [];
+      this.forgetIncomplete();
       this.hold(line.toString('utf8').replace(/\r$/, ''));
       start = end + 1;
     }
-    if (start < chunk.length) this.incomplete.push(start === 0 ? chunk : chunk.subarray(start));
+    if (start < chunk.length) this.keepIncomplete(start === 0 ? chunk : chunk.subarray(start));
   }
 
   /**
@@ -46,7 +52,7 @@ export class LineReader<T> implements StreamReader {
    */
   takeRest(): string {
     const unended = Buffer.concat(this.incomplete).toString('utf8').replace(/\r$/, '');
-    this.incomplete = [];
+    this.forgetIncomplete();
     const last = [this.held, unended].filter((line): line is string => line !== undefined && line !== '');
     this.held = undefined;
     let rest = '';
@@ -62,6 +68,18 @@ export class LineReader<T> implements StreamReader {
     if (this.held !== undefined) this.readLineIn(this.held);
     this.held = undefined;
     return this.rows;
+  }
+
+  /** Keeps the start of the line still arriving, which fails past `maxItemBytes`: an output that never ends one. */
+  private keepIncomplete(bytes: Buffer): void {
+    this.incompleteBytes += bytes.length;
+    if (this.incompleteBytes > this.maxItemBytes) throw new CmItemTooLargeError(this.maxItemBytes);
+    this.incomplete.push(bytes);
+  }
+
+  private forgetIncomplete(): void {
+    this.incomplete = [];
+    this.incompleteBytes = 0;
   }
 
   private hold(line: string): void {
