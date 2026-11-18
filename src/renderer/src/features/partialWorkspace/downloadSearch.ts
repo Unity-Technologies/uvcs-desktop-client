@@ -20,7 +20,7 @@ export function isLoadKnown(path: string, tree: DownloadTree): boolean {
 /**
  * The folders whose loaded items a search's results need, so each shows whether it's loaded: those above each result
  * (`foldersToReadLoaded` keeps the ones the workspace holds anything of). Only the workspace's side, a local read: the
- * repository's listings of these folders are read only once the user ticks a result (`searchTicked`).
+ * repository's listings of these folders are read only once the user ticks a result, which opens the folders above it (`choicesAwaitReads`).
  */
 export function foldersAboveResults(paths: readonly string[]): string[] {
   return [...new Set(paths.flatMap(ancestorsOf))];
