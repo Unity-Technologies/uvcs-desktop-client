@@ -89,12 +89,13 @@ loaded, as `cm partial update` would bring them.
   workspace loaded something else (a folder Big, never loaded, reads as new), so a loaded folder holding a new-looking
   item (`foldersWithNewItems`) is listed as it was at its loaded changeset (`readItemsWhenLoaded`: `cm ls <folders…>
   --tree=cs:<N>`, one per changeset, `treeListingArgs`): what it held then existed, so the folder was loaded in part
-  and nothing in it is added. Usually no folder needs it. Xlinks and what they hold are left out (`loadedFolders`): their items belong to
-  another repository, whose item ids say nothing about the workspace's. `cm ls` lists an xlink as a folder (`dir`),
-  never as an xlink, so both formats ask its `{name}`, which names its target (`parseXlinkName`), to tell it apart. A loaded folder the head no longer has fails
-  its listing, though `cm` lists the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head
-  moved it, its parent's listing shows it at its new path, which a next pass lists (`movedFolderPaths`); otherwise it
-  reads as removed.
+  and nothing in it is added. Usually no folder needs it. Xlinks and what they hold are left out (`loadedFolders`,
+  `withoutXlinks`): their items belong to another repository, whose item ids say nothing about the workspace's (an
+  xlink lists its target's root id, often the workspace root's own). `cm ls` lists an xlink as a folder (`dir`), never
+  as an xlink, so both formats ask its `{name}`, which names its target (`parseXlinkName`), to tell it apart. A loaded
+  folder the head no longer has fails its listing, though `cm` lists the rest: it's listed again without it
+  (`listHead`, `notInTreePaths`). If the head moved it, its parent's listing shows it at its new path, which a next
+  pass lists (`movedFolderPaths`, never through an xlink); otherwise it reads as removed.
 - **The view** (`PartialIncomingSession`) is the shared list of changed files (`FileTreeList`: a list or a tree,
   filtered, its folders closing), in the groups of `partialItemGroups` (conflicts first, then changed, moved, removed,
   added; `partialItemTreeGroups`). Each row ends with its letter (`partialItemStatus`, its `partialItemDetail` line as
