@@ -7,6 +7,8 @@
 }
 
 .covered {
+  /* What it covers draws its layers (a model viewer's labels, floating cards) within it, under the screen. */
+  isolation: isolate;
   display: flex;
   flex: 1;
   flex-direction: column;

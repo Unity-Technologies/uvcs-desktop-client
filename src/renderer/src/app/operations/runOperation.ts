@@ -1,7 +1,7 @@
 import { ApiError, api } from '../../api/client';
 import { useCommandLogStore } from '../shell/commandLogStore';
 import { workspacePlace, type Place } from '@shared/domain/place';
-import { refusedForSignIn } from '../signIn/refusedOperation';
+import { readRefusedForSignIn, refusedForSignIn } from '../signIn/refusedOperation';
 import { invalidatePlace, invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type Toast } from '../../ui/toast/toastStore';
 import { describeCompletion } from './describeProgress';
@@ -141,13 +141,14 @@ export async function runAction<T>(
 
 /**
  * Runs a read, or an action that leaves the workspace and repository as they were (opening a file), reporting
- * failures. Unlike `runAction`, it refreshes nothing: nothing changed.
+ * failures (but a sign-in the window's sign-in screen tells: `readRefusedForSignIn`). Unlike `runAction`, it refreshes
+ * nothing: nothing changed.
  */
 export async function runRead<T>(failureTitle: string, read: () => Promise<T>): Promise<T | undefined> {
   try {
     return await read();
   } catch (error) {
-    toast.error(failureTitle, error);
+    if (!readRefusedForSignIn(error)) toast.error(failureTitle, error);
     return undefined;
   }
 }

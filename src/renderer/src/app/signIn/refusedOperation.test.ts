@@ -5,7 +5,8 @@ import type { SignInProblem } from '@shared/domain/signIn';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { ApiError } from '../../api/client';
 import { pressToastAction, shownToasts } from '../../testing/operationOutcome';
-import { runAction, runOperation } from '../operations/runOperation';
+import { runAction, runOperation, runRead } from '../operations/runOperation';
+import { useSession } from '../workspace/sessionStore';
 import { queryClient } from '../queryClient';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import { forgetRefusedOperation, offerRefusedAgain } from './refusedOperation';
@@ -113,5 +114,24 @@ describe('an operation refused for a sign-in', () => {
     await checkIn(refused('acme@cloud')).run();
 
     expect(shownToasts().map(({ title }) => title)).toEqual(['Checking in failed']);
+  });
+});
+
+describe('a read refused for a sign-in', () => {
+  it("raises no toast in a window whose place's server it is: the sign-in screen tells", async () => {
+    useSession.getState().openWorkspace(WS);
+
+    await runRead("Couldn't check what came in", () => Promise.reject(refused('acme@cloud')));
+
+    expect(shownToasts()).toEqual([]);
+  });
+
+  it("toasts on the home screen, and for another server's sign-in", async () => {
+    useSession.getState().openWorkspace(WS);
+    await runRead("Couldn't check what came in", () => Promise.reject(refused('build:8087')));
+    useSession.getState().goHome();
+    await runRead("Couldn't list the repositories", () => Promise.reject(refused('acme@cloud')));
+
+    expect(shownToasts().map(({ title }) => title)).toEqual(["Couldn't check what came in", "Couldn't list the repositories"]);
   });
 });

@@ -3,6 +3,7 @@ import { samePlace, workspacePathOf, type Place } from '@shared/domain/place';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 import { serverOfPlace } from '../workspace/placeOrigin';
+import { useSession } from '../workspace/sessionStore';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import { signInProblemOf, toldBySignInScreen } from './windowSignIn';
 
@@ -38,6 +39,15 @@ export function offerRefusedAgain(server: string, shownPlace: Place | null): voi
   useRefusedOperation.setState({ refused: null });
   if (!shownPlace || !samePlace(shownPlace, refused.place)) return;
   toast.success(`Signed in to ${server}`, refused.detail, { label: 'Try again', run: refused.again });
+}
+
+/**
+ * Whether a read the user asked for failed for the sign-in the window's sign-in screen tells (its place's server's):
+ * then it raises no toast of its own. A read isn't offered again: what it was for is asked again once signed in.
+ */
+export function readRefusedForSignIn(error: unknown): boolean {
+  const place = useSession.getState().place;
+  return place !== null && toldBySignInScreen(error, placeServerNow(place));
 }
 
 export function forgetRefusedOperation(): void {
