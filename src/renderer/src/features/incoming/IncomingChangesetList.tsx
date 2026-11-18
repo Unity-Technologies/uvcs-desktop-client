@@ -8,12 +8,10 @@ import type { ChangesetStepListState } from '../../components/changesetList/useC
 import type { MenuEntry } from '../../lib/actions';
 import { focusMainNear } from '../../lib/mainFocus';
 import { singleSelection } from '../../lib/selection';
-import { showMoreBeforeKey } from './incomingChangesetSection';
+import { showMoreBeforeKey } from './showMoreBeforeKey';
+import { ALL_INCOMING_ROW } from './allIncomingRow';
 import { IncomingShowMore } from './IncomingShowMore';
 import { showMoreLanding } from './showMoreLanding';
-
-/** The row standing for the whole update, above the changesets, which folds them. */
-export const ALL_INCOMING_ROW = { label: 'All incoming changes' };
 
 interface IncomingChangesetListProps {
   /** The list's state (`useChangesetStepList`, `allApart`), over the changesets read so far, newest first. */

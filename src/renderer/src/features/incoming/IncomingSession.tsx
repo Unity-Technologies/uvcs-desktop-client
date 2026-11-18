@@ -4,7 +4,6 @@ import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { ALL_CHANGES_KEY, ALL_CHANGES_SELECTION, selectedChangesetIds, type ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
-import { toggledFold } from '../../components/changesetList/changesetListFold';
 import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
@@ -93,9 +92,10 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const showAll = (): void => changesetSteps.select(ALL_CHANGES_SELECTION, ALL_CHANGES_KEY);
   const showAllRef = useRef(showAll);
   showAllRef.current = showAll;
-  // Folding goes back to the whole update: a changeset selected out of sight would leave files the row doesn't name.
+  // Folding goes back to the whole update, as a branch diff's fold does (`toggledFold`): a changeset selected out of
+  // sight would leave files the row doesn't name.
   const toggleChangesetFold = (): void => {
-    if (toggledFold({ remembered: changesetsOpen, asked: false }).showsAll) showAll();
+    if (changesetsOpen) showAll();
     toggleChangesets();
   };
   const { mergerFor, othersFor } = useFileMergers();

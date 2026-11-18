@@ -3,8 +3,9 @@ import type { HostDiffs } from '../../components/diffExpansion';
 
 /**
  * What the Incoming view shows under its header: the panes' skeleton while it reads, why it couldn't check, that the
- * workspace isn't on a branch (nothing comes in), that it is up to date (alone: there's no update to list), or the incoming changesets and files. A partial
- * workspace loads no one changeset: it shows the loaded items the branch head would change instead.
+ * workspace isn't on a branch (nothing comes in), that it is up to date (alone: there's no update to list), or the
+ * incoming changesets and files. A partial workspace loads no one changeset: it shows the loaded items the branch head
+ * would change instead.
  */
 export type IncomingViewState =
   | { kind: 'reading' }

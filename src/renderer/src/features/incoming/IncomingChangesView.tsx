@@ -44,8 +44,8 @@ export function IncomingChangesView() {
   };
   const header = headerSaying(incoming?.branch ? branchLabel(incoming.branch) : undefined);
 
-  // The panes keep their layout while reading; up to date, it says so alone, as there's no update to list; not being on a branch, or failing with nothing
-  // read, takes the body.
+  // The panes keep their layout while reading. Up to date, with no update to list, not being on a branch, or failing
+  // with nothing read, takes the body.
   const state = incomingViewState(incoming, isPending, error !== null);
   useCollapseWithHost(incomingDiffs(state.kind));
   if (state.kind === 'reading') {

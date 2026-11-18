@@ -3,7 +3,7 @@ import { changesetFoldLabel } from '../../components/changesetList/changesetList
 import { ChangesetStepList } from '../../components/changesetList/ChangesetStepList';
 import { CHANGESET_LIST_MOST_ROWS, type ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
 import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
-import { ALL_INCOMING_ROW } from './IncomingChangesetList';
+import { ALL_INCOMING_ROW } from './allIncomingRow';
 import { useIncomingViewStore } from './incomingViewStore';
 
 const ALL: ChangesetListFocus = { kind: 'all' };
