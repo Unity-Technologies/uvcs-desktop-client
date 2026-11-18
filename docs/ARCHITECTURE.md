@@ -1280,8 +1280,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container. The keyboard
   ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
   once a key was pressed (and before any input at all), and a clicked button at the next key, so focus the app moves on
-  its own (the workspace opening on its first list: `mainFocusMover`; Expand Diff giving the code the keyboard:
-  `focusMain`'s `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
+  its own (a workspace or repository opening on its first list, which rings at the first key aimed at it as a list
+  reached by a click does: `mainFocusMover`, `ringsAtKey`; Expand Diff giving the code the keyboard: `focusMain`'s
+  `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
   `focusAs`, `focus({ focusVisible: false })`, which keeps it ringless until a Tab (Go to line… too). New code uses
   `focusAs` and `settleClickFocus`. Two older marks remain for what they alone can see: a click inside the code, whose
   focus may land in Pierre's shadow root (`usePointerFocusMark`, `data-pointer-focus`, which the code panes' rings
