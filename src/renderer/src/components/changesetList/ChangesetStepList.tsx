@@ -46,8 +46,9 @@ interface ChangesetStepListProps {
 }
 
 /**
- * Each changeset in one line: the author's avatar, the comment's first line and how long ago, the rest in its tooltip (`changesetRowTip`: its number too, which the filter still finds; on
- * every row it said little and took the comment's room).
+ * Each changeset in one line: the author's avatar, the comment's first line and how long ago, the rest in its tooltip
+ * (`changesetRowTip`: its number too, which the filter still finds; on every row it said little and took the comment's
+ * room).
  */
 function changesetColumns(quiet: ((changeset: Changeset) => boolean) | undefined, now: number): Column<Changeset>[] {
   return [
@@ -73,8 +74,8 @@ function changesetColumns(quiet: ((changeset: Changeset) => boolean) | undefined
 /**
  * Changesets to step through above the files of what's selected (a branch diff, Incoming): a filter, the buttons that
  * step to the changeset before or after (`previousChangeset`, `nextChangeset`), and the rows, oldest on top, under the
- * row that stands for them all, which the place shows above the list (`ChangesetFold`). Several selected show as one diff and read as one band (`changesetListSelection`).
- * Only the rows in view render (`DataTable`).
+ * row that stands for them all, which the place shows above the list (`ChangesetFold`). Several selected show as one
+ * diff and read as one band (`changesetListSelection`). Only the rows in view render (`DataTable`).
  */
 export function ChangesetStepList({ list, quiet, separator, mostRows, label, contextMenu }: ChangesetStepListProps) {
   const { changesets, shown, query, setQuery, selection, select, revealKey, stepsTo, stepTo } = list;
