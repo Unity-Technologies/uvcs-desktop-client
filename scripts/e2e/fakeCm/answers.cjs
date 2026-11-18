@@ -27,9 +27,16 @@ const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REPOSITORY_SPEC, REVISIO
 
 /** A Unity organization the user signed in to, besides the workspace's server: the home screen lists its projects. */
 const ORGANIZATION = 'studio@unity';
+/**
+ * A second Unity account, with an organization of its own: the home screen's switcher lists both accounts. Its user
+ * sorts after the owner's, so the home screen shows the owner's organizations first.
+ */
+const OTHER_USER = 'zoe@example.com';
+const OTHER_ORGANIZATION = 'arcade@unity';
 const ACCOUNTS = [
   { name: SERVER, server: SERVER, user: OWNER, workingmode: 'UPWorkingMode' },
   { name: ORGANIZATION, server: ORGANIZATION, user: OWNER, workingmode: 'SSOWorkingMode' },
+  { name: OTHER_ORGANIZATION, server: OTHER_ORGANIZATION, user: OTHER_USER, workingmode: 'SSOWorkingMode' },
 ];
 /** As `cm repository list --type=all` prints a Unity organization: its projects, their repositories, a deleted one, and storage. */
 const ORGANIZATION_REPOSITORIES = [
