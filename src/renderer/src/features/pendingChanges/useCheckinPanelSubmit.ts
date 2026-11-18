@@ -32,7 +32,9 @@ export function useCheckinPanelSubmit(request: PanelCheckin, shelvable: PendingC
   };
 
   const checkin = async (): Promise<void> => {
-    // Refused for a sign-in, the whole check-in is offered again: the panel's, with its comment cleared once in.
+    // Refused for a sign-in, the whole check-in is offered again (Try again): the changes it was started with, the
+    // comment read fresh from the panel and cleared once in; a branch moved on since is caught up with as any
+    // check-in's is (`checkinRejection`).
     const outcome = await checkinFromPanel(request, whileBusy, checkin);
     if (outcome === 'writeComment') summaryRef.current?.focus();
     if (outcome === 'checkedIn') setSelection(EMPTY_SELECTION);

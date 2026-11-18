@@ -133,8 +133,10 @@ and `runAction`) raises no error toast: the screen already says. What its caller
 the user's whole action, never the step that failed: a check-in from its panel, with its catch-up when the branch
 moved and its comment cleared once in, `checkinFromPanel`; one from Files with the comment already given) is
 remembered (the last one, forgotten when the window leaves the place) and, once its server is signed in again, offered
-from a toast: "Signed in to {server}", "{what} didn't run.", and Try again (`offerRefusedAgain`). A caller that names
-nothing is offered nothing. Never run again by itself: the user sees the workspace again before it runs.
+from a toast: "Signed in to {server}", "{what} didn't run.", and Try again (`offerRefusedAgain`). Each step of such an
+action offers the whole of it: a check-in that catches up first, refused as it reads what came in (`runRead`'s
+`partOf`) or as it updates (`updateToIncoming`), offers the check-in. A caller that names nothing (a quick action:
+`runAction`) is offered nothing. Never run again by itself: the user sees the workspace again before it runs.
 
 ## Considered and rejected
 

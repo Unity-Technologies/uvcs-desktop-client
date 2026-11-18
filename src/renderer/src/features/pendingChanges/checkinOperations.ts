@@ -52,7 +52,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
 
   const rejected: { rejection?: CheckinRejection } = {};
   const result = await runOperation({
-    title: `Checking in ${pluralize(changes.length, 'change')}`,
+    title: checkinTitle(changes.length),
     workspacePath,
     run: async (operationId) =>
       expectedCheckinResult(await api.pendingChanges.checkin(workspacePath, { paths, comment, addsPrivate }, operationId), changes),
@@ -97,7 +97,9 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
  */
 async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinRejection | null): Promise<boolean> {
   const { workspacePath, changes } = options;
-  const incoming = await runRead("Couldn't check what came in", () => api.merge.incomingChanges(workspacePath));
+  // Each step refused for a sign-in offers the whole check-in again, as the user started it.
+  const again = options.again && { what: checkinTitle(changes.length), run: options.again };
+  const incoming = await runRead("Couldn't check what came in", () => api.merge.incomingChanges(workspacePath), { place: workspacePlace(workspacePath), again });
   // A partial workspace checks in without catching up (`behindBranch`), and `cm` never asks it to merge first.
   if (!incoming?.branch || 'partial' in incoming) return false;
   // Someone updated the workspace since the incoming check: nothing to catch up with.
@@ -116,8 +118,12 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
     navigation.goToView('incoming');
     return false;
   }
-  if (!(await updateToIncoming(workspacePath, incoming))) return false;
+  if (!(await updateToIncoming(workspacePath, incoming, options.again))) return false;
   return checkinChanges(options);
+}
+
+function checkinTitle(count: number): string {
+  return `Checking in ${pluralize(count, 'change')}`;
 }
 
 /**

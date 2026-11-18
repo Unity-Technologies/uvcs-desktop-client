@@ -16,8 +16,10 @@ import { conflictsIn, type PartialUpdateSelection } from './partialIncomingSelec
  * Updates to the incoming changesets (known not to collide with local changes), then says what came in and offers
  * to see it. Resolves to whether it updated.
  */
-export async function updateToIncoming(workspacePath: string, incoming: BranchIncomingChanges): Promise<boolean> {
+export async function updateToIncoming(workspacePath: string, incoming: BranchIncomingChanges, again?: () => unknown): Promise<boolean> {
   const updated = await runOperation({
+    // The update a check-in catches up with first offers that whole check-in again (`OperationOptions.again`).
+    again,
     title: 'Updating workspace',
     workspacePath,
     kind: 'update',

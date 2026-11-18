@@ -96,12 +96,20 @@ describe('an operation refused for a sign-in', () => {
 
   it('offers only the last one refused, and only once', async () => {
     await checkIn(refused('acme@cloud')).run();
-    await runAction(PLACE, "Couldn't create the label", () => Promise.reject(refused('acme@cloud')), undefined, { what: 'Creating the label', run: () => undefined });
+    await runOperation({ title: 'Updating workspace', workspacePath: WS, run: () => Promise.reject(refused('acme@cloud')), again: () => undefined });
 
     offerRefusedAgain('acme@cloud', PLACE);
     offerRefusedAgain('acme@cloud', PLACE);
 
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme', detail: "Creating the label didn't run.", action: 'Try again' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme', detail: "Updating workspace didn't run.", action: 'Try again' }]);
+  });
+
+  it('offers nothing for a quick action, which names nothing to run again, and still raises no toast', async () => {
+    await runAction(PLACE, "Couldn't create the label", () => Promise.reject(refused('acme@cloud')));
+
+    offerRefusedAgain('acme@cloud', PLACE);
+
+    expect(shownToasts()).toEqual([]);
   });
 
   it('offers nothing once the window left the place, or for another server', async () => {

@@ -122,8 +122,8 @@ export function refuseWhileBusy(workspacePath: string, changesLoadedRevisions = 
 }
 
 /**
- * Runs a quick action, reporting failures (but a sign-in its place's server needs, which the sign-in screen tells, and
- * offers `again` once signed in: `refusedForSignIn`); refreshes the views of `place` it `affects` afterwards (`refreshScopes`), every
+ * Runs a quick action, reporting failures (but a sign-in its place's server needs, which the sign-in screen tells:
+ * `refusedForSignIn`); refreshes the views of `place` it `affects` afterwards (`refreshScopes`), every
  * view by default.
  */
 export async function runAction<T>(
@@ -131,12 +131,12 @@ export async function runAction<T>(
   failureTitle: string,
   action: () => Promise<T>,
   affects?: (queryKey: readonly unknown[]) => boolean,
-  again?: OfferedAgain,
 ): Promise<T | undefined> {
   try {
     return await action();
   } catch (error) {
-    if (!refusedForSignIn(error, place, again)) toast.error(failureTitle, error);
+    // A quick action names nothing to run again: the sign-in screen tells it, and nothing is offered.
+    if (!refusedForSignIn(error, place, undefined)) toast.error(failureTitle, error);
     return undefined;
   } finally {
     void invalidatePlace(place, affects);
@@ -146,13 +146,15 @@ export async function runAction<T>(
 /**
  * Runs a read, or an action that leaves the workspace and repository as they were (opening a file), reporting
  * failures (but a sign-in the window's sign-in screen tells: `readRefusedForSignIn`). Unlike `runAction`, it refreshes
- * nothing: nothing changed.
+ * nothing: nothing changed. A read that is one step of the user's action (what came in, before a check-in) says its
+ * place and that action (`partOf`), offered `again` should a sign-in refuse it.
  */
-export async function runRead<T>(failureTitle: string, read: () => Promise<T>): Promise<T | undefined> {
+export async function runRead<T>(failureTitle: string, read: () => Promise<T>, partOf?: { place: Place; again: OfferedAgain | undefined }): Promise<T | undefined> {
   try {
     return await read();
   } catch (error) {
-    if (!readRefusedForSignIn(error)) toast.error(failureTitle, error);
+    const refused = partOf ? refusedForSignIn(error, partOf.place, partOf.again) : readRefusedForSignIn(error);
+    if (!refused) toast.error(failureTitle, error);
     return undefined;
   }
 }
