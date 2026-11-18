@@ -21,6 +21,7 @@ import { repositoryFileSearchKey, repositoryFileSearchView, searchesFor } from '
 import { RepositoryFileSearchList } from '../repositoryFiles/RepositoryFileSearchList';
 import { useRepositoryFileSearch } from '../repositoryFiles/useRepositoryFileSearch';
 import { applyDownloads } from './applyDownloads';
+import { choicesAwaitReads, downloadSearchCheck, foldersAboveResults } from './downloadSearch';
 import { chooseDownloadsNote } from './workspaceDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
 import {
@@ -48,6 +49,10 @@ const NO_TREE: RepositoryTreePoint = { kind: 'changeset', changeset: -1 };
  */
 export function openChooseDownloads(workspacePath: string, initialPath?: string): void {
   openDialog((close) => <ChooseDownloadsDialog workspacePath={workspacePath} initialPath={initialPath} close={close} />);
+}
+
+function nameOf(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
 }
 
 function loadedInKey(workspacePath: string, folder: string) {
@@ -82,6 +87,18 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
   const searchPlace = useMemo(() => repositoryPlace(info?.repository ?? ''), [info?.repository]);
   const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchOf?.changeset ?? null, query), query, searchOf?.name ?? '');
   const searching = searchesFor(query);
+  const foundPaths = search.rows.map((row) => row.path);
+
+  // Each result shows whether the workspace holds it, so the folders above the results have their loaded items read
+  // (local). They're kept while the dialog is open, so typing on doesn't read them again as results come and go.
+  const [foldersOfResults, setFoldersOfResults] = useState<ReadonlySet<string>>(() => new Set());
+  const newFoldersOfResults = foldersAboveResults(foundPaths).filter((folder) => !foldersOfResults.has(folder));
+  // One string stands for the new folders, so the effect runs when they change rather than on every render.
+  const newFoldersKey = JSON.stringify(newFoldersOfResults);
+  useEffect(() => {
+    const folders = JSON.parse(newFoldersKey) as string[];
+    if (folders.length > 0) setFoldersOfResults((known) => new Set([...known, ...folders]));
+  }, [newFoldersKey]);
 
   // The repository side: what the workspace's changeset (or branch) holds, folder by folder.
   const repositoryFolders = [ROOT, ...expanded];
@@ -96,14 +113,15 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
   // The workspace side: what it holds of each loaded folder. Whether a folder is loaded shows only once its parent is
   // read, so the folders to read come from what this dialog read so far; dropped as it closes (`gcTime` 0), they're
   // read afresh each time it opens, since applying changes them.
+  const foldersShown = new Set([...expanded, ...foldersOfResults]);
   const loadedSoFar = dataByFolder(
-    repositoryFolders.map((folder) => ({
+    [ROOT, ...foldersShown].map((folder) => ({
       folder,
       data: queryClient.getQueryData<string[]>(loadedInKey(workspacePath, folder)),
       failed: false,
     })),
   );
-  const loadedFolders = foldersToReadLoaded(downloadTreeOf(dataByFolder(listingReads), loadedSoFar), expanded);
+  const loadedFolders = foldersToReadLoaded(downloadTreeOf(dataByFolder(listingReads), loadedSoFar), foldersShown);
   const loadedQueries = useQueries({
     queries: loadedFolders.map((folder) => ({
       queryKey: loadedInKey(workspacePath, folder),
@@ -122,6 +140,7 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
   const status = rootStatus(tree, failures);
   const rows = downloadRows(tree, choices, expanded, failures);
   const rules = downloadRules(tree, choices);
+  const foundChecks = new Map(foundPaths.map((path) => [path, downloadSearchCheck(path, tree, choices)]));
   const treeId = useId();
   const rowId = (index: number) => `${treeId}-${index}`;
   const selectedIndex = rows.findIndex((row) => row.path === selected);
@@ -143,6 +162,12 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
       return next;
     });
   const toggleChecked = (path: string): void => setChoices((current) => toggled(path, tree, current));
+  // A result ticked in the search opens the folders above it, so they're read and the rules can reach it
+  // (`choicesAwaitReads`), and the tree shows it once the search is cleared.
+  const toggleFound = (path: string): void => {
+    toggleChecked(path);
+    setExpanded((open) => revealedDownload(path, open).expanded);
+  };
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const outcome = downloadKey(rows, selected, event.key);
@@ -187,7 +212,7 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
         <>
           <span className={styles.summary}>{rulesSummary(rules)}</span>
           <Button onClick={close}>Cancel</Button>
-          <Button variant="primary" disabled={!canApply(rules, applying)} onClick={() => void apply()}>
+          <Button variant="primary" disabled={!canApply(rules, applying, choicesAwaitReads(tree, choices))} onClick={() => void apply()}>
             Apply
           </Button>
         </>
@@ -215,7 +240,28 @@ function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspac
       )}
       {status === 'ready' && searching && (
         <div className={styles.found}>
-          <RepositoryFileSearchList view={search} highlighted={highlighted} onHighlight={setHighlighted} onPick={reveal} />
+          <RepositoryFileSearchList
+            view={search}
+            highlighted={highlighted}
+            onHighlight={setHighlighted}
+            onPick={reveal}
+            lead={(path) => {
+              const found = foundChecks.get(path);
+              if (!found) return <Spinner size={12} />;
+              return <Checkbox checked={found.check} focusable={false} ariaLabel={nameOf(path)} onChange={() => toggleFound(path)} />;
+            }}
+            end={(path) => {
+              const found = foundChecks.get(path);
+              const marker = found && downloadChangeMarker(found.change);
+              return (
+                marker && (
+                  <span className={styles.marker} data-change={found.change}>
+                    {marker}
+                  </span>
+                )
+              );
+            }}
+          />
         </div>
       )}
       {status === 'ready' && (
