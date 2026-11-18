@@ -10,14 +10,20 @@ import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import { serverInSentence } from './signInWords';
 import { signInProblemOf, toldBySignInScreen } from './windowSignIn';
 
+/**
+ * What the user started, offered again once signed in: named for the offer ("Checking in 2 changes"), and run whole, as
+ * the user started it (a check-in from its panel, with its catch-up and its comment cleared), never one inner step.
+ */
+export interface OfferedAgain {
+  what: string;
+  run: () => unknown;
+}
+
 /** The last operation or action the sign-in screen's server refused, to offer once signed in again. */
-export interface RefusedOperation {
+interface RefusedOperation {
   place: Place;
   server: string;
-  /** What the offer says of it: "Checking in didn't run." */
-  detail: string;
-  /** Runs it again, as the user started it. */
-  again: () => void;
+  again: OfferedAgain;
 }
 
 /** One at a time: the last one refused. Forgotten when the window leaves its place (`forgetRefusedOperation`). */
@@ -25,13 +31,14 @@ export const useRefusedOperation = create<{ refused: RefusedOperation | null }>(
 
 /**
  * Whether an operation or action of `place` failed only because its server needs a sign-in, which the sign-in screen
- * tells: then it raises no toast, and is remembered (`offerRefusedAgain`). Never run again by itself: the user sees the
- * workspace again before it runs (docs/features/accounts.md "Operations refused").
+ * tells: then it raises no toast, and what its caller named to run `again` is remembered (`offerRefusedAgain`); with
+ * nothing named, nothing is offered. Never run again by itself: the user sees the workspace again before it runs
+ * (docs/features/accounts.md "Operations refused").
  */
-export function refusedForSignIn(error: unknown, place: Place, refused: Pick<RefusedOperation, 'detail' | 'again'>): boolean {
+export function refusedForSignIn(error: unknown, place: Place, again: OfferedAgain | undefined): boolean {
   const problem = signInProblemOf(error);
   if (!problem || !toldBySignInScreen(error, placeServerNow(place))) return false;
-  useRefusedOperation.setState({ refused: { place, server: problem.server, ...refused } });
+  useRefusedOperation.setState({ refused: again ? { place, server: problem.server, again } : null });
   markToldByScreen(error);
   return true;
 }
@@ -42,7 +49,8 @@ export function offerRefusedAgain(server: string, shownPlace: Place | null): voi
   if (!refused || refused.server !== server) return;
   useRefusedOperation.setState({ refused: null });
   if (!shownPlace || !samePlace(shownPlace, refused.place)) return;
-  toast.success(`Signed in to ${serverInSentence(server).inside}`, refused.detail, { label: 'Try again', run: refused.again });
+  const { what, run } = refused.again;
+  toast.success(`Signed in to ${serverInSentence(server).inside}`, `${what} didn't run.`, { label: 'Try again', run: () => void run() });
 }
 
 /**

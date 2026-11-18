@@ -32,7 +32,8 @@ export function useCheckinPanelSubmit(request: PanelCheckin, shelvable: PendingC
   };
 
   const checkin = async (): Promise<void> => {
-    const outcome = await checkinFromPanel(request, whileBusy);
+    // Refused for a sign-in, the whole check-in is offered again: the panel's, with its comment cleared once in.
+    const outcome = await checkinFromPanel(request, whileBusy, checkin);
     if (outcome === 'writeComment') summaryRef.current?.focus();
     if (outcome === 'checkedIn') setSelection(EMPTY_SELECTION);
   };

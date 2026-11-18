@@ -37,6 +37,8 @@ interface CheckinOptions {
    * review suggestion's "Apply suggestion from …", which names a change request no longer pending once applied.
    */
   remembersComment?: boolean;
+  /** The user's whole check-in, offered again once a sign-in it was refused for is made (`OperationOptions.again`). */
+  again?: () => unknown;
 }
 
 /**
@@ -71,6 +73,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
         },
       };
     },
+    again: options.again,
     onFailure: (error) => {
       rejected.rejection = (error instanceof ApiError && checkinRejection(error.command)) || undefined;
       return rejected.rejection !== undefined;

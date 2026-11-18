@@ -4,7 +4,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { bulkPrivateFiles } from '../pendingChanges/bulkPrivate';
 import { confirmCheckinWithoutComment } from '../pendingChanges/checkinConfirmations';
-import { checkinConfirmed } from '../pendingChanges/confirmedCheckin';
+import { checkinConfirmed, justRun } from '../pendingChanges/confirmedCheckin';
 import { askForCheckinComment } from './CheckinCommentDialog';
 
 /**
@@ -17,7 +17,10 @@ import { askForCheckinComment } from './CheckinCommentDialog';
 export async function checkinItems(workspacePath: string, changes: PendingChange[], allPending: PendingChange[]): Promise<boolean> {
   const comment = await askForCheckinCommentUntilAgreed(changes.length);
   if (comment === undefined) return false;
-  return checkinConfirmed({ workspacePath, changes, allChanges: allPending, comment, bulkPrivate: bulkPrivateFiles(changes) });
+  const request = { workspacePath, changes, allChanges: allPending, comment, bulkPrivate: bulkPrivateFiles(changes) };
+  // Refused for a sign-in, the check-in is offered again with the comment given: never asked twice.
+  const checkin = (): Promise<boolean> => checkinConfirmed(request, justRun, checkin);
+  return checkin();
 }
 
 /** The comment, asked until it has words or the user agrees to go without; `undefined` once cancelled. */

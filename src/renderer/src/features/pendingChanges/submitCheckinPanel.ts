@@ -29,13 +29,14 @@ export interface PanelCheckin {
  * The check-in panel's check-in, with the draft's comment: asks about an empty comment (when the setting says to),
  * then checks in as every check-in does (`checkinConfirmed`). A changeset clears the comment.
  */
-export async function checkinFromPanel(request: PanelCheckin, whileRunning: WhileRunning = justRun): Promise<PanelCheckinOutcome> {
+export async function checkinFromPanel(request: PanelCheckin, whileRunning: WhileRunning = justRun, again?: () => unknown): Promise<PanelCheckinOutcome> {
   const { workspacePath } = request;
   const comment = joinComment(checkinDraftOf(workspacePath));
   if (!comment.trim() && request.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) return 'writeComment';
   const checkedIn = await checkinConfirmed(
     { workspacePath, changes: request.included, allChanges: request.allChanges, comment, bulkPrivate: request.bulkPrivate, updateFirst: request.behind },
     whileRunning,
+    again,
   );
   if (!checkedIn) return 'notCheckedIn';
   useCheckinDraftStore.getState().clearMessage(workspacePath);

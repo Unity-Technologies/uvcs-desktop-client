@@ -25,10 +25,14 @@ function workspaceOnAcme(): void {
   queryClient.setQueryData(workspaceInfoQuery(WS).queryKey, info);
 }
 
-/** A check-in whose every run fails with `error` the first `failures` times, then succeeds; counts its runs. */
-function checkIn(error: Error, failures = 1) {
+/**
+ * A check-in whose every run fails with `error` the first `failures` times, then succeeds; counts its runs, and the
+ * runs of the user's whole action it names to run `again` (none when `offered` is false).
+ */
+function checkIn(error: Error, { failures = 1, offered = true } = {}) {
   let runs = 0;
-  const run = () =>
+  let wholeRuns = 0;
+  const run = (): Promise<unknown> =>
     runOperation({
       title: 'Checking in',
       workspacePath: WS,
@@ -38,8 +42,14 @@ function checkIn(error: Error, failures = 1) {
         return 'cs:12';
       },
       success: () => ({ title: 'Checked in' }),
+      ...(offered && {
+        again: () => {
+          wholeRuns++;
+          return run();
+        },
+      }),
     });
-  return { run, runs: () => runs };
+  return { run, runs: () => runs, wholeRuns: () => wholeRuns };
 }
 
 beforeEach(() => {
@@ -72,17 +82,26 @@ describe('an operation refused for a sign-in', () => {
     offerRefusedAgain('acme@cloud', PLACE);
 
     pressToastAction('Signed in to acme');
+    expect(checkin.wholeRuns()).toBe(1);
     expect(checkin.runs()).toBe(2);
+  });
+
+  it('offers nothing when its caller named nothing to run again, and still raises no toast', async () => {
+    await checkIn(refused('acme@cloud'), { offered: false }).run();
+
+    offerRefusedAgain('acme@cloud', PLACE);
+
+    expect(shownToasts()).toEqual([]);
   });
 
   it('offers only the last one refused, and only once', async () => {
     await checkIn(refused('acme@cloud')).run();
-    await runAction(PLACE, "Couldn't create the label", () => Promise.reject(refused('acme@cloud')));
+    await runAction(PLACE, "Couldn't create the label", () => Promise.reject(refused('acme@cloud')), undefined, { what: 'Creating the label', run: () => undefined });
 
     offerRefusedAgain('acme@cloud', PLACE);
     offerRefusedAgain('acme@cloud', PLACE);
 
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme', detail: "Couldn't create the label", action: 'Try again' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Signed in to acme', detail: "Creating the label didn't run.", action: 'Try again' }]);
   });
 
   it('offers nothing once the window left the place, or for another server', async () => {

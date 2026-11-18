@@ -1,7 +1,7 @@
 import { ApiError, api } from '../../api/client';
 import { useCommandLogStore } from '../shell/commandLogStore';
 import { workspacePlace, type Place } from '@shared/domain/place';
-import { readRefusedForSignIn, refusedForSignIn } from '../signIn/refusedOperation';
+import { readRefusedForSignIn, refusedForSignIn, type OfferedAgain } from '../signIn/refusedOperation';
 import { invalidatePlace, invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type Toast } from '../../ui/toast/toastStore';
 import { describeCompletion } from './describeProgress';
@@ -35,6 +35,11 @@ interface OperationOptions<T> {
   onFailure?: (error: unknown) => boolean;
   /** The views it can change (`refreshScopes`), refreshed when it ends; every view by default. */
   affects?: (queryKey: readonly unknown[]) => boolean;
+  /**
+   * The user's whole action this operation is part of (a check-in from its panel, with its catch-up), offered from a
+   * toast once the sign-in its server refused it for is made (`refusedForSignIn`). None: nothing is offered.
+   */
+  again?: () => unknown;
 }
 
 /**
@@ -44,7 +49,7 @@ interface OperationOptions<T> {
  * sign-in screen when its server needs a sign-in, which offers it again once signed in: `refusedForSignIn`).
  */
 export async function runOperation<T>(options: OperationOptions<T>): Promise<T | undefined> {
-  const { title, workspacePath, run, success, cancellable = true, kind, onFailure, affects } = options;
+  const { title, workspacePath, run, success, cancellable = true, kind, onFailure, affects, again } = options;
   if (refuseWhileBusy(workspacePath, kind !== undefined)) return undefined;
 
   const operationId = crypto.randomUUID();
@@ -75,9 +80,8 @@ export async function runOperation<T>(options: OperationOptions<T>): Promise<T |
     return result;
   } catch (error) {
     toasts.dismiss(toastId);
-    const again = () => void runOperation(options);
     if (cancelRequested) toast.info('Stopped', `${title} was stopped.`);
-    else if (!refusedForSignIn(error, workspacePlace(workspacePath), { detail: `${title} didn't run.`, again })) tellFailure(error);
+    else if (!refusedForSignIn(error, workspacePlace(workspacePath), again && { what: title, run: again })) tellFailure(error);
     return undefined;
   } finally {
     stopListening();
@@ -118,8 +122,8 @@ export function refuseWhileBusy(workspacePath: string, changesLoadedRevisions = 
 }
 
 /**
- * Runs a quick action, reporting failures (but a sign-in its place's server needs, which the sign-in screen tells and
- * offers again: `refusedForSignIn`); refreshes the views of `place` it `affects` afterwards (`refreshScopes`), every
+ * Runs a quick action, reporting failures (but a sign-in its place's server needs, which the sign-in screen tells, and
+ * offers `again` once signed in: `refusedForSignIn`); refreshes the views of `place` it `affects` afterwards (`refreshScopes`), every
  * view by default.
  */
 export async function runAction<T>(
@@ -127,12 +131,12 @@ export async function runAction<T>(
   failureTitle: string,
   action: () => Promise<T>,
   affects?: (queryKey: readonly unknown[]) => boolean,
+  again?: OfferedAgain,
 ): Promise<T | undefined> {
   try {
     return await action();
   } catch (error) {
-    const again = () => void runAction(place, failureTitle, action, affects);
-    if (!refusedForSignIn(error, place, { detail: failureTitle, again })) toast.error(failureTitle, error);
+    if (!refusedForSignIn(error, place, again)) toast.error(failureTitle, error);
     return undefined;
   } finally {
     void invalidatePlace(place, affects);

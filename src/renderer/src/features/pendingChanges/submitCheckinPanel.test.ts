@@ -66,6 +66,20 @@ describe('checkinFromPanel', () => {
     expect(askedDialogs()).toEqual([]);
   });
 
+  it("hands the user's whole check-in to run again should a sign-in refuse it: once in, the retry clears the comment", async () => {
+    writeComment('Add login');
+    steps.checkedIn = false;
+    const again = (): Promise<unknown> => checkinFromPanel(panelCheckin(), undefined, again);
+
+    expect(await again()).toBe('notCheckedIn');
+    expect(checkinDraftOf(ws)).toMatchObject({ summary: 'Add login' });
+    steps.checkedIn = true;
+
+    expect(await (steps.checkins[0] as { again: () => Promise<unknown> }).again()).toBe('checkedIn');
+    expect(checkinDraftOf(ws)).toMatchObject({ summary: '' });
+    expect(steps.checkins).toHaveLength(2);
+  });
+
   it('checks in quietly when every pending change goes in: the empty Changes tells it', async () => {
     writeComment('All of it');
 

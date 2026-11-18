@@ -119,10 +119,12 @@ failed for its sign-in (`failedForSignInTo`, `useServerSessionsFromMain`): a wor
 ## Operations refused
 
 An operation or an action refused because its place's server needs a sign-in (`refusedForSignIn`, in `runOperation`
-and `runAction`) raises no error toast: the screen already says. The last one refused is remembered (one, forgotten
-when the window leaves the place) and, once its server is signed in again, offered from a toast: "Signed in to
-{server}", what didn't run, and Try again (`offerRefusedAgain`). Never run again by itself: the user sees the workspace
-again before it runs.
+and `runAction`) raises no error toast: the screen already says. What its caller names to run `again` (`OfferedAgain`:
+the user's whole action, never the step that failed: a check-in from its panel, with its catch-up when the branch
+moved and its comment cleared once in, `checkinFromPanel`; one from Files with the comment already given) is
+remembered (the last one, forgotten when the window leaves the place) and, once its server is signed in again, offered
+from a toast: "Signed in to {server}", "{what} didn't run.", and Try again (`offerRefusedAgain`). A caller that names
+nothing is offered nothing. Never run again by itself: the user sees the workspace again before it runs.
 
 ## Considered and rejected
 
