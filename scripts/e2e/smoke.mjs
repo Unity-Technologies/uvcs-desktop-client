@@ -141,7 +141,7 @@ try {
   });
   await step('Open workspace', async () => {
     await workspaceOnHome.click();
-    await window.getByRole('navigation').getByRole('button', { name: 'Switch workspace' }).waitFor();
+    await window.getByRole('banner').getByRole('button', { name: 'Switch workspace' }).waitFor();
   });
   await step('Profile pictures question', async () => {
     // Changesets show their owners, named by email addresses: the first people the window shows.

@@ -1,0 +1,40 @@
+/* The top bar's first step: the place (a workspace, or a repository explored without one), before its branch. */
+.pill:is(button) {
+  flex: 0 1 auto;
+  padding-left: 5px;
+}
+
+.nameLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The kind's chip fits the pill's first line. */
+.nameLine > :not(.name) {
+  flex: none;
+  height: 16px;
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+/* Narrow, the avatar names the place (its tooltip says the rest) and the branch keeps the room. */
+@media (max-width: 1100px) {
+  .pill:is(button) {
+    flex: none;
+    padding-right: 5px;
+  }
+
+  .pill > :not(:first-child) {
+    display: none;
+  }
+}

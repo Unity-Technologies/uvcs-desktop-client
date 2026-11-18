@@ -21,10 +21,8 @@ import { ViewShownContext } from '../../lib/viewShown';
 import { KeptView } from './KeptView';
 
 interface PlaceLayoutProps {
-  /** The top bar: a workspace's branch, or the repository explored and the way to make it a workspace. */
+  /** The top bar: the workspace and its branch, or the repository explored and the way to make it a workspace. */
   topBar: ReactNode;
-  /** The sidebar's card naming the place, above its views. */
-  sidebarCard: ReactNode;
   statusBar: ReactNode;
 }
 
@@ -34,7 +32,7 @@ interface PlaceLayoutProps {
  * status bar. What every place has runs here: its commands (`usePlaceCommands`, `useMergeRequestCommands`), Copy link,
  * its command log and its page windows.
  */
-export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps) {
+export function PlaceLayout({ topBar, statusBar }: PlaceLayoutProps) {
   const { view, pages, merge, kept } = useNavigation();
   const commandLogOpen = useCommandLogStore((state) => state.open);
   const commandLogHeight = useCommandLogStore((state) => state.height);
@@ -57,7 +55,7 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
       <div className={styles.body}>
         {/* An expanded diff takes the window but the top bar (the window's buttons, the place) and the command log. */}
         <Stowable stowed={diffExpanded}>
-          <Sidebar card={sidebarCard} />
+          <Sidebar />
         </Stowable>
         <main className={styles.main}>
           {/* The command log sits under the view, as tall as it was left; the view keeps the rest. */}
