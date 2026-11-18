@@ -1,6 +1,7 @@
 import { ApiError, api } from '../../api/client';
 import { useCommandLogStore } from '../shell/commandLogStore';
-import type { Place } from '@shared/domain/place';
+import { workspacePlace, type Place } from '@shared/domain/place';
+import { refusedForSignIn } from '../signIn/refusedOperation';
 import { invalidatePlace, invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type Toast } from '../../ui/toast/toastStore';
 import { describeCompletion } from './describeProgress';
@@ -39,18 +40,11 @@ interface OperationOptions<T> {
 /**
  * Runs a long `cm` operation with a live progress card, then refreshes the workspace views. On success the card turns
  * into the message (with what was done, counted from the last progress) and goes away by itself.
- * Resolves with the operation's result, or `undefined` if it failed (the error is shown to the user).
+ * Resolves with the operation's result, or `undefined` if it failed (the error is shown to the user, or by the
+ * sign-in screen when its server needs a sign-in, which offers it again once signed in: `refusedForSignIn`).
  */
-export async function runOperation<T>({
-  title,
-  workspacePath,
-  run,
-  success,
-  cancellable = true,
-  kind,
-  onFailure,
-  affects,
-}: OperationOptions<T>): Promise<T | undefined> {
+export async function runOperation<T>(options: OperationOptions<T>): Promise<T | undefined> {
+  const { title, workspacePath, run, success, cancellable = true, kind, onFailure, affects } = options;
   if (refuseWhileBusy(workspacePath, kind !== undefined)) return undefined;
 
   const operationId = crypto.randomUUID();
@@ -67,6 +61,10 @@ export async function runOperation<T>({
   );
   const toastId = toasts.show({ kind: 'progress', title, operationId, action: cancellable ? { label: 'Cancel', run: cancel } : undefined });
 
+  const tellFailure = (error: unknown): void => {
+    if (onFailure?.(error)) markHandled(error);
+    else toast.error(`${title} failed`, error);
+  };
   const stopListening = window.uvcs.on('operationProgress', (event) => {
     if (event.operationId === operationId) operations.report(operationId, event.progress);
   });
@@ -77,9 +75,9 @@ export async function runOperation<T>({
     return result;
   } catch (error) {
     toasts.dismiss(toastId);
+    const again = () => void runOperation(options);
     if (cancelRequested) toast.info('Stopped', `${title} was stopped.`);
-    else if (onFailure?.(error)) markHandled(error);
-    else toast.error(`${title} failed`, error);
+    else if (!refusedForSignIn(error, workspacePlace(workspacePath), { detail: `${title} didn't run.`, again })) tellFailure(error);
     return undefined;
   } finally {
     stopListening();
@@ -120,8 +118,9 @@ export function refuseWhileBusy(workspacePath: string, changesLoadedRevisions = 
 }
 
 /**
- * Runs a quick action, reporting failures; refreshes the views of `place` it `affects` afterwards (`refreshScopes`),
- * every view by default.
+ * Runs a quick action, reporting failures (but a sign-in its place's server needs, which the sign-in screen tells and
+ * offers again: `refusedForSignIn`); refreshes the views of `place` it `affects` afterwards (`refreshScopes`), every
+ * view by default.
  */
 export async function runAction<T>(
   place: Place,
@@ -132,7 +131,8 @@ export async function runAction<T>(
   try {
     return await action();
   } catch (error) {
-    toast.error(failureTitle, error);
+    const again = () => void runAction(place, failureTitle, action, affects);
+    if (!refusedForSignIn(error, place, { detail: failureTitle, again })) toast.error(failureTitle, error);
     return undefined;
   } finally {
     void invalidatePlace(place, affects);
