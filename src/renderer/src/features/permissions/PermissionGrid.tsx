@@ -41,7 +41,7 @@ export const PermissionGrid = forwardRef<HTMLDivElement, PermissionGridProps>(fu
   const onMenuOpenChange = useCallback(
     (permission: PermissionName, open: boolean) => {
       setMenuFor(open ? permission : undefined);
-      // In a dialog a closing menu leaves focus alone (`focusAfterMenu`): the grid takes it back, its keys working on.
+      // A closing menu gives focus back to its trigger, a button in the row (`focusAfterMenu`): the grid takes it, its keys working on.
       if (!open) requestAnimationFrame(() => document.getElementById(rowId(permission))?.closest<HTMLElement>('[role="grid"]')?.focus());
     },
     [rowId],
