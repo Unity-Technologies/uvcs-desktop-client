@@ -1260,7 +1260,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   by the character typed (Ctrl+Z on a German keyboard), digits by position. A comment field takes its formatting keys
   (⌘B, ⇧⌘U, ⇧⌘C: the registry's Comments area, `scope: 'commentField'`) before the window's shortcuts, inside a focused
   comment field only (`yieldsToCommentField`; features/rich-comments.md "Writing"). F2
-  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
+  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A list driven from its filter field (the palette, Go to file, the branch and workspace switchers) offers a result's actions three ways that open one menu, at the "…" (`RowActionsButton`) the highlighted row shows: that button, Tab (or the menu key, `isRowMenuKey`) and a right click on any row, which highlights it first; closing the menu gives focus back to the filter (the test: `rowActionsEverywhere.test.ts`). A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per

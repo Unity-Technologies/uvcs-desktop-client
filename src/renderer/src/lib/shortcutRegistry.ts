@@ -85,7 +85,7 @@ export const SHORTCUTS = {
   copyLink: { area: 'General', label: 'Copy a link to the page in front, else to the selected object, else to the view', keys: ['mod+shift+c'] },
   listContextMenu: { area: 'Lists', label: 'Actions of the selected rows', keys: ['shift+f10'] },
   listExpand: { area: 'Lists', label: 'Collapse or expand a folder', keys: ['left', 'right'] },
-  rowActions: { area: 'Lists', label: 'Actions of the highlighted result (palette, pickers, Go to file)', keys: ['tab', 'shift+f10'] },
+  rowActions: { area: 'Lists', label: 'Actions of the highlighted result (palette, switchers, Go to file)', keys: ['tab', 'shift+f10'] },
 
   checkin: { area: 'Changes', label: 'Check in', keys: ['mod+enter'] },
   toggleIncluded: { area: 'Changes', label: 'Include or exclude from the check in', keys: ['space'] },
