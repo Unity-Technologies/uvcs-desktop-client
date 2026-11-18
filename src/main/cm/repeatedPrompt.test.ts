@@ -25,6 +25,15 @@ describe('RepeatedPromptWatch', () => {
     expect(watch.prompt).toBe('サインインに使うシステムを選択してください [0-1]');
   });
 
+  it("finds it in the console's code page, where a character isn't UTF-8 (cm in Spanish on Windows)", () => {
+    const spanish = 'Seleccione un sistema de autenticación [0-1] '.repeat(200);
+    const asBytes = new RepeatedPromptWatch();
+    asBytes.appendBytes(Buffer.from(spanish, 'latin1'));
+    expect(asBytes.prompt).toBe('Seleccione un sistema de autenticaci\uFFFDn [0-1]');
+    // As a process's text output decodes it.
+    expect(promptIn(Buffer.from(spanish, 'latin1').toString('utf8'), 1000)).toBe('Seleccione un sistema de autenticaci\uFFFDn [0-1]');
+  });
+
   it('finds no loop in a prompt asked once, as cm asks before it fails', () => {
     expect(promptIn(`${SIGN_IN_MENU}${SIGN_IN_PROMPT}Error: no input`)).toBeUndefined();
   });
@@ -36,6 +45,11 @@ describe('RepeatedPromptWatch', () => {
   it('finds no prompt in lines or records that repeat, as a list may', () => {
     expect(promptIn('Enter a value [y/n]:\n'.repeat(500))).toBeUndefined();
     expect(promptIn(`1${FIELD_SEPARATOR}/main/task:${RECORD_SEPARATOR}\n`.repeat(500))).toBeUndefined();
+  });
+
+  it('finds no prompt in progress lines rewritten again and again with a carriage return', () => {
+    expect(promptIn('\rDownloading: 12/40 files'.repeat(500))).toBeUndefined();
+    expect(promptIn('\rProcessing... [3/10]'.repeat(500))).toBeUndefined();
   });
 
   it('finds no prompt in text that repeats without asking anything', () => {
