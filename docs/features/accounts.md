@@ -12,7 +12,7 @@ found it (Details). Every window hears each change (`serverSessionsChanged`) and
 (`accounts.sessions`, `useServerSessions`). The same problem told again changes nothing, so no event repeats.
 
 The kinds (`SignInProblemKind`) and what the screen says of each (`signInWords`), the server named as the rest of the
-app names it (`describeServer`: an organization by its name, the local server as this computer):
+app names it (`describeServer`: an organization by its name, the local server as the server on this computer):
 
 | Kind                 | Words                                                  |
 | -------------------- | ------------------------------------------------------ |

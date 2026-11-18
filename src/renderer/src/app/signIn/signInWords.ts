@@ -36,11 +36,12 @@ export function signInWords({ kind, server }: SignInProblem): SignInWords {
 }
 
 /**
- * The server as the rest of the app names it (`describeServer`: an organization by its name, `local` as This computer),
- * inside a sentence and at its start: a server's own name keeps its case.
+ * The server as the rest of the app names it (`describeServer`: an organization by its name, `local`, This computer in
+ * lists, as the server on this computer, never the computer alone, whose own session it would read as), inside a
+ * sentence and at its start: a server's own name keeps its case.
  */
 export function serverInSentence(server: string): ServerNames {
-  if (server === 'local') return { inside: 'this computer', first: 'This computer' };
+  if (server === 'local') return { inside: 'the server on this computer', first: 'The server on this computer' };
   const { label } = describeServer(server);
   return { inside: label, first: label };
 }

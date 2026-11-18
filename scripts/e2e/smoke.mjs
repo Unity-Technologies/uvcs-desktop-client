@@ -340,7 +340,7 @@ try {
     // The session ends: the next read runs into it, a check confirms it, and one screen covers the window.
     writeFileSync(signInFile, 'local');
     await main.getByRole('button', { name: /^Refresh/ }).click();
-    const signInScreen = window.getByRole('heading', { name: 'Your session for this computer ended' });
+    const signInScreen = window.getByRole('heading', { name: 'Your session for the server on this computer ended' });
     await signInScreen.waitFor();
     if ((await signInScreen.count()) !== 1) throw new Error(`${await signInScreen.count()} sign-in screens`);
     // Covered, the place's shortcuts are off (going to a view, Refresh): the window stays on Branches, and asks the
@@ -355,7 +355,7 @@ try {
   await step('Signed in again', async () => {
     writeFileSync(signInFile, '');
     await window.getByRole('button', { name: 'Check again' }).click();
-    await window.getByRole('heading', { name: 'Your session for this computer ended' }).waitFor({ state: 'detached' });
+    await window.getByRole('heading', { name: 'Your session for the server on this computer ended' }).waitFor({ state: 'detached' });
     await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
     await settled();
   });
