@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { forgetRefusedOperation } from './refusedOperation';
 import { SignInScreen } from './SignInScreen';
 import styles from './SignInCover.module.css';
@@ -17,16 +17,23 @@ export function SignInCover({ children, offersHome = true }: { children: ReactNo
   const { server } = useWindowSessionCheck();
   const { data: sessions } = useServerSessions();
   const problem = signInCovering(sessions, server);
+  const covers = problem !== null;
+  const screen = useRef<HTMLDivElement>(null);
   // An operation refused here is offered again only while the window shows this place.
   useEffect(() => forgetRefusedOperation, []);
+  // A menu, popover or card a covered view opened lives outside it, in the page's body, above the screen: a press on
+  // the screen closes them, as a click outside them would (Radix's layers and the app's cards listen for it).
+  useEffect(() => {
+    if (covers) screen.current?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  }, [covers]);
 
   return (
     <div className={styles.cover}>
-      <div className={styles.covered} inert={problem !== null}>
+      <div className={styles.covered} inert={covers}>
         {children}
       </div>
       {problem && (
-        <div className={styles.screen}>
+        <div ref={screen} className={styles.screen}>
           <SignInScreen problem={problem} as="card" offersHome={offersHome} />
         </div>
       )}
