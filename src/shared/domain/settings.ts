@@ -71,6 +71,11 @@ export interface AppSettings {
   gravatarChoiceAsked: boolean;
   /** Show an OS notification when someone checks in to the loaded branch while the window is in the background. */
   notifyOnIncoming: boolean;
+  /**
+   * The Unity account last picked in a home screen's account switcher (its `UserAccount.id`), which a home screen
+   * shows unless something on it names another (`homeAccountOf`); empty until one is picked. It changes nothing in `cm`.
+   */
+  homeAccount: string;
   /** The merge tool files no rule matches open in: `auto` (the UVCS merge tool, else the first found) or a tool id. */
   mergeTool: string;
   /** Which tool opens which files, tried in order before `mergeTool` (Settings › Merge). */
@@ -134,6 +139,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showGravatar: false,
   gravatarChoiceAsked: false,
   notifyOnIncoming: false,
+  homeAccount: '',
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
   mergeToolArgs: {},

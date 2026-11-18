@@ -1,15 +1,21 @@
 import { House, Layers, Settings } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import type { ServerProfile } from '@shared/domain/repository';
 import { ServerIcon } from '../../components/ServerIcon';
 import { describeServer } from '../../lib/servers';
 import { NavFooter, NavGroups, NavItem, Sidebar, type NavSectionItem } from '../../ui/nav/SidebarNav';
 import { CenteredSpinner } from '../../ui/Spinner';
+import { useCommands } from '../commands/commandStore';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useSidebarCollapsed } from '../shell/sidebarStore';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
-import { useServers } from '../workspace/workspaceQueries';
+import { AccountSwitcher } from './AccountSwitcher';
+import { accountSwitchCommands } from './accountSwitcherMenu';
+import { homeServersOf } from './homeAccount';
+import { showHomeAccount } from './homeAccountStore';
 import { isSameSection, WELCOME, type HomeSection } from './homeSection';
-import { serverGroups } from './serverGroups';
+import { serverEntryDetail, serverGroups } from './serverGroups';
+import { useHomeAccount } from './useHomeAccount';
 import { ServerMonogram } from './ServerMonogram';
 
 interface HomeSidebarProps {
@@ -18,8 +24,9 @@ interface HomeSidebarProps {
 }
 
 export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
-  const { data: servers, isLoading } = useServers();
+  const { accounts, shown, reading } = useHomeAccount();
   const rail = useSidebarCollapsed();
+  useCommands(useMemo(() => accountSwitchCommands(accounts, shown, (account) => showHomeAccount(account, accounts)), [accounts, shown]));
 
   // `railLabel`: the short name the folded sidebar's tile shows, where "All workspaces" and "This computer" would wrap.
   const item = (target: HomeSection, icon: ReactNode, label: string, words: { detail?: string; railLabel?: string } = {}): NavSectionItem => {
@@ -32,22 +39,21 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
       ),
     };
   };
-  const serverItem = (server: string): NavSectionItem => {
-    // The group names the kind of organization, so its entries need no detail of their own; folded, where groups are
-    // only rules, the tooltip says it (`navItemTip`): `acme · Unity organization` and `acme · Cloud organization`.
-    const { label, detail } = describeServer(server);
+  const serverItem = (profile: ServerProfile): NavSectionItem => {
+    const { server } = profile;
+    const { label } = describeServer(server);
     // Folded, every organization would be the same icon: their initials tell them apart.
     const icon = rail && server !== 'local' ? <ServerMonogram label={label} /> : <ServerIcon server={server} />;
     const railLabel = server === 'local' ? 'Local' : undefined;
-    return item({ kind: 'server', server }, icon, label, { railLabel, detail: rail ? detail : undefined });
+    return item({ kind: 'server', server }, icon, label, { railLabel, detail: serverEntryDetail(profile, rail) });
   };
-  const serverSections = isLoading
+  const serverSections = reading
     ? [{ label: 'Servers', items: [{ key: 'loading', element: <CenteredSpinner /> }] }]
-    : serverGroups(servers ?? []).map((group) => ({ label: group.label, items: group.servers.map((profile) => serverItem(profile.server)) }));
+    : serverGroups(homeServersOf(accounts, shown)).map((group) => ({ label: group.label, items: group.servers.map(serverItem) }));
 
   return (
     <Sidebar width={232} rail={rail}>
-
+      {shown && <AccountSwitcher accounts={accounts} shown={shown} />}
       <NavGroups
         sections={[
           {

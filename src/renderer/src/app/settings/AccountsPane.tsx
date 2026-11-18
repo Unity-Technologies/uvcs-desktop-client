@@ -1,40 +1,35 @@
-import { Trash2 } from 'lucide-react';
+import { ChevronRight, Trash2 } from 'lucide-react';
+import { useId, useState } from 'react';
 import type { Account } from '@shared/domain/account';
 import { ServerIcon } from '../../components/ServerIcon';
-import { describeServer } from '../../lib/servers';
 import { Avatar } from '../../ui/Avatar';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
-import { removeAccount, useAccounts } from '../account/accounts';
-import { accountForServer, organizationName, signInMethod } from '../account/serverAccount';
-import { serverOfPlace } from '../workspace/placeOrigin';
-import { useSession } from '../workspace/sessionStore';
-import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
+import { removeAccount, useUserAccounts } from '../account/accounts';
+import { useWindowServer } from '../workspace/useWorkspace';
+import { accountRowsOf, type AccountRow } from './accountRows';
 import styles from './AccountsPane.module.css';
 
 /**
- * The connection profiles `cm` signs in with, one per server, shared with the official client and the CLI.
- * Signing in stays with the official client: it runs the Unity ID / SSO flow this app doesn't.
+ * The accounts this computer signs in with, one row each (`accountRowsOf`), shared with the official client and the CLI.
+ * A Unity account opens to its organizations, each removed apart, as `cm` keeps one profile per server. Signing in
+ * stays with the official client: it runs the Unity ID / SSO flow this app doesn't.
  */
 export function AccountsPane() {
-  const { data: accounts, isLoading } = useAccounts();
-  const place = useSession((state) => state.place);
-  const { data: info } = useWorkspaceInfoOf(useSession((state) => state.workspacePath));
-  const server = place ? serverOfPlace(place, info) : undefined;
-  const inUse = server && accounts ? accountForServer(accounts, server) : undefined;
-  // The account of the window's place comes first: "Manage accounts" in the account menu usually starts from it.
-  const ordered = accounts && inUse ? [inUse, ...accounts.filter((account) => account !== inUse)] : accounts;
+  const { data: accounts, isPending } = useUserAccounts();
+  const placeServer = useWindowServer();
+  const rows = accounts ? accountRowsOf(accounts, placeServer) : [];
 
   return (
     <>
       <p className={styles.intro}>
-        The accounts this computer signs in with, one per server. They are shared with the Unity Version Control app and the command line.
+        The accounts this computer signs in with. They are shared with the Unity Version Control app and the command line.
       </p>
-      {isLoading && <CenteredSpinner />}
-      {ordered && (
+      {isPending && <CenteredSpinner />}
+      {rows.length > 0 && (
         <ul className={styles.list}>
-          {ordered.map((account) => (
-            <AccountRow key={account.name} account={account} inUse={account === inUse} />
+          {rows.map((row) => (
+            <AccountRowItem key={row.account.id} row={row} />
           ))}
         </ul>
       )}
@@ -46,23 +41,47 @@ export function AccountsPane() {
   );
 }
 
-function AccountRow({ account, inUse }: { account: Account; inUse: boolean }) {
-  const place = organizationName(account.server, account) ?? describeServer(account.server).label;
+function AccountRowItem({ row }: { row: AccountRow }) {
+  const [expanded, setExpanded] = useState(false);
+  const serversId = useId();
+  const { account, detail, inUse, servers, expands } = row;
+  const only = servers[0];
 
   return (
-    <li className={styles.row}>
-      <Avatar user={account.user} size={28} ownAccount />
-      <div className={styles.text}>
-        <span className={styles.server}>
-          <ServerIcon server={account.server} size={13} />
-          {place}
-          {inUse && <span className={styles.inUse}>This workspace</span>}
-        </span>
-        <span className={styles.user}>
-          {account.user} · {signInMethod(account.workingMode)}
-        </span>
+    <li className={styles.account}>
+      <div className={styles.row}>
+        {expands ? (
+          <button type="button" className={styles.expand} aria-expanded={expanded} aria-controls={serversId} aria-label={`Organizations of ${account.user}`} onClick={() => setExpanded(!expanded)}>
+            <ChevronRight size={14} className={styles.chevron} />
+          </button>
+        ) : (
+          <span className={styles.expand} />
+        )}
+        <Avatar user={account.user} size={28} ownAccount />
+        <div className={styles.text}>
+          <span className={styles.user}>
+            {account.user}
+            {inUse && <span className={styles.inUse}>This workspace</span>}
+          </span>
+          <span className={styles.detail}>{detail}</span>
+        </div>
+        {!expands && only && <RemoveButton profile={only.profile} label={only.label} />}
       </div>
-      <IconButton icon={<Trash2 size={14} />} label={`Remove the account on ${place}`} onClick={() => void removeAccount(account)} />
+      {expands && expanded && (
+        <ul id={serversId} className={styles.servers}>
+          {servers.map(({ profile, label }) => (
+            <li key={profile.name} className={styles.serverRow}>
+              <ServerIcon server={profile.server} size={13} />
+              <span className={styles.serverName}>{label}</span>
+              <RemoveButton profile={profile} label={label} />
+            </li>
+          ))}
+        </ul>
+      )}
     </li>
   );
+}
+
+function RemoveButton({ profile, label }: { profile: Account; label: string }) {
+  return <IconButton icon={<Trash2 size={14} />} label={`Remove the account on ${label}`} onClick={() => void removeAccount(profile)} />;
 }

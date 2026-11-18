@@ -29,3 +29,11 @@ export function openContextMenuOf(element: HTMLElement | null): void {
   const bounds = element.getBoundingClientRect();
   element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: bounds.left + 24, clientY: bounds.bottom - 4 }));
 }
+
+/**
+ * Whether a row of a list driven from its filter shows its "…" (`RowActionsButton`): on the highlighted row, and on the
+ * row whose menu is open while the highlight moves on, so the menu keeps its trigger.
+ */
+export function showsRowActions(row: { highlighted: boolean; menuOpen: boolean }): boolean {
+  return row.highlighted || row.menuOpen;
+}

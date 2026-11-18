@@ -46,20 +46,31 @@
   text-align: center;
 }
 
-.item {
+/* A workspace: the button that opens it, then its actions' "…" on the highlighted one (`RowActionsButton`). */
+.row {
   display: flex;
   flex: none;
   align-items: center;
+  padding-right: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.row[data-highlighted='true'] {
+  background: var(--accent-soft);
+}
+
+.item {
+  display: flex;
+  flex: 1;
+  align-self: stretch;
+  align-items: center;
+  min-width: 0;
   gap: var(--space-2);
   padding: 6px var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background: none;
   text-align: left;
-}
-
-.item[data-highlighted='true'] {
-  background: var(--accent-soft);
 }
 
 .item:focus-visible {

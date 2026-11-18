@@ -38,7 +38,7 @@ you touch:
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
-| `features/accounts.md`                  | Sign-in state, one per server: how `cm` says a server needs a sign-in, the gate that keeps commands from it, keeping sessions alive, the sign-in screen, operations refused and offered again |
+| `features/accounts.md`                  | Accounts and sign-in: how profiles make accounts (a Unity account per user, one per server), Home's account switcher, Settings › Accounts; sign-in state, one per server: how `cm` says a server needs a sign-in, the gate that keeps commands from it, keeping sessions alive, the sign-in screen, operations refused and offered again |
 
 ## How a request flows
 
@@ -533,7 +533,8 @@ by name, and never passes it to `cm`.
   show.
 - **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
   `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
-  sidebar groups them (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
+  sidebar lists one Unity account's at a time, by its switcher (docs/features/accounts.md "Home"), and groups them
+  (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
   (`ServerIcon`; `OrganizationIcon` is the building Unity's apps draw). Only a Unity organization has projects: a
   repository of type `Project`, which `cm repository list` leaves out unless asked with `--type=all`, and
   `{reptype}` tells apart (`repositoryListArgs`). Neither is in `cm`'s help: `cm` keeps `--type` for its own use and
@@ -567,7 +568,8 @@ by name, and never passes it to `cm`.
 - Not done instead: reading `cm`'s own local table of organizations (a file in its config folder) duplicates what
   `cm` does and is the client's config, which the app doesn't keep reading ("Own config"); keeping a table in the app
   (learned once per organization) was tried and dropped for the same duplication; `cm profile list`'s names cover
-  only organizations with a profile of their own, not those signed in through `*@cloud`.
+  only organizations with a profile of their own, not those signed in through `*@cloud` (docs/features/accounts.md
+  "Known limit").
 
 ## No external tool opens by itself
 
@@ -777,7 +779,7 @@ each email address shown, and the user decides whether it leaves the machine.
   (`isEmailAddress`).
 - **Asked once, when people show**: the first avatar of someone named by an email address marks people as shown in
   the window (`notePersonShown`, from `avatarImageFor`); the user's own account (the top bar, the account menu,
-  Settings' accounts, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
+  Settings' accounts, Home's account switcher, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
   a card in the toast corner (`GravatarPrompt` on `CornerCard`, `asksAboutGravatar`) asks "Show profile pictures?"
   with "Show pictures" and "Not now". While a dialog opened with `openDialog` or `askDialog` is open (`useDialogStore`:
   Settings, About, confirmations...; the command palette isn't one) it waits, so it never sits over the dialog's
@@ -904,7 +906,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   a problem is checked again by the next window, and by Retry. `cm version` says `cm` runs (`CmUnavailableScreen`
   otherwise); `cm profile list`, a local command, says it's configured (`checkSetup`): without a configuration every
   command but `version`, `location`, `configure` and `help` fails at once saying so, and `SetupProblemScreen` takes the
-  app's place. The check costs no command of its own: the accounts, the servers and it share one profiles read
+  app's place. The check costs no command of its own: the profiles, the accounts they make, the servers and it share one profiles read
   (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
@@ -984,7 +986,7 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    ms), wires the services and, as it loads, before Electron is ready (`cm` needs neither that nor a window), starts
    the `cm shell`s of the workspace the first window reopens (or of the home folder, for the home screen) and that
    screen's first reads (`readFirstScreenAhead`, `readFirstScreen`): `cm version` and the workspace's info and
-   pending changes, or the home screen's workspaces and servers. Their commands run while Electron gets ready (50-60
+   pending changes, or the home screen's workspaces, servers and profiles (the last two one `cm profile list`). Their commands run while Electron gets ready (50-60
    ms) and the window and its page load; the page's identical calls take the answers (`EarlyCalls`, in
    `registerApi`; one nobody takes goes 5 s after the window opened, `EARLY_ANSWER_MS`, `expireUntaken`). A launch
    that names a folder on Windows and Linux (`launchNamesAFolder`, known as the module loads) reads ahead only
@@ -1277,7 +1279,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   by the character typed (Ctrl+Z on a German keyboard), digits by position. A comment field takes its formatting keys
   (⌘B, ⇧⌘U, ⇧⌘C: the registry's Comments area, `scope: 'commentField'`) before the window's shortcuts, inside a focused
   comment field only (`yieldsToCommentField`; features/rich-comments.md "Writing"). F2
-  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
+  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A list driven from its filter field (the palette, Go to file, the branch and workspace switchers) offers a result's actions three ways that open one menu, at the "…" (`RowActionsButton`) the highlighted row shows: that button, Tab (or the menu key, `isRowMenuKey`) and a right click on any row, which highlights it first; closing the menu gives focus back to the filter (the test: `rowActionsEverywhere.test.ts`). A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
@@ -1300,7 +1302,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
   a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
-  the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
+  the action runs first, `runAfterMenuCloses`). A dialog holding the trigger was open before the menu and doesn't
+  count: a result's menu in Go to file gives focus back to its filter. Views keep their list's selection while away (`useViewSelection`).
   Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container. The keyboard
   ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
   once a key was pressed (and before any input at all), and a clicked button at the next key, so focus the app moves on

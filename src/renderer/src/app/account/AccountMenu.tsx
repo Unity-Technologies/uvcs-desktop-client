@@ -12,7 +12,7 @@ import { openShortcutsDialog } from '../commands/ShortcutsDialog';
 import { openSettingsDialog, openSettingsDialogAt } from '../settings/SettingsDialog';
 import { THEMES } from '../settings/themes';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
-import { useAccounts } from './accounts';
+import { useUserAccounts } from './accounts';
 import { cloudDashboardUrl, organizationName, signInMethod } from './serverAccount';
 import styles from './AccountMenu.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -29,7 +29,8 @@ interface AccountMenuProps {
  */
 export function AccountMenu({ server, identity, onDone }: AccountMenuProps) {
   const { user, account } = identity;
-  const { data: accounts } = useAccounts();
+  // As many as Settings › Accounts lists: one per account, not per server.
+  const { data: accounts } = useUserAccounts();
   const { theme } = useSettings();
   const updateSettings = useUpdateSettings();
   const cloud = isCloudServer(server);

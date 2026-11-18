@@ -1,22 +1,36 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import type { Account } from '@shared/domain/account';
+import { userAccountsOf } from '@shared/domain/userAccounts';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { describeServer } from '../../lib/servers';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 import { usePlaceServer, useWindowServer } from '../workspace/useWorkspace';
-import { accountForServer } from './serverAccount';
+import { accountForServer, profileLabel } from './serverAccount';
 
-/** Refreshed when the window regains focus after a minute: signing in with the official client adds or changes one. */
-const accountsQuery = queryOptions({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: 60_000 });
+/**
+ * How long the profiles read stay fresh, and the servers made of them (`serversQuery`): refreshed when the window
+ * regains focus after a minute, as signing in with the official client adds or changes one.
+ */
+export const PROFILES_STALE_MS = 60_000;
+
+export const accountsQuery = queryOptions({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: PROFILES_STALE_MS });
 
 /** The user `cm` signs in as where no account is set up (client.conf's default user); it changes only by hand. */
 const defaultUserQuery = queryOptions({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
 
 export function useAccounts() {
   return useQuery(accountsQuery);
+}
+
+/**
+ * The accounts the profiles make (a Unity account per user, one per server: `userAccountsOf`), derived from the
+ * profiles this window reads anyway: no command of their own, and as fresh as the profiles (a sign-in made in the
+ * official client shows once the window regains focus a minute later).
+ */
+export function useUserAccounts() {
+  return useQuery({ ...accountsQuery, select: userAccountsOf });
 }
 
 /**
@@ -57,10 +71,10 @@ export function cachedServerUser(server: string): string | undefined {
 }
 
 export async function removeAccount(account: Account): Promise<void> {
-  const { label } = describeServer(account.server);
+  const label = profileLabel(account);
   const confirmed = await confirm({
     title: `Remove the account on ${label}?`,
-    message: `This computer forgets how to sign in to ${account.server} as ${account.user}. Sign in again with the Unity Version Control app to use it.`,
+    message: `This computer forgets how to sign in to ${label} as ${account.user}. Sign in again with the Unity Version Control app to use it.`,
     confirmLabel: 'Remove account',
     danger: true,
   });

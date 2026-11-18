@@ -5,7 +5,7 @@ import type { Account } from '@shared/domain/account';
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import { queryKeys } from '../../api/queryKeys';
-import { answerConfirms } from '../../testing/fakeDialogs';
+import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts } from '../../testing/operationOutcome';
 import { queryClient } from '../queryClient';
 import { readServerUser, removeAccount } from './accounts';
@@ -48,6 +48,14 @@ describe('removeAccount', () => {
   beforeEach(() => {
     queryClient.setQueryData(queryKeys.accounts, [acme]);
     queryClient.setQueryData(queryKeys.profiles, []);
+  });
+
+  it('names an organization by its readable name in its question, never its genesis id', async () => {
+    answerConfirms(false);
+
+    await removeAccount({ name: 'acme@unity', server: '1375488836673@cloud', user: 'ana@acme.com', workingMode: 'SSOWorkingMode' });
+
+    expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Remove the account on acme?' }]);
   });
 
   it('removes nothing unless the user confirms', async () => {

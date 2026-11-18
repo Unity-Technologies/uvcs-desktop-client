@@ -153,6 +153,24 @@ try {
     await sidebar.getByRole('button', { name: /^Home/ }).click();
     await workspaceOnHome.waitFor();
   });
+  await step('The account switcher', async () => {
+    // Each Unity account shows only its organizations: switching shows the other's, and switching back the owner's.
+    const sidebar = window.getByRole('navigation');
+    const switchTo = async (user) => {
+      await sidebar.getByRole('button', { name: /^Account: / }).click();
+      const menu = window.getByRole('menu');
+      await menu.getByRole('menuitem', { name: /tester@example\.com/ }).waitFor();
+      await menu.getByRole('menuitem', { name: /zoe@example\.com/ }).waitFor();
+      await menu.getByRole('menuitem', { name: new RegExp(user.replaceAll('.', '\\.')) }).click();
+      await sidebar.getByRole('button', { name: `Account: ${user}` }).waitFor();
+    };
+    await switchTo('zoe@example.com');
+    await sidebar.getByRole('button', { name: /^arcade/ }).waitFor();
+    await sidebar.getByRole('button', { name: /^studio/ }).waitFor({ state: 'detached' });
+    await switchTo('tester@example.com');
+    await sidebar.getByRole('button', { name: /^studio/ }).waitFor();
+    await sidebar.getByRole('button', { name: /^arcade/ }).waitFor({ state: 'detached' });
+  });
   await step('Open workspace', async () => {
     await workspaceOnHome.click();
     await window.getByRole('banner').getByRole('button', { name: 'Switch workspace' }).waitFor();

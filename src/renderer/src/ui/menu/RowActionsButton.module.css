@@ -1,12 +1,15 @@
-/* The highlighted result's actions (Tab), like the command palette's. */
 .actions {
   display: flex;
   flex: none;
-  padding: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
   border: none;
   border-radius: var(--radius-sm);
   background: none;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
 }
 
 .actions:hover,

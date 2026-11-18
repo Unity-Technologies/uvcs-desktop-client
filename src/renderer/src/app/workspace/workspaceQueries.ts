@@ -4,6 +4,7 @@ import type { WorkspaceKind, WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
+import { PROFILES_STALE_MS } from '../account/accounts';
 import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useSettings } from '../settings/useSettings';
 
@@ -133,7 +134,12 @@ export function useCanCreateDynamicWorkspaces() {
   return useQuery({ queryKey: queryKeys.dynamicWorkspaces, queryFn: () => api.workspaces.canCreateDynamic(), staleTime: 0, refetchOnWindowFocus: false });
 }
 
-export const serversQuery = queryOptions({ queryKey: queryKeys.profiles, queryFn: () => api.repositories.servers(), staleTime: Infinity });
+/**
+ * The servers the profiles sign in to, as fresh as the accounts made of the same profiles (`accountsQuery`): read again
+ * when the window regains focus a minute after, so an organization added with the official client shows in Home, the
+ * server pickers and links alike. Both refetch on the same focus, so `ProfileList` answers them with one command.
+ */
+export const serversQuery = queryOptions({ queryKey: queryKeys.profiles, queryFn: () => api.repositories.servers(), staleTime: PROFILES_STALE_MS });
 
 export function useServers() {
   return useQuery(serversQuery);
