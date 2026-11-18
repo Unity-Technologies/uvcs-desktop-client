@@ -1,9 +1,11 @@
 import { useEffect, type RefObject } from 'react';
 import { restoredFocusMover } from '../../components/diffExpansion';
 import { isDiffExpanded } from '../../components/diffExpansionStore';
+import { focusAs, showsFocusRing, type FocusMover } from '../../lib/focusRing';
 import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { useNavigation } from '../navigation/navigationStore';
 import { isAimedAtMainList } from './mainFocusKeys';
+import { mainFocusMover, ringsAtKey, type MainFocusReason } from './mainFocusMover';
 
 /** How long a view may take to show its list (until its data shows) before focus stops waiting for it. */
 const WAIT_MS = 5000;
@@ -17,11 +19,14 @@ const WAIT_MS = 5000;
 export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     let stopWaiting = (): void => {};
+    // The list the place opened on took focus ringless, until the first key aimed at it, a click or a navigation.
+    let ringless = false;
 
-    const focusSoon = (): void => {
+    const focusSoon = (reason: MainFocusReason): void => {
       stopWaiting();
+      ringless = !showsFocusRing(mainFocusMover(reason));
       const root = contentRef.current;
-      if (root) stopWaiting = waitToFocusMain(root);
+      if (root) stopWaiting = waitToFocusMain(root, mainFocusMover(reason));
     };
 
     const focusIfLost = (): void => {
@@ -31,7 +36,19 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
       });
     };
 
+    const ringAtFirstKey = (event: KeyboardEvent): void => {
+      const active = document.activeElement;
+      const onMainList = active instanceof HTMLElement && active.hasAttribute('data-main-focus');
+      if (!ringsAtKey(event, { ringless, onMainList }) || !(active instanceof HTMLElement)) return;
+      ringless = false;
+      // Focused again as the keyboard's, the list shows the ring (focusing what has focus changes nothing, hence the
+      // blur); the key goes on to it.
+      active.blur();
+      focusAs(active, 'keyboard');
+    };
+
     const onKeyDownCapture = (event: KeyboardEvent): void => {
+      ringAtFirstKey(event);
       const root = contentRef.current;
       if (!root || document.activeElement !== document.body || !isAimedAtMainList(event)) return;
       if (isKeyboardTaken() || !focusMain(root)) return;
@@ -48,25 +65,29 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
     portals.observe(document.body, { childList: true });
 
     const unsubscribe = useNavigation.subscribe((state, previous) => {
-      if (state.view !== previous.view || state.pages !== previous.pages) focusSoon();
+      if (state.view !== previous.view || state.pages !== previous.pages) focusSoon('navigated');
     });
+    const onPointerDown = (): void => void (ringless = false);
     window.addEventListener('keydown', onKeyDownCapture, true);
-    focusSoon();
+    window.addEventListener('pointerdown', onPointerDown, true);
+    focusSoon('placeOpened');
 
     return () => {
       stopWaiting();
       unsubscribe();
       portals.disconnect();
       window.removeEventListener('keydown', onKeyDownCapture, true);
+      window.removeEventListener('pointerdown', onPointerDown, true);
     };
   }, [contentRef]);
 }
 
 /**
  * Focuses the main list under `root` as soon as it shows (when the view's data arrives), giving up after
- * `WAIT_MS`, once the user clicks, or once focus goes anywhere else. Returns what stops waiting.
+ * `WAIT_MS`, once the user clicks, or once focus goes anywhere else. `mover` decides its ring (`focusAs`). Returns what
+ * stops waiting.
  */
-function waitToFocusMain(root: HTMLElement): () => void {
+function waitToFocusMain(root: HTMLElement, mover: FocusMover): () => void {
   const observer = new MutationObserver(() => attempt());
   const stop = (): void => {
     observer.disconnect();
@@ -81,7 +102,7 @@ function waitToFocusMain(root: HTMLElement): () => void {
   };
   const attempt = (): void => {
     if (isKeyboardTaken()) return stop();
-    if (focusMain(root)) stop();
+    if (focusMain(root, mover)) stop();
   };
   const frame = requestAnimationFrame(attempt);
   const timeout = setTimeout(stop, WAIT_MS);
