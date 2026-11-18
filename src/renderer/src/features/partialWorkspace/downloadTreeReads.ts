@@ -44,7 +44,10 @@ export function downloadTreeReads({
   return { listings: dataByFolder(listings), loadedIn: dataByFolder(loaded), failures };
 }
 
-/** Apply runs only when the choices change something, and not while it's already running. */
-export function canApply(rules: readonly PartialRule[], applying: boolean): boolean {
-  return rules.length > 0 && !applying;
+/**
+ * Apply runs only when the choices change something, not while it's already running, and not while a choice waits
+ * for the folders above it to be read (`choicesAwaitReads`), when the rules would leave it out.
+ */
+export function canApply(rules: readonly PartialRule[], applying: boolean, awaitingReads: boolean): boolean {
+  return rules.length > 0 && !applying && !awaitingReads;
 }
