@@ -107,8 +107,8 @@ download where signing in again is the way forward) and Go to Home. Signed in el
 app, a terminal), the next check notices: Check again, or coming back to the window.
 
 A workspace opened while its server needs a sign-in can't be read (its header asks the server), so the same screen
-takes the window's place, as a workspace that can't be opened does (`WorkspaceGate`, `SignInScreen` with
-`as="page"`).
+takes the window's place, as a workspace that can't be opened does (`workspaceSignInProblem`, `WorkspaceGate`,
+`SignInScreen` with `as="page"`), and coming back to the window checks that server too (`serverToKeepChecking`).
 
 Once the server is signed in again, every window on it is uncovered, and reads once more each query whose last read
 failed for its sign-in (`failedForSignInTo`, `useServerSessionsFromMain`): a workspace that couldn't be opened opens.

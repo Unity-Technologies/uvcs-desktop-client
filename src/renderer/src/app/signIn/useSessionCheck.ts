@@ -3,7 +3,10 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { serverToCheck } from '../startup/connectionProblemShown';
 import { useCmAvailability, useSetupCheck } from '../startup/useCmAvailability';
-import { useWindowServer } from '../workspace/useWorkspace';
+import { workspacePathOf } from '@shared/domain/place';
+import { useSession } from '../workspace/sessionStore';
+import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
+import { serverToKeepChecking } from './windowSignIn';
 
 /**
  * The check of the window's place's server (`accounts.checkSession`): as the place opens, and every time the window
@@ -14,7 +17,9 @@ import { useWindowServer } from '../workspace/useWorkspace';
 export function useWindowSessionCheck() {
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
-  const server = serverToCheck(setup.data, useWindowServer());
+  const place = useSession((state) => state.place);
+  const info = useWorkspaceInfoOf(place ? workspacePathOf(place) : null);
+  const server = serverToCheck(setup.data, serverToKeepChecking(place, info));
   const check = useQuery({
     queryKey: queryKeys.serverSession(server ?? ''),
     queryFn: () => api.accounts.checkSession(server ?? '', 'whenStale'),

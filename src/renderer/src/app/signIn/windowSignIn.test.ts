@@ -2,7 +2,9 @@ import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 import type { ServerSession, SignInProblem } from '@shared/domain/signIn';
 import { ApiError } from '../../api/client';
-import { failedForSignInTo, signedInAgain, signInCovering, signInProblemOf, toldBySignInScreen } from './windowSignIn';
+import { failedForSignInTo, serverToKeepChecking, signedInAgain, signInCovering, signInProblemOf, toldBySignInScreen, workspaceSignInProblem } from './windowSignIn';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import type { WorkspaceInfo } from '@shared/domain/workspace';
 
 const problem = (server: string): SignInProblem => ({ kind: 'sessionEnded', server, details: { commandLine: `cm checkconnection ${server}`, output: '' } });
 const needs = (server: string): ServerSession => ({ server, state: 'needsSignIn', problem: problem(server) });
@@ -55,5 +57,35 @@ describe('failedForSignInTo', () => {
     const picked = client.getQueryCache().findAll({ predicate: failedForSignInTo('acme@cloud') });
 
     expect(picked.map((query) => query.queryKey)).toEqual([['branches']]);
+  });
+});
+
+const INFO = { server: 'acme@cloud', repository: 'game@acme@cloud' } as WorkspaceInfo;
+
+describe('workspaceSignInProblem', () => {
+  it("is the sign-in a workspace's info couldn't be read for, while none was ever read", () => {
+    expect(workspaceSignInProblem({ data: undefined, error: refused('acme@cloud') })).toEqual(problem('acme@cloud'));
+  });
+
+  it('is none once the info was read (a later failure keeps the screen), for any other failure, or while it reads', () => {
+    expect(workspaceSignInProblem({ data: INFO, error: refused('acme@cloud') })).toBeNull();
+    expect(workspaceSignInProblem({ data: undefined, error: new ApiError({ message: 'Not a workspace' }) })).toBeNull();
+    expect(workspaceSignInProblem({ data: undefined, error: null })).toBeNull();
+  });
+});
+
+describe('serverToKeepChecking', () => {
+  it("is the place's server: a repository's from its spec, a workspace's from its info", () => {
+    expect(serverToKeepChecking(repositoryPlace('game@acme@cloud'), { data: undefined, error: null })).toBe('acme@cloud');
+    expect(serverToKeepChecking(workspacePlace('/wk'), { data: INFO, error: null })).toBe('acme@cloud');
+  });
+
+  it("is the server a workspace's info couldn't be read for, so coming back to its window checks it again", () => {
+    expect(serverToKeepChecking(workspacePlace('/wk'), { data: undefined, error: refused('acme@cloud') })).toBe('acme@cloud');
+  });
+
+  it('is none on the home screen, or while the info reads', () => {
+    expect(serverToKeepChecking(null, { data: undefined, error: null })).toBeUndefined();
+    expect(serverToKeepChecking(workspacePlace('/wk'), { data: undefined, error: null })).toBeUndefined();
   });
 });

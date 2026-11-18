@@ -1,6 +1,6 @@
 import { WorkspaceScreen } from '../shell/WorkspaceScreen';
 import { SignInScreen } from '../signIn/SignInScreen';
-import { signInProblemOf } from '../signIn/windowSignIn';
+import { workspaceSignInProblem } from '../signIn/windowSignIn';
 import { BrokenWorkspace } from './BrokenWorkspace';
 import { MissingWorkspace } from './missing/MissingWorkspace';
 import { useWorkspaceFolderMissing, useWorkspaceInfo, useWorkspacePath } from './useWorkspace';
@@ -22,7 +22,7 @@ function ReadableWorkspace({ path }: { path: string }) {
   const info = useWorkspaceInfo();
   // Its header asks the server for the branch's head, so a workspace opened while its server needs a sign-in can't be
   // read: the sign-in screen says so, and the workspace opens once signed in (docs/features/accounts.md).
-  const signIn = info.data ? null : signInProblemOf(info.error);
+  const signIn = workspaceSignInProblem(info);
   if (signIn) return <SignInScreen problem={signIn} as="page" />;
   // Keep the screen when a later refresh fails; the views report their own errors.
   if (info.error && !info.data) {
