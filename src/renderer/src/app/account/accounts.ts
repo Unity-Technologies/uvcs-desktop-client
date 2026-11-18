@@ -1,5 +1,5 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import type { Account } from '@shared/domain/account';
+import type { Account, UserAccount } from '@shared/domain/account';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { describeServer } from '../../lib/servers';
@@ -17,6 +17,23 @@ const defaultUserQuery = queryOptions({ queryKey: queryKeys.user, queryFn: () =>
 
 export function useAccounts() {
   return useQuery(accountsQuery);
+}
+
+/**
+ * The accounts the profiles make (a Unity account per user, one per server: `userAccountsOf`), kept for the session as
+ * the servers the home screen lists are (`serversQuery`), and read again with them.
+ */
+export const userAccountsQuery = queryOptions({ queryKey: queryKeys.userAccounts, queryFn: () => api.accounts.accounts(), staleTime: Infinity });
+
+export function useUserAccounts() {
+  return useQuery(userAccountsQuery);
+}
+
+const NO_ACCOUNTS: UserAccount[] = [];
+
+/** The accounts once read, none meanwhile. */
+export function useUserAccountList(): UserAccount[] {
+  return useUserAccounts().data ?? NO_ACCOUNTS;
 }
 
 /**

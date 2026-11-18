@@ -27,6 +27,8 @@ export const queryKeys = {
   permissions: (server: string, spec: string) => ['permissions', server, 'acl', spec] as const,
   permissionMembers: (server: string, kind: string, filter: string) => ['permissions', server, 'members', kind, filter] as const,
   profiles: ['profiles'] as const,
+  /** Under `profiles`, as they are read from the same profiles: what refreshes the servers refreshes the accounts too. */
+  userAccounts: ['profiles', 'userAccounts'] as const,
   accounts: ['accounts'] as const,
   mergeTools: ['mergeTools'] as const,
   externalApps: ['externalApps'] as const,

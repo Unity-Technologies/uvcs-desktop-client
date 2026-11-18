@@ -1,4 +1,5 @@
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
+import { userAccountsQuery } from '../account/accounts';
 import { queryClient } from '../queryClient';
 import { settingsQuery } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
@@ -10,14 +11,14 @@ import { cmVersionQuery } from './useCmAvailability';
  * Asks for what the first screen shows as the page loads: the components' own queries would ask only after the first
  * paint, and by then the main process is busy showing the window (`show()` holds it for 50-100 ms). A window that
  * starts on a workspace (`openPlaceFromAddress`, its folder known to be there) asks for what its Changes view
- * shows; the home screen for its workspaces and servers.
+ * shows; the home screen for its workspaces, servers and accounts.
  */
 export async function prefetchStartupQueries(): Promise<void> {
   const workspacePath = useSession.getState().workspacePath;
   await Promise.all([
     queryClient.prefetchQuery(settingsQuery),
     queryClient.prefetchQuery(cmVersionQuery),
-    ...(workspacePath ? [prefetchWorkspaceQueries(workspacePath)] : [queryClient.prefetchQuery(workspaceListQuery), queryClient.prefetchQuery(serversQuery)]),
+    ...(workspacePath ? [prefetchWorkspaceQueries(workspacePath)] : [queryClient.prefetchQuery(workspaceListQuery), queryClient.prefetchQuery(serversQuery), queryClient.prefetchQuery(userAccountsQuery)]),
   ]);
 }
 
