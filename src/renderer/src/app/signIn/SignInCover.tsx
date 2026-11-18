@@ -22,9 +22,12 @@ export function SignInCover({ children, offersHome = true }: { children: ReactNo
   // An operation refused here is offered again only while the window shows this place.
   useEffect(() => forgetRefusedOperation, []);
   // A menu, popover or card a covered view opened lives outside it, in the page's body, above the screen: a press on
-  // the screen closes them, as a click outside them would (Radix's layers and the app's cards listen for it).
+  // the screen closes them, as a click outside them would (Radix's layers and the app's cards listen for it). In a task
+  // of its own: closing a menu flushes React's work, which it refuses from inside an effect.
   useEffect(() => {
-    if (covers) screen.current?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    if (!covers) return undefined;
+    const pressed = setTimeout(() => screen.current?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    return () => clearTimeout(pressed);
   }, [covers]);
 
   return (
