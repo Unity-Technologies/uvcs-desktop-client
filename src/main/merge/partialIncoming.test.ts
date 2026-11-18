@@ -50,6 +50,7 @@ describe('incoming in a partial workspace', () => {
     expect(listings.map((command) => command.args.filter((arg) => !arg.startsWith('--format=')))).toEqual([
       ['ls', '-R'],
       ['ls', '/', '/Code', '--tree=br:/main'],
+      ['ls', '/', '--tree=cs:0'],
       ['ls', '/Code', '--tree=cs:1'],
     ]);
     expect(listings.every((command) => command.readsRecords)).toBe(true);
@@ -83,7 +84,7 @@ describe('incoming in a partial workspace', () => {
     const changes = await readIncomingChanges(cm, WORKSPACE);
 
     expect(changes).toMatchObject({ partial: true, items: [item({ kind: 'removed', path: 'Code', isDirectory: true, conflict: true, loadedRevisionId: 23 })] });
-    expect(lines().filter((line) => line.startsWith('ls /'))).toHaveLength(2);
+    expect(lines().filter((line) => line.startsWith('ls /') && line.includes('--tree=br:'))).toHaveLength(2);
   });
 
   it('lists a loaded folder the head moved at its new path, and reads its changes there', async () => {
@@ -105,7 +106,7 @@ describe('incoming in a partial workspace', () => {
       ],
     });
     const headListings = commands.filter((command) => command.args[0] === 'ls' && command.args[1] !== '-R');
-    expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code'], ['/'], ['/Src'], ['/Code']]);
+    expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code'], ['/'], ['/Src'], ['/'], ['/Code']]);
   });
 
   it('never takes an xlink for a loaded folder the head moved, though it shares the item id of the root', async () => {
@@ -126,6 +127,61 @@ describe('incoming in a partial workspace', () => {
     expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code']]);
   });
 
+  it('names what the head brings inside an xlink, reading what a folder held when loaded from the xlinked repository', async () => {
+    // A partial workspace that loaded one folder of an xlink: the head changed CarnageMain.cs, removed GetUnityToken.cs
+    // and added SetEvictionConfig.cs, whose ids and changesets are pnunit's, not the workspace's.
+    const name = (changeset: number) => `03pnunit -> wxlink -> / ${changeset}@pnunit@ [relative] codice@cloud`;
+    const loaded = formatOutput(
+      ['2', '4', '-1', 'dir', '', '0', ''],
+      ['2', '850279', '849994', 'dir', '03pnunit', '27890', '', name(27894)],
+      ['101652', '850280', '-1', 'dir', '03pnunit\\test', '27890', ''],
+      ['103262', '850281', '-1', 'dir', '03pnunit\\test\\carnagetest', '27890', ''],
+      ['833552', '850282', '-1', 'dir', '03pnunit\\test\\carnagetest\\accelerator', '27890', ''],
+      ['838894', '838899', '-1', 'txt', '03pnunit\\test\\carnagetest\\accelerator\\CarnageMain.cs', '27275', ''],
+      ['838963', '845883', '-1', 'txt', '03pnunit\\test\\carnagetest\\accelerator\\GetUnityToken.cs', '27570', ''],
+      ['833905', '834386', '-1', 'txt', '03pnunit\\test\\carnagetest\\accelerator\\Stats.cs', '27024', ''],
+    );
+    const head = formatOutput(
+      ['2', '5000', 'dir', '/', '27898'],
+      ['2', '850312', 'dir', '/03pnunit', '27898', name(27898)],
+      ['101652', '850313', 'dir', '/03pnunit/test', '27898'],
+      ['103262', '850314', 'dir', '/03pnunit/test/carnagetest', '27898'],
+      ['833552', '850315', 'dir', '/03pnunit/test/carnagetest/accelerator', '27898'],
+      ['838894', '849822', 'txt', '/03pnunit/test/carnagetest/accelerator/CarnageMain.cs', '27855'],
+      ['849844', '850274', 'txt', '/03pnunit/test/carnagetest/accelerator/SetEvictionConfig.cs', '27889'],
+      ['833905', '834386', 'txt', '/03pnunit/test/carnagetest/accelerator/Stats.cs', '27024'],
+    );
+    const acceleratorWhenLoaded = formatOutput(
+      ['833552', '850282', 'dir', '/test/carnagetest/accelerator', '27890'],
+      ['838894', '838899', 'txt', '/test/carnagetest/accelerator/CarnageMain.cs', '27275'],
+      ['838963', '845883', 'txt', '/test/carnagetest/accelerator/GetUnityToken.cs', '27570'],
+      ['833905', '834386', 'txt', '/test/carnagetest/accelerator/Stats.cs', '27024'],
+    );
+    const { cm, commands } = fakeCmClient({
+      'status --header --xml': statusHeader('/main', { changeset: -1 }),
+      'status --controlledchanged --changed': pendingStatus(WORKSPACE),
+      'ls -R': loaded,
+      'ls /': head,
+      'ls /test/carnagetest/accelerator': acceleratorWhenLoaded,
+      'find changeset': formatOutput([27898]),
+    });
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    const repository = 'pnunit@codice@cloud';
+    expect(changes).toMatchObject({
+      items: [
+        item({ kind: 'changed', path: '03pnunit/test/carnagetest/accelerator/CarnageMain.cs', loadedRevisionId: 838899, headRevisionId: 849822, repository }),
+        item({ kind: 'removed', path: '03pnunit/test/carnagetest/accelerator/GetUnityToken.cs', loadedRevisionId: 845883, repository }),
+        item({ kind: 'added', path: '03pnunit/test/carnagetest/accelerator/SetEvictionConfig.cs', headRevisionId: 850274, repository }),
+      ],
+    });
+    const loadedListings = commands.filter((command) => command.args.some((arg) => arg.startsWith('--tree=cs:')));
+    expect(loadedListings.map((command) => command.args.filter((arg) => !arg.startsWith('--format=')))).toEqual([
+      ['ls', '/test/carnagetest/accelerator', '--tree=cs:27890@pnunit@codice@cloud'],
+    ]);
+  });
+
   it('rethrows a failure that names no folder', async () => {
     const { cm } = partialWorkspace(cmFails('The server is unreachable'));
 
@@ -135,19 +191,22 @@ describe('incoming in a partial workspace', () => {
   it('reads every listing of a workspace whose folders overflow one command line, and finds what the last one holds', async () => {
     const folders = Array.from({ length: 2_000 }, (_, index) => `Assets/Folder number ${index}`);
     const loaded = formatOutput(['3', '5', '-1', 'dir', '', '0', ''], ...folders.map((path, index) => [String(100 + index), String(5_000 + index), '-1', 'dir', path, '1', '']));
-    const headRowOf = (path: string) => (path === '/' ? ['3', '5', 'dir', '/', '3'] : (() => {
-      const index = folders.indexOf(path.slice(1));
-      return [String(100 + index), String(5_000 + index), 'dir', path, '1'];
-    })());
     const lastFolder = `/${folders[folders.length - 1]}`;
+    // The head changed the last folder (it holds a new file), so only it is listed as it was loaded.
+    const headRowOf = (path: string, onHead: boolean) => (path === '/' ? ['3', '5', 'dir', '/', '3'] : (() => {
+      const index = folders.indexOf(path.slice(1));
+      const revision = onHead && path === lastFolder ? 9_002 : 5_000 + index;
+      return [String(100 + index), String(revision), 'dir', path, '1'];
+    })());
     const { cm, commands } = fakeCmClient({
       'status --header --xml': statusHeader('/main', { changeset: -1 }),
       'status --controlledchanged --changed': pendingStatus(WORKSPACE),
       'ls -R': loaded,
       ls: ({ args }) => {
         const listed = args.filter((arg) => arg.startsWith('/'));
-        const added = listed.includes(lastFolder) && args.includes('--tree=br:/main') ? [['9000', '9001', 'txt', `${lastFolder}/New.cs`, '3']] : [];
-        return formatOutput(...listed.map(headRowOf), ...added);
+        const onHead = args.includes('--tree=br:/main');
+        const added = listed.includes(lastFolder) && onHead ? [['9000', '9001', 'txt', `${lastFolder}/New.cs`, '3']] : [];
+        return formatOutput(...listed.map((path) => headRowOf(path, onHead)), ...added);
       },
       'find changeset': formatOutput([3]),
     });
