@@ -135,13 +135,17 @@ The window gets the problem with the error (`RemoteError.signIn`, `ApiError.sign
 
 ## Options that stick to a shell
 
-A `cm shell` keeps a command's global options for every later command of its session: `--server`, `--username`,
-`--password`, `--token`, `--workingmode`, the files it reads its sign-in from (`--clientconf`, `--tokensconf`,
-`--cloudregionsconf`, `--unityorgsconf`), `--cacheserver` and `-wks`. A pooled shell runs every quick read of its folder,
-so one command carrying one would change who all the others sign in as. The app never sends them through a shell:
+A `cm shell` keeps a command's global options for every later command of its session: who it signs in as and with what
+(`--server`, `--username`, `--password`, `--token`, `--workingmode`), the files it reads its sign-in and organizations
+from (`--clientconf`, `--tokensconf`, `--cloudregionsconf`, `--unityorgsconf`, and the older `-clientconf`, which `cm`
+reads first), the cache server (`--cacheserver`, `-cacheserver`), encryption settings (`--encryptmethod`,
+`--encryptpassword`, `--encryptserver`), the workspace (`-wks`) and the folder it works in (`-path`). A pooled shell runs
+every quick read of its folder, so one command carrying one would change what all the others sign in as, or where they
+run. The app never sends them through a shell:
 `CmClient`'s quick commands refuse them as a programming error (`STICKY_SHELL_OPTIONS`, `refuseStickyShellOptions`, in
 `fakeCmClient` too), and no main-process source passes them at all (`noStickyShellOptions.test.ts`). A command that
-needs one runs with `execute()`, in a process of its own, where it ends with the command.
+needs one runs with `execute()`, in a process of its own, where it ends with the command; the logs hide the secrets
+among them (`SECRET_OPTIONS`: `--password=`, `--token=`, `--encryptpassword=`).
 
 ## Keeping sessions alive
 
