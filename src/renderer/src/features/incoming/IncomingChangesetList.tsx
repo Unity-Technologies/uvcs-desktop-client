@@ -8,10 +8,9 @@ import type { ChangesetStepListState } from '../../components/changesetList/useC
 import type { MenuEntry } from '../../lib/actions';
 import { focusMainNear } from '../../lib/mainFocus';
 import { singleSelection } from '../../lib/selection';
-import { foldedChangesetsAuthors, showMoreBeforeKey } from './incomingChangesetSection';
+import { showMoreBeforeKey } from './incomingChangesetSection';
 import { IncomingShowMore } from './IncomingShowMore';
 import { showMoreLanding } from './showMoreLanding';
-import styles from './IncomingChangesetList.module.css';
 
 /** The row standing for the whole update, above the changesets, which folds them. */
 export const ALL_INCOMING_ROW = { label: 'All incoming changes' };
@@ -35,8 +34,7 @@ interface IncomingChangesetListProps {
 /**
  * The incoming changesets as a branch diff lists its own (`ChangesetFold`, `ChangesetStepList`): "All incoming changes"
  * apart above them, the whole update, folding them at its end, and each changeset one row under it, what the list of
- * changesets read (comment, author, date): nothing is asked of `cm` per row. Folded, the row names who made them
- * (`foldedChangesetsAuthors`).
+ * changesets read (comment, author, date): nothing is asked of `cm` per row.
  */
 export function IncomingChangesetList({ list, changesets, more, open, onToggle, onSelectAll, changesetMenu, older }: IncomingChangesetListProps) {
   const showMoreRef = useRef<HTMLDivElement>(null);
@@ -63,7 +61,6 @@ export function IncomingChangesetList({ list, changesets, more, open, onToggle, 
     older?.onShowMore();
   };
   const showMoreKey = showMoreBeforeKey(list.shown, more);
-  const authors = foldedChangesetsAuthors(changesets);
 
   return (
     <ChangesetFold
@@ -73,7 +70,6 @@ export function IncomingChangesetList({ list, changesets, more, open, onToggle, 
       foldLabel={changesetFoldLabel(open)}
       open={open}
       onToggle={onToggle}
-      folded={authors && <span className={styles.authors}>{authors}</span>}
     >
       <div ref={showMoreRef}>
         <ChangesetStepList

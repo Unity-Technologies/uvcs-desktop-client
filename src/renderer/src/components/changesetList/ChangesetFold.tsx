@@ -7,7 +7,7 @@ import styles from './ChangesetFold.module.css';
  * Changesets above the files, under the row that stands for them all ("All changes on task", "All incoming changes"),
  * which folds them at its end ("Changesets ⌄", a word that stays as they're read; how many is the filter's, once open).
  * Folded, that row is all there is, selected while it's what the files show, with what the place adds after it
- * (`folded`: a review's "3 new", Incoming's authors). The row stays in its place as the list opens under it, and stands
+ * (`folded`: a review's "3 new"). The row stays in its place as the list opens under it, and stands
  * apart from the list (`allApart`), so the filter never hides it. The list mounts only open, so folded it reads nothing.
  */
 export function ChangesetFold(props: {

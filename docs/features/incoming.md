@@ -16,8 +16,8 @@ The left pane is the incoming changesets above the files, as every list of chang
   changesets read all together or one by one, and a header of its own over the list ("Changesets 3") was tried in both
   and read as a section's title, too quiet for what decides what the files are. Unlike a branch diff's, the list starts
   open, since what came in, and from whom, is what Incoming is for; folded, it stays folded across sessions
-  (`useIncomingViewStore`), the row naming who made them: "from Ana, Luis" (`foldedChangesetsAuthors`; how many, the
-  view's header says). Folding goes back to the whole update. Nor does it hide with one changeset, as a branch diff's
+  (`useIncomingViewStore`), the row alone, as a branch diff's (how many came in, the view's header says; who, the
+  list). Folding goes back to the whole update. Nor does it hide with one changeset, as a branch diff's
   does (`showsChangesetList`): that changeset's comment and author are the news. While Incoming checks, the row and the
   list's skeleton hold their places (`IncomingChangesetsReading`). Each row is what the list of changesets read
   (comment, author, date): nothing is asked of `cm` per row, and no row counts its files. It holds the changesets read
