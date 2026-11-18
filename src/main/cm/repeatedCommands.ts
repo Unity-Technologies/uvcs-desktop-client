@@ -6,12 +6,25 @@ import { commandLineForLog } from './hideSecrets';
  * (it only greets the server, but for its header: ARCHITECTURE.md "`cm status` asks the server for its header");
  * everything else asks the server.
  */
+// Two copies follow this list and `needsSignIn`, as the e2e fake can't import the app's code: `isLocal` in
+// scripts/e2e/fakeCm/signIn.cjs and `LOCAL_COMMAND` in scripts/e2e/smoke.mjs. Change them together.
 const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
 
 export function isServerCommand(args: readonly string[]): boolean {
   const [command = '', subcommand] = args;
   if (command === 'workspace' || command === 'wk') return subcommand !== 'list';
   return !LOCAL_COMMANDS.has(command);
+}
+
+/**
+ * Whether a command needs a sign-in to the server: every server command, and `cm status` unless told not to work out
+ * the workspace's header (`--compact`, `--cset`, `--format`), as it then asks the server for the branch's head
+ * (ARCHITECTURE.md "`cm status` asks the server for its header"). The sign-in gate refuses these while the server needs
+ * a sign-in (`SignInGate`); the budget counts only server commands, as such a header is one quick round trip.
+ */
+export function needsSignIn(args: readonly string[]): boolean {
+  if (args[0] !== 'status') return isServerCommand(args);
+  return !args.some((arg) => arg === '--compact' || arg.startsWith('--cset') || arg.startsWith('--format'));
 }
 
 /** The development budget: the same server command more often than this within the window is probably a regression. */

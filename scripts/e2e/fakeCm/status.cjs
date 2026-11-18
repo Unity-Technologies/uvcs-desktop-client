@@ -35,9 +35,14 @@ function statusRecords(args) {
   return records.map((fields) => `${fields.join(field)}${end}\n`).join('');
 }
 
-/** The answer to `cm status <args>`: the header alone with `--header --xml`, the changes as records with `--machinereadable`. */
+/**
+ * The answer to `cm status <args>`: the header alone with `--header --xml`, or as its `STATUS` record with `--header
+ * --machinereadable` (how the app learns a workspace's server when its `--xml` header fails for a sign-in), the
+ * changes as records with `--machinereadable`.
+ */
 function statusOutput(args) {
-  if (args.includes('--machinereadable') && !args.includes('--header')) return statusRecords(args);
+  if (args.includes('--machinereadable') && args.includes('--header')) return `${['STATUS', WORKSPACE.changeset, REPOSITORY, SERVER].join(option(args, 'fieldseparator') || ' ')}\n`;
+  if (args.includes('--machinereadable')) return statusRecords(args);
   if (!args.includes('--xml') || !args.includes('--header')) throw new Error('The fake cm answers cm status only with --header --xml or --machinereadable');
   return `<?xml version="1.0" encoding="utf-8"?><StatusOutput>${header()}</StatusOutput>\n`;
 }

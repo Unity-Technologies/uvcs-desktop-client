@@ -23,16 +23,26 @@ function shellArguments(line) {
 
 function runShell() {
   const lines = createInterface({ input: process.stdin });
+  let waiting = false;
   lines.on('line', (line) => {
+    // A session that asked a question reads every later line as its answer, as `cm shell` does: the app stops it.
+    if (waiting) return;
     const args = shellArguments(line);
     if (args[0] === 'exit') process.exit(0);
-    const { output, exitCode } = run(args);
+    const { output, exitCode, prompt } = run(args);
+    if (prompt) {
+      waiting = true;
+      process.stdout.write(prompt);
+      return;
+    }
     process.stdout.write(`${output}${output.endsWith('\n') || output === '' ? '' : '\n'}CommandResult ${exitCode}\n`);
   });
 }
 
 function runOnce(args) {
-  const { output, exitCode } = run(args);
+  const { output, exitCode, prompt } = run(args);
+  // Its input closed, `cm` reads an empty answer and asks again, without end, until the app stops it.
+  if (prompt) return void setInterval(() => process.stdout.write(prompt), 1);
   process.stdout.write(output);
   process.exitCode = exitCode;
 }

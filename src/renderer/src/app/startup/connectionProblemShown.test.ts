@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { ConnectionProblem } from '@shared/domain/setup';
 import { connectionProblemShown, serverToCheck } from './connectionProblemShown';
 
-const problem = (server: string): ConnectionProblem => ({ kind: 'serverUnreachable', server, commandLine: `cm checkconnection ${server}`, output: '' });
+const problem = (server: string): ConnectionProblem => ({ server, commandLine: `cm checkconnection ${server}`, output: '' });
 
 describe('connectionProblemShown', () => {
-  it("shows the server problem of the window's place, a workspace or a repository explored without one", () => {
+  it("shows the server out of reach of the window's place, a workspace or a repository explored without one", () => {
     expect(connectionProblemShown(problem('codice@cloud'), { placeOpen: true, dismissedServer: null })).toEqual(problem('codice@cloud'));
   });
 

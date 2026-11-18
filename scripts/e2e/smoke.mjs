@@ -29,6 +29,8 @@ rmSync(shots, { recursive: true, force: true });
 mkdirSync(shots, { recursive: true });
 const workspace = join(temp, 'demo');
 const cmLog = join(temp, 'cm.log');
+// Holds the server whose session ended, while one has (`fakeCm/signIn.cjs`): none to start with.
+const signInFile = join(temp, 'sign-in');
 const userData = join(temp, 'user-data');
 createWorkspace(workspace);
 // Light theme to start with, and Gravatar as on a first run: pictures off until asked. The run answers "Not now", so
@@ -46,6 +48,7 @@ const app = await electron.launch({
     UVCS_CM_PATH: fakeCmExecutable(temp),
     UVCS_FAKE_WORKSPACE: workspace,
     UVCS_FAKE_CM_LOG: cmLog,
+    UVCS_FAKE_CM_SIGN_IN: signInFile,
     // The official client's config folder, read by the first-run import (`plasticConfigFolder`): an empty one.
     PLASTIC_HOME: join(temp, 'plastic4'),
   },
@@ -87,6 +90,17 @@ async function withTimeout(promise, ms, what) {
     clearTimeout(timer);
   }
 }
+
+/** The commands the fake `cm` ran so far, as logged (`ok find branch …`). */
+function commandsRun() {
+  return existsSync(cmLog) ? readFileSync(cmLog, 'utf8').split('\n').filter(Boolean) : [];
+}
+
+/**
+ * Commands that need no sign-in (`needsSignIn` in main/cm/repeatedCommands.ts): those that only read this machine, and
+ * a `cm status` told not to work out the workspace's header, which would ask the server for its branch's head.
+ */
+const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
 /** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
 async function settled() {
@@ -336,9 +350,34 @@ try {
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
-  await step('Explore a repository', async () => {
+  await step('A session that ended', async () => {
     await window.keyboard.press('Escape');
     await window.getByRole('dialog').waitFor({ state: 'detached' });
+    await window.getByRole('navigation').getByRole('button', { name: /^Branches( \d+)?$/ }).click();
+    await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
+    // The session ends: the next read runs into it, a check confirms it, and one screen covers the window.
+    writeFileSync(signInFile, 'local');
+    await main.getByRole('button', { name: /^Refresh/ }).click();
+    const signInScreen = window.getByRole('heading', { name: 'Your session for the server on this computer ended' });
+    await signInScreen.waitFor();
+    if ((await signInScreen.count()) !== 1) throw new Error(`${await signInScreen.count()} sign-in screens`);
+    // Covered, the place's shortcuts are off (going to a view, Refresh): the window stays on Branches, and asks the
+    // server nothing.
+    const before = commandsRun().length;
+    for (const key of ['5', '7', '8', 'R']) await window.keyboard.press(`ControlOrMeta+${key}`);
+    await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
+    if (await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).isVisible()) throw new Error('a view shortcut ran while covered');
+    const serverCommands = commandsRun().slice(before).filter((line) => !LOCAL_COMMAND.test(line));
+    if (serverCommands.length > 0) throw new Error(`server commands ran while signed out: ${serverCommands.join('; ')}`);
+  });
+  await step('Signed in again', async () => {
+    writeFileSync(signInFile, '');
+    await window.getByRole('button', { name: 'Check again' }).click();
+    await window.getByRole('heading', { name: 'Your session for the server on this computer ended' }).waitFor({ state: 'detached' });
+    await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
+    await settled();
+  });
+  await step('Explore a repository', async () => {
     await window.getByRole('button', { name: 'Home' }).first().click();
     await window.getByRole('navigation').getByRole('button', { name: /^This computer/ }).click();
     await window.getByRole('button', { name: 'Repository actions' }).first().click();

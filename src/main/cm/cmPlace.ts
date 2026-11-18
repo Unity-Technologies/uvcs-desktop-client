@@ -1,3 +1,4 @@
+import { serverOfRepository } from '@shared/domain/permissions';
 import type { Place } from '@shared/domain/place';
 import type { CmRunOptions } from './CmClient';
 
@@ -13,8 +14,11 @@ import type { CmRunOptions } from './CmClient';
  *   fails with "Object reference not set to an instance of an object", after creating the review.
  */
 export interface CmPlace {
-  /** How a command runs there: in the workspace's folder, or outside every workspace. */
-  readonly options: Pick<CmRunOptions, 'cwd' | 'outsideWorkspaces'>;
+  /**
+   * How a command runs there: in the workspace's folder, or outside every workspace naming the repository's server, for
+   * the sign-in gate (a workspace's server the gate knows from its folder: `WorkspaceServers`).
+   */
+  readonly options: Pick<CmRunOptions, 'cwd' | 'outsideWorkspaces' | 'server'>;
   /** The repository a command must name, as no folder tells `cm` which: undefined in a workspace. */
   readonly repository: string | undefined;
   /** `cm codereview`'s option naming the repository: none in a workspace. */
@@ -36,8 +40,9 @@ export function cmPlace(place: Place): CmPlace {
     return { options: { cwd: place.workspacePath }, repository: undefined, repositoryOption: [], spec: (objectSpec) => objectSpec, newObject: (_specPrefix, name) => name };
   }
   const { repository } = place;
+  const server = serverOfRepository(repository);
   return {
-    options: { outsideWorkspaces: true },
+    options: { outsideWorkspaces: true, ...(server && { server }) },
     repository,
     repositoryOption: [`--repository=${repository}`],
     spec: (objectSpec) => (namesRepository(objectSpec) ? objectSpec : `${objectSpec}@${repository}`),

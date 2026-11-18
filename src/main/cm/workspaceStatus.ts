@@ -1,5 +1,6 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
-import type { CmClient } from './CmClient';
+import type { CmClient, CmRunOptions } from './CmClient';
+import { findWorkspaceRoot } from './workspaceRoot';
 import { isOrganizationIdServer } from './organizationIds';
 import { child, integer, parseXml, text } from './parseXml';
 
@@ -33,7 +34,7 @@ export interface PrintedWorkspaceStatus extends Omit<WorkspaceStatus, 'server'> 
 /** What the workspace is loaded from, read with `cm status --header --xml`, its server by name (`serverByName`). */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
   const { printedServer, ...status } = await readStatusHeader(cm, workspacePath);
-  return { ...status, server: await serverByName(cm, workspacePath, printedServer, { cwd: workspacePath }) };
+  return { ...status, server: await serverByName(cm, workspacePath, printedServer) };
 }
 
 /**
@@ -52,12 +53,31 @@ async function readStatusHeader(cm: CmClient, workspacePath: string): Promise<Pr
 /**
  * The workspace's server as `cm` names it everywhere but in `cm status --xml`, which prints a Unity organization's by
  * its id (ARCHITECTURE.md "Unity organizations"). Only then is the workspace's machine-readable header read, a local
- * read that names it, run from `cwd`. Should it fail, the id stays.
+ * read that names it (`readWorkspaceServer`). Should it fail, the id stays.
  */
-async function serverByName(cm: CmClient, workspacePath: string, printedServer: string, { cwd }: { cwd: string }): Promise<string> {
+async function serverByName(cm: CmClient, workspacePath: string, printedServer: string): Promise<string> {
   if (!isOrganizationIdServer(printedServer)) return printedServer;
-  const output = await cm.query(machineReadableHeaderArgs(workspacePath), { cwd }).catch(() => '');
-  return parseMachineReadableHeader(output)?.server ?? printedServer;
+  return (await readWorkspaceServer(cm, workspacePath)) ?? printedServer;
+}
+
+/**
+ * The server of the workspace holding `directory`, by name, from its machine-readable header: a local read that asks no
+ * server, so it answers while the server needs a sign-in. Undefined when `directory` is in no workspace, or `cm` fails.
+ */
+export async function readWorkspaceServer(cm: Pick<CmClient, 'query'>, directory: string, options: CmRunOptions = { cwd: directory }): Promise<string | undefined> {
+  const output = await cm.query(machineReadableHeaderArgs(directory), options).catch(() => '');
+  return parseMachineReadableHeader(output)?.server;
+}
+
+/**
+ * The root and server of the workspace holding `directory`, with two local reads (`findWorkspaceRoot`,
+ * `readWorkspaceServer`), for the sign-in gate to learn a workspace's server (`WorkspaceServers.learn`).
+ */
+export async function readWorkspaceOrigin(cm: CmClient, directory: string): Promise<{ root: string; server: string } | undefined> {
+  const root = await findWorkspaceRoot(cm, directory);
+  // Both name their folder and run in any directory: a failure of theirs never asks to learn a server itself.
+  const server = root === null ? undefined : await readWorkspaceServer(cm, root, { anyDirectory: true });
+  return root !== null && server !== undefined ? { root, server } : undefined;
 }
 
 /**

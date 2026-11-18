@@ -57,6 +57,8 @@ export interface FakeCm {
   released: string[];
   /** Working directories a window watches (`show`), where queries that run anywhere go. */
   shown: string[];
+  /** How many times the `cm shell` sessions were restarted (`restartShells`: a server signed in again). */
+  shellRestarts(): number;
 }
 
 /**
@@ -72,6 +74,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   const warmedUp: string[] = [];
   const released: string[] = [];
   const shown: string[] = [];
+  let shellRestarts = 0;
   const keys = Object.keys(answers).sort((a, b) => b.length - a.length);
 
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}, readsRecords = false): Promise<string> {
@@ -110,6 +113,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     show: (cwd: string) => void shown.push(cwd),
     release: (cwd: string) => void released.push(cwd),
     relocate: () => undefined,
+    restartShells: () => void shellRestarts++,
     onCommandLogged: () => () => undefined,
     onCommandStarted: () => () => undefined,
     dispose: () => undefined,
@@ -124,6 +128,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     warmedUp,
     released,
     shown,
+    shellRestarts: () => shellRestarts,
   };
 }
 

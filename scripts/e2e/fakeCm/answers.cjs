@@ -5,6 +5,7 @@ const { formatRecords } = require('./format.cjs');
 const repository = require('./repository.cjs');
 const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
+const { signInFailure } = require('./signIn.cjs');
 const { matching } = require('./where.cjs');
 
 /** A command `cm` itself refuses, as it would the real one: it fails, but the fake knew what to answer. */
@@ -226,8 +227,13 @@ function commandOf(args) {
   return { reply: COMMANDS[args[0]], rest: args.slice(1) };
 }
 
-/** The answer to `cm <args>`: its output and exit code. */
+/**
+ * The answer to `cm <args>`: its output and exit code, or the prompt it waits at. A server whose session ended
+ * (`signIn.cjs`) is answered as `cm` would, which is no command the fake doesn't know.
+ */
 function answer(args) {
+  const signIn = signInFailure(args, { workspaceServer: SERVER, otherServers: [ORGANIZATION] });
+  if (signIn) return { ...signIn, refused: true };
   const { reply, rest } = commandOf(args);
   try {
     if (!reply) throw new Error("The fake cm doesn't know this command");

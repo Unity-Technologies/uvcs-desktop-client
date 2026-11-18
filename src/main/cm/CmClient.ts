@@ -1,7 +1,11 @@
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
+import type { FailedCommand } from '@shared/ipc';
+import type { SignInProblem, SignInProblemKind } from '@shared/domain/signIn';
 import { CmError } from './CmError';
+import { CmSignInError } from './CmSignInError';
+import { CmStoppedAtPromptError, WaitingForInputError } from './consolePrompts';
 import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
@@ -14,8 +18,10 @@ import { runsLong } from './longCommands';
 import { CmOutputTooLargeError, textLimitOf } from './outputLimit';
 import type { OutputReading, StreamReader } from './outputReading';
 import { processCommand } from './processCommand';
+import { needsSignIn } from './repeatedCommands';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
+import { isSignInPrompt, signInFailureOf } from './signInFailure';
 import { LineReader, type ReadLine } from './LineReader';
 import { isShellResultLine, shellCommandResult } from './shellResultLine';
 import { withUtf8Output } from './utf8Output';
@@ -36,17 +42,28 @@ export interface CmRunOptions {
    * instead of reading or changing the repository of a workspace it happened to run in.
    */
   outsideWorkspaces?: boolean;
+  /**
+   * The server the command works with, when it names one (`checkconnection <server>`, a repository's place: `cmPlace`).
+   * A workspace's needs none: the sign-in gate knows it from the workspace's folder (`SignInGate.serverOf`).
+   */
+  server?: string;
   signal?: AbortSignal;
   /** Signal sent to the process when `signal` aborts (default SIGTERM). */
   killSignal?: NodeJS.Signals;
   onOutputLine?: (line: string) => void;
 }
 
+/** Where a command runs (`directoryOf`), and the folder it was given (its workspace's, for the sign-in gate), if any. */
+interface Placed {
+  cwd: string;
+  givenCwd: string | undefined;
+}
+
 /** How a command whose list is streamed runs: as any other, but with no output lines to report. */
 export type CmRecordsOptions = Omit<CmRunOptions, 'onOutputLine'>;
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
-type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll'>;
+type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll' | 'restartSessions'>;
 
 /** What `CmClient` runs commands with: a process of their own, and pooled `cm shell` sessions. Tests pass fakes. */
 export interface CmRunners {
@@ -61,6 +78,33 @@ export const OPENING_SHOW_MS = 30_000;
 type CommandStartedListener = (command: { args: readonly string[]; cwd: string; finished: Promise<unknown> }) => void;
 
 /**
+ * Keeps commands from a server that needs a sign-in, and tells one a command ran into (`SignInGate` in `main/accounts`,
+ * docs/features/accounts.md "The gate").
+ */
+export interface SignInGate {
+  /**
+   * The server a command works with: the one it names (`CmRunOptions.server`), or the workspace's of the folder it was
+   * given (`workspace`: its `cwd`, never a folder it runs in by chance, `anyDirectory`); undefined when unknown.
+   */
+  serverOf(workspace: string | undefined, named: string | undefined): string | undefined;
+  /**
+   * The server of the workspace holding `cwd`, read now (a local read) for a command there that failed for a sign-in
+   * before the gate knew it (`WorkspaceServers.learn`); undefined when `cwd` is in no workspace.
+   */
+  learnServerOf(cwd: string): Promise<string | undefined>;
+  /** Whether a command goes by the gate unasked: the session check itself (`cm checkconnection`). */
+  passes(args: readonly string[]): boolean;
+  /** The problem that keeps server commands from `server`, or undefined when they may run. */
+  refusal(server: string): SignInProblem | undefined;
+  /**
+   * A command to `server`, started at `commandStartedAt` (in a pooled `cm shell` when `ranInShell`), failed as a sign-in
+   * problem would: the server's problem once a check of its session confirms it (`SessionChecks.confirm`), else null:
+   * the failure was another server's (an xlink's), a shell's stale sign-in, or no sign-in problem at all.
+   */
+  confirm(server: string, commandStartedAt: number, ranInShell: boolean): Promise<SignInProblem | null>;
+}
+
+/**
  * The single entry point to the `cm` CLI.
  * Quick commands reuse pooled `cm shell` sessions: a warm one answers in a few ms, where starting a `cm` process costs
  * 100-150 ms before the command even runs. Commands that may run long, stream progress or can be cancelled run as
@@ -73,6 +117,7 @@ export class CmClient {
   private readonly logListeners = new Set<CommandLogListener>();
   private readonly startListeners = new Set<CommandStartedListener>();
   private nextCommandId = 1;
+  private signInGate: SignInGate | null = null;
 
   /**
    * `locate` finds the `cm` executable; it runs again on `relocate()`. `outsideWorkspaces` is an empty folder of the
@@ -109,6 +154,20 @@ export class CmClient {
   logEntry(entry: Omit<CommandLogEntry, 'id'>): void {
     const logged = { ...entry, id: this.nextCommandId++ };
     this.logListeners.forEach((listener) => listener(logged));
+  }
+
+  /** From now on, commands go by `gate` (`SignInGate`): set once, as main wires its services. */
+  gateSignIns(gate: SignInGate): void {
+    this.signInGate = gate;
+  }
+
+  /**
+   * Starts new `cm shell` sessions as the ones running finish their commands, in the directories `restarts` picks
+   * (every one by default): a session keeps the sign-in it read when it started, so after signing in again the old
+   * ones would still fail.
+   */
+  restartShells(restarts?: (cwd: string) => boolean): void {
+    this.shellPool.restartSessions(restarts);
   }
 
   onCommandLogged(listener: CommandLogListener): () => void {
@@ -203,9 +262,9 @@ export class CmClient {
     this.shellPool.disposeAll();
   }
 
-  /** The options with the directory the command runs in (`directoryOf`). */
-  private placed<T extends CmRunOptions>(options: T): T & { cwd: string } {
-    return { ...options, cwd: this.directoryOf(options) };
+  /** The options with the directory the command runs in (`directoryOf`), and the one it was given, if any. */
+  private placed<T extends CmRunOptions>(options: T): T & Placed {
+    return { ...options, cwd: this.directoryOf(options), givenCwd: options.cwd };
   }
 
   /**
@@ -242,7 +301,7 @@ export class CmClient {
    * Runs a command whose output is text, kept as its kind says (`textOutputKind`), which refuses a list before it runs.
    * `useShell` is asked only then: a refused command warms no session up.
    */
-  private async runText(args: string[], options: CmRunOptions, useShell: () => boolean): Promise<string> {
+  private async runText(args: string[], options: CmRunOptions & Placed, useShell: () => boolean): Promise<string> {
     const reading: OutputReading = { text: textLimitOf(textOutputKind(args)) };
     return this.run(args, options, useShell(), reading);
   }
@@ -251,29 +310,63 @@ export class CmClient {
    * Runs the command with its stdout read by `reader` as it arrives. What it printed besides (its stderr, text after
    * the last item) is its output, which explains its failure and is no item.
    */
-  private async runStreamed<T>(args: string[], reader: StreamReader & { finish(): T[] }, options: CmRecordsOptions, useShell: boolean): Promise<T[]> {
+  private async runStreamed<T>(args: string[], reader: StreamReader & { finish(): T[] }, options: CmRecordsOptions & Placed, useShell: boolean): Promise<T[]> {
     await this.run(args, options, useShell, { stream: reader });
     return reader.finish();
   }
 
-  /** Runs `cm <args>`, logs it and fails on an exit code other than 0; its output read as `reading` says. */
-  private async run(requested: string[], options: CmRunOptions, useShell: boolean, reading: OutputReading): Promise<string> {
-    const cwd = options.cwd ?? homedir();
+  /**
+   * Runs `cm <args>`, logs it and fails on an exit code other than 0; its output read as `reading` says. A server command
+   * to a server that needs a sign-in doesn't run, and a sign-in problem it runs into fails as one (`SignInGate`).
+   */
+  private async run(requested: string[], options: CmRunOptions & Placed, useShell: boolean, reading: OutputReading): Promise<string> {
+    const { cwd } = options;
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
+    const gate = this.signInGate && !this.signInGate.passes(args) ? this.signInGate : null;
+    // Only a folder the command was given tells its workspace: one run in any directory (`anyDirectory`) runs in the
+    // shown workspace's by chance, and may be about another (a glance at another workspace's header).
+    const server = gate?.serverOf(options.givenCwd, options.server);
+    const refused = server !== undefined && needsSignIn(args) ? gate?.refusal(server) : undefined;
+    if (refused) throw this.notRun(args, cwd, refused);
+
     const startedAt = Date.now();
     const log = (result: CmResult): CommandLogEntry => this.log(args, cwd, startedAt, result, useShell);
+    const signInFailure = async (kind: SignInProblemKind | null, entry: CommandLogEntry): Promise<CmSignInError | null> => {
+      if (!gate || !kind) return null;
+      // Its server, or else its workspace's, learned only now that it failed for a sign-in.
+      const learned = server === undefined && options.givenCwd !== undefined ? await gate.learnServerOf(options.givenCwd) : undefined;
+      return this.signInFailure(gate, server ?? learned, startedAt, useShell, entry);
+    };
     const finished = useShell ? this.shellPool.run(cwd, args, reading) : this.runProcess(args, cwd, options, reading);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
-    const result = await finished.catch((error: unknown) => {
+    const result = await finished.catch(async (error: unknown) => {
       // A command its caller cancelled is no failure to log; one that gave up waiting (a timeout's abort) is.
       if (options.signal?.aborted && !gaveUpWaiting(options.signal)) throw error;
       const entry = log(endedWithoutExitCode(error));
-      throw error instanceof CmOutputTooLargeError ? stoppedFailure(error, entry) : error;
+      if (error instanceof CmOutputTooLargeError) throw stoppedFailure(error, entry);
+      if (!(error instanceof WaitingForInputError)) throw error;
+      throw (await signInFailure(isSignInPrompt(error.prompt) ? 'signInRequired' : null, entry)) ?? new CmStoppedAtPromptError(error.prompt, commandOf(entry));
     });
     const entry = log(result);
-    if (result.exitCode !== 0) throw failure(result, entry);
+    if (result.exitCode !== 0) throw (await signInFailure(signInFailureOf(result.output), entry)) ?? failure(result, entry);
     return result.output;
+  }
+
+  /** A command its server's sign-in keeps from running, logged as not run (`notRun`) so the command log explains itself. */
+  private notRun(args: string[], cwd: string, problem: SignInProblem): CmSignInError {
+    const output = `Not run: sign in to ${problem.server} first.`;
+    const entry = this.log(args, cwd, Date.now(), { output, exitCode: -1 }, false, true);
+    return new CmSignInError(problem, commandOf(entry));
+  }
+
+  /**
+   * A failure that said its server needs a sign-in, once the gate confirmed it (`SignInGate.confirm`); null when its
+   * server can't be known (never guessed: `learnServerOf`), or its session turned out fine.
+   */
+  private async signInFailure(gate: SignInGate, server: string | undefined, startedAt: number, ranInShell: boolean, entry: CommandLogEntry): Promise<CmSignInError | null> {
+    const problem = server === undefined ? null : await gate.confirm(server, startedAt, ranInShell);
+    return problem && new CmSignInError(problem, commandOf(entry));
   }
 
   /** A process of its own: `cm` as it is, or a `cm shell` of its own for an operation or a command line too long to start one with (`processCommand`). */
@@ -292,7 +385,7 @@ export class CmClient {
    * error that reports it: what reads the error in main may need all of it, and the window gets it clipped
    * (`registerApi`).
    */
-  private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): CommandLogEntry {
+  private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean, notRun = false): CommandLogEntry {
     const commandLine = commandLineForLog(args);
     const output = result.exitCode === 0 ? '' : outputForLog(result.output.trim());
     const entry: CommandLogEntry = {
@@ -304,6 +397,7 @@ export class CmClient {
       exitCode: result.exitCode,
       viaShell,
       ...(cwd === this.outsideWorkspaces && { outsideWorkspaces: true as const }),
+      ...(notRun && { notRun: true as const }),
       output,
     };
     const logged = { ...entry, commandLine: clipForLog(commandLine, MAX_LOGGED_COMMAND_LINE), output: clipForLog(output, MAX_LOGGED_OUTPUT, 'ends') };
@@ -317,19 +411,22 @@ function endedWithoutExitCode(error: unknown): CmResult {
   return { output: error instanceof Error ? error.message : String(error), exitCode: -1 };
 }
 
-/** A command the app stopped for a reason of its own (`CmOutputTooLargeError`), reported with its details as any failure. */
+/** The failed command an error reports: the logged entry, unclipped. */
+function commandOf(entry: CommandLogEntry): FailedCommand {
+  return { commandLine: entry.commandLine, exitCode: entry.exitCode, output: entry.output, logEntryId: entry.id };
+}
+
+/**
+ * A command the app stopped for a reason of its own (`CmOutputTooLargeError`), reported with its details as any
+ * failure.
+ */
 function stoppedFailure(error: Error, entry: CommandLogEntry): CmError {
-  return new CmError(error.message, { commandLine: entry.commandLine, exitCode: entry.exitCode, output: entry.output, logEntryId: entry.id });
+  return new CmError(error.message, commandOf(entry));
 }
 
 /** A command that exited with another code than 0, explained by the error line of its output. */
 function failure(result: CmResult, entry: CommandLogEntry): CmError {
-  return new CmError(outputForLog(extractErrorMessage(result.output)), {
-    commandLine: entry.commandLine,
-    exitCode: entry.exitCode,
-    output: entry.output,
-    logEntryId: entry.id,
-  });
+  return new CmError(outputForLog(extractErrorMessage(result.output)), commandOf(entry));
 }
 
 /** Whether a signal aborted because its time ran out (`AbortSignal.timeout`, `readOneObject`), not by its caller. */

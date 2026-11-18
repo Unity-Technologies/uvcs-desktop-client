@@ -97,7 +97,7 @@ export class CmShellPool {
     for (const session of directory.sessions) {
       // A session answering its first command is free for the commands waiting, and may leave the directory idle.
       void session.start().then(() => {
-        if (this.directories.get(cwd) !== directory) return;
+        if (this.directories.get(cwd) !== directory) return disposeWhenIdle(session);
         this.dispatch(cwd, directory);
         this.letGoWhenIdle(cwd, directory);
       });
@@ -112,6 +112,25 @@ export class CmShellPool {
     if (!directory) return;
     directory.released = true;
     this.letGoWhenIdle(cwd, directory);
+  }
+
+  /**
+   * Replaces the sessions of the directories `restarts` picks (every one by default): an idle one goes now, a busy one
+   * once its command is done (`disposeWhenIdle`). What waits, and every later command, runs in new sessions; a shown
+   * directory's start now. A session keeps the sign-in it read as it started (`CmClient.restartShells`).
+   */
+  restartSessions(restarts: (cwd: string) => boolean = () => true): void {
+    for (const [cwd, replaced] of [...this.directories]) {
+      if (!restarts(cwd)) continue;
+      this.directories.delete(cwd);
+      if (replaced.idleTimer) clearTimeout(replaced.idleTimer);
+      replaced.sessions.forEach(disposeWhenIdle);
+      const waiting = replaced.waiting.splice(0);
+      if (waiting.length === 0 && !this.shown.has(cwd)) continue;
+      this.directory(cwd).waiting.push(...waiting);
+      this.warmUp(cwd);
+      this.dispatch(cwd, this.directory(cwd));
+    }
   }
 
   disposeAll(): void {
@@ -147,7 +166,7 @@ export class CmShellPool {
         .run(args, reading)
         .then(resolve, reject)
         .finally(() => {
-          if (this.directories.get(cwd) !== directory) return;
+          if (this.directories.get(cwd) !== directory) return disposeWhenIdle(session);
           this.dispatch(cwd, directory);
           this.letGoWhenIdle(cwd, directory);
         });
@@ -184,4 +203,9 @@ export class CmShellPool {
     directory.sessions.forEach((session) => session.dispose());
     directory.waiting.splice(0).forEach((command) => command.reject(new Error('cm shell session was closed')));
   }
+}
+
+/** Ends a session that no directory holds anymore once it has nothing to run; a disposed session takes no more. */
+function disposeWhenIdle(session: Session): void {
+  if (session.pendingCount === 0) session.dispose();
 }

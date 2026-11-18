@@ -88,7 +88,7 @@ describe('browsing the workspace', () => {
 
     await service.listRepositoryDirectory(repositoryPlace('game@local'), { kind: 'changeset', changeset: 12 }, 'src');
 
-    expect(commands.map(({ args, options }) => [args.slice(0, 3), options])).toEqual([[['ls', '/src', '--tree=cs:12@game@local'], { outsideWorkspaces: true }]]);
+    expect(commands.map(({ args, options }) => [args.slice(0, 3), options])).toEqual([[['ls', '/src', '--tree=cs:12@game@local'], { outsideWorkspaces: true, server: 'local' }]]);
   });
 
   it("lists a folder of a branch's tree, as its head holds it, in the workspace and in a repository with none", async () => {

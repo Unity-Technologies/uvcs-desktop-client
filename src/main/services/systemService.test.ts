@@ -177,18 +177,4 @@ describe('the setup and connection checks', () => {
     expect(fake.commands).toMatchObject([{ via: 'query', options: { anyDirectory: true } }]);
   });
 
-  it("checks a workspace's server once it answers, for every window, and again while it doesn't", async () => {
-    let reachable = false;
-    const { service, lines } = system({
-      checkconnection: () => (reachable ? 'Test connection executed successfully\n' : cmFails("Error: Can't resolve DNS entry for acme")),
-    });
-
-    expect(await service.checkConnection('acme:8087')).toMatchObject({ kind: 'serverUnreachable', server: 'acme:8087' });
-    reachable = true;
-    expect(await service.checkConnection('acme:8087')).toBeNull();
-    expect(await service.checkConnection('acme:8087')).toBeNull();
-    expect(await service.checkConnection('local')).toBeNull();
-
-    expect(lines()).toEqual(['checkconnection acme:8087', 'checkconnection acme:8087', 'checkconnection local']);
-  });
 });

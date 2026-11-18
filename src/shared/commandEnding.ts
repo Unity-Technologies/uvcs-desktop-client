@@ -12,10 +12,11 @@ export function commandEnding(exitCode: number): string {
 }
 
 /**
- * How a failed entry ended, in words: a command by its exit code (`commandEnding`), an issue tracker's request by its
- * answer's status ("HTTP 404"), or "No answer" when none came.
+ * How a failed entry ended, in words: a command by its exit code (`commandEnding`), or "Not run" when its server needed
+ * a sign-in (`notRun`); an issue tracker's request by its answer's status ("HTTP 404"), or "No answer" when none came.
  */
-export function entryEnding(entry: Pick<CommandLogEntry, 'exitCode' | 'source' | 'httpStatus'>): string {
+export function entryEnding(entry: Pick<CommandLogEntry, 'exitCode' | 'source' | 'httpStatus' | 'notRun'>): string {
+  if (entry.notRun) return 'Not run';
   if (entry.source !== 'tracker') return commandEnding(entry.exitCode);
   return entry.httpStatus === undefined ? 'No answer' : `HTTP ${entry.httpStatus}`;
 }

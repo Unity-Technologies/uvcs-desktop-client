@@ -55,6 +55,12 @@ docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn
   fails listing it. A failure `cm` itself would give (`CmRefusal`: previewing a merge of task-001 or task-002, which
   the fake's merge rules refuse) is an answer, not a command it doesn't know. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
   objects in `repository.cjs`, output shaped as the app's parser reads it (its tests show real `cm` output).
+- `signIn.cjs` ends a server's session (docs/features/accounts.md): `UVCS_FAKE_CM_SIGN_IN` names a file, read on every
+  command, holding the server's name (and ` prompt` to have `cm` ask which system to sign in with, as it does once it
+  can't renew a sign-in, instead of printing its "auth token expired" sentence). While it does, every command to that
+  server but the local ones fails so (`cm status` too, unless `--compact`, as it asks the server for the workspace's
+  header). The smoke test writes it to see one sign-in screen, no server command while it
+  shows, and the views back after Check again.
 - Windows starts only executables (Node refuses a `.cmd` without a shell), so there `executable.mjs` builds `cm.exe`
   with `node --build-sea` (Node 25.5 or later) that loads `cm.cjs`; on macOS and Linux the script runs by its `#!`.
 

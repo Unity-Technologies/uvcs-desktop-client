@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { CmResult } from './CmResult';
-import { waitingForInputError } from './consolePrompts';
+import { WaitingForInputError } from './consolePrompts';
 import { OutputBuffer } from './OutputBuffer';
 import { ANSWER_TEXT, CmOutputTooLargeError, MAX_TEXT_OUTPUT_LENGTH } from './outputLimit';
 import type { OutputReading, StreamReader } from './outputReading';
@@ -81,7 +81,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     /** Stops a command asking the same question again and again; true when it did. */
     const stopAskingAgain = (): boolean => {
       const { prompt } = promptWatch;
-      if (prompt !== undefined) stop(waitingForInputError(prompt));
+      if (prompt !== undefined) stop(new WaitingForInputError(prompt));
       return prompt !== undefined;
     };
     const readText = (chunk: string): void => {

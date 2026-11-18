@@ -26,6 +26,7 @@ import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { ConnectionProblemCard } from './startup/ConnectionProblemCard';
+import { useServerSessionsFromMain } from './signIn/useServerSessions';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
 import { UpdateCard } from './updates/UpdateCard';
@@ -61,6 +62,7 @@ function Root() {
   useGravatarSetting();
   useSettingsFromOtherWindows();
   useIssueTrackersFromMain();
+  useServerSessionsFromMain();
   useWorkspaceKindsFromMain();
   useExternalApps();
   useAppCommands();
@@ -77,7 +79,8 @@ function Root() {
 
   if (cm.error) return <CmUnavailableScreen reason={cm.error.message} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
   // The app shows meanwhile: the check is local and takes a moment. A server out of reach never stops the app: the
-  // open workspace's server is checked apart (`ConnectionProblemCard`), and the home screen asks no server at all.
+  // open workspace's server is checked apart (`ConnectionProblemCard`, and `SignInCover` for a sign-in it needs), and
+  // the home screen asks no server at all.
   if (setup.data) {
     return <SetupProblemScreen problem={setup.data} checking={setup.isFetching} onRetry={() => void setup.refetch()} />;
   }

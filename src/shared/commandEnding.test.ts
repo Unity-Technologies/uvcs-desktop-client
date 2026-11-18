@@ -8,4 +8,8 @@ describe('entryEnding', () => {
     expect(entryEnding({ exitCode: 1, source: 'tracker', httpStatus: 404 })).toBe('HTTP 404');
     expect(entryEnding({ exitCode: 1, source: 'tracker' })).toBe('No answer');
   });
+
+  it('says a command refused for a sign-in never ran', () => {
+    expect(entryEnding({ exitCode: -1, notRun: true })).toBe('Not run');
+  });
 });

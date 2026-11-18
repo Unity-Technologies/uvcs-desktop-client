@@ -27,6 +27,12 @@ describe('paletteCommands', () => {
     expect(offered.map((each) => each.id)).toEqual(['app.settings', 'files.goTo']);
     expect(offered[1]).toBe(browse);
   });
+
+  it("offers only the app's own commands while the sign-in screen covers the place", () => {
+    const byOwner = new Map([['owner', [{ id: 'app.settings', group: 'App', label: 'Settings', run: () => undefined }, { id: 'changes.checkin', group: 'Changes', label: 'Check in', run: () => undefined }]]]);
+
+    expect(paletteCommands(byOwner, true).map((each) => each.id)).toEqual(['app.settings']);
+  });
 });
 
 describe('commandResult', () => {

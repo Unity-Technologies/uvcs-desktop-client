@@ -34,7 +34,7 @@ describe('shelves', () => {
 
     await service.list(repositoryPlace('game@local'), { owners: ['me'] });
 
-    expect(fake.commands.map(({ args, options }) => [args[2], options])).toEqual([["where owner = 'me' on repository 'game@local'", { outsideWorkspaces: true }]]);
+    expect(fake.commands.map(({ args, options }) => [args[2], options])).toEqual([["where owner = 'me' on repository 'game@local'", { outsideWorkspaces: true, server: 'local' }]]);
   });
 
   it("replaces a shelve's comment with one quick command on the changeset below zero it is, the comment in a file deleted afterwards", async () => {
@@ -56,7 +56,7 @@ describe('shelves', () => {
 
     await service.editComment(repositoryPlace('game@local'), 12, '');
 
-    expect(fake.commands).toMatchObject([{ args: ['changeset', 'editcomment', 'cs:-12@game@local', `-commentsfile=${seen.file}`], options: { outsideWorkspaces: true } }]);
+    expect(fake.commands).toMatchObject([{ args: ['changeset', 'editcomment', 'cs:-12@game@local', `-commentsfile=${seen.file}`], options: { outsideWorkspaces: true, server: 'local' } }]);
     expect(seen.content).toBe('');
   });
 

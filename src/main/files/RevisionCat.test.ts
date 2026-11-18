@@ -282,6 +282,6 @@ describe('RevisionCat', () => {
     const saved = Promise.all([cat.save(workspacePlace(WORKSPACE), version(1), target(1)), cat.save(repositoryPlace('eco@local'), version(2), target(2))]);
     flush();
     await saved;
-    expect(fake.commands.map((command) => command.options)).toEqual([{ cwd: WORKSPACE }, { outsideWorkspaces: true }]);
+    expect(fake.commands.map((command) => command.options)).toEqual([{ cwd: WORKSPACE }, { outsideWorkspaces: true, server: 'local' }]);
   });
 });

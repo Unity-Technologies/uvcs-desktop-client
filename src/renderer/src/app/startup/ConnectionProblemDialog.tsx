@@ -1,17 +1,25 @@
 import { Download } from 'lucide-react';
-import type { ConnectionProblem } from '@shared/domain/setup';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { OutputBlock } from '../../ui/OutputBlock';
-import { connectionProblemWords } from './connectionProblemWords';
 import { DOWNLOAD_URL } from './installGuidance';
 
-/** The details of the connection problem card (`ConnectionProblemCard`): what to do, and what `cm` answered. */
-export function ConnectionProblemDialog({ problem, onClose }: { problem: ConnectionProblem; onClose: () => void }) {
-  const { title, explanation } = connectionProblemWords(problem);
-  const signIn = problem.kind === 'notSignedIn';
+interface ConnectionProblemDialogProps {
+  title: string;
+  explanation: string;
+  /** The command that found the problem and what `cm` answered. */
+  details: { commandLine: string; output: string };
+  /** Offers the Unity Version Control app, where a sign-in is made until this app signs in itself. */
+  offersSignInApp?: boolean;
+  onClose: () => void;
+}
 
+/**
+ * The details of a server's problem (`ConnectionProblemCard`'s server out of reach, `SignInScreen`'s sign-in): what to
+ * do, and what `cm` answered.
+ */
+export function ConnectionProblemDialog({ title, explanation, details, offersSignInApp = false, onClose }: ConnectionProblemDialogProps) {
   return (
     <Dialog
       title={title}
@@ -20,7 +28,7 @@ export function ConnectionProblemDialog({ problem, onClose }: { problem: Connect
       onClose={onClose}
       footer={
         <>
-          {signIn && (
+          {offersSignInApp && (
             <Button variant="ghost" icon={<Download size={14} />} onClick={() => void api.system.openExternal(DOWNLOAD_URL)}>
               Get the Unity Version Control app
             </Button>
@@ -31,7 +39,7 @@ export function ConnectionProblemDialog({ problem, onClose }: { problem: Connect
         </>
       }
     >
-      <OutputBlock output={`$ ${problem.commandLine}\n${problem.output}`} />
+      <OutputBlock output={`$ ${details.commandLine}\n${details.output}`} />
     </Dialog>
   );
 }

@@ -4,11 +4,11 @@ export interface SetupProblem {
   output: string;
 }
 
-/** Why a workspace's server can't be worked with (`checkConnection`). */
-export type ConnectionProblemKind = 'notSignedIn' | 'serverUnreachable';
-
+/**
+ * A server `cm checkconnection` couldn't reach (`checkConnection`): a window on it keeps working with what's local. A
+ * server that needs a sign-in is a `SignInProblem` instead.
+ */
 export interface ConnectionProblem {
-  kind: ConnectionProblemKind;
   /** The server checked, as the workspace names it (`codice@cloud`, `localhost:8087`). */
   server: string;
   commandLine: string;

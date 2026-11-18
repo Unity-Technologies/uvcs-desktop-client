@@ -39,6 +39,7 @@ import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
+import { trackSignIns } from './startup/signIns';
 import { isShown, watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
@@ -52,13 +53,19 @@ import { showProgressOnAppIcon } from './window/showProgressOnAppIcon';
 import { WindowWrites } from './window/WindowWrites';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
+import { WorkspaceServers } from './workspace/WorkspaceServers';
+import { readWorkspaceOrigin } from './cm/workspaceStatus';
 
 const userData = app.getPath('userData');
 // Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
 const cm = new CmClient(locateCm, join(userData, 'outside-workspaces'));
 const settings = openSettings(userData);
-// What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
-const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
+// What a workspace is loaded from, shared by the reads that follow one another as a window opens it; each one's server
+// remembered as it's read, for the sign-in gate.
+const workspaceServers = new WorkspaceServers((directory) => readWorkspaceOrigin(cm, directory));
+const headers = new WorkspaceHeaders(workspaceServers.remembering(cmHeaderReaders(cm)));
+// One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
+const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
@@ -154,6 +161,7 @@ const api = createServices({
   branchNames,
   issueTrackers,
   diagnosticLog: appLog,
+  signIns,
 });
 const early = new EarlyCalls(apiMethods(api));
 

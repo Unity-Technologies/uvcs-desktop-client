@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
-import { looksLikePrompt, MAX_PROMPT_LENGTH, waitingForInputError } from './consolePrompts';
+import { looksLikePrompt, MAX_PROMPT_LENGTH, WaitingForInputError } from './consolePrompts';
 import { ANSWER_TEXT, CmOutputTooLargeError } from './outputLimit';
 import type { OutputReading } from './outputReading';
 import { StreamOutput, TextOutput, type OutputStream, type ShellCommandOutput } from './ShellCommandOutput';
@@ -184,7 +184,7 @@ export class CmShellSession {
         setImmediate(() =>
           this.guarded(() => {
             if (this.received !== receivedBefore || !this.running) return;
-            this.abortRunning(waitingForInputError(lastLine));
+            this.abortRunning(new WaitingForInputError(lastLine));
           }),
         ),
       this.promptStallMs,
