@@ -51,8 +51,9 @@ bundle, and the main module evaluates it in about 7 ms that the first window wou
   version left. The releases never stage, so nothing is lost; a staged rollout would need
   another way to pick its users. Downloads send no id either, the unsigned-macOS installer's included
   (`downloadInstaller` fetches the bare URL).
-- **Download**: an update found downloads by itself, then waits (`ready`). A check while one is under way or ready
-  checks nothing and tells where it stands.
+- **Download**: an update found downloads by itself, with the `cm` it runs when that's another one
+  (docs/features/cm-runtime.md "Updates bring their cm"), then waits (`ready`). A check while one is under way or
+  ready checks nothing and tells where it stands.
 - **Install**: "Restart & Install" quits into it (Windows runs the installer silently, per user, and starts the app
   again); quitting the app installs it too (`autoInstallOnAppQuit`). Asked while an operation changes a workspace
   (`writesRunning`: an update, a checkin…), it waits for it to finish (`waitingToInstall`: the card and About say so,
@@ -299,6 +300,9 @@ CI's runners are slow and uneven: a test runs up to ten times slower there than 
 again on a bad day (a word-marks test of 0.6 s locally once took 10 s on Windows x64), against vitest's 5 s timeout.
 Tests that took 2 to 4 s there timed out now and then, whichever was running when the runner slowed down; that is why
 a test takes milliseconds (CLAUDE.md "Super fast").
+
+`.github/workflows/cm-bundles.yml` checks every day that the bundles `cm-version.json` pins are still published as
+pinned (docs/features/cm-runtime.md "The pin").
 
 `.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to main, pull requests and weekly;
 findings show in the Security tab and on pull requests. It skips while the repository is private: code scanning needs
