@@ -453,32 +453,28 @@ ranges changes only it.
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
   word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). It reads as GitHub's and
   GitLab's suggestions do: every line replaced, then every line suggested, the lines it keeps among them, numbered as
-  the file's lines from the first one commented (`replacedThenSuggested`: one hunk starting there, in a diff kept whole, as Pierre loads the full files of a partial one). The line
-  diff alone would mix them: a line wrapped in a new `if` became the `if` added above the line removed and added again,
-  indented, which read as if the `if` were already there. Words are marked only when the suggested lines take the
-  replaced ones' places one for one (every change of the line diff adds as many lines as it removes), as Pierre marks
-  the n-th line removed against the n-th added. One column, highlighted in
-  the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it: `useSyntaxHighlighter`), every line
-  shown. A few lines, so
-  drawn whole on the main thread: no workers, and no virtualizer, even inside the code's diff, whose own it would
-  otherwise join. Inside a thread in the code, the box is a diff in the code's annotation row: its pointer events stay
-  in it (`keepCodePointerToItself`), and the code's menu doesn't take its rows for the code's lines (`rowUnderPointer`).
-  Its rows run edge to edge, from the header's border to the box's and from the change bar on
-  (`pierreSnippetDiffOptions`); a long line scrolls sideways with the bar every code view has (`PaneScrollbars`), there
-  only while a line overflows. "Suggested change: delete the line" for an empty fence. A suggestion of the lines as they
-  are (Suggest change's prefill sent unedited) says "The suggestion is line 13 as it is" in place of a diff of no rows
-  (`unchangedSuggestionNote`). The line is read from the revision the comment is on (`useCommentedText`): one immutable
-  `contentQuery` under the key the review's diff reads it by, so in the code it's the diff's read, and in the
-  conversation one read per revision, shared by every suggestion on it, and only by a comment shown whole (a settled
-  thread starts folded); a revision the workspace has loaded is read from the disk. While it's read, and while Pierre
-  loads with the first box shown, a place as tall as its rows holds it; lines that can't be read leave the suggested
-  lines alone, added. One-line previews (the Comments panel, Open, a folded card) show the comment's first words, or the
-  code's first line, as for any code block. Copying keeps the fence as written.
-
-## Applying a suggestion
-
-An open change request's Suggested change has a split button in its header (`SuggestionApplyButton`):
-
+  the file's lines from the first one commented (`replacedThenSuggested`: one hunk starting there, in a diff kept
+  whole, as Pierre loads the full files of a partial one). The line diff alone would mix them: a line wrapped in a new
+  `if` became the `if` added above the line removed and added again, indented, which read as if the `if` were already
+  there. Words are marked only when the suggested lines take the replaced ones' places one for one (every change of
+  the line diff adds as many lines as it removes), as Pierre marks the n-th line removed against the n-th added. One
+  column, highlighted in the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it:
+  `useSyntaxHighlighter`), every line shown. A few lines, so drawn whole on the main thread: no workers, and no
+  virtualizer, even inside the code's diff, whose own it would otherwise join. Inside a thread in the code, the box is
+  a diff in the code's annotation row: its pointer events stay in it (`keepCodePointerToItself`), and the code's menu
+  doesn't take its rows for the code's lines (`rowUnderPointer`). Its rows run edge to edge, from the header's border
+  to the box's and from the change bar on (`pierreSnippetDiffOptions`); a long line scrolls sideways with the bar
+  every code view has (`PaneScrollbars`), there only while a line overflows. "Suggested change: delete the line" for
+  an empty fence. A suggestion of the lines as they are (Suggest change's prefill sent unedited) says "The suggestion
+  is line 13 as it is" in place of a diff of no rows (`unchangedSuggestionNote`). The line is read from the revision
+  the comment is on (`useCommentedText`): one immutable `contentQuery` under the key the review's diff reads it by, so
+  in the code it's the diff's read, and in the conversation one read per revision, shared by every suggestion on it,
+  and only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from
+  the disk. While it's read, and while Pierre loads with the first box shown, a place as tall as its rows holds it;
+  lines that can't be read leave the suggested lines alone, added. One-line previews (the Comments panel, Open, a
+  folded card) show the comment's first words, or the code's first line, as for any code block. Copying keeps the
+  fence as written. ## Applying a suggestion An open change request's Suggested change has a split button in its
+  header (`SuggestionApplyButton`):
 - **Check in suggestion** asks for the check-in's comment (`CommentDialog`): "Apply suggestion from Ana", the request to
   apply in its description (`suggestionCheckinComment`; in the summary its chip, reading a line of code, wrapped and
   moved the buttons from under the pointer), then writes the lines and checks in that file alone (`checkInSuggestion`,
