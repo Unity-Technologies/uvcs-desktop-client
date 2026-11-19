@@ -74,16 +74,41 @@ describe('the cm version', () => {
 });
 
 describe('the cm version of an installed cm older than the app’s own', () => {
-  it('asks the app’s own instead once it runs it, with no other command', async () => {
-    const { service, cm, lines } = system({ version: () => (cm.executable === '/store/cm' ? '11.0.16.10659\n' : '11.0.16.9000\n') }, {}, fakeCmRuntime({
+  const OWN_CM = '/store/cm';
+
+  /** The service over a fake `cm` printing the app's own version at `OWN_CM`, an older one anywhere else. */
+  function systemDroppingOlder() {
+    let running = { executable: 'cm' };
+    const setup = system({ version: () => (running.executable === OWN_CM ? '11.0.16.10659\n' : '11.0.16.9000\n') }, {}, droppingOlder(() => running));
+    running = setup.cm as { executable: string };
+    return setup;
+  }
+
+  /**
+   * As `CmRuntime.admits`: drops the older `cm` running for its own at `OWN_CM`, moving `cm` there as `relocated` would,
+   * and answers yes for any `cm` no longer running.
+   */
+  function droppingOlder(cm: () => { executable: string }): CmRuntime {
+    return fakeCmRuntime({
       admits: (executable) => {
-        if (executable === '/store/cm') return true;
-        (cm as { executable: string }).executable = '/store/cm';
+        if (executable === OWN_CM || executable !== cm().executable) return true;
+        cm().executable = OWN_CM;
         return false;
       },
-    }));
+    });
+  }
+
+  it('asks the app’s own instead once it runs it, with no other command', async () => {
+    const { service, lines } = systemDroppingOlder();
 
     expect(await service.cmVersion()).toBe('11.0.16.10659');
+    expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('gives every window opening at once the app’s own version, never the older one they shared', async () => {
+    const { service, lines } = systemDroppingOlder();
+
+    expect(await Promise.all([service.cmVersion(), service.cmVersion()])).toEqual(['11.0.16.10659', '11.0.16.10659']);
     expect(lines()).toEqual(['version', 'version']);
   });
 

@@ -372,6 +372,18 @@ describe('CmRuntime refusing an installed cm older than its own', () => {
     expect(choice()).toBe('managed');
   });
 
+  it('keeps the user’s last choice when Installed was clicked first and its version answers after', async () => {
+    let answer: (version: string) => void = () => undefined;
+    const { runtime, choice } = runtimeWith({ installed: [VERSION], versionOf: () => new Promise((resolve) => (answer = resolve)) });
+    runtime.start();
+    const installed = runtime.use('installed');
+    await runtime.use('managed');
+    answer(INSTALLED_VERSION);
+    await installed;
+    expect(runtime.cmPath()).toBe(MANAGED);
+    expect(choice()).toBe('managed');
+  });
+
   it('answers only for the cm running: another one asked before a switch is none of its business', () => {
     const { runtime } = runtimeWith({ chosen: 'installed' });
     expect(runtime.admits('/somewhere/else/cm', OLDER)).toBe(true);

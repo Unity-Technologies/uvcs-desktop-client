@@ -73,6 +73,8 @@ export class CmRuntime {
   private pruned = false;
   /** The app's own `cm` downloading to replace the installed one (`useOwnWhenDownloaded`). */
   private switchingToOwn: OwnCmSwitch | null = null;
+  /** Counts the user's choices (`use`): one still checking the installed `cm`'s version yields to a later one. */
+  private choiceTurn = 0;
   /** What waits for `cm` to run (`whenReady`). */
   private waitingForReady: (() => void)[] = [];
   /** No version of the app's own `cm` was set up before this one: setting up, rather than updating. */
@@ -149,7 +151,10 @@ export class CmRuntime {
    * show for a setup screen.
    */
   async use(choice: CmChoice): Promise<void> {
+    const turn = ++this.choiceTurn;
+    // Refused without a word: Settings never offers an older one, nor does the setup's failure screen.
     if (choice === 'installed' && !(await this.usableInstalledCm())) return;
+    if (turn !== this.choiceTurn) return;
     if (choice === 'managed' && this.chosen.source === 'installed' && this.hasOwnCm() && !this.options.installer.isInstalled(this.pinnedVersion)) {
       void this.useOwnWhenDownloaded();
       return;

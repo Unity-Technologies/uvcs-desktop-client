@@ -99,8 +99,10 @@ page hears it's back online (`useRetryWhenOnline`). The details name the address
 **Never an installed `cm` older than the pinned version** (`meetsCmVersion`): any feature may rely on what the pinned
 one does, so no feature checks the version itself. Settings can't choose one (`cmChoiceCards`, and `CmRuntime.use`
 refuses it), nor the setup's failure screen offer it (`usableInstalledCm`). One chosen before, or downgraded since, is
-caught by the `cm version` every window reads as it opens (`system.cmVersion`), so it costs no command of its own:
-`CmRuntime.admits` saves the choice of the app's own and runs it, set up first when it isn't there (the setup screen).
+caught by the `cm version` the first window reads as it opens (`system.cmVersion`), so it costs no command of its
+own; what started before that answers (the window's first reads, `readFirstScreenAhead`) still runs on it once.
+`CmRuntime.admits` saves the choice of the app's own and runs it, set up first when it isn't there (the setup screen):
+an installed one updated later is chosen again in Settings. Windows opening at once all get the app's own version.
 Where the app has none of its own, `CmUnavailableScreen` names both versions, and Check Again reads the version again.
 `UVCS_CM_PATH` is never checked.
 
@@ -155,8 +157,8 @@ failure there never stops the update: the new version sets its `cm` up as it sta
 Settings › Workspaces › Command line client (`CmChoiceGroup`, `cmChoiceCards`): "Included with the app" (its version,
 or its download's progress while it replaces the installed one) and "Installed on this computer" (its version and
 path, from one `cm version` each time Settings opens; "Not found"
-and disabled when there is none; disabled, in the caution color and naming the version it needs when older than the
-app's own). `UVCS_CM_PATH` overrides both:
+and disabled when there is none; disabled, naming the version it needs in the caution color, never faded, when older
+than the app's own). `UVCS_CM_PATH` overrides both:
 neither is checked, and a line says why.
 
 ## Seeing which cm runs

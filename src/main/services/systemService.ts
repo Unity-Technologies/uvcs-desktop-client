@@ -46,11 +46,13 @@ export function createSystemService({ cm, cmRuntime, operations, windows, settin
     cm.relocate();
     const executable = cm.executable;
     const answer = await versionOf(executable);
+    // Another `cm` runs since it was asked (a window opened at the same time dropped an older one): ask that one.
+    if (cm.executable !== executable) return cmVersion();
     if (cmRuntime.admits(executable, answer)) return answer;
     // Check Again asks it again: the user may have updated it meanwhile.
     versions.delete(executable);
-    cm.relocate();
-    // The app's own, there already, runs instead; one still setting up shows its setup screen meanwhile.
+    // The app's own runs instead (`CmRuntime.admits` relocated `cm` to it), when it's there; one still setting up shows
+    // the setup screen meanwhile.
     if (cm.executable !== executable && cmRuntime.isReady()) return cmVersion();
     throw new Error(`The installed Unity Version Control is version ${answer}. This app needs version ${cmRuntime.pinnedVersion} or later.`);
   };
