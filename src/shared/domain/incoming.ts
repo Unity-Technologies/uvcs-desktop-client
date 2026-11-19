@@ -113,6 +113,11 @@ export interface PartialIncomingItem {
   loadedRevisionId: number | null;
   /** The head's revision; null for a `removed` one. */
   headRevisionId: number | null;
+  /**
+   * The repository its revisions belong to (`pnunit@acme@cloud`), for an item inside an xlink; unset for the
+   * workspace's own repository.
+   */
+  repository?: string;
 }
 
 export type BranchIncomingChanges = BranchIncoming & IncomingDetails;

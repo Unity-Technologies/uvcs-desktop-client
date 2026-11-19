@@ -77,6 +77,12 @@ describe('partialItemDiffEntry', () => {
     expect(partialItemDiffEntry(item('removed', 'Old/gone.txt'), repository)).toMatchObject({ status: 'deleted', baseRevisionId: 1, revisionId: -1 });
   });
 
+  it('reads the revisions of an item inside an xlink from the xlinked repository', () => {
+    const inXlink = item('changed', '03pnunit/Stats.cs', { repository: 'pnunit@codice@cloud' });
+
+    expect(partialItemDiffEntry(inXlink, repository)).toMatchObject({ repository: 'pnunit@codice@cloud' });
+  });
+
   it('has no diff for a directory, nor before the repository is known', () => {
     expect(partialItemDiffEntry(item('added', 'Art', { isDirectory: true }), repository)).toBeNull();
     expect(partialItemDiffEntry(item('changed', 'Code/Ship.cs'), undefined)).toBeNull();

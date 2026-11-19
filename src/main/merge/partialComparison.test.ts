@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import type { PartialIncomingItem } from '@shared/domain/incoming';
-import { compareWithHead, foldersWithNewItems, readHeadItem, readLoadedTreeItem, type HeadItem, type LoadedTreeItem } from './partialComparison';
+import { changedFoldersWithUnloadedItems, compareWithHead, readHeadItem, readLoadedTreeItem, repositorySpec, type HeadItem, type LoadedTreeItem } from './partialComparison';
 
-// `cm ls -R --format={itemid}|{revid}|{parentrevid}|{type}|{wkpath}|{changeset}|{checkout}` in the workspace: what it
-// has loaded. The sandbox's (`partial-operations.sh`): the root and Code, two files.
+// `cm ls -R --format={itemid}|{revid}|{parentrevid}|{type}|{wkpath}|{changeset}|{checkout}|{name}` in the workspace:
+// what it has loaded. The sandbox's (`partial-operations.sh`): the root and Code, two files. `{name}` is left out where
+// it only repeats the path's last part: it tells an xlink alone.
 const loaded = (...records: string[]): LoadedTreeItem[] => records.map((record) => readLoadedTreeItem(record.split('|'))!);
-// `cm ls / /Code --tree=br:/main --format={itemid}|{revid}|{type}|{path}|{changeset}`: each folder and its children.
+// `cm ls / /Code --tree=br:/main --format={itemid}|{revid}|{type}|{path}|{changeset}|{name}`: each folder and its children.
 const head = (...records: string[]): HeadItem[] => records.map((record) => readHeadItem(record.split('|'))!);
 
 const SANDBOX_LOADED = loaded('3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Engine.cs|1|', '28|16|-1|txt|Code\\Ship.cs|1|');
@@ -103,6 +104,20 @@ describe('what the branch head brings a partial workspace', () => {
     ]);
   });
 
+  it("doesn't take an item the workspace lists at two paths for one moved onto the other", () => {
+    // `cm ls -R` can print one item id and revision for two loaded files, which the head lists apart: the one still at
+    // its path isn't moved, and the other, whose own id the workspace doesn't name, isn't either.
+    const twice = loaded('3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Notes.md|1|', '24|25|-1|dir|Docs|1|', '27|15|-1|txt|Docs\\Notes.md|1|');
+    const onHead = head('3|5|dir|/|0', '22|23|dir|/Code|1', '27|15|txt|/Code/Notes.md|1', '24|25|dir|/Docs|1', '28|16|txt|/Docs/Notes.md|1');
+    expect(compareWithHead(twice, onHead, new Set())).toEqual([]);
+  });
+
+  it('names an item the workspace lists at two paths changed once, at the path the head keeps', () => {
+    const twice = loaded('3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Notes.md|1|', '24|25|-1|dir|Docs|1|', '27|15|-1|txt|Docs\\Notes.md|1|');
+    const onHead = head('3|5|dir|/|0', '22|23|dir|/Code|1', '27|30|txt|/Code/Notes.md|2', '24|25|dir|/Docs|1', '28|16|txt|/Docs/Notes.md|1');
+    expect(compareWithHead(twice, onHead, new Set())).toEqual([item({ kind: 'changed', path: 'Code/Notes.md', loadedRevisionId: 15, headRevisionId: 30 })]);
+  });
+
   it('names a removed item, and a removed folder alone, not each item it held', () => {
     const withoutCode = head('3|40|dir|/|3');
     expect(compareWithHead(SANDBOX_LOADED, withoutCode, new Set())).toEqual([
@@ -142,26 +157,36 @@ describe('what the branch head brings a partial workspace', () => {
     // Big (item 60) was created after everything the workspace loaded, then the workspace loaded the root at a later
     // changeset and left Big out: by id and changeset it looks new, but the root's listing at its loaded changeset has it.
     const withBig = head('3|40|dir|/|5', '60|61|dir|/Big|5', '22|41|dir|/Code|3', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1', '70|71|txt|/README.md|6');
+    // `cm ls / --tree=cs:0`: what the root held as the workspace loaded it.
+    const rootWhenLoaded = new Map([['', head('60|61|dir|/Big|5', '22|23|dir|/Code|1')]]);
 
     it('is not added, and its folder counts as loaded in part, so nothing new in it is added', () => {
-      expect(compareWithHead(SANDBOX_LOADED, withBig, new Set(), new Set([60]))).toEqual([]);
+      expect(compareWithHead(SANDBOX_LOADED, withBig, new Set(), rootWhenLoaded)).toEqual([]);
     });
 
     it('leaves what is new in other folders added', () => {
       const withHull = [...withBig, ...head('43|38|txt|/Code/Hull.cs|3')];
-      const added = compareWithHead(SANDBOX_LOADED, withHull, new Set(), new Set([60])).filter((change) => change.kind === 'added');
+      const added = compareWithHead(SANDBOX_LOADED, withHull, new Set(), rootWhenLoaded).filter((change) => change.kind === 'added');
       expect(added.map((change) => change.path)).toEqual(['Code/Hull.cs']);
     });
 
-    it('is looked for only in the folders that look whole and hold something that looks new', () => {
-      expect(foldersWithNewItems(SANDBOX_LOADED, withBig).map((folder) => folder.path)).toEqual(['']);
-      expect(foldersWithNewItems(SANDBOX_LOADED, SANDBOX_HEAD).map((folder) => folder.path)).toEqual(['Code']);
-      expect(foldersWithNewItems(SANDBOX_LOADED, head('3|40|dir|/|3', '22|41|dir|/Code|3'))).toEqual([]);
+    it('is looked for only in the loaded folders the head changed that hold an item the workspace left out', () => {
+      expect(changedFoldersWithUnloadedItems(SANDBOX_LOADED, withBig).map((folder) => folder.path)).toEqual(['']);
+      expect(changedFoldersWithUnloadedItems(SANDBOX_LOADED, SANDBOX_HEAD).map((folder) => folder.path)).toEqual(['', 'Code']);
+      expect(changedFoldersWithUnloadedItems(SANDBOX_LOADED, head('3|40|dir|/|3', '22|41|dir|/Code|3'))).toEqual([]);
+    });
+
+    it("adds nothing to a folder whose listing misses an item the workspace loaded in it: the folder kept an older revision", () => {
+      // A partial workspace keeps the root at the revision it was created with (changeset 0, empty) while it loads
+      // folders into it: `cm ls / --tree=cs:0` lists the root alone, not Code, so it can't tell what the root held.
+      const emptyRoot = new Map([['', [] as HeadItem[]]]);
+      const withNew = head('3|40|dir|/|6', '22|41|dir|/Code|3', '27|15|txt|/Code/Engine.cs|1', '28|16|txt|/Code/Ship.cs|1', '70|71|txt|/README.md|6');
+      expect(compareWithHead(SANDBOX_LOADED, withNew, new Set(), emptyRoot)).toEqual([]);
     });
 
     it('is not looked for in a checked-out folder, which has no loaded changeset to list it at', () => {
-      const checkedOut = loaded('3|-1|5|dir||-1|CO', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\Engine.cs|1|', '28|16|-1|txt|Code\Ship.cs|1|');
-      expect(foldersWithNewItems(checkedOut, withBig)).toEqual([]);
+      const checkedOut = loaded('3|-1|5|dir||-1|CO', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Engine.cs|1|', '28|16|-1|txt|Code\\Ship.cs|1|');
+      expect(changedFoldersWithUnloadedItems(checkedOut, withBig)).toEqual([]);
     });
   });
 
@@ -171,10 +196,110 @@ describe('what the branch head brings a partial workspace', () => {
     ]);
   });
 
-  it("leaves out an xlink's items, which belong to another repository with ids of its own", () => {
-    const withXlink = loaded(...['3|5|-1|dir||0|', '22|23|-1|dir|Code|1|', '30|31|-1|xlink|Lib|1|', '5|9|-1|txt|Lib\\Math.cs|1|']);
-    const headWithXlink = head('3|40|dir|/|3', '22|41|dir|/Code|3', '30|31|xlink|/Lib|1', '5|12|txt|/Lib/Math.cs|7', '60|61|txt|/Lib/New.cs|8');
-    expect(compareWithHead(withXlink, headWithXlink, new Set())).toEqual([]);
+  it("compares an xlink's items with its head, apart from the workspace's own, and names the repository they belong to", () => {
+    // `cm ls` lists an xlink as a folder (`dir`) named after its target, holding the other repository's items: its
+    // root is that repository's (item 3 here too) and its files reuse ids the workspace's repository gives others
+    // (Math.cs is 27, as Engine.cs): ids are compared within one repository only.
+    const withXlink = loaded(
+      ...['3|5|-1|dir||0||.', '22|23|-1|dir|Code|1|', '27|15|-1|txt|Code\\Engine.cs|1|', '28|16|-1|txt|Code\\Ship.cs|1|'],
+      '3|31|30|dir|Lib|9||Lib -> wxlink -> / 9@lib@ [relative] local',
+      '27|33|-1|txt|Lib\\Math.cs|9|',
+    );
+    const headWithXlink = head(
+      '3|40|dir|/|3|.',
+      '22|41|dir|/Code|3',
+      '27|15|txt|/Code/Engine.cs|1',
+      '28|34|txt|/Code/Ship.cs|2',
+      '3|35|dir|/Lib|12|Lib -> wxlink -> / 12@lib@ [relative] local',
+      '27|36|txt|/Lib/Math.cs|12',
+      '60|61|txt|/Lib/New.cs|12',
+    );
+    expect(compareWithHead(withXlink, headWithXlink, new Set())).toEqual([
+      item({ kind: 'changed', path: 'Code/Ship.cs', loadedRevisionId: 16, headRevisionId: 34 }),
+      item({ kind: 'changed', path: 'Lib/Math.cs', loadedRevisionId: 33, headRevisionId: 36, repository: 'lib@local' }),
+      item({ kind: 'added', path: 'Lib/New.cs', headRevisionId: 61, repository: 'lib@local' }),
+    ]);
+  });
+
+  it('names what the head brings into a folder of a partial workspace inside an xlink, as the official clients do', () => {
+    // A partial workspace of a repository that xlinks another at 03pnunit, with accelerator loaded whole at cs:27890 of
+    // the xlinked repository. On the head, five of its files changed, one was removed and one is new.
+    const xlinked = '2|850279|849994|dir|03pnunit|27890||03pnunit -> wxlink -> / 27894@pnunit@ [relative] codice@cloud';
+    const accelerator = '03pnunit\\test\\carnagetest\\accelerator';
+    const loadedRows = loaded(
+      '2|4|-1|dir||0|',
+      xlinked,
+      '101652|850280|-1|dir|03pnunit\\test|27890|',
+      '103262|850281|-1|dir|03pnunit\\test\\carnagetest|27890|',
+      `833552|850282|-1|dir|${accelerator}|27890|`,
+      `833554|850035|-1|txt|${accelerator}\\AcceleratorTest.cs|27880|`,
+      `838894|838899|-1|txt|${accelerator}\\CarnageMain.cs|27275|`,
+      `833555|850036|-1|txt|${accelerator}\\EntryDownloader.cs|27880|`,
+      `833556|850037|-1|txt|${accelerator}\\EntryUploader.cs|27880|`,
+      `838963|845883|-1|txt|${accelerator}\\GetUnityToken.cs|27570|`,
+      `834351|850038|-1|txt|${accelerator}\\LoadTest.cs|27880|`,
+      `833905|834386|-1|txt|${accelerator}\\Stats.cs|27024|`,
+      `833912|833907|-1|txt|${accelerator}\\VerifyChunk.cs|26997|`,
+    );
+    const onHead = '/03pnunit/test/carnagetest/accelerator';
+    const headRows = head(
+      '2|5000|dir|/|27898',
+      '2|850312|dir|/03pnunit|27898|03pnunit -> wxlink -> / 27898@pnunit@ [relative] codice@cloud',
+      '101652|850313|dir|/03pnunit/test|27898',
+      '103262|850314|dir|/03pnunit/test/carnagetest|27898',
+      `833552|850315|dir|${onHead}|27898`,
+      `833554|850288|txt|${onHead}/AcceleratorTest.cs|27892`,
+      `838894|849822|txt|${onHead}/CarnageMain.cs|27855`,
+      `833555|850289|txt|${onHead}/EntryDownloader.cs|27892`,
+      `833556|850037|txt|${onHead}/EntryUploader.cs|27880`,
+      `834351|850290|txt|${onHead}/LoadTest.cs|27892`,
+      `849844|850274|txt|${onHead}/SetEvictionConfig.cs|27889`,
+      `833905|849839|txt|${onHead}/Stats.cs|27857`,
+      `833912|833907|txt|${onHead}/VerifyChunk.cs|26997`,
+    );
+    // `cm ls /test/carnagetest/accelerator --tree=cs:27890@pnunit@codice@cloud`, read back at workspace paths.
+    const acceleratorWhenLoaded = head(
+      `833554|850035|txt|${onHead}/AcceleratorTest.cs|27880`,
+      `838894|838899|txt|${onHead}/CarnageMain.cs|27275`,
+      `833555|850036|txt|${onHead}/EntryDownloader.cs|27880`,
+      `833556|850037|txt|${onHead}/EntryUploader.cs|27880`,
+      `838963|845883|txt|${onHead}/GetUnityToken.cs|27570`,
+      `834351|850038|txt|${onHead}/LoadTest.cs|27880`,
+      `833905|834386|txt|${onHead}/Stats.cs|27024`,
+      `833912|833907|txt|${onHead}/VerifyChunk.cs|26997`,
+    );
+    const folder = '03pnunit/test/carnagetest/accelerator';
+    const repository = 'pnunit@codice@cloud';
+
+    expect(changedFoldersWithUnloadedItems(loadedRows, headRows).map((each) => each.path)).toEqual([folder]);
+    expect(compareWithHead(loadedRows, headRows, new Set(), new Map([[folder, acceleratorWhenLoaded]]))).toEqual([
+      item({ kind: 'changed', path: `${folder}/AcceleratorTest.cs`, loadedRevisionId: 850035, headRevisionId: 850288, repository }),
+      item({ kind: 'changed', path: `${folder}/CarnageMain.cs`, loadedRevisionId: 838899, headRevisionId: 849822, repository }),
+      item({ kind: 'changed', path: `${folder}/EntryDownloader.cs`, loadedRevisionId: 850036, headRevisionId: 850289, repository }),
+      item({ kind: 'removed', path: `${folder}/GetUnityToken.cs`, loadedRevisionId: 845883, repository }),
+      item({ kind: 'changed', path: `${folder}/LoadTest.cs`, loadedRevisionId: 850038, headRevisionId: 850290, repository }),
+      item({ kind: 'added', path: `${folder}/SetEvictionConfig.cs`, headRevisionId: 850274, repository }),
+      item({ kind: 'changed', path: `${folder}/Stats.cs`, loadedRevisionId: 834386, headRevisionId: 849839, repository }),
+    ]);
+  });
+
+  it('reads an xlink as `cm ls` lists it: a folder named after its target, read-only or writable', () => {
+    expect(readLoadedTreeItem(['2', '850279', '849994', 'dir', '03pnunit', '27890', '', '03pnunit -> wxlink -> / 27894@pnunit@ [relative] codice@cloud'])?.xlink).toMatchObject({
+      writable: true,
+      repository: 'pnunit',
+      server: 'codice@cloud',
+    });
+    expect(readHeadItem(['2', '446043', 'dir', '/04licensetools', '6782', '04licensetools -> xlink -> / 7649@licensetools@acme@cloud'])?.xlink).toMatchObject({
+      writable: false,
+      repository: 'licensetools',
+      server: 'acme@cloud',
+    });
+    expect(readHeadItem(['22', '41', 'dir', '/Code', '3', 'Code'])?.xlink).toBeUndefined();
+  });
+
+  it("names an xlink's repository with its server, or alone when the xlink names none", () => {
+    expect(repositorySpec({ repository: 'lib', server: 'local' })).toBe('lib@local');
+    expect(repositorySpec({ repository: 'lib', server: '' })).toBe('lib');
   });
 
   it('does work in step with the workspace, however many local changes, removed folders and xlinks it holds', () => {
@@ -204,7 +329,7 @@ function pathChecksFor(size: number): number {
     if (index % 10 === 0) locallyChanged.add(file.path);
     else headItems.push(folder, index % 10 === 1 ? { ...file, revisionId: 2 } : file);
     if (index % 10 === 1) locallyChanged.add(file.path);
-    if (index % 10 === 2) loadedItems.push({ itemId: 10 * size + index, revisionId: 1, isDirectory: true, path: `X${index}`, changeset: 1, xlink: true });
+    if (index % 10 === 2) loadedItems.push({ itemId: 10 * size + index, revisionId: 1, isDirectory: true, path: `X${index}`, changeset: 1, xlink: { writable: true, path: '/', changeset: 1, repository: 'lib', server: 'local' } });
   }
   let checks = 0;
   const prefixChecks = countCalls(String.prototype, 'startsWith', () => {

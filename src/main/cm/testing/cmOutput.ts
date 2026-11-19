@@ -250,7 +250,8 @@ export function extendedAclOutput(level: AclOutputLevel, indent = 2): string {
 /** An item of `cm ls --tree -R --format` (`treeListingArgs`): its workspace path and what tells its revision. */
 export interface ListedRecord {
   path: string;
-  type?: 'dir' | 'txt' | 'bin' | 'xlink';
+  /** `cm ls` never prints `xlink`: an xlink is a `dir`. */
+  type?: 'dir' | 'txt' | 'bin';
   size?: number;
   revid: number;
   hash?: string;

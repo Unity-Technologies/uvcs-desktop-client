@@ -82,16 +82,38 @@ loaded, as `cm partial update` would bring them.
 - **The comparison** (`readPartialIncomingItems`) is two listings and a status, whatever the head's distance: what the
   workspace loaded (`cm ls -R`, `LOADED_TREE_FORMAT`) with its local changes (`readPendingChanges`), then the head's
   version of the loaded folders (`cm ls <folders…> --tree=br:<branch>`, `HEAD_TREE_FORMAT`, batched by `fitsCommandLine`).
+  Past `MOST_FOLDERS_LISTED_ONE_BY_ONE` folders, the head is one listing of the whole tree instead (`cm ls / -R
+  --tree=br:<branch>`, `readHeadOfWholeTree`, in a process of its own), keeping only the loaded folders and what lies
+  right inside them (`isInFolders`). `cm` resolves each path given to `ls --tree` on the server apart, a round of its
+  own each: on a large repository, about 0.3 s a folder and 0.45 s inside an xlink, so 180 loaded folders took 80 s one
+  by one, and the whole tree of 80,000 items takes 4.5 s, about what 15 folders cost. The limit sits above that
+  crossover because the whole tree grows with the repository and the folders don't. A folder the head moved is still
+  listed by its new path afterwards.
   `compareWithHead` pairs them by item id: changed, moved, removed or added, and a conflict where the item has local
   changes too. An item is added only when it's new (a greater item id than every loaded item, in a later changeset)
   in a folder the workspace loaded whole: a folder that also holds an older item the workspace left out was loaded in
   part, and an update leaves out what's new in it too. Ids and changesets miss an old folder created after the
-  workspace loaded something else (a folder Big, never loaded, reads as new), so a loaded folder holding a new-looking
-  item (`foldersWithNewItems`) is listed as it was at its loaded changeset (`readItemsWhenLoaded`: `cm ls <folders…>
-  --tree=cs:<N>`, one per changeset, `treeListingArgs`): what it held then existed, so the folder was loaded in part
-  and nothing in it is added. Usually no folder needs it. Xlinks and what they hold are left out (`loadedFolders`). A loaded folder the head no longer has fails
-  its listing, though `cm` lists the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head
-  moved it, its parent's listing shows it at its new path, which a next pass lists (`movedFolderPaths`); otherwise it
+  workspace loaded something else (a folder Big, never loaded, reads as new), so a loaded folder the head changed
+  that holds an item the workspace doesn't have (`changedFoldersWithUnloadedItems`) is listed as it was at its loaded
+  changeset (`readChildrenWhenLoaded`: `cm ls <folders…> --tree=cs:<N>`, one per changeset, run together, `treeListingArgs`): an
+  item it held then existed, so the folder was loaded in part and nothing in it is added. A folder listed with its
+  parent is one of the parent's children too, though `cm` prints it again as itself. Nor is anything added when
+  that listing misses an item the workspace loaded in the folder: the folder kept an older revision than what it
+  loaded (a partial workspace keeps its root at the one it was created with, changeset 0, empty), so the listing
+  can't tell what it held (`unlistedIfWhole`). `cm ls -R` can print one item id for two loaded files, which the head
+  lists apart: the one at the head's path stands for it, and neither reads as moved (`pathsByKey`).
+- **Xlinks** are followed: the head lists the folders inside one through the workspace's branch, at their workspace
+  paths, and its items belong to the xlinked repository. Their item ids say nothing about the workspace's (an xlink
+  lists its target's root id, often the workspace root's own), so items are matched by id within their repository
+  (`byScopedKey`, `enclosingXlink`), and each item inside an xlink names that repository (`PartialIncomingItem.repository`,
+  `repositorySpec`), where its diff reads its revisions (`partialItemDiffEntry`). A folder inside an xlink was loaded
+  at a changeset of the xlinked repository, so what it held then is listed there, at the path the xlink shows
+  (`loadedListingOf`: `--tree=cs:<N>@<repository>`), and read back at its workspace path (`workspacePathOf`). `cm ls`
+  lists an xlink as a folder (`dir`), never as an xlink, so both formats ask its `{name}`, which names its target
+  (`parseXlinkName`), to tell it apart.
+- **A folder the head no longer has** fails its listing, though `cm` lists
+  the rest: it's listed again without it (`listHead`, `notInTreePaths`). If the head moved it, its parent's listing
+  shows it at its new path, which a next pass lists (`movedFolderPaths`, never into another repository); otherwise it
   reads as removed.
 - **The view** (`PartialIncomingSession`) is the shared list of changed files (`FileTreeList`: a list or a tree,
   filtered, its folders closing), in the groups of `partialItemGroups` (conflicts first, then changed, moved, removed,
