@@ -13,8 +13,8 @@ interface MergePanesProps {
   detail: ReactNode;
 }
 
-/** The list of what a merge does: remembered as it was left, for the next merge. */
-const LIST_WIDTH: DetailsWidthLimits = { initial: 360, min: 240, max: 640 };
+/** The list of what a merge does: remembered as it was left, for the next merge, giving way first as the window narrows. */
+const LIST_WIDTH: DetailsWidthLimits = { initial: 360, min: 240, max: 640, restMin: 480 };
 const LIST_WIDTH_KEY = 'mergeList';
 
 /** The merge page's layout, the same while the plan is calculated as once it's in. */

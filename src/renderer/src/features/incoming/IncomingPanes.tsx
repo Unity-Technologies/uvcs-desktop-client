@@ -12,8 +12,8 @@ interface IncomingPanesProps {
   detail: ReactNode;
 }
 
-/** Incoming's list of changes: remembered as it was left. */
-const LIST_WIDTH: DetailsWidthLimits = { initial: 360, min: 240, max: 640 };
+/** Incoming's list of changes: remembered as it was left, giving way first as the window narrows so the diff beside it keeps room. */
+const LIST_WIDTH: DetailsWidthLimits = { initial: 360, min: 240, max: 640, restMin: 480 };
 const LIST_WIDTH_KEY = 'incomingList';
 
 /**

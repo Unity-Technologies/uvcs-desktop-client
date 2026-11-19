@@ -83,8 +83,8 @@ interface PendingChangesPanesProps {
   readAt: number;
 }
 
-/** The list of changes and the check-in panel: remembered as they were left. */
-const LIST_WIDTH: DetailsWidthLimits = { initial: 380, min: 260, max: 720 };
+/** The list of changes and the check-in panel: remembered as they were left, giving way first as the window narrows so the diff beside them keeps room. */
+const LIST_WIDTH: DetailsWidthLimits = { initial: 380, min: 260, max: 720, restMin: 480 };
 const LIST_WIDTH_KEY = 'pendingChangesList';
 
 /**
