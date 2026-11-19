@@ -9,7 +9,7 @@ export interface CmRuntimeApi {
   status(): Promise<CmRuntimeStatus>;
   /** Tries setting up the app's own `cm` again, after it failed. */
   retry(): Promise<void>;
-  /** Runs the installed `cm` from now on, or the app's own again; saved as the `cmChoice` setting. */
+  /** Runs the installed `cm` from now on, or the app's own again; saved as the `cmChoice` setting. An installed one older than the app's own is refused. */
   use(choice: CmChoice): Promise<void>;
   /** The `cm` installed on the computer and its version (one `cm version` of it); null when there is none. */
   installedCm(): Promise<InstalledCm | null>;

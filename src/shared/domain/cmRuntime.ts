@@ -72,7 +72,7 @@ export type CmRuntimeStatus =
       /** What failed, for the details a user may copy into a bug report: the address and the error. */
       detail: string;
       firstRun: boolean;
-      /** The `cm` installed on the computer, which the user may run instead; null when none was found. */
+      /** The `cm` installed on the computer, which the user may run instead; null when none was found or it's older than the app's own. */
       installedCm: InstalledCm | null;
     };
 
