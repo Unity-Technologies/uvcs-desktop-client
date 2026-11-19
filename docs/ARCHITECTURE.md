@@ -90,6 +90,9 @@ you touch:
      it arrives with no size limit but one on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past
      `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError` (`CmOutputTooLargeError`; a session starts a new process), and an
      operation keeps the ends of what it prints and is never stopped for its size.
+   The one `cm` run apart from it: `cm version` of a `cm` that doesn't run yet, the app's own just unpacked or an
+   installed one offered in Settings (`versionReader`, docs/features/cm-runtime.md), logged in the command log with
+   `CmClient.logEntry`.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log), and written to the log file ("The log file"); one that ended without an exit code
    (stopped on a prompt, `cm` not found) is logged with -1, which the log and the error dialog word as "Stopped"

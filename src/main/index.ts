@@ -64,6 +64,7 @@ const cmRuntime = createCmRuntime({
   settings,
   prunes: app.isPackaged,
   relocated: () => cm.relocate(),
+  logCommand: (entry) => cm.logEntry(entry),
   statusChanged: (status) => {
     sendEvent('cmRuntimeChanged', status);
     appIcon.cmSetupReported(cmSetupIconProgress(status));
