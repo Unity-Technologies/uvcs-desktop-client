@@ -1,0 +1,9 @@
+{
+  "version": "4.0.0",
+  "source": "https://github.com/blader/humanizer/tree/732e48abbe80850a74d0a1e2c4b9b6c926213161",
+  "commit": "732e48abbe80850a74d0a1e2c4b9b6c926213161",
+  "installedWith": "SKILL.md and LICENSE copied from the repository at that commit; to update, copy them again from a newer commit and change this file",
+  "localChanges": [
+    "LICENSE.md: the repository's LICENSE (MIT), renamed as the Pierre skills name theirs"
+  ]
+}
