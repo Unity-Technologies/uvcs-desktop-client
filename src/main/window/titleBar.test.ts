@@ -31,7 +31,11 @@ describe('trafficLightsAt', () => {
     expect(trafficLightsAt(3)).toEqual({ x: 16, y: 72 });
   });
 
-  it('never puts them above the window at the smallest zoom', () => {
+  it('keeps them inside the window at the smallest zoom', () => {
+    expect(trafficLightsAt(0.25)).toEqual({ x: 16, y: 1 });
+  });
+
+  it('never puts them above the window, however small the bar', () => {
     expect(trafficLightsAt(0.2)).toEqual({ x: 16, y: 0 });
   });
 });
