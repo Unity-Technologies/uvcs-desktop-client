@@ -139,6 +139,8 @@ export class CmRuntime {
       void this.useOwnWhenDownloaded();
       return;
     }
+    // Any other choice drops a switch to its own still downloading (`useOwnWhenDownloaded` checks it's still wanted).
+    this.switchingToOwn = null;
     this.options.saveChoice(choice);
     this.switchTo(this.choose());
   }
@@ -161,13 +163,16 @@ export class CmRuntime {
     this.announce();
     try {
       await this.options.installer.install(this.pinnedVersion, own.bundle, (progress) => {
+        if (this.switchingToOwn?.kind !== 'downloading') return;
         this.switchingToOwn = { kind: 'downloading', fraction: progress.phase === 'downloading' && !progress.totalBytes ? null : prefetchFraction(progress) };
         this.announceProgress(progress.phase);
       });
+      if (this.switchingToOwn?.kind !== 'downloading') return;
       this.switchingToOwn = null;
       this.options.saveChoice('managed');
       this.switchTo(this.choose());
     } catch (error) {
+      if (this.switchingToOwn?.kind !== 'downloading') return;
       this.switchingToOwn = { kind: 'failed', failure: cmInstallFailureOf(error), detail: error instanceof Error ? error.message : String(error) };
       this.announce();
     }

@@ -263,6 +263,17 @@ describe('CmRuntime going back to its own cm from the installed one', () => {
     expect(relocations()).toBe(1);
   });
 
+  it('stays on the installed one when it’s chosen again while its own downloads', async () => {
+    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'installed' });
+    runtime.use('managed');
+    runtime.use('installed');
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
+    await installer.succeed();
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(choice()).toBe('installed');
+    expect(relocations()).toBe(0);
+  });
+
   it('stays on the installed one, saying why, when its own fails to download', async () => {
     const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'installed' });
     runtime.use('managed');

@@ -154,13 +154,18 @@ export class CmInstaller {
   private async moveIntoPlace(unpacking: string, installed: string, cmPath: string): Promise<void> {
     const { rename = fsRename, wait = sleep } = this.options;
     for (let attempt = 0; ; attempt++) {
+      // Another copy's install stands: it's never deleted for this one.
+      if (existsSync(cmPath)) {
+        await rm(unpacking, { recursive: true, force: true });
+        return;
+      }
       try {
         await rm(installed, { recursive: true, force: true });
         await rename(unpacking, installed);
         return;
       } catch (error) {
-        if (existsSync(cmPath)) return;
         const delay = RENAME_RETRY_DELAYS_MS[attempt];
+        if (existsSync(cmPath)) continue;
         if (delay === undefined || !HELD_FOR_A_MOMENT.has(codeOf(error) ?? '')) throw error;
         await wait(delay);
       }
