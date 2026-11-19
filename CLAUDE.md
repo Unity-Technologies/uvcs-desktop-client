@@ -28,6 +28,11 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 - **`cm` economy: protect the server.** `cm` is not `git`: almost every command is a network round trip to a server
   many people share (a large production repository holds ~280k changesets, ~20k branches). See "Every `cm` command
   earns its place".
+- **Written for people.** Every text a person reads (pull request titles and bodies, release notes, commit messages,
+  error messages, toasts, labels, docs) says exactly what it does for that reader, in plain English, in the fewest
+  words: the effect first, one idea, no comparisons they didn't ask for. Write it with the `writing-for-people` skill
+  (`.claude/skills/writing-for-people`), then run it through the `humanizer` skill (`.claude/skills/humanizer`), which
+  takes out the habits that make text sound machine-written.
 
 ## Read before changing code
 
@@ -304,7 +309,9 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
   32,767-character command lines (ARCHITECTURE.md "Parsing `cm` output"). What can't be run here is tested with each
   OS's own input (its paths, its tools' output), and `UVCS_RENDERER_PLATFORM` previews another OS's UI.
 - **Copy**: plain words, short. Labels name things, tooltips define them, no sentence restates what the screen shows.
-  UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags.
+  UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags. Error
+  messages say what happened and what to do next. All of it is written with the `writing-for-people` skill, then the
+  `humanizer` skill (see "Written for people", in Principles).
 - **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
   `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
   Colors, motion and focus only through `styles/tokens.css`.
@@ -340,7 +347,7 @@ Commit like a careful human. The history should show *how* the work happened.
 - A refactor commit stands alone, with no other change, and keeps the tests green.
 - A commit message says what the user can now do or see, in the product's words, not which files changed ("The
   Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
-  change in a short line.
+  change in a short line. Plain words, by the `writing-for-people` skill.
 - **Public text says what changed, never why internally.** The repository is public: commit messages, branch names,
   pull requests, comments and docs never mention internal reviews, approvals, requests or tickets (Legal, Privacy,
   security, compliance), nor the reasoning they gave. Say what the user can now do or see, and what the code does.
@@ -369,19 +376,21 @@ them on the server, and reading shell command lines cost more to keep right than
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for, how you verified it, and its release note (written now, with the `release-notes` skill: step 6)
-   with its pictures' paths, or the skill's row that made it none. A fresh context sees what the author's can't. The
-   reviewer only reads: it runs no tests, builds or app, since step 3 and CI already do. A subagent that can't start
-   agents of its own stops after step 3 and reports its branch, folder, verification, release note and pictures' paths;
-   the agent that started it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does
-   them itself.
+   the change is for, how you verified it, its release note (written now, with the `release-notes` skill: step 6)
+   with its pictures' paths, or the skill's row that made it none, and the pull request's title and body as drafted.
+   A fresh context sees what the author's can't. The reviewer only reads: it runs no tests, builds or app, since step 3
+   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch, folder,
+   verification, release note, pictures' paths, and drafted pull request title and body; the agent that started it
+   runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
    (`.github/pull_request_template.md`): the behavior before and after, how it was implemented (the approach, the
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
-   what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
-   message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
+   what the review found and what changed for it, the docs. **The title says exactly what the pull request does**,
+   as an order with its effect (the `writing-for-people` skill's "Pull request titles" holds the rule), and nothing in it names an internal review or approval ("Public text says
+   what changed", in Commits). The title, the body and the release note are written with the `writing-for-people`
+   skill, then run through the `humanizer` skill.
    **Every pull request carries its release note**, written with the `release-notes` skill
    (`.claude/skills/release-notes`): the `## Release note` section, `### New:`, `Improved:` or `Fixed:` and a title,
    then a short description, or `None:` and why users have nothing to read. It is what users read in What's New and on

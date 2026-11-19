@@ -8,7 +8,9 @@ description: Write the release note of a Unity Version Control — Desktop pull 
 A release note is what the people who use the app read to learn what a new version gives them: in What's New, inside
 the app, and on the GitHub releases page. It is not for reviewers: the pull request's title and the rest of its body
 are. The two are written apart, for different readers. Write the note for someone who uses version control every day,
-has never seen this change, and will read it once, quickly.
+has never seen this change, and will read it once, quickly. Write it by the `writing-for-people` skill's rule (the
+effect first, one idea, common words, no comparisons the reader didn't ask for), then run it through the `humanizer`
+skill.
 
 **A release note is part of the product's UX**, held to the same bar as a screen: it's the first a user sees of a
 change, and often the only way they learn it exists. A good one is read in a few seconds, and leaves the reader
@@ -60,7 +62,10 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
 
 ## The title
 
-- **What the user gets**, in one short line: under 80 characters, never past 150.
+- **What the user gets**, in one short line: under 60 characters when it can be, never past 80.
+- **The effect, not the mechanism**: "The account switcher on Home is easier to spot", not "The account switcher on
+  Home sits on a card". The how belongs in the description, if anywhere. (A pull request's title is an order instead;
+  the `writing-for-people` skill's "Three kinds of title" tells them apart.)
 - **New** and **Improved** say what the user can now do or see: "Run your own tools on files, changesets and branches",
   "Hide the details panel the same way in every view".
 - **Fixed** says what no longer goes wrong, from what the user saw: "Closing a window no longer stops what it's
@@ -71,6 +76,8 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
 
 - **Always there, fixes included.** The first sentence or two carry the whole message; what follows is detail for
   those who want it.
+- **What changed, then how it helps**, in that first sentence: "The account switcher on Home now has its own card, so
+  it's easy to spot and click." Not a tour of where it sits and what it looks like next to other parts of the app.
 - **What it is, where to find it, when it helps.** Name the place in the app the way the app names it (**Settings ›
   Tools**, the **Branches** view, the changeset's menu) and the shortcut, if there is one (⌘I or Ctrl+I).
 - **A fix says what users saw and what happens now**: "If you closed a window during an update, the update stopped
@@ -260,6 +267,15 @@ changeset, label, shelve, checkin, merge, xlink, code review, pending changes. N
 | Fix ProcessPool leak when cm shell stdout closes | **Fixed:** The app stays fast after a long day of work |
 | Stream cm status records instead of reading XML | **Improved:** Pending changes load quickly in very large workspaces |
 | Add ToolsService and tool runner with placeholders | **New:** Run your own tools on files, changesets and branches |
+| A roomier top bar | **Improved:** More space around the workspace and branch at the top of the window |
+| When your session ends, one clear screen says so as you come back | **Improved:** See one sign-in screen when your session ends |
+
+And a description, before and after:
+
+> On Home, the account at the top of the sidebar now sits on a card, like the workspace and branch at the top of a
+> workspace's window, so it reads as something you can click to switch accounts.
+
+> The account switcher on Home now has its own card, so it's easy to spot and click to switch accounts.
 
 ## Check it before opening the pull request
 
@@ -268,5 +284,6 @@ changeset, label, shelve, checkin, merge, xlink, code review, pending changes. N
 3. Is every word one the app shows or a UVCS user already says?
 4. Is it as short as it can be and still say all of that?
 5. Would a user reading it once want to try it, and know where to go?
-6. Does the picture, or its absence, follow "Pictures": the row of the table the change fits, and the test passed on
+6. Did the `humanizer` skill run on the title and the description, and did every fact survive?
+7. Does the picture, or its absence, follow "Pictures": the row of the table the change fits, and the test passed on
    the file itself?
