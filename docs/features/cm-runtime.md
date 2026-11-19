@@ -3,7 +3,7 @@
 The app runs its own `cm`: one exact version per version of the app, downloaded on the first run and with each
 update that needs another, kept in a folder of the app's. Nothing has to be installed, and a release can rely on what
 its `cm` does. The user may still run the `cm` installed on the computer instead (Settings › Workspaces › Command line
-client). The code is in `main/cmRuntime/` and `app/cmSetup/` (the renderer).
+client), when it's that version or newer. The code is in `main/cmRuntime/` and `app/cmSetup/` (the renderer).
 
 ## The pin
 
@@ -19,10 +19,12 @@ SHA-256 of that file (`CmVersionPin`, `cmBundles.ts`):
   bundles, fails if any is missing, unpacks this machine's and checks its `cm version` prints the version, and writes
   the file. A pull request that needs a newer `cm` bumps it; when two do, the highest version stays.
 - **Exact, never a minimum**: every user of a release runs the `cm` it was tested with. Nothing reads `latest`, which
-  lags behind what's published.
+  lags behind what's published. It is also the oldest `cm` the app runs (see "Which cm runs"), so a bump makes an
+  older installed one give way to the app's own.
 - **Bundles**: `win32-x64` (a zip), `darwin-x64`, `darwin-arm64` and `linux-x64` (gzipped tars), all unpacking into
   `client/` with `cm` or `cm.exe` inside (`CM_BUNDLE_FILES`). Windows on Arm runs the x64 one, emulated
-  (`cmBundleFor`). Linux on Arm has none: it runs the installed `cm`, as before.
+  (`cmBundleFor`). Linux on Arm has none, and no installer either (releases build Linux on x64): a build from the
+  sources there runs the installed `cm`.
 - **Where**: `cmBundleUrl(version, file)`, under `CM_BUNDLES_URL`. `UVCS_CM_BUNDLES_URL` names another site laid out
   the same way (a failure shown on purpose, a throttled local copy to watch the setup); the SHA-256 still applies.
 - **Why a hash**: unpacking and `cm version` already catch a damaged download. The hash catches a file that isn't the
@@ -92,7 +94,15 @@ page hears it's back online (`useRetryWhenOnline`). The details name the address
    (`cmChoice: 'installed'`) and it's there.
 3. The app's own of the pinned version: source `managed`.
 4. Where the app has none of its own (Linux on Arm), the installed one, found or not: one not found shows
-   `CmUnavailableScreen`, as before.
+   `CmUnavailableScreen`.
+
+**Never an installed `cm` older than the pinned version** (`meetsCmVersion`): any feature may rely on what the pinned
+one does, so no feature checks the version itself. Settings can't choose one (`cmChoiceCards`, and `CmRuntime.use`
+refuses it), nor the setup's failure screen offer it (`usableInstalledCm`). One chosen before, or downgraded since, is
+caught by the `cm version` every window reads as it opens (`system.cmVersion`), so it costs no command of its own:
+`CmRuntime.admits` saves the choice of the app's own and runs it, set up first when it isn't there (the setup screen).
+Where the app has none of its own, `CmUnavailableScreen` names both versions, and Check Again reads the version again.
+`UVCS_CM_PATH` is never checked.
 
 A change of choice (`cmRuntime.use`) restarts `CmClient`'s shells (`relocate`), and every window asks again which `cm`
 runs and whether it's set up (`cmChanged`; `system.cmVersion` answers per executable, and logs the new one). Going
@@ -145,7 +155,8 @@ failure there never stops the update: the new version sets its `cm` up as it sta
 Settings › Workspaces › Command line client (`CmChoiceGroup`, `cmChoiceCards`): "Included with the app" (its version,
 or its download's progress while it replaces the installed one) and "Installed on this computer" (its version and
 path, from one `cm version` each time Settings opens; "Not found"
-and disabled when there is none; in the caution color when older than the app's own). `UVCS_CM_PATH` overrides both:
+and disabled when there is none; disabled, in the caution color and naming the version it needs when older than the
+app's own). `UVCS_CM_PATH` overrides both:
 neither is checked, and a line says why.
 
 ## Seeing which cm runs
@@ -158,6 +169,7 @@ Client does from the menu bar: the app's own in its store, or the installed one.
 
 - **Shipping `cm` in the installers**: the bundles are 45-130 MB (unpacked 100-260 MB), which every installer and
   every update would carry even when `cm` didn't change.
-- **A minimum version over an installed `cm`**: an installed `cm` older than a feature needs would stop the user's
-  work with a request to update another product; the app's own pinned one never does.
+- **Checking the `cm` version per feature** (an edit offered only from the `cm` that has it): each check covers only
+  the gap someone noticed, and every other feature still misbehaves on an older `cm`. The app's own is always there
+  to run instead, so refusing an older installed one stops no one.
 - **Checking sizes in the pin**: the download's `Content-Length` gives the progress, and the hash checks the rest.
