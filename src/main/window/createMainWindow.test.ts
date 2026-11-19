@@ -122,11 +122,11 @@ describe('createMainWindow', () => {
     window.webContents.zoomLevel = -2;
 
     window.emit('ready-to-show');
-    expect(window).toMatchObject({ shown: true, windowButtonPosition: { x: 16, y: 9 } });
+    expect(window).toMatchObject({ shown: true, windowButtonPosition: { x: 16, y: 12 } });
 
     window.webContents.zoomLevel = 1;
     window.webContents.emit('dom-ready');
-    expect(window.windowButtonPosition).toEqual({ x: 16, y: 20 });
+    expect(window.windowButtonPosition).toEqual({ x: 16, y: 25 });
   });
 
   it('shows a window whose page opens zoomed with the caption buttons as tall as its top bar, and again after a reload (Windows)', () => {
@@ -135,10 +135,10 @@ describe('createMainWindow', () => {
     window.webContents.zoomLevel = -2;
 
     window.emit('ready-to-show');
-    expect(window.titleBarOverlay).toMatchObject({ height: 31 });
+    expect(window.titleBarOverlay).toMatchObject({ height: 36 });
 
     window.webContents.zoomLevel = 1;
     window.webContents.emit('dom-ready');
-    expect(window.titleBarOverlay).toMatchObject({ height: 53 });
+    expect(window.titleBarOverlay).toMatchObject({ height: 62 });
   });
 });

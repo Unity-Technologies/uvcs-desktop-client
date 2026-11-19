@@ -53,7 +53,7 @@ describe('captionButtons', () => {
 
   it('makes them as tall as the top bar at the page’s zoom', () => {
     expect(captionButtons(false, 1).height).toBe(52);
-    expect(captionButtons(true, 0.9).height).toBe(40);
-    expect(captionButtons(false, 1.5).height).toBe(66);
+    expect(captionButtons(true, 0.9).height).toBe(47);
+    expect(captionButtons(false, 1.5).height).toBe(78);
   });
 });
