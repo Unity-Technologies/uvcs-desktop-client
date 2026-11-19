@@ -14,14 +14,14 @@ const ROOT_ON_HEAD = [['3', '40', 'dir', '/', '3'], ['20', '42', 'dir', '/Audio'
 const CODE_WHEN_LOADED = formatOutput(['22', '23', 'dir', '/Code', '1'], ['27', '15', 'txt', '/Code/Engine.cs', '1'], ['28', '16', 'txt', '/Code/Ship.cs', '1']);
 const CODE_ON_HEAD = [['22', '41', 'dir', '/Code', '3'], ['27', '15', 'txt', '/Code/Engine.cs', '1'], ['43', '38', 'txt', '/Code/Hull.cs', '3'], ['28', '34', 'txt', '/Code/Ship.cs', '2']];
 
-const partialWorkspace = (headListing: CmAnswer) =>
+const partialWorkspace = (headListing: CmAnswer, codeListing: CmAnswer = CODE_WHEN_LOADED) =>
   fakeCmClient({
     'status --header --xml': statusHeader('/main', { changeset: -1 }),
     'status --controlledchanged --changed': pendingStatus(WORKSPACE, change('CH', 'Code/Ship.cs')),
     'ls -R': LOADED,
     'ls /': headListing,
     'ls /Src': headListing,
-    'ls /Code': CODE_WHEN_LOADED,
+    'ls /Code': codeListing,
     'find changeset': formatOutput([3]),
   });
 
@@ -72,6 +72,20 @@ describe('incoming in a partial workspace', () => {
       ['ls', '/', '--tree=cs:0'],
       ['ls', '/Code', '--tree=cs:1'],
     ]);
+  });
+
+  it('lists what the loaded folders held at each of their changesets together, not one changeset after another', async () => {
+    // The listing at cs:0 answers only once the one at cs:1 was asked: listed one after the other, it never would.
+    let askAtChangesetOne = () => {};
+    const askedAtChangesetOne = new Promise<void>((resolve) => (askAtChangesetOne = resolve));
+    const answer: CmAnswer = async ({ args }) => {
+      if (args.includes('--tree=cs:1')) askAtChangesetOne();
+      if (args.includes('--tree=cs:0')) await askedAtChangesetOne;
+      return formatOutput(...ROOT_ON_HEAD, ...CODE_ON_HEAD);
+    };
+    const { cm } = partialWorkspace(answer, answer);
+
+    expect(await readIncomingChanges(cm, WORKSPACE)).toMatchObject({ partial: true });
   });
 
   it('adds what is new in a folder whose loaded listing also lists a subfolder it lists as loaded', async () => {
