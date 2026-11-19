@@ -12,6 +12,12 @@
   WriteRegStr HKCU "Software\Classes\uvcs\shell\open\command" "" "$\"$INSTDIR\${APP_EXECUTABLE_FILENAME}$\" --uvcs-link -- $\"%1$\""
 !macroend
 
+; The app's own Unity Version Control (docs/features/cm-runtime.md "The store", `cmStoreFolder`) goes with the app,
+; but not on an update, which runs this uninstaller too: the new version keeps what the old one downloaded for it.
 !macro customUnInstall
   DeleteRegKey HKCU "Software\Classes\uvcs"
+  ${ifNot} ${isUpdated}
+    RMDir /r "$LOCALAPPDATA\Unity Version Control\cm"
+    RMDir "$LOCALAPPDATA\Unity Version Control"
+  ${endIf}
 !macroend
