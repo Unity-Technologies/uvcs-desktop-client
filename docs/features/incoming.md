@@ -95,7 +95,7 @@ loaded, as `cm partial update` would bring them.
   part, and an update leaves out what's new in it too. Ids and changesets miss an old folder created after the
   workspace loaded something else (a folder Big, never loaded, reads as new), so a loaded folder the head changed
   that holds an item the workspace doesn't have (`changedFoldersWithUnloadedItems`) is listed as it was at its loaded
-  changeset (`readChildrenWhenLoaded`: `cm ls <folders…> --tree=cs:<N>`, one per changeset, `treeListingArgs`): an
+  changeset (`readChildrenWhenLoaded`: `cm ls <folders…> --tree=cs:<N>`, one per changeset, run together, `treeListingArgs`): an
   item it held then existed, so the folder was loaded in part and nothing in it is added. A folder listed with its
   parent is one of the parent's children too, though `cm` prints it again as itself. Nor is anything added when
   that listing misses an item the workspace loaded in the folder: the folder kept an older revision than what it
