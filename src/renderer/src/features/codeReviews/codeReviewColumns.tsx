@@ -115,7 +115,7 @@ function ReviewedChanges({ review }: { review: CodeReview }) {
   if (changes.kind === 'text') return <Highlight text={changes.text} />;
   if (changes.kind === 'branch') {
     return (
-      <span className={styles.merge} data-tip={tip}>
+      <span className={styles.branch} data-tip={tip}>
         <PathLabel path={changes.branch} nameOnly tooltip={false} />
       </span>
     );

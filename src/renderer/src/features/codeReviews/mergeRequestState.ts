@@ -106,7 +106,8 @@ export function reviewedChangesTip(review: Pick<CodeReview, 'target' | 'mergeReq
       return `Merged ${merge}`;
     case 'Closed':
       return `${author} wanted to merge ${merge}`;
-    default:
+    case 'Draft':
+    case 'Open':
       return `${author} wants to merge ${merge}`;
   }
 }
