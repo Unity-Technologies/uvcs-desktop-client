@@ -16,7 +16,7 @@ export function cmUnavailableView(source: CmSource): CmUnavailableView {
   if (source === 'managed') {
     return {
       title: 'Unity Version Control didn’t start',
-      body: 'It’s set up, but this computer didn’t let it start. Its security settings may block apps in your user folder: ask whoever manages it, then check again.',
+      body: 'It’s set up, but didn’t start on this computer, which may block apps in your user folder or lack something they need: the output below says what. Then check again.',
       offersInstall: false,
     };
   }
