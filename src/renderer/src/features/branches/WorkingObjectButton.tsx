@@ -1,11 +1,10 @@
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
-import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
-import { SELECTOR_ICONS, workingObjectName } from '../../components/workingObject';
+import { SELECTOR_ICONS } from '../../components/workingObject';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ringValue } from '../../app/operations/progressBar';
@@ -22,6 +21,7 @@ import { useBranchSwitcher } from './branchSwitcherStore';
 import { useWorkingObject } from './useWorkingObject';
 import { useWorkingObjectComment } from './useWorkingObjectComment';
 import { workingObjectCommentLine } from './workingObjectCommentLine';
+import { workingObjectLabel } from './workingObjectLabel';
 import { workingObjectMenu } from './workingObjectMenu';
 import styles from './WorkingObjectButton.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -46,7 +46,8 @@ export function WorkingObjectButton() {
   const switchBar = runningSwitch?.bar ?? null;
   const { selector } = shownWorkspace(workspace, useWorkspacePreview(workspacePath));
   const SelectorIcon = SELECTOR_ICONS[selector?.kind ?? 'branch'];
-  const title = selector ? workingObjectTitle(selector) : undefined;
+  const label = workingObjectLabel(switching, selector);
+  const title = label.kind === 'branch' || label.kind === 'other' ? label.title : undefined;
   const { data: comment, isError: commentFailed } = useWorkingObjectComment(workspace);
   const commentLine = workingObjectCommentLine(comment, commentFailed, switching !== null);
   // Right-click (or the context-menu key, Shift+F10) offers what the workspace is on, as its list does; what that
@@ -78,17 +79,17 @@ export function WorkingObjectButton() {
             textMaxWidth={TEXT_MAX_WIDTH}
             icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
             label={
-              switching ? (
-                `${switching}…`
-              ) : title === undefined ? (
+              label.kind === 'switching' ? (
+                label.text
+              ) : label.kind === 'loading' ? (
                 <SkeletonLine width={`${NAME_PLACEHOLDER_WIDTH}px`} />
-              ) : selector?.kind === 'branch' ? (
+              ) : label.kind === 'branch' ? (
                 <span className={styles.nameLine}>
                   {branchName}
                   {mergeRequest && <MergeRequestChip {...mergeRequest} />}
                 </span>
               ) : (
-                title
+                label.title
               )
             }
             sub={
@@ -114,10 +115,4 @@ export function WorkingObjectButton() {
       </Popover.Portal>
     </Popover.Root>
   );
-}
-
-/** The pill's first line: the branch name as is; `cs:42` and `sh:3` explain themselves, a bare label name doesn't. */
-function workingObjectTitle(selector: WorkspaceSelector): string {
-  const name = workingObjectName(selector);
-  return selector.kind === 'label' ? `Label ${name}` : name;
 }
