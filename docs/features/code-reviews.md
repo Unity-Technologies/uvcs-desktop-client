@@ -751,7 +751,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like any
   details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
   hidden, and so it does where the code beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
-  width less the files' and the panel's, `diffWidthBesidePanel`, each side's half of it side by side), decided as the
+  width less the files' as they were left (`pageDiffFilesWidthOf`) and the panel's, `diffWidthBesidePanel`, each side's half of it side by side), decided as the
   changes first show, so a first comment doesn't open it, and the user's own choice is kept for the next review:
   `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code,
   **Open** or **All**, in the order a small sort button by its arrows chooses (`CommentsOrderMenu`, `CommentsOrder`,

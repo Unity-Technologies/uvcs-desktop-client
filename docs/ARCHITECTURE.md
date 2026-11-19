@@ -1465,6 +1465,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   its details, calls `useShowInFollowingWindow`), and a link to a file's lines shows Browse repository's details again
   (`showDetails`). Panes that show a diff beside its files (Changes, Incoming, merge, History, a diff) are not details:
   they have no toggle. Their diff expands to the whole window instead, the merge page's aside (features/diff.md "Expanding the diff").
+- **Splitters remember where they were dragged**, across pages and sessions: a details panel's width per view
+  (`detailsKey`), and every other split of a page through `RememberedSplitPane`, its width under a key of its own in the
+  same store (`detailsWidthOf`): Changes' (`pendingChangesList`), Incoming's (`incomingList`), the merge page's
+  (`mergeList`) and History's (`historyList`) lists, and the files beside a diff, one width for every page's diff
+  (`diffFilesWidthKey`: a merge request, a review, a changeset, a shelve, a branch) and one for a dialog's, which is
+  narrower. Heights too: the command log's, a details panel's changes (`DetailsChangesPane`), the check-in message's,
+  the changesets above a diff's files. A double-click goes back to the default. `splittersRemembered.test.ts` holds
+  every `SplitPane` to it. An image's swipe divider isn't a splitter of the layout: it starts in the middle each time.
 - **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
   users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
   a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
