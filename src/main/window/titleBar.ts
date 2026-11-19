@@ -4,8 +4,11 @@ import { TITLE_BAR_HEIGHT, type WindowChrome } from '@shared/windowChrome';
 /** How far in from the window's left edge the traffic lights start, in window points, at every zoom. */
 const TRAFFIC_LIGHTS_X = 16;
 
-/** How far above the top bar's middle the traffic lights' top sits (half their height): kept at every zoom, it keeps them centered. */
-const TRAFFIC_LIGHTS_ABOVE_MIDDLE = 6;
+/**
+ * How far above the top bar's middle the traffic lights' top sits, half their height (macOS draws them about 14 points
+ * tall, not the 12 their circles look): kept at every zoom, it keeps them centered.
+ */
+const TRAFFIC_LIGHTS_ABOVE_MIDDLE = 7;
 
 /**
  * The top bar's height in window points at a page zoom (View > Zoom In, Zoom Out: `zoomPage`), unrounded: the page
