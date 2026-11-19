@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
-import { SplitPane } from '../../ui/SplitPane';
+import type { DetailsWidthLimits } from '../../components/detailsPaneStore';
+import { RememberedSplitPane } from '../../components/RememberedSplitPane';
 import styles from './IncomingPanes.module.css';
 
 interface IncomingPanesProps {
@@ -11,6 +12,10 @@ interface IncomingPanesProps {
   detail: ReactNode;
 }
 
+/** Incoming's list of changes: remembered as it was left. */
+const LIST_WIDTH: DetailsWidthLimits = { initial: 360, min: 240, max: 640 };
+const LIST_WIDTH_KEY = 'incomingList';
+
 /**
  * Incoming's two panes, laid out the same while it reads, once it's up to date, and with changes coming in. A file's
  * diff expands: the list stays mounted out of sight, its scroll, selection and filter kept for when it shows again.
@@ -18,10 +23,9 @@ interface IncomingPanesProps {
 export function IncomingPanes({ list, detail }: IncomingPanesProps) {
   const diffExpanded = useDiffExpanded();
   return (
-    <SplitPane
-      initialSize={360}
-      minSize={240}
-      maxSize={640}
+    <RememberedSplitPane
+      widthKey={LIST_WIDTH_KEY}
+      widthLimits={LIST_WIDTH}
       stowed={diffExpanded ? 'first' : undefined}
       first={<div className={styles.pane}>{list}</div>}
       second={<ExpandableDiffContext.Provider value>{detail}</ExpandableDiffContext.Provider>}
