@@ -127,6 +127,20 @@ describe('CmInstaller', () => {
     expect(waits).toEqual(RENAME_RETRY_DELAYS_MS.slice(0, 2));
   });
 
+  it('keeps the install another copy of the app made meanwhile, and leaves nothing of its own behind', async () => {
+    let store = '';
+    const rename = async () => {
+      // The other copy renamed its folder into place first.
+      await mkdir(join(store, VERSION, 'client'), { recursive: true });
+      await writeFile(join(store, VERSION, 'client', CM), 'the other copy’s cm');
+      throw Object.assign(new Error('ENOTEMPTY: directory not empty, rename'), { code: 'ENOTEMPTY' });
+    };
+    const setup = await installerWith({ rename });
+    store = setup.store;
+    await setup.installer.install(VERSION, BUNDLE, () => undefined);
+    expect(await readdir(store)).toEqual([VERSION]);
+  });
+
   it('fails as a folder it can’t write once the rename is refused every time', async () => {
     const rename = async () => {
       throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
