@@ -24,8 +24,8 @@ describe('cmChoiceCards', () => {
     expect(installed).toEqual({
       choice: 'installed',
       label: 'Installed on this computer',
-      description: 'Version 11.0.16.9000 is older than this app needs',
-      tip: 'Update it to version 11.0.16.10659 or later to use it. /usr/local/bin/cm',
+      description: 'Version 11.0.16.9000 · needs 11.0.16.10659 or later',
+      tip: 'Older than the one included with the app. Update it to use it. /usr/local/bin/cm',
       disabled: true,
       selected: false,
       warning: true,

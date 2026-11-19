@@ -45,8 +45,8 @@ function installedCard({ pinnedVersion, installed, source }: CmChoiceFacts): CmC
   if (pinnedVersion !== null && !meetsCmVersion(installed.version, pinnedVersion)) {
     return {
       ...base,
-      description: `Version ${installed.version} is older than this app needs`,
-      tip: `Update it to version ${pinnedVersion} or later to use it. ${installed.path}`,
+      description: `Version ${installed.version} · needs ${pinnedVersion} or later`,
+      tip: `Older than the one included with the app. Update it to use it. ${installed.path}`,
       disabled: true,
       warning: true,
     };

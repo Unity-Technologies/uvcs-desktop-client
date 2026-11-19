@@ -39,13 +39,12 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
   // The review its chip shows, read with the branches in view (`useBranchReview`): a merge request gets a section.
   const request = asMergeRequest(useBranchReview(branch.id, useSettled()) ?? undefined);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
-  const saveComment = (comment: string) => saveBranchComment(place, branch, comment);
 
   return (
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={saveComment} draftKey={commentDraftKey(placeId(place), 'branch', branch.id)} />}
+      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={(comment) => saveBranchComment(place, branch, comment)} draftKey={commentDraftKey(placeId(place), 'branch', branch.id)} />}
       author={{ user: branch.owner, date: branch.date }}
       meta={[
         branch.parent && (
