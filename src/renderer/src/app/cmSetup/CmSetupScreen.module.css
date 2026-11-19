@@ -1,0 +1,146 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+  background: var(--bg-app);
+}
+
+.dragRegion {
+  flex: none;
+  height: 48px;
+  -webkit-app-region: drag;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: min(520px, 100% - 2 * var(--space-6));
+  margin: auto;
+  padding: 0 0 var(--space-8);
+  text-align: center;
+}
+
+/*
+ * The mark shows at once; the words and the bar only if the setup is still running after a moment, so a short one
+ * never flashes them.
+ */
+.delayed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  animation: var(--keyframes-view-enter) var(--duration-slow) var(--ease-out) 1.5s both;
+}
+
+.failure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  animation: var(--keyframes-view-enter) var(--duration-slow) var(--ease-out) both;
+}
+
+.title {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.subtitle,
+.reason {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+.track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  margin-top: var(--space-6);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+}
+
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width var(--duration-slow) var(--ease-out);
+}
+
+/* No measure yet, or the last stretch: a light runs along what's left, so the bar never looks stuck. */
+.track[data-indeterminate]::after,
+.track[data-finishing]::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  content: '';
+  animation: sweep 1.4s var(--ease-in-out) infinite;
+}
+
+.track[data-finishing]::after {
+  left: 90%;
+  background-size: 60% 100%;
+}
+
+@keyframes sweep {
+  from {
+    background-position: -60% 0;
+  }
+  to {
+    background-position: 160% 0;
+  }
+}
+
+.detail {
+  min-height: 1.5em;
+  margin: var(--space-3) 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+/* The error, in full: read and copied as it is. */
+.details pre {
+  width: 100%;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delayed {
+    animation-delay: 0s;
+  }
+
+  .track::after {
+    animation: none;
+  }
+}

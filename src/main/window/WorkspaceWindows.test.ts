@@ -8,6 +8,7 @@ import type { SavedWindow } from '@shared/domain/settings';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
+import type { CmSetupStart } from '@shared/startingPlace';
 import { fakeElectron, type FakeWindow } from './testing/fakeElectron';
 import { WorkspaceWindows } from './WorkspaceWindows';
 
@@ -45,8 +46,10 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const closeLeftBehind = vi.fn((windowId: number) => fakeElectron.windows().find((window) => window.id === windowId)?.close());
   const onCloseRequested = vi.fn((windowId: number, event: { preventDefault(): void }) => heldBack.has(windowId) && event.preventDefault());
   const settings = memorySettings({ recentWorkspacePaths, openWindows });
+  const cm = { setup: null as CmSetupStart | null };
   const windows = new WorkspaceWindows({
     settings,
+    cmSetup: () => cm.setup,
     onLastWindowClosing,
     workspaceOf: (viewer) => shown.get(viewer),
     onWindowsChanged,
@@ -58,7 +61,7 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath === undefined ? undefined : workspacePlace(workspacePath)) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
   const shows = (window: FakeWindow, workspacePath: string): void => void shown.set(window.webContents.id, workspacePath);
-  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft, heldBack, closeLeftBehind };
+  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft, heldBack, closeLeftBehind, cm };
 }
 
 const asBrowserWindow = (window: FakeWindow): BrowserWindow => window as unknown as BrowserWindow;
@@ -108,6 +111,17 @@ describe('one window per workspace', () => {
     expect(windows.windowShowing(workspacePlace(GAME))).toBe(asBrowserWindow(game));
     expect(windows.windowShowing(workspacePlace(GAME), game.webContents.id)).toBeUndefined();
     expect(windows.windowShowing(workspacePlace(TOOLS))).toBeUndefined();
+  });
+});
+
+describe('the app’s own cm being set up', () => {
+  it('opens a window on the setup while it runs, and the next ones as usual once it’s done', () => {
+    const { windows, cm } = setUp();
+    cm.setup = 'settingUp';
+    windows.open();
+    cm.setup = null;
+    windows.open();
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.cmSetup)).toEqual(['settingUp', null]);
   });
 });
 

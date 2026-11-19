@@ -34,6 +34,10 @@ export const queryKeys = {
   appInfo: ['appInfo'] as const,
   releaseNotes: (version: string) => ['releaseNotes', version] as const,
   cmSetup: ['cmSetup'] as const,
+  /** The `cm` installed on the computer, offered in Settings beside the app's own (`api.cmRuntime.installedCm`). */
+  installedCm: ['cmRuntime', 'installed'] as const,
+  /** The version of the app's own `cm`, fixed for this version of the app. */
+  pinnedCmVersion: ['cmRuntime', 'pinned'] as const,
   serverSession: (server: string) => ['serverSession', server] as const,
   serverSessions: ['serverSessions'] as const,
   homeDirectory: ['homeDirectory'] as const,

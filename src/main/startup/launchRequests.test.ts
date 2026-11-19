@@ -26,6 +26,7 @@ function setUp() {
     workspaceOf: () => undefined,
     onRepositoryLeft: () => {},
     onWindowsChanged: () => {},
+    cmSetup: () => null,
     onLastWindowClosing: () => {},
     onClosed: () => {},
     onCloseRequested: () => {},

@@ -46,9 +46,12 @@ export function cmBundleFor(pin: CmVersionPin, platform: string, arch: string): 
   return bundle ? { key, bundle } : null;
 }
 
-/** The address of one version's bundle. Never `latest`, which lags behind the versions published. */
-export function cmBundleUrl(version: string, file: string): string {
-  return `${CM_BUNDLES_URL}/${encodeURIComponent(version)}/${encodeURIComponent(file)}`;
+/**
+ * The address of one version's bundle. Never `latest`, which lags behind the versions published. `bundlesUrl` is
+ * another site laid out the same way (`UVCS_CM_BUNDLES_URL`: the smoke test's, a failure shown on purpose).
+ */
+export function cmBundleUrl(version: string, file: string, bundlesUrl: string = CM_BUNDLES_URL): string {
+  return `${bundlesUrl.replace(/\/+$/, '')}/${encodeURIComponent(version)}/${encodeURIComponent(file)}`;
 }
 
 /** A version as `cm version` prints it: four numbers. */
@@ -70,15 +73,4 @@ export function pinProblems(pin: CmVersionPin): string[] {
     if (!SHA256_FORMAT.test(bundle.sha256)) problems.push(`${key}'s sha256 isn't 64 lowercase hex digits`);
   }
   return problems;
-}
-
-/** Compares two versions number by number: negative when `a` is older. */
-export function compareCmVersions(a: string, b: string): number {
-  const left = a.split('.').map(Number);
-  const right = b.split('.').map(Number);
-  for (let index = 0; index < Math.max(left.length, right.length); index++) {
-    const difference = (left[index] ?? 0) - (right[index] ?? 0);
-    if (difference !== 0) return difference;
-  }
-  return 0;
 }

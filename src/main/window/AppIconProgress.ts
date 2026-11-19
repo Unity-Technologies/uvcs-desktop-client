@@ -28,6 +28,8 @@ export class AppIconProgress {
   private readonly closing = new Set<number>();
   /** What each window last set, so a report that changes nothing on the icon sets nothing. */
   private readonly shown = new Map<number, string>();
+  /** The app's own `cm` being set up (`cmSetupIconProgress`), shown on every window's icon; null otherwise. */
+  private cmSetup: IconProgress | null = null;
 
   constructor(
     private readonly windows: IconWindows,
@@ -49,6 +51,12 @@ export class AppIconProgress {
     const operation = this.running.get(operationId);
     if (!operation) return;
     operation.icon = operationIconProgress(progress, operation.icon);
+    this.show();
+  }
+
+  /** The app's own `cm` setup moved on, or ended (null). */
+  cmSetupReported(progress: IconProgress | null): void {
+    this.cmSetup = progress;
     this.show();
   }
 
@@ -115,8 +123,9 @@ export class AppIconProgress {
     const wholeApp = iconIsTheApp(this.platform);
     const running = [...this.running.values()].filter((operation) => wholeApp || operation.windowId === windowId);
     const failed = wholeApp ? this.unseenFailures.size > 0 : this.unseenFailures.has(windowId);
+    const setup = this.cmSetup ? [this.cmSetup] : [];
     return combinedIconProgress(
-      running.map((operation) => operation.icon),
+      [...running.map((operation) => operation.icon), ...setup],
       failed,
     );
   }

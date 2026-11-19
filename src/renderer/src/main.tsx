@@ -7,6 +7,7 @@ import { AppErrorBoundary } from './app/errors/AppErrorBoundary';
 import { reportUnexpectedErrors } from './app/errors/reportUnexpectedErrors';
 import { guardUnloading } from './app/navigation/leaveGuard';
 import { reportShownView } from './app/navigation/reportShownView';
+import { isSettingUpCm, useCmRuntimeStore } from './app/cmSetup/cmRuntimeStore';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openPageWindowFromAddress } from './app/pageWindow/openPageWindowFromAddress';
 import { openPlaceFromAddress } from './app/workspace/openPlaceFromAddress';
@@ -34,7 +35,8 @@ trackPointerReturnFocus();
 if (!openPageWindowFromAddress()) {
   openPlaceFromAddress();
   reportShownView();
-  void prefetchStartupQueries();
+  // While the app's own `cm` is set up, nothing can read the first screen: its views ask once they show.
+  if (!isSettingUpCm(useCmRuntimeStore.getState().status)) void prefetchStartupQueries();
 }
 
 const root = createRoot(document.getElementById('root')!);

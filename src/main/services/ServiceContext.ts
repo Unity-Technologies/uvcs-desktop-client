@@ -2,6 +2,7 @@ import type { ServerSessions } from '../accounts/ServerSessions';
 import type { SessionChecks } from '../accounts/SessionChecks';
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
+import type { CmRuntime } from '../cmRuntime/CmRuntime';
 import type { DiagnosticWriter } from '../diagnostics/DiagnosticLog';
 import type { ProfileList } from '../cm/ProfileList';
 import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
@@ -48,6 +49,7 @@ export interface ServiceContext {
   /** A repository's files found by name, its trees listed once per changeset into the session's files (`RepositoryPathSearch`). */
   repositoryPaths: RepositoryPathSearch;
   updates: AppUpdates;
+  cmRuntime: CmRuntime;
   /** Branch names by object id, kept while a window shows the workspace (`BranchNamesCache`). */
   branchNames: BranchNamesCache;
   /** The issue trackers' engine: connections, bindings and issue reads (`IssueTrackers`). */

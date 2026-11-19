@@ -90,6 +90,19 @@
   background: var(--bg-hover);
 }
 
+.choice:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.choice:disabled:hover {
+  background: var(--bg-subtle);
+}
+
+.choiceDescription[data-warning] {
+  color: var(--caution-text);
+}
+
 .choice[data-selected='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);

@@ -1,3 +1,4 @@
+import type { CmChoice } from './cmRuntime';
 import { AUTO_APP, type CustomEditor } from './externalApps';
 import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
@@ -47,6 +48,11 @@ export interface AppSettings {
   recentCommentsByRepository: Record<string, string[]>;
   /** Automatically refresh pending changes when files change on disk. */
   autoRefresh: boolean;
+  /**
+   * Which `cm` the app runs: its own, pinned to this version of the app (the default), or the one installed on the
+   * computer (Settings › General, docs/features/cm-runtime.md "Which cm runs").
+   */
+  cmChoice: CmChoice;
   /** Folder new workspaces are created in; empty means the home folder. */
   defaultWorkspaceRoot: string;
   /** What to do with pending changes when switching the workspace. */
@@ -130,6 +136,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   recentComments: [],
   recentCommentsByRepository: {},
   autoRefresh: true,
+  cmChoice: 'managed',
   defaultWorkspaceRoot: '',
   pendingChangesOnSwitch: 'ask',
   restoreLeftChangesAutomatically: true,
