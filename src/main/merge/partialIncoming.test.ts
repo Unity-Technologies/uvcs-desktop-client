@@ -3,7 +3,7 @@ import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { change, formatOutput, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { readIncomingChanges } from './incoming';
-import { loadedListingOf, treeListingArgs, workspacePathOf } from './partialIncoming';
+import { loadedListingOf, MOST_FOLDERS_LISTED_ONE_BY_ONE, treeListingArgs, workspacePathOf } from './partialIncoming';
 
 const WORKSPACE = '/work';
 
@@ -215,35 +215,69 @@ describe('incoming in a partial workspace', () => {
     await expect(readIncomingChanges(cm, WORKSPACE)).rejects.toThrow(/unreachable/);
   });
 
-  it('reads every listing of a workspace whose folders overflow one command line, and finds what the last one holds', async () => {
-    const folders = Array.from({ length: 2_000 }, (_, index) => `Assets/Folder number ${index}`);
-    const loaded = formatOutput(['3', '5', '-1', 'dir', '', '0', ''], ...folders.map((path, index) => [String(100 + index), String(5_000 + index), '-1', 'dir', path, '1', '']));
-    const lastFolder = `/${folders[folders.length - 1]}`;
-    // The head changed the last folder (it holds a new file), so only it is listed as it was loaded.
-    const headRowOf = (path: string, onHead: boolean) => (path === '/' ? ['3', '5', 'dir', '/', '3'] : (() => {
-      const index = folders.indexOf(path.slice(1));
-      const revision = onHead && path === lastFolder ? 9_002 : 5_000 + index;
-      return [String(100 + index), String(revision), 'dir', path, '1'];
-    })());
-    const { cm, commands } = fakeCmClient({
+  // A workspace that loaded more folders than are worth listing one by one: the root, Assets, and Assets/Folder 0…n.
+  // The head changed the last folder (it holds a new file), and holds Audio, a folder the workspace left out.
+  const manyFolders = Array.from({ length: MOST_FOLDERS_LISTED_ONE_BY_ONE }, (_, index) => `Assets/Folder ${index}`);
+  const lastFolder = manyFolders[manyFolders.length - 1] ?? '';
+  const lastFolderId = String(100 + manyFolders.length - 1);
+  const manyFoldersLoaded = formatOutput(
+    ['3', '5', '-1', 'dir', '', '0', ''],
+    ['4', '6', '-1', 'dir', 'Assets', '1', ''],
+    ...manyFolders.map((path, index) => [String(100 + index), String(500 + index), '-1', 'dir', path, '1', '']),
+  );
+  const manyFoldersOnHead = (lastFolderAt: string) => [
+    ['3', '5', 'dir', '/', '1'],
+    ['4', '6', 'dir', '/Assets', '1'],
+    ...manyFolders.map((path, index) => (path === lastFolder ? [lastFolderId, '900', 'dir', `/${lastFolderAt}`, '3'] : [String(100 + index), String(500 + index), 'dir', `/${path}`, '1'])),
+    ['900', '901', 'txt', `/${lastFolderAt}/New.cs`, '3'],
+    ['50', '51', 'dir', '/Audio', '1'],
+    ['52', '53', 'txt', '/Audio/Theme.ogg', '1'],
+  ];
+  const workspaceOfManyFolders = (headListing: CmAnswer, headOfFolder: (path: string) => string | undefined = () => undefined) =>
+    fakeCmClient({
       'status --header --xml': statusHeader('/main', { changeset: -1 }),
       'status --controlledchanged --changed': pendingStatus(WORKSPACE),
-      'ls -R': loaded,
+      'ls -R': manyFoldersLoaded,
+      'ls / -R --tree=br:/main': headListing,
       ls: ({ args }) => {
-        const listed = args.filter((arg) => arg.startsWith('/'));
-        const onHead = args.includes('--tree=br:/main');
-        const added = listed.includes(lastFolder) && onHead ? [['9000', '9001', 'txt', `${lastFolder}/New.cs`, '3']] : [];
-        return formatOutput(...listed.map((path) => headRowOf(path, onHead)), ...added);
+        if (args.includes('--tree=cs:1')) return formatOutput([lastFolderId, String(500 + manyFolders.length - 1), 'dir', `/${lastFolder}`, '1']);
+        return headOfFolder(args[1] ?? '') ?? cmFails(`Unexpected listing: ${args.join(' ')}`);
       },
       'find changeset': formatOutput([3]),
     });
 
+  it('reads the head of a workspace with many loaded folders in one listing of the whole tree, keeping what the loaded folders hold', async () => {
+    const { cm, commands } = workspaceOfManyFolders(formatOutput(...manyFoldersOnHead(lastFolder)));
+
     const changes = await readIncomingChanges(cm, WORKSPACE);
 
-    expect(changes).toMatchObject({ items: [item({ kind: 'added', path: `${folders[folders.length - 1]}/New.cs`, headRevisionId: 9001 })] });
+    expect(changes).toMatchObject({ items: [item({ kind: 'added', path: `${lastFolder}/New.cs`, headRevisionId: 901 })] });
     const headListings = commands.filter((command) => command.args[0] === 'ls' && command.args.includes('--tree=br:/main'));
-    expect(headListings.length).toBeGreaterThan(1);
-    expect(headListings.flatMap((command) => command.args.filter((arg) => arg.startsWith('/'))).sort()).toEqual(['/', ...folders.map((path) => `/${path}`)].sort());
+    expect(headListings.map((command) => command.args.filter((arg) => !arg.startsWith('--format=')))).toEqual([['ls', '/', '-R', '--tree=br:/main']]);
+    // The whole tree takes seconds on a big repository: a process of its own, never a pooled shell the reads wait on.
+    expect(headListings.every((command) => command.via === 'execute' && command.readsRecords)).toBe(true);
+  });
+
+  it('lists a loaded folder the head moved by its new path after the listing of the whole tree, and reads its changes there', async () => {
+    const movedTo = 'Assets/Renamed';
+    const onHead = manyFoldersOnHead(movedTo);
+    const { cm, commands } = workspaceOfManyFolders(formatOutput(...onHead), (path) =>
+      path === `/${movedTo}` ? formatOutput(...onHead.filter(([, , , row = '']) => row.startsWith(path))) : undefined,
+    );
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    expect(changes).toMatchObject({
+      items: [
+        item({ kind: 'moved', path: movedTo, oldPath: lastFolder, isDirectory: true, loadedRevisionId: 500 + manyFolders.length - 1, headRevisionId: 900 }),
+        item({ kind: 'added', path: `${movedTo}/New.cs`, headRevisionId: 901 }),
+      ],
+    });
+    const headListings = commands.filter((command) => command.args.includes('--tree=br:/main'));
+    expect(headListings.map((command) => command.args.filter((arg) => !arg.startsWith('--format=')))).toEqual([
+      ['ls', '/', '-R', '--tree=br:/main'],
+      ['ls', `/${movedTo}`, '--tree=br:/main'],
+    ]);
   });
 
   it('splits the folders across listings when they would overflow one command line', () => {
