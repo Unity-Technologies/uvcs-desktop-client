@@ -379,17 +379,16 @@ them on the server, and reading shell command lines cost more to keep right than
    the change is for, how you verified it, its release note (written now, with the `release-notes` skill: step 6)
    with its pictures' paths, or the skill's row that made it none, and the pull request's title and body as drafted.
    A fresh context sees what the author's can't. The reviewer only reads: it runs no tests, builds or app, since step 3
-   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch, folder, verification, release note and pictures' paths;
-   the agent that started it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does
-   them itself.
+   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch, folder,
+   verification, release note, pictures' paths, and drafted pull request title and body; the agent that started it
+   runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
    (`.github/pull_request_template.md`): the behavior before and after, how it was implemented (the approach, the
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
    what the review found and what changed for it, the docs. **The title says exactly what the pull request does**,
-   as an order with its effect, under 60 characters when it can be ("Make the account switcher stand out on Home",
-   "Fix the app's icon in Activity Monitor"), and nothing in it names an internal review or approval ("Public text says
+   as an order with its effect (the `writing-for-people` skill's "Pull request titles" holds the rule), and nothing in it names an internal review or approval ("Public text says
    what changed", in Commits). The title, the body and the release note are written with the `writing-for-people`
    skill, then run through the `humanizer` skill.
    **Every pull request carries its release note**, written with the `release-notes` skill
