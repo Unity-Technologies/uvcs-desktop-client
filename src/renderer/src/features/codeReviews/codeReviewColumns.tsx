@@ -107,21 +107,21 @@ function WaitingDot({ review, user }: { review: CodeReview; user: string | undef
 
 /**
  * What a review reviews; for a merge request, its branch into its destination. Branches show by their names alone,
- * the destination kept when narrow; the tooltip names them whole (`reviewedChangesTip`).
+ * the destination kept when narrow; the tooltip says it in a sentence, the branches whole (`reviewedChangesTip`).
  */
 function ReviewedChanges({ review }: { review: CodeReview }) {
   const changes = reviewedChangesOf(review);
-  const tip = reviewedChangesTip(changes);
+  const tip = reviewedChangesTip(review);
   if (changes.kind === 'text') return <Highlight text={changes.text} />;
   if (changes.kind === 'branch') {
     return (
-      <span className={styles.merge} data-tip={tip?.text}>
+      <span className={styles.merge} data-tip={tip}>
         <PathLabel path={changes.branch} nameOnly tooltip={false} />
       </span>
     );
   }
   return (
-    <span className={styles.merge} data-tip={tip?.text} data-tip-sub={tip?.sub}>
+    <span className={styles.merge} data-tip={tip}>
       <span className={styles.source}>
         <PathLabel path={changes.source} nameOnly tooltip={false} fitContent />
       </span>

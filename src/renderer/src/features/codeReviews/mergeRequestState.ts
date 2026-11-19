@@ -1,6 +1,7 @@
 import { GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, type LucideIcon } from 'lucide-react';
 import type { CodeReview, CodeReviewSummary, MergeRequestInfo, MergeRequestState } from '@shared/domain/codeReview';
 import type { MenuWordId } from '../../components/menuWords';
+import { displayName } from '../../lib/userName';
 import { describeTarget } from './reviewTarget';
 
 /**
@@ -90,11 +91,22 @@ export function reviewedChangesOf({ target, mergeRequest }: Pick<CodeReview, 'ta
 }
 
 /**
- * The tooltip of a review's Changes, which show branches by their names alone: the whole branches, a merge request's
- * source over where it merges, so two branches of one name under different parents tell apart.
+ * The tooltip of a review's Changes, which show branches by their names alone: a sentence naming the whole branches,
+ * which also tells apart two of one name. Who asks for the merge is the review's author; a merged request names no one,
+ * as whoever merged it may be someone else.
  */
-export function reviewedChangesTip(changes: ReviewedChanges): { text: string; sub?: string } | undefined {
-  if (changes.kind === 'merge') return { text: `Merge ${changes.source}`, sub: `into ${changes.destination}` };
-  if (changes.kind === 'branch') return { text: changes.branch };
-  return undefined;
+export function reviewedChangesTip(review: Pick<CodeReview, 'target' | 'mergeRequest' | 'owner'>): string | undefined {
+  const changes = reviewedChangesOf(review);
+  if (changes.kind === 'branch') return changes.branch;
+  if (changes.kind === 'text' || !review.mergeRequest) return undefined;
+  const merge = `${changes.source} into ${changes.destination}`;
+  const author = displayName(review.owner);
+  switch (review.mergeRequest.state) {
+    case 'Merged':
+      return `Merged ${merge}`;
+    case 'Closed':
+      return `${author} wanted to merge ${merge}`;
+    default:
+      return `${author} wants to merge ${merge}`;
+  }
 }

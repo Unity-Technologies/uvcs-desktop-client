@@ -61,12 +61,19 @@ describe('what a review is called and what its changes show', () => {
     expect(reviewedChangesOf({ target: { kind: 'changeset', changesetId: 4 } })).toEqual({ kind: 'text', text: 'Changeset 4' });
   });
 
-  it('names the whole branches in the tooltip, as the column shows only their names', () => {
-    expect(reviewedChangesTip({ kind: 'merge', source: '/main/scm1/scm2', destination: '/main/scm1' })).toEqual({
-      text: 'Merge /main/scm1/scm2',
-      sub: 'into /main/scm1',
-    });
-    expect(reviewedChangesTip({ kind: 'branch', branch: '/main/task' })).toEqual({ text: '/main/task' });
-    expect(reviewedChangesTip({ kind: 'text', text: 'Changeset 4' })).toBeUndefined();
+  it('says in the tooltip who wants to merge which whole branch into which, as the column shows only their names', () => {
+    const nested: CodeReviewTarget = { kind: 'branch', branch: '/main/scm1/scm2' };
+    const tip = (state: MergeRequestInfo['state']) => reviewedChangesTip({ target: nested, owner: 'jane.doe@unity3d.com', ...request(state, '/main/scm1') });
+    expect([tip('Open'), tip('Draft'), tip('Merged'), tip('Closed')]).toEqual([
+      'Jane Doe wants to merge /main/scm1/scm2 into /main/scm1',
+      'Jane Doe wants to merge /main/scm1/scm2 into /main/scm1',
+      'Merged /main/scm1/scm2 into /main/scm1',
+      'Jane Doe wanted to merge /main/scm1/scm2 into /main/scm1',
+    ]);
+  });
+
+  it("names a reviewed branch whole in the tooltip, and gives none for changes said in words", () => {
+    expect(reviewedChangesTip({ target: branch, owner: 'jane' })).toBe('/main/task');
+    expect(reviewedChangesTip({ target: { kind: 'changeset', changesetId: 4 }, owner: 'jane' })).toBeUndefined();
   });
 });
