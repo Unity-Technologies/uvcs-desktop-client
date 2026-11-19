@@ -1,4 +1,4 @@
-import { compareCmVersions, type CmChoice, type CmSource, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
+import { meetsCmVersion, type CmChoice, type CmSource, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
 
 /** One card of Settings' choice of which Unity Version Control the app runs (`cmChoice`). */
 export interface CmChoiceCard {
@@ -9,7 +9,7 @@ export interface CmChoiceCard {
   tip?: string;
   disabled: boolean;
   selected: boolean;
-  /** The installed one is older than the app's own: newer features may not work with it. */
+  /** Drawn in the caution color: its own download failed, or the installed one is too old to choose. */
   warning: boolean;
 }
 
@@ -41,14 +41,17 @@ function installedCard({ pinnedVersion, installed, source }: CmChoiceFacts): CmC
   const base = { choice: 'installed' as const, label: 'Installed on this computer', selected: source === 'installed', warning: false };
   if (installed === undefined) return { ...base, description: 'Looking…', disabled: true };
   if (installed === null) return { ...base, description: 'Not found on this computer', disabled: true };
-  const older = pinnedVersion !== null && compareCmVersions(installed.version, pinnedVersion) < 0;
-  return {
-    ...base,
-    description: `Version ${installed.version} · ${installed.path}`,
-    tip: older ? `Older than the one included with the app: newer features may not work with it. ${installed.path}` : installed.path,
-    disabled: false,
-    warning: older,
-  };
+  // Never one older than the app's own (`CmRuntime.use` refuses it too): any feature may rely on a newer `cm`.
+  if (pinnedVersion !== null && !meetsCmVersion(installed.version, pinnedVersion)) {
+    return {
+      ...base,
+      description: `Version ${installed.version} is older than this app needs`,
+      tip: `Update it to version ${pinnedVersion} or later to use it. ${installed.path}`,
+      disabled: true,
+      warning: true,
+    };
+  }
+  return { ...base, description: `Version ${installed.version} · ${installed.path}`, tip: installed.path, disabled: false };
 }
 
 /**
