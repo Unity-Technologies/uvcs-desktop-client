@@ -1,4 +1,4 @@
-import type { CmInstallFailure, CmRuntimeStatus, InstalledCm } from '@shared/domain/cmRuntime';
+import { CM_SETUP_DOWNLOAD_SHARE, type CmInstallFailure, type CmRuntimeStatus, type InstalledCm } from '@shared/domain/cmRuntime';
 import { formatSize } from '../../lib/formatDate';
 
 /**
@@ -29,9 +29,6 @@ export type CmSetupView =
       /** What failed, folded under Details. */
       detail: string;
     };
-
-/** The share of the bar the download takes: the rest is for unpacking and checking, which has no measure of its own. */
-export const DOWNLOAD_SHARE = 0.9;
 
 function titleOf(firstRun: boolean): string {
   return firstRun ? 'Setting up Unity Version Control' : 'Updating Unity Version Control';
@@ -70,13 +67,13 @@ export function cmSetupViewOf(status: CmRuntimeStatus, secondsLeft: number | nul
     };
   }
   const base = { kind: 'progress' as const, title: titleOf(status.firstRun), subtitle: subtitleOf(status.firstRun) };
-  if (status.phase === 'finishing') return { ...base, fraction: DOWNLOAD_SHARE, finishing: true, detail: 'Finishing…' };
+  if (status.phase === 'finishing') return { ...base, fraction: CM_SETUP_DOWNLOAD_SHARE, finishing: true, detail: 'Finishing…' };
   const { receivedBytes, totalBytes } = status;
   if (totalBytes === null) return { ...base, fraction: null, finishing: false, detail: receivedBytes > 0 ? formatSize(receivedBytes) : null };
   const sizes = `${formatSize(receivedBytes)} of ${formatSize(totalBytes)}`;
   return {
     ...base,
-    fraction: DOWNLOAD_SHARE * Math.min(1, receivedBytes / totalBytes),
+    fraction: CM_SETUP_DOWNLOAD_SHARE * Math.min(1, receivedBytes / totalBytes),
     finishing: false,
     detail: secondsLeft === null ? sizes : `${sizes} · ${timeLeftText(secondsLeft)}`,
   };

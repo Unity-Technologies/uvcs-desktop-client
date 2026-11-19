@@ -7,6 +7,7 @@ import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { readBranchNames } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
+import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
 import { createCmRuntime } from './cmRuntime/createCmRuntime';
 import { warnOnOrganizationIds } from './cm/organizationIds';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
@@ -63,7 +64,10 @@ const cmRuntime = createCmRuntime({
   settings,
   prunes: app.isPackaged,
   relocated: () => cm.relocate(),
-  statusChanged: (status) => sendEvent('cmRuntimeChanged', status),
+  statusChanged: (status) => {
+    sendEvent('cmRuntimeChanged', status);
+    appIcon.cmSetupReported(cmSetupIconProgress(status));
+  },
 });
 // Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
 const cm = new CmClient(() => cmRuntime.cmPath(), join(userData, 'outside-workspaces'));

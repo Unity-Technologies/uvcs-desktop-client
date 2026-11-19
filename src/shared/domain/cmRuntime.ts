@@ -57,6 +57,12 @@ export type CmRuntimeStatus =
       installedCm: InstalledCm | null;
     };
 
+/**
+ * The share of a setup's progress the download takes, on the setup screen's bar and the app's icon: the rest is for
+ * unpacking and checking, which has no measure of its own.
+ */
+export const CM_SETUP_DOWNLOAD_SHARE = 0.9;
+
 /** Compares two `cm` versions number by number (`11.0.16.9876` is older than `11.0.16.10659`): negative when `a` is older. */
 export function compareCmVersions(a: string, b: string): number {
   const left = a.split('.').map(Number);

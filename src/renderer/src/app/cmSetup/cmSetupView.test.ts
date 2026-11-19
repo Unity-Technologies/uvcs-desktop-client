@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CmInstallFailure, CmRuntimeStatus } from '@shared/domain/cmRuntime';
-import { cmSetupViewOf, DOWNLOAD_SHARE, installedCmLabel, timeLeftText } from './cmSetupView';
+import { CM_SETUP_DOWNLOAD_SHARE } from '@shared/domain/cmRuntime';
+import { cmSetupViewOf, installedCmLabel, timeLeftText } from './cmSetupView';
 
 const MB = 1024 * 1024;
 
@@ -28,13 +29,13 @@ describe('cmSetupViewOf', () => {
   });
 
   it('measures the download in the bar’s first stretch, with the time left once known', () => {
-    expect(cmSetupViewOf(downloading(39 * MB, 78 * MB), null)).toMatchObject({ fraction: DOWNLOAD_SHARE / 2, detail: '39 MB of 78 MB' });
+    expect(cmSetupViewOf(downloading(39 * MB, 78 * MB), null)).toMatchObject({ fraction: CM_SETUP_DOWNLOAD_SHARE / 2, detail: '39 MB of 78 MB' });
     expect(cmSetupViewOf(downloading(48 * MB, 78 * MB), 12.4)).toMatchObject({ detail: '48 MB of 78 MB · 12 s left' });
   });
 
   it('holds the bar’s last stretch while finishing', () => {
     const finishing: CmRuntimeStatus = { kind: 'installing', version: '11.0.16.10659', phase: 'finishing', receivedBytes: 78 * MB, totalBytes: 78 * MB, firstRun: true };
-    expect(cmSetupViewOf(finishing, 3)).toMatchObject({ fraction: DOWNLOAD_SHARE, finishing: true, detail: 'Finishing…' });
+    expect(cmSetupViewOf(finishing, 3)).toMatchObject({ fraction: CM_SETUP_DOWNLOAD_SHARE, finishing: true, detail: 'Finishing…' });
   });
 
   it('says a failure in plain words, never the app’s inner names', () => {
