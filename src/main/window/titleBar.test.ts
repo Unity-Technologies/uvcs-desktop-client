@@ -4,12 +4,12 @@ import { captionButtons, titleBarOptions, topBarHeightAt, trafficLightsAt } from
 
 describe('titleBarOptions', () => {
   it('insets the traffic lights on macOS', () => {
-    expect(titleBarOptions(windowChrome('darwin'), false)).toMatchObject({ titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 16 } });
+    expect(titleBarOptions(windowChrome('darwin'), false)).toMatchObject({ titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 20 } });
   });
 
   it('overlays the caption buttons on the top bar on Windows, as tall as it', () => {
     const options = titleBarOptions(windowChrome('win32'), true);
-    expect(options).toMatchObject({ titleBarStyle: 'hidden', titleBarOverlay: { height: 44 } });
+    expect(options).toMatchObject({ titleBarStyle: 'hidden', titleBarOverlay: { height: 52 } });
     expect(options).not.toHaveProperty('trafficLightPosition');
   });
 
@@ -19,29 +19,29 @@ describe('titleBarOptions', () => {
 });
 
 describe('trafficLightsAt', () => {
-  it('keeps them where they always were at 100%', () => {
-    expect(trafficLightsAt(1)).toEqual({ x: 16, y: 16 });
+  it('centers them in the top bar at 100%', () => {
+    expect(trafficLightsAt(1)).toEqual({ x: 16, y: 20 });
   });
 
   it('keeps them centered in the top bar as the zoom shrinks or grows it, as far in from the left', () => {
-    // The bar is 44 × zoom points tall; the lights' top sits 6 above its middle at 100%, and stays so.
-    expect(trafficLightsAt(0.9)).toEqual({ x: 16, y: 14 });
-    expect(trafficLightsAt(2 / 3)).toEqual({ x: 16, y: 9 });
-    expect(trafficLightsAt(1.5)).toEqual({ x: 16, y: 27 });
-    expect(trafficLightsAt(3)).toEqual({ x: 16, y: 60 });
+    // The bar is 52 × zoom points tall; the lights' top sits 6 above its middle at every zoom.
+    expect(trafficLightsAt(0.9)).toEqual({ x: 16, y: 17 });
+    expect(trafficLightsAt(2 / 3)).toEqual({ x: 16, y: 11 });
+    expect(trafficLightsAt(1.5)).toEqual({ x: 16, y: 33 });
+    expect(trafficLightsAt(3)).toEqual({ x: 16, y: 72 });
   });
 
   it('never puts them above the window at the smallest zoom', () => {
-    expect(trafficLightsAt(0.25)).toEqual({ x: 16, y: 0 });
+    expect(trafficLightsAt(0.2)).toEqual({ x: 16, y: 0 });
   });
 });
 
 describe('topBarHeightAt', () => {
-  it('scales the top bar’s 44 pixels by the zoom, in whole points', () => {
-    expect(topBarHeightAt(1)).toBe(44);
-    expect(topBarHeightAt(0.9)).toBe(40);
-    expect(topBarHeightAt(1.2 ** 0.5)).toBe(48);
-    expect(topBarHeightAt(1.5)).toBe(66);
+  it('scales the top bar’s 52 pixels by the zoom, in whole points', () => {
+    expect(topBarHeightAt(1)).toBe(52);
+    expect(topBarHeightAt(0.9)).toBe(47);
+    expect(topBarHeightAt(1.2 ** 0.5)).toBe(57);
+    expect(topBarHeightAt(1.5)).toBe(78);
   });
 });
 
@@ -52,7 +52,7 @@ describe('captionButtons', () => {
   });
 
   it('makes them as tall as the top bar at the page’s zoom', () => {
-    expect(captionButtons(false, 1).height).toBe(44);
+    expect(captionButtons(false, 1).height).toBe(52);
     expect(captionButtons(true, 0.9).height).toBe(40);
     expect(captionButtons(false, 1.5).height).toBe(66);
   });
