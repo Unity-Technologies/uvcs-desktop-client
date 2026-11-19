@@ -149,9 +149,13 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   a top-level source (`/release`, branched from `/main`) has no ancestor there, and its parent shows under Other
   branches. A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
   (`setMergeRequestDestination`); the name shows at once, with a spinner while it's written. Merged and closed show it
-  as text. The same change is one step away in the list: the row's **Change destination…** (`changeDestination`,
-  `chooseMergeRequestDestination`) opens that branch list in a dialog (`pickDestination`), and the details panel's
-  destination chip opens it as the headline does (`DestinationPicker`'s `chip` look). Picking the destination it has
+  as text. The same change is one step away outside the page. **Change destination…** (`changeDestination`,
+  `chooseMergeRequestDestination`) opens that branch list in a dialog (`pickDestination`) from every menu of a single
+  review (`codeReviewMenu`): the Merge requests view's rows (right-click and their "…"), the Branch Explorer's review
+  menu, and the palette's review results when they come with the branch named. The page's own ⋯ menu leaves it out:
+  its headline has it. In the Merge requests view's details panel, the destination chip opens the list as the headline
+  does (`DestinationPicker`'s `chip` look), instead of showing the branch in the Branch Explorer as the source chip
+  does. Picking the destination it has
   changes nothing; a pick shows in the row and its details at once, then the reviews are read again
   (`isAffectedByCodeReviews`). A window with no workspace offers it too: it changes the server, not the disk.
 - **The conversation's events** (`conversationOf`, `reviewEventRow`), from the server's notes:
