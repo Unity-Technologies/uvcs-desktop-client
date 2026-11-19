@@ -72,7 +72,7 @@ export type CmRuntimeStatus =
       /** What failed, for the details a user may copy into a bug report: the address and the error. */
       detail: string;
       firstRun: boolean;
-      /** The `cm` installed on the computer, which the user may run instead; null when none was found. */
+      /** The `cm` installed on the computer, which the user may run instead; null when none was found or it's older than the app's own. */
       installedCm: InstalledCm | null;
     };
 
@@ -91,4 +91,14 @@ export function compareCmVersions(a: string, b: string): number {
     if (difference !== 0) return difference;
   }
   return 0;
+}
+
+/**
+ * Whether a `cm` (its version as `cm version` prints it) can run this app: the version the app pins, or a newer one
+ * (docs/features/cm-runtime.md "Which cm runs"). An older one may lack what any feature relies on, so none is run; one
+ * whose version can't be read isn't either.
+ */
+export function meetsCmVersion(version: string, minimum: string): boolean {
+  const readable = /^\d+(\.\d+)*$/.test(version.trim());
+  return readable && compareCmVersions(version.trim(), minimum) >= 0;
 }

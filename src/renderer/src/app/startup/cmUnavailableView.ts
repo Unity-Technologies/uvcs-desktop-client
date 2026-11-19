@@ -22,7 +22,7 @@ export function cmUnavailableView(source: CmSource): CmUnavailableView {
   }
   return {
     title: 'Unity Version Control is required',
-    body: 'This app works through cm, the Unity Version Control command line client, and it isn’t installed (or isn’t on your PATH) yet. Install it, then check again: no restart needed.',
+    body: 'This app works through cm, the Unity Version Control command line client, and it isn’t installed, isn’t on your PATH or is older than this app needs. Install the latest version, then check again: no restart needed.',
     offersInstall: true,
   };
 }

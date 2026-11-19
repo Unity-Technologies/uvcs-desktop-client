@@ -31,7 +31,7 @@ export interface CodeReviewsApi {
   remove(place: Place, reviewIds: number[]): Promise<void>;
   /**
    * Whether the signed-in user gets the review's emails, why, and whether its repository sends any: one quick
-   * `cm codereview subscription`, for the review shown. Needs a `cm` that has it (`readsReviewSubscriptions`).
+   * `cm codereview subscription`, for the review shown.
    */
   subscription(place: Place, reviewId: number): Promise<ReviewSubscription>;
   /** Subscribes the signed-in user to the review's emails. */

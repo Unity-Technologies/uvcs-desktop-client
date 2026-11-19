@@ -16,7 +16,7 @@ import { isWebAddress } from '../system/webAddress';
 import { showIncomingNotification } from '../window/incomingNotification';
 import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
-export function createSystemService({ cm, operations, windows, settings, diagnosticLog }: ServiceContext, { profiles }: ProfilesContext): SystemApi {
+export function createSystemService({ cm, cmRuntime, operations, windows, settings, diagnosticLog }: ServiceContext, { profiles }: ProfilesContext): SystemApi {
   const gravatars = new GravatarCache(async (url) => {
     const response = await net.fetch(url);
     if (!response.ok) return null;
@@ -26,9 +26,7 @@ export function createSystemService({ cm, operations, windows, settings, diagnos
   // Every window asks when it opens: once a `cm` runs and reaches its server, later windows take that answer. Kept per
   // executable: choosing another `cm` in Settings (`cmRuntime.use`) asks the new one, and logs where it is.
   const versions = new Map<string, () => Promise<string>>();
-  const cmVersion = (): Promise<string> => {
-    cm.relocate();
-    const executable = cm.executable;
+  const versionOf = (executable: string): Promise<string> => {
     let version = versions.get(executable);
     if (!version) {
       version = untilSucceeded(async () => {
@@ -41,6 +39,22 @@ export function createSystemService({ cm, operations, windows, settings, diagnos
       versions.set(executable, version);
     }
     return version();
+  };
+  // The one read of every `cm` the app runs, so the version floor costs no command of its own (`CmRuntime.admits`):
+  // an installed `cm` older than the app's own gives way to it, or, where the app has none, stops here.
+  const cmVersion = async (): Promise<string> => {
+    cm.relocate();
+    const executable = cm.executable;
+    const answer = await versionOf(executable);
+    // Another `cm` runs since it was asked (a window opened at the same time dropped an older one): ask that one.
+    if (cm.executable !== executable) return cmVersion();
+    if (cmRuntime.admits(executable, answer)) return answer;
+    // Check Again asks it again: the user may have updated it meanwhile.
+    versions.delete(executable);
+    // The app's own runs instead (`CmRuntime.admits` relocated `cm` to it), when it's there; one still setting up shows
+    // the setup screen meanwhile.
+    if (cm.executable !== executable && cmRuntime.isReady()) return cmVersion();
+    throw new Error(`The installed Unity Version Control is version ${answer}. This app needs version ${cmRuntime.pinnedVersion} or later.`);
   };
   const setupProblem = untilSucceeded(() => checkSetup(profiles, cm.executable), (problem) => problem === null);
 

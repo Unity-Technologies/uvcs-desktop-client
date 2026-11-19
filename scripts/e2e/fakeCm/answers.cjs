@@ -7,6 +7,7 @@ const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
 const { signInFailure } = require('./signIn.cjs');
 const { matching } = require('./where.cjs');
+const { version: PINNED_CM_VERSION } = require('../../../cm-version.json');
 
 /** A command `cm` itself refuses, as it would the real one: it fails, but the fake knew what to answer. */
 class CmRefusal extends Error {}
@@ -53,8 +54,8 @@ const ORGANIZATION_REPOSITORIES = [
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid, type: 'regular', dynamic: 'static' }];
 
 const COMMANDS = {
-  // The version code reviews need (docs/features/code-reviews.md): the app asks what it has, as a review's subscription.
-  version: () => '11.0.16.10616\n',
+  // The version the app pins: as an installed `cm`, an older one wouldn't be run (docs/features/cm-runtime.md).
+  version: () => `${PINNED_CM_VERSION}\n`,
   checkconnection: () => 'Test connection executed successfully\n',
   whoami: () => `${OWNER}\n`,
   // Without --format: the local setup check (`checkSetup`), which reads only whether it succeeds.

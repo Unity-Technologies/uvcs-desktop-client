@@ -14,9 +14,28 @@ describe('cmChoiceCards', () => {
     expect(cmChoiceCards({ pinnedVersion: '11.0.16.10659', installed: INSTALLED, source: 'installed' }).map((card) => card.selected)).toEqual([false, true]);
   });
 
-  it('warns when the installed one is older than the app’s own', () => {
-    const [, installed] = cmChoiceCards({ pinnedVersion: '11.0.16.10659', installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'installed' });
-    expect(installed).toMatchObject({ warning: true, tip: 'Older than the one included with the app: newer features may not work with it. /usr/local/bin/cm' });
+  it('takes an installed one newer than the app’s own', () => {
+    const [, installed] = cmChoiceCards({ pinnedVersion: '11.0.16.10659', installed: { ...INSTALLED, version: '11.0.16.10700' }, source: 'managed' });
+    expect(installed).toMatchObject({ disabled: false, warning: false });
+  });
+
+  it('can’t choose an installed one older than the app’s own, and says what it needs', () => {
+    const [, installed] = cmChoiceCards({ pinnedVersion: '11.0.16.10659', installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'managed' });
+    expect(installed).toEqual({
+      choice: 'installed',
+      label: 'Installed on this computer',
+      description: 'Version 11.0.16.9000 · needs 11.0.16.10659 or later',
+      tip: 'Older than the one included with the app. Update it to use it. /usr/local/bin/cm',
+      disabled: true,
+      selected: false,
+      warning: true,
+    });
+  });
+
+  // Where it has none (Linux on Arm), `system.cmVersion` stops an older one before any window shows Settings.
+  it('compares no versions where the app has none of its own', () => {
+    const [, installed] = cmChoiceCards({ pinnedVersion: null, installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'installed' });
+    expect(installed).toMatchObject({ disabled: false, warning: false });
   });
 
   it('can’t choose an installed one that isn’t there, nor while it’s looked for', () => {

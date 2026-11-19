@@ -1,4 +1,4 @@
-import { retriesByItself, type CmChoice, type CmRuntimeStatus, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
+import { meetsCmVersion, retriesByItself, type CmChoice, type CmRuntimeStatus, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
 import { existsSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import type { CmSetupStart } from '@shared/startingPlace';
@@ -73,6 +73,8 @@ export class CmRuntime {
   private pruned = false;
   /** The app's own `cm` downloading to replace the installed one (`useOwnWhenDownloaded`). */
   private switchingToOwn: OwnCmSwitch | null = null;
+  /** Counts the user's choices (`use`): one still checking the installed `cm`'s version yields to a later one. */
+  private choiceTurn = 0;
   /** What waits for `cm` to run (`whenReady`). */
   private waitingForReady: (() => void)[] = [];
   /** No version of the app's own `cm` was set up before this one: setting up, rather than updating. */
@@ -143,11 +145,16 @@ export class CmRuntime {
   }
 
   /**
-   * Runs the installed `cm` from now on, or the app's own again (Settings, or the setup's failure screen). Going back to
-   * the app's own before it's there keeps the installed one running while it downloads (`useOwnWhenDownloaded`): the
-   * windows never lose what they show for a setup screen.
+   * Runs the installed `cm` from now on, or the app's own again (Settings, or the setup's failure screen). An installed
+   * one older than the pinned version is never taken (`usableInstalledCm`). Going back to the app's own before it's
+   * there keeps the installed one running while it downloads (`useOwnWhenDownloaded`): the windows never lose what they
+   * show for a setup screen.
    */
-  use(choice: CmChoice): void {
+  async use(choice: CmChoice): Promise<void> {
+    const turn = ++this.choiceTurn;
+    // Refused without a word: Settings never offers an older one, nor does the setup's failure screen.
+    if (choice === 'installed' && !(await this.usableInstalledCm())) return;
+    if (turn !== this.choiceTurn) return;
     if (choice === 'managed' && this.chosen.source === 'installed' && this.hasOwnCm() && !this.options.installer.isInstalled(this.pinnedVersion)) {
       void this.useOwnWhenDownloaded();
       return;
@@ -156,6 +163,21 @@ export class CmRuntime {
     this.switchingToOwn = null;
     this.options.saveChoice(choice);
     this.switchTo(this.choose());
+  }
+
+  /**
+   * Whether the `cm` at `executable`, which printed `version`, may run the app (`system.cmVersion` asks each `cm` it
+   * reads). Only an installed one older than the pinned version may not: where the app has its own, it runs that from
+   * now on (setting it up first if it isn't there), and the choice is saved; where it has none, nothing runs.
+   */
+  admits(executable: string, version: string): boolean {
+    if (this.chosen.source !== 'installed' || executable !== this.chosen.path || meetsCmVersion(version, this.pinnedVersion)) return true;
+    if (this.hasOwnCm()) {
+      this.switchingToOwn = null;
+      this.options.saveChoice('managed');
+      this.switchTo(this.choose());
+    }
+    return false;
   }
 
   private switchTo(chosen: ChosenCm): void {
@@ -216,6 +238,12 @@ export class CmRuntime {
     } catch {
       return null;
     }
+  }
+
+  /** The installed `cm` when it may run the app: the pinned version or newer (`meetsCmVersion`). */
+  private async usableInstalledCm(): Promise<InstalledCm | null> {
+    const installed = await this.installedCm();
+    return installed && meetsCmVersion(installed.version, this.pinnedVersion) ? installed : null;
   }
 
   private choose(): ChosenCm {
@@ -293,7 +321,7 @@ export class CmRuntime {
   private async failed(error: unknown): Promise<void> {
     const failure = cmInstallFailureOf(error);
     const detail = error instanceof Error ? error.message : String(error);
-    this.progress = { kind: 'failed', version: this.pinnedVersion, failure, detail, firstRun: this.firstRun, installedCm: await this.installedCm() };
+    this.progress = { kind: 'failed', version: this.pinnedVersion, failure, detail, firstRun: this.firstRun, installedCm: await this.usableInstalledCm() };
     if (this.chosen.source !== 'managed') return;
     this.announce();
     if (retriesByItself(failure)) {
