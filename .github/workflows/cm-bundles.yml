@@ -1,0 +1,23 @@
+name: cm bundles
+
+# Every day, the bundles cm-version.json pins are downloaded again and their SHA-256 compared with the pin: a bundle
+# republished with other bytes, or gone, would stop every new install of the app, which downloads it
+# (docs/features/cm-runtime.md "The pin"). A failure here is found before a user meets it.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts check
