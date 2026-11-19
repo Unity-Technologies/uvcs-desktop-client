@@ -23,15 +23,25 @@ export function createSystemService({ cm, operations, windows, settings, diagnos
     return { type: response.headers.get('content-type') ?? 'image/png', bytes: new Uint8Array(await response.arrayBuffer()) };
   });
 
-  // Every window asks when it opens: once `cm` runs and reaches its server, later windows take that answer.
-  const cmVersion = untilSucceeded(async () => {
+  // Every window asks when it opens: once a `cm` runs and reaches its server, later windows take that answer. Kept per
+  // executable: choosing another `cm` in Settings (`cmRuntime.use`) asks the new one, and logs where it is.
+  const versions = new Map<string, () => Promise<string>>();
+  const cmVersion = (): Promise<string> => {
     cm.relocate();
-    // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
-    const version = (await cm.execute(['version'])).trim();
-    // Once a launch: the log's reader learns which `cm` the app ran, with no command of its own.
-    diagnosticLog.write(cmFoundText(version, cm.executable));
-    return version;
-  });
+    const executable = cm.executable;
+    let version = versions.get(executable);
+    if (!version) {
+      version = untilSucceeded(async () => {
+        // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
+        const answer = (await cm.execute(['version'])).trim();
+        // Once per `cm` a launch runs: the log's reader learns which one the app ran, with no command of its own.
+        diagnosticLog.write(cmFoundText(answer, executable));
+        return answer;
+      });
+      versions.set(executable, version);
+    }
+    return version();
+  };
   const setupProblem = untilSucceeded(() => checkSetup(profiles), (problem) => problem === null);
 
   return {
