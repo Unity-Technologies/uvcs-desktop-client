@@ -1,4 +1,5 @@
-import { posix, win32 } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join, posix, win32 } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmStoreEntries, cmStoreFolder, managedCmPath, storeEntriesToPrune } from './cmStore';
 
@@ -56,5 +57,16 @@ describe('storeEntriesToPrune', () => {
 
   it('leaves alone anything that is not a version', () => {
     expect(storeEntriesToPrune(['.DS_Store', 'notes', 'latest'], ['11.0.16.10659'])).toEqual([]);
+  });
+});
+
+describe('the Windows uninstaller', () => {
+  // Checked out with CRLF on Windows.
+  const script = readFileSync(join(__dirname, '../../../build/installer.nsh'), 'utf8').replace(/\r\n/g, '\n');
+
+  it('removes the store cmStoreFolder names, but not on an update, which keeps it for the new version', () => {
+    const store = cmStoreFolder('win32', { LOCALAPPDATA: '$LOCALAPPDATA' }, '');
+    const uninstall = script.slice(script.indexOf('!macro customUnInstall'));
+    expect(uninstall).toContain(`\${ifNot} \${isUpdated}\n    RMDir /r "${store}"`);
   });
 });

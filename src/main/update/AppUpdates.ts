@@ -1,4 +1,5 @@
 import type { ReleaseNotes, UpdateStatus } from '@shared/domain/appUpdate';
+import type { CmPrefetch } from '../cmRuntime/CmRuntime';
 import type { ReleaseFile } from './installerAsset';
 import { releaseNotesOf, type FeedReleaseNotes } from './releaseNotes';
 import { describeUpdateError, UpdateFailure, updateErrorForLog } from './updateError';
@@ -15,6 +16,9 @@ export interface UpdateFeed {
   quitAndInstall(isSilent: boolean, isForceRunAfter: boolean): void;
   on(event: 'download-progress', listener: (progress: { percent: number }) => void): unknown;
 }
+
+/** The share of an update's progress its own download takes when its `cm` downloads too. */
+export const APP_SHARE_WITH_CM = 0.5;
 
 /** What `AppUpdates` reads of the update a check found. */
 export interface FoundUpdate {
@@ -47,6 +51,12 @@ export interface AppUpdatesDependencies {
   writesFinished: () => Promise<void>;
   /** Called just before quitting to install (`Quitting.restartToInstall`): the windows reopen where they were. */
   beforeRestart: () => void;
+  /**
+   * The `cm` the update of `version` runs, to download with it (docs/features/cm-runtime.md "Updates bring their cm"),
+   * so restarting into it never waits on a setup; null when there's none to download (the same one, the installed one
+   * chosen). A failure here or in its download never stops the update: its first start sets it up.
+   */
+  cmPrefetchFor: (version: string) => Promise<CmPrefetch | null>;
   /** Tells every window where the update stands. */
   push: (status: UpdateStatus) => void;
   /** Keeps the cause of a failed check or download, which the window shows only in a sentence (`describeUpdateError`). */
@@ -71,6 +81,8 @@ export class AppUpdates {
   private installerPath: string | null = null;
   private notes: ReleaseNotes[] = [];
   private feedLoaded: Promise<UpdateFeed> | null = null;
+  /** The share of the progress the app's own download takes: all of it, or half when its `cm` downloads too. */
+  private appShare = 1;
 
   constructor(private readonly dependencies: AppUpdatesDependencies) {
     this.current = dependencies.packaged ? { state: 'idle' } : { state: 'unavailable' };
@@ -137,18 +149,47 @@ export class AppUpdates {
   private async download({ version, files, releaseNotes, releaseDate }: FoundUpdate): Promise<void> {
     this.notes = releaseNotesOf(releaseNotes, version, releaseDate);
     this.setStatus({ state: 'downloading', version, percent: 0 });
+    const cm = await this.cmPrefetchFor(version);
+    this.appShare = cm ? APP_SHARE_WITH_CM : 1;
+    const install = await this.downloadApp(version, files);
+    if (cm) await this.downloadCm(version, cm);
+    this.setStatus({ state: 'ready', version, install });
+  }
+
+  private async downloadApp(version: string, files: ReleaseFile[]): Promise<'restart' | 'installer'> {
     this.manualInstall ??= this.dependencies.needsManualInstall();
     if (!(await this.manualInstall)) {
       await (await this.feed()).downloadUpdate();
-      this.setStatus({ state: 'ready', version, install: 'restart' });
-      return;
+      return 'restart';
     }
     const installer = this.dependencies.installerOf(files);
     if (!installer) throw new UpdateFailure(`Version ${version} has no installer for this Mac.`);
     this.installerPath = await this.dependencies.downloadInstaller(installer, version, (percent) =>
-      this.setStatus({ state: 'downloading', version, percent }),
+      this.setStatus({ state: 'downloading', version, percent: Math.floor(percent * this.appShare) }),
     );
-    this.setStatus({ state: 'ready', version, install: 'installer' });
+    return 'installer';
+  }
+
+  private async cmPrefetchFor(version: string): Promise<CmPrefetch | null> {
+    try {
+      return await this.dependencies.cmPrefetchFor(version);
+    } catch (error) {
+      this.dependencies.logFailure(`[updates] The cm of ${version} couldn't be read; it's set up as it starts: ${updateErrorForLog(error)}`);
+      return null;
+    }
+  }
+
+  /** The rest of the progress; a failure only means the update sets its `cm` up as it starts. */
+  private async downloadCm(version: string, cm: CmPrefetch): Promise<void> {
+    const from = Math.floor(100 * this.appShare);
+    try {
+      await cm.download((fraction) => {
+        const percent = from + Math.floor((100 - from) * fraction);
+        if (this.current.state === 'downloading' && percent !== this.current.percent) this.setStatus({ state: 'downloading', version, percent });
+      });
+    } catch (error) {
+      this.dependencies.logFailure(`[updates] The cm of ${version} didn't download; it's set up as it starts: ${updateErrorForLog(error)}`);
+    }
   }
 
   /** The feed, loaded once (`loadFeed`). */
@@ -156,7 +197,7 @@ export class AppUpdates {
     this.feedLoaded ??= this.dependencies.loadFeed().then((feed) => {
       // electron-updater reports fractions many times a second: windows hear whole percents only.
       feed.on('download-progress', (progress) => {
-        const percent = Math.floor(progress.percent);
+        const percent = Math.floor(progress.percent * this.appShare);
         if (this.current.state === 'downloading' && percent !== this.current.percent) this.setStatus({ ...this.current, percent });
       });
       return feed;

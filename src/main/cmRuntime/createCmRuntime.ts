@@ -40,9 +40,9 @@ export function createCmRuntime({ settings, prunes, relocated, statusChanged }: 
     unpack: (archive, destination) => unpackBundle(archive, destination, process.platform, process.env),
     cmVersionOf: versionOf,
   });
-  // Once the pinned version runs, the others go: an update's waits for step 5's prefetch to be kept too.
+  // Once the pinned version runs, the others go, but for one an update downloaded to run (`keptVersions`).
   const prune = (): void => {
-    if (prunes) void installer.prune([pin.version]);
+    if (prunes) void installer.prune(runtime.keptVersions());
   };
   const runtime = new CmRuntime({
     pin,

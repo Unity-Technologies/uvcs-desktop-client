@@ -7,6 +7,17 @@ import { cmInstallFailureOf } from './cmInstallFailure';
 import type { CmInstaller, CmInstallProgress } from './CmInstaller';
 import { retryDelayAfter, retriesByItself } from './installRetries';
 
+/** A download of another version's `cm`, ahead of the update that runs it. */
+export interface CmPrefetch {
+  download(onProgress: (fraction: number) => void): Promise<void>;
+}
+
+/** How far a prefetch is, 0 to 1: the download, then whole once it's finishing. */
+export function prefetchFraction(progress: CmInstallProgress): number {
+  if (progress.phase === 'finishing') return 1;
+  return progress.totalBytes ? Math.min(1, progress.receivedBytes / progress.totalBytes) : 0;
+}
+
 export interface CmRuntimeTimers {
   now: () => number;
   setTimeout: (run: () => void, ms: number) => unknown;
@@ -47,6 +58,8 @@ export class CmRuntime {
   private attempts = 0;
   private retryTimer: unknown = null;
   private lastProgressAt = Number.NEGATIVE_INFINITY;
+  /** Versions downloaded for an update waiting to install: kept until it starts, as its own. */
+  private readonly prefetched = new Set<string>();
   /** No version of the app's own `cm` was set up before this one: setting up, rather than updating. */
   private firstRun: boolean;
 
@@ -110,6 +123,28 @@ export class CmRuntime {
     this.progress = null;
     this.options.statusChanged(this.status());
     this.start();
+  }
+
+  /** The versions to keep when pruning the store: the pinned one, and any an update downloaded ahead. */
+  keptVersions(): string[] {
+    return [this.pinnedVersion, ...this.prefetched];
+  }
+
+  /**
+   * The download of the `cm` an update pins, along with the update (docs/features/cm-runtime.md "Updates bring their
+   * cm"); null when there's nothing to download: the app's own isn't the one running, this platform has no bundle,
+   * or that version is there already.
+   */
+  prefetchFor(pin: CmVersionPin): CmPrefetch | null {
+    if (this.chosen.source !== 'managed') return null;
+    const own = cmBundleFor(pin, this.options.platform, this.options.arch);
+    if (!own || this.options.installer.isInstalled(pin.version)) return null;
+    return {
+      download: async (onProgress) => {
+        this.prefetched.add(pin.version);
+        await this.options.installer.install(pin.version, own.bundle, (progress) => onProgress(prefetchFraction(progress)));
+      },
+    };
   }
 
   /** The `cm` installed on the computer, with its version; null when none is found or it doesn't run. */

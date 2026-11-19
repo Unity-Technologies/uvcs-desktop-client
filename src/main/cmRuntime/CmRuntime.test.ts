@@ -194,3 +194,33 @@ describe('CmRuntime', () => {
     expect(installer.installs).toBe(0);
   });
 });
+
+describe('CmRuntime with an update waiting', () => {
+  const NEXT: CmVersionPin = { ...PIN, version: '11.0.16.10700' };
+
+  it('downloads the cm the update pins, and keeps it when pruning', async () => {
+    const { runtime, installer } = runtimeWith({ installed: [VERSION] });
+    const prefetch = runtime.prefetchFor(NEXT);
+    const fractions: number[] = [];
+    const downloading = prefetch!.download((fraction) => fractions.push(fraction));
+    installer.progress({ phase: 'downloading', receivedBytes: 25, totalBytes: 100 });
+    installer.progress({ phase: 'finishing' });
+    await installer.succeed();
+    await downloading;
+    expect(fractions).toEqual([0.25, 1]);
+    expect(runtime.keptVersions()).toEqual([VERSION, NEXT.version]);
+  });
+
+  it('downloads nothing for the same version, nor when the installed one runs', () => {
+    expect(runtimeWith({ installed: [VERSION] }).runtime.prefetchFor(PIN)).toBeNull();
+    expect(runtimeWith({ chosen: 'installed' }).runtime.prefetchFor(NEXT)).toBeNull();
+  });
+
+  it('downloads nothing where the platform has no bundle', () => {
+    expect(runtimeWith({ arch: 'arm64' }).runtime.prefetchFor(NEXT)).toBeNull();
+  });
+
+  it('keeps only the pinned version before any update', () => {
+    expect(runtimeWith({ installed: [VERSION] }).runtime.keptVersions()).toEqual([VERSION]);
+  });
+});
