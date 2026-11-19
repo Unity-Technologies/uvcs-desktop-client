@@ -106,12 +106,14 @@ const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|chan
 const LOADING = 'main [aria-busy="true"], main [aria-label="Loading"]';
 
 /**
- * Waits until nothing in the page is loading (skeletons and spinners say `Loading`). If something still is when the
- * wait gives up, the failure names it (`stillLoading`): a run that fails now and then can be read only from its output.
+ * Waits until nothing shown is loading (skeletons and spinners say `Loading`). Only what shows: a view left while it
+ * loaded stays mounted, hidden by its `Activity` (`MOUNTED_VIEWS`), with its effects stopped, so it shows its skeleton
+ * until it is shown again and reads its data then. If something still is when the wait gives up, the failure names it
+ * (`stillLoading`): a run that fails now and then can be read only from its output.
  */
 async function settled() {
   try {
-    await window.waitForFunction((loading) => !document.querySelector(loading), LOADING);
+    await window.waitForFunction((loading) => ![...document.querySelectorAll(loading)].some((element) => element.checkVisibility()), LOADING);
   } catch (error) {
     const loading = await withTimeout(window.evaluate(stillLoading, LOADING), TIMEOUT_MS, 'what is still loading').catch((reason) => [reason.message]);
     throw new Error(`${error.message.split('\n')[0]}\nStill loading:\n  ${loading.join('\n  ')}`, { cause: error });
@@ -418,6 +420,8 @@ try {
     await window.getByRole('menuitem', { name: 'Explore', exact: true }).click();
     await main.getByRole('heading', { level: 1, name: 'Branch Explorer', exact: true }).waitFor();
     await window.getByRole('button', { name: 'Create workspace' }).waitFor();
+    // Its graph read before the next step hides the view: hidden, it would show its skeleton until shown again.
+    await settled();
   });
   for (const view of REPOSITORY_VIEWS) {
     await step(`${view} of a repository`, async () => {
