@@ -27,8 +27,8 @@ interface SuggestionDiffProps {
 export function SuggestionDiff({ path, body }: SuggestionDiffProps) {
   const theme = useResolvedTheme();
   const highlighterReady = useSyntaxHighlighter(pierreThemeName(theme), path);
-  const { replacedText, suggestedText } = body;
-  const fileDiff = useMemo(() => suggestionFileDiff(path, { replacedText, suggestedText }), [path, replacedText, suggestedText]);
+  const { replacedText, suggestedText, firstLine } = body;
+  const fileDiff = useMemo(() => suggestionFileDiff(path, { replacedText, suggestedText, firstLine }), [path, replacedText, suggestedText, firstLine]);
   const options = useMemo(() => pierreSnippetDiffOptions(theme), [theme]);
   const container = useRef<HTMLDivElement | null>(null);
   const holdContainer = useCallback((element: HTMLDivElement | null) => {

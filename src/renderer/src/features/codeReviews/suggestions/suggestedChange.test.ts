@@ -57,19 +57,19 @@ describe('suggestionBody', () => {
   const change = { firstLine: 3, lastLine: 3, lines: ['new 1', 'new 2'] };
 
   it('is the diff of the lines replaced to those suggested, each ending in a line end, as a file holding them', () => {
-    expect(suggestionBody(change, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: 'new 1\nnew 2\n', rowCount: 3 });
+    expect(suggestionBody(change, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: 'new 1\nnew 2\n', firstLine: 3, rowCount: 3 });
   });
 
   it('diffs a range as all its lines replaced', () => {
-    expect(suggestionBody({ firstLine: 3, lastLine: 4, lines: ['ab'] }, readValue(['a', 'b']))).toEqual({ kind: 'diff', replacedText: 'a\nb\n', suggestedText: 'ab\n', rowCount: 3 });
+    expect(suggestionBody({ firstLine: 3, lastLine: 4, lines: ['ab'] }, readValue(['a', 'b']))).toEqual({ kind: 'diff', replacedText: 'a\nb\n', suggestedText: 'ab\n', firstLine: 3, rowCount: 3 });
   });
 
   it('diffs a deletion as the line removed alone', () => {
-    expect(suggestionBody({ ...change, lines: [] }, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: '', rowCount: 1 });
+    expect(suggestionBody({ ...change, lines: [] }, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: '', firstLine: 3, rowCount: 1 });
   });
 
   it('keeps an empty line as a line', () => {
-    expect(suggestionBody({ ...change, lines: [''] }, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: '\n', rowCount: 2 });
+    expect(suggestionBody({ ...change, lines: [''] }, readValue(['old']))).toEqual({ kind: 'diff', replacedText: 'old\n', suggestedText: '\n', firstLine: 3, rowCount: 2 });
   });
 
   it('says the suggestion is the lines as they are when it changes nothing, rather than a diff of no change', () => {
@@ -85,7 +85,7 @@ describe('suggestionBody', () => {
   });
 
   it("shows the suggested lines alone when the replaced ones can't be read, and nothing for a deletion then", () => {
-    expect(suggestionBody(change, FAILED)).toEqual({ kind: 'diff', replacedText: '', suggestedText: 'new 1\nnew 2\n', rowCount: 2 });
+    expect(suggestionBody(change, FAILED)).toEqual({ kind: 'diff', replacedText: '', suggestedText: 'new 1\nnew 2\n', firstLine: 3, rowCount: 2 });
     expect(suggestionBody({ ...change, lines: [] }, FAILED)).toEqual({ kind: 'empty' });
   });
 });
