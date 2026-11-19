@@ -25,6 +25,8 @@ interface DiffBrowserLayoutProps {
    * window isn't the dialog's to lay out (its files would also hide while the page's diff is expanded behind it).
    */
   expandable?: boolean;
+  /** Shown in a dialog: its files keep a width of their own, a dialog being narrower than a page (`diffFilesWidthKey`). */
+  inDialog?: boolean;
 }
 
 /**
@@ -33,7 +35,7 @@ interface DiffBrowserLayoutProps {
  * dragged (remembered: `diffFilesWidthKey`) and what's above the files stay, so the changesets keep their focus, scroll and filter as they're stepped.
  * Only the diff's column holds what changes height from one target to the next (`aboveDiff`): the lists never move.
  */
-export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable = true }: DiffBrowserLayoutProps) {
+export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable = true, inDialog = false }: DiffBrowserLayoutProps) {
   const [files, setFiles] = useKeptElement<HTMLElement>();
   const [diff, setDiff] = useKeptElement<HTMLElement>();
   const diffExpanded = useDiffExpanded() && expandable;
@@ -43,7 +45,7 @@ export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable 
   return (
     <ExpandableDiffContext.Provider value={expandable}>
       <RememberedSplitPane
-        widthKey={diffFilesWidthKey(expandable)}
+        widthKey={diffFilesWidthKey(inDialog)}
         widthLimits={DIFF_FILES_WIDTH}
         // Expanded, the files stay mounted out of sight: stepping past the last change still goes on to the next file.
         stowed={diffExpanded ? 'first' : undefined}
