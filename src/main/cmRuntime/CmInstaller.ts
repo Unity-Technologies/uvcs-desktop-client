@@ -168,12 +168,12 @@ export class CmInstaller {
   }
 
   /**
-   * Deletes every version but the ones kept, and what's left of their downloads. What can't be deleted now (a `cm`
-   * still running from it, a file Windows holds) waits for the next start.
+   * Deletes every version but the pinned one and the newest above it (`storeEntriesToPrune`), and what's left of their
+   * downloads. What can't be deleted now (a `cm` still running from it, a file Windows holds) waits for the next start.
    */
-  async prune(keep: readonly string[]): Promise<void> {
+  async prune(pinned: string): Promise<void> {
     const names = await readdir(this.options.store).catch(() => []);
-    for (const name of storeEntriesToPrune(names, keep)) {
+    for (const name of storeEntriesToPrune(names, pinned)) {
       await rm(join(this.options.store, name), { recursive: true, force: true }).catch((error: unknown) => console.warn(`[cm] ${name} stays until the next start:`, error));
     }
   }

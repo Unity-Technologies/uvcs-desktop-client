@@ -63,6 +63,7 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
   let now = 0;
   let choice: CmChoice = chosen ?? 'managed';
   let relocations = 0;
+  const pruned: string[] = [];
   const runtime = new CmRuntime({
     pin: PIN,
     platform: 'linux',
@@ -75,10 +76,11 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
     versionOf: async () => '11.0.16.9000\n',
     relocated: () => relocations++,
     statusChanged: (status) => statuses.push(status),
+    prune: (pinned) => pruned.push(pinned),
     timers: { now: () => now, setTimeout: (run, ms) => timers.push({ ms, run }), clearTimeout: () => timers.splice(0) },
     ...overrides,
   });
-  return { runtime, installer, statuses, timers, advance: (ms: number) => (now += ms), relocations: () => relocations, choice: () => choice };
+  return { runtime, installer, statuses, timers, pruned, advance: (ms: number) => (now += ms), relocations: () => relocations, choice: () => choice };
 }
 
 describe('CmRuntime', () => {
@@ -170,15 +172,6 @@ describe('CmRuntime', () => {
     expect(relocations()).toBe(1);
   });
 
-  it('sets up the app’s own when the user goes back to it from the installed one', () => {
-    const { runtime, installer } = runtimeWith({ chosen: 'installed' });
-    runtime.start();
-    expect(runtime.status()).toEqual({ kind: 'ready', source: 'installed' });
-    runtime.use('managed');
-    expect(runtime.cmPath()).toBe(MANAGED);
-    expect(installer.installs).toBe(1);
-  });
-
   it('runs UVCS_CM_PATH without setting up anything', () => {
     const { runtime, installer } = runtimeWith({ environmentPath: '/fake/cm' });
     runtime.start();
@@ -198,7 +191,7 @@ describe('CmRuntime', () => {
 describe('CmRuntime with an update waiting', () => {
   const NEXT: CmVersionPin = { ...PIN, version: '11.0.16.10700' };
 
-  it('downloads the cm the update pins, and keeps it when pruning', async () => {
+  it('downloads the cm the update pins, reporting how far it is', async () => {
     const { runtime, installer } = runtimeWith({ installed: [VERSION] });
     const prefetch = runtime.prefetchFor(NEXT);
     const fractions: number[] = [];
@@ -208,7 +201,6 @@ describe('CmRuntime with an update waiting', () => {
     await installer.succeed();
     await downloading;
     expect(fractions).toEqual([0.25, 1]);
-    expect(runtime.keptVersions()).toEqual([VERSION, NEXT.version]);
   });
 
   it('downloads nothing for the same version, nor when the installed one runs', () => {
@@ -219,8 +211,93 @@ describe('CmRuntime with an update waiting', () => {
   it('downloads nothing where the platform has no bundle', () => {
     expect(runtimeWith({ arch: 'arm64' }).runtime.prefetchFor(NEXT)).toBeNull();
   });
+});
 
-  it('keeps only the pinned version before any update', () => {
-    expect(runtimeWith({ installed: [VERSION] }).runtime.keptVersions()).toEqual([VERSION]);
+describe('CmRuntime pruning the store', () => {
+  it('prunes once a launch, as soon as a cm runs', async () => {
+    const ready = runtimeWith({ installed: [VERSION] });
+    ready.runtime.start();
+    ready.runtime.use('managed');
+    expect(ready.pruned).toEqual([VERSION]);
+
+    const settingUp = runtimeWith();
+    settingUp.runtime.start();
+    expect(settingUp.pruned).toEqual([]);
+    await settingUp.installer.succeed();
+    expect(settingUp.pruned).toEqual([VERSION]);
+  });
+});
+
+describe('CmRuntime and what waits for cm', () => {
+  it('lets a launch’s folder lookup wait until the app’s own cm is set up', async () => {
+    const { runtime, installer } = runtimeWith();
+    runtime.start();
+    let ready = false;
+    void runtime.whenReady().then(() => (ready = true));
+    await flush();
+    expect(ready).toBe(false);
+    await installer.succeed();
+    expect(ready).toBe(true);
+  });
+
+  it('answers at once when cm runs', async () => {
+    await expect(runtimeWith({ installed: [VERSION] }).runtime.whenReady()).resolves.toBeUndefined();
+  });
+});
+
+describe('CmRuntime going back to its own cm from the installed one', () => {
+  it('keeps the installed one running while its own downloads, then switches to it', async () => {
+    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'installed' });
+    runtime.start();
+    runtime.use('managed');
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed', switchingToOwn: { kind: 'downloading', fraction: null } });
+    installer.progress({ phase: 'downloading', receivedBytes: 40, totalBytes: 100 });
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed', switchingToOwn: { kind: 'downloading', fraction: 0.4 } });
+    expect(choice()).toBe('installed');
+
+    await installer.succeed();
+    expect(runtime.cmPath()).toBe(MANAGED);
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
+    expect(choice()).toBe('managed');
+    expect(relocations()).toBe(1);
+  });
+
+  it('stays on the installed one, saying why, when its own fails to download', async () => {
+    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'installed' });
+    runtime.use('managed');
+    await installer.fail(new CmInstallError('unavailable', 'HTTP 403'));
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed', switchingToOwn: { kind: 'failed', failure: 'unavailable', detail: 'HTTP 403' } });
+    expect(choice()).toBe('installed');
+    expect(relocations()).toBe(0);
+  });
+});
+
+describe('CmRuntime with choices made during its setup', () => {
+  it('keeps the installed one chosen while its own was downloading, once that finishes', async () => {
+    const { runtime, installer, statuses, relocations } = runtimeWith();
+    runtime.start();
+    runtime.use('installed');
+    await installer.succeed();
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
+    expect(relocations()).toBe(1);
+  });
+
+  it('says nothing of a failure of its own once the installed one runs', async () => {
+    const { runtime, installer, statuses, timers } = runtimeWith();
+    runtime.start();
+    runtime.use('installed');
+    await installer.fail(new Error('net::ERR_INTERNET_DISCONNECTED'));
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
+    expect(timers).toEqual([]);
+  });
+
+  it('starts no second download when retried, or its own chosen again, while one runs', () => {
+    const { runtime, installer } = runtimeWith();
+    runtime.start();
+    runtime.retry();
+    runtime.use('managed');
+    expect(installer.installs).toBe(1);
   });
 });

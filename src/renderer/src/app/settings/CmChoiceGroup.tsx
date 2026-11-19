@@ -18,7 +18,7 @@ export function CmChoiceGroup() {
   // One `cm version` of the installed one, each time Settings opens: it may have been installed or updated meanwhile.
   const installed = useQuery({ queryKey: queryKeys.installedCm, queryFn: () => api.cmRuntime.installedCm(), staleTime: 0, gcTime: 0 });
   if (status.kind !== 'ready' || pinned.data === undefined) return null;
-  const cards = cmChoiceCards({ pinnedVersion: pinned.data, installed: installed.data, source: status.source });
+  const cards = cmChoiceCards({ pinnedVersion: pinned.data, installed: installed.data, source: status.source, switchingToOwn: status.switchingToOwn });
   const note = cmChoiceNote(status.source);
   return (
     <SettingsGroup title="Command line client">

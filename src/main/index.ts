@@ -204,7 +204,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
 if (isTheRunningApp()) {
   appLog.write(startedText({ appVersion: app.getVersion(), platform: process.platform, osRelease: release(), arch: process.arch, electronVersion: process.versions.electron }));
   logAppHealth(app, appLog);
-  const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
+  const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder), cmRuntime);
   const links = receiveLinks(windows);
   // `cm` doesn't need Electron ready: the first screen's commands run while it gets there. Not while the app's own `cm`
   // still has to be set up: the window shows the setup first, and reads its screen once it's done.

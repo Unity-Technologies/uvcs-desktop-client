@@ -1,4 +1,4 @@
-import { retriesByItself, type CmChoice, type CmRuntimeStatus, type InstalledCm } from '@shared/domain/cmRuntime';
+import { retriesByItself, type CmChoice, type CmRuntimeStatus, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
 import type { CmSetupStart } from '@shared/startingPlace';
 import { cmExecutableName } from '../cm/findInstalledCm';
 import { chooseCm, type ChosenCm } from './chooseCm';
@@ -41,6 +41,11 @@ export interface CmRuntimeOptions {
   /** The `cm` to run changed: `CmClient` starts its shells again with it (`relocate`). */
   relocated: () => void;
   statusChanged: (status: CmRuntimeStatus) => void;
+  /**
+   * Once a `cm` runs, the store keeps the pinned version and the newest above it, an update's (`CmInstaller.prune`);
+   * development builds, sharing the store, prune nothing.
+   */
+  prune: (pinnedVersion: string) => void;
   timers: CmRuntimeTimers;
 }
 
@@ -58,8 +63,14 @@ export class CmRuntime {
   private attempts = 0;
   private retryTimer: unknown = null;
   private lastProgressAt = Number.NEGATIVE_INFINITY;
-  /** Versions downloaded for an update waiting to install: kept until it starts, as its own. */
-  private readonly prefetched = new Set<string>();
+  private lastPhase: CmInstallProgress['phase'] | null = null;
+  /** An install of the pinned version runs (`install`): a second ask while it does joins nothing more. */
+  private installing = false;
+  private pruned = false;
+  /** The app's own `cm` downloading to replace the installed one (`useOwnWhenDownloaded`). */
+  private switchingToOwn: OwnCmSwitch | null = null;
+  /** What waits for `cm` to run (`whenReady`). */
+  private waitingForReady: (() => void)[] = [];
   /** No version of the app's own `cm` was set up before this one: setting up, rather than updating. */
   private firstRun: boolean;
 
@@ -95,13 +106,20 @@ export class CmRuntime {
   }
 
   status(): CmRuntimeStatus {
-    if (this.isReady()) return { kind: 'ready', source: this.chosen.source };
+    if (this.isReady()) return this.switchingToOwn ? { kind: 'ready', source: this.chosen.source, switchingToOwn: this.switchingToOwn } : { kind: 'ready', source: this.chosen.source };
     return this.progress ?? this.installingStatus({ phase: 'downloading', receivedBytes: 0, totalBytes: null });
   }
 
-  /** Sets up the app's own `cm` if it runs and isn't there; nothing otherwise. */
+  /** Settles once `cm` can run: at once when it can, or when the app's own is set up. */
+  whenReady(): Promise<void> {
+    if (this.isReady()) return Promise.resolve();
+    return new Promise((resolve) => this.waitingForReady.push(resolve));
+  }
+
+  /** Sets up the app's own `cm` if it runs and isn't there; prunes the store once a `cm` runs. */
   start(): void {
-    if (!this.isReady()) void this.install();
+    if (this.isReady()) this.pruneOnce();
+    else void this.install();
   }
 
   /** Tries the setup again now: the user asked, or the network came back. */
@@ -111,23 +129,48 @@ export class CmRuntime {
     void this.install();
   }
 
-  /** Runs the installed `cm` from now on, or the app's own again (Settings, or the setup's failure screen). */
+  /**
+   * Runs the installed `cm` from now on, or the app's own again (Settings, or the setup's failure screen). Going back to
+   * the app's own before it's there keeps the installed one running while it downloads (`useOwnWhenDownloaded`): the
+   * windows never lose what they show for a setup screen.
+   */
   use(choice: CmChoice): void {
+    if (choice === 'managed' && this.chosen.source === 'installed' && this.hasOwnCm() && !this.options.installer.isInstalled(this.pinnedVersion)) {
+      void this.useOwnWhenDownloaded();
+      return;
+    }
     this.options.saveChoice(choice);
-    const chosen = this.choose();
+    this.switchTo(this.choose());
+  }
+
+  private switchTo(chosen: ChosenCm): void {
     if (chosen.path !== this.chosen.path || chosen.source !== this.chosen.source) {
       this.chosen = chosen;
       this.options.relocated();
     }
     this.cancelRetry();
     this.progress = null;
-    this.options.statusChanged(this.status());
-    this.start();
+    this.announce();
+    if (!this.isReady()) void this.install();
   }
 
-  /** The versions to keep when pruning the store: the pinned one, and any an update downloaded ahead. */
-  keptVersions(): string[] {
-    return [this.pinnedVersion, ...this.prefetched];
+  private async useOwnWhenDownloaded(): Promise<void> {
+    if (this.switchingToOwn?.kind === 'downloading') return;
+    const own = cmBundleFor(this.options.pin, this.options.platform, this.options.arch)!;
+    this.switchingToOwn = { kind: 'downloading', fraction: null };
+    this.announce();
+    try {
+      await this.options.installer.install(this.pinnedVersion, own.bundle, (progress) => {
+        this.switchingToOwn = { kind: 'downloading', fraction: progress.phase === 'downloading' && !progress.totalBytes ? null : prefetchFraction(progress) };
+        this.announceProgress(progress.phase);
+      });
+      this.switchingToOwn = null;
+      this.options.saveChoice('managed');
+      this.switchTo(this.choose());
+    } catch (error) {
+      this.switchingToOwn = { kind: 'failed', failure: cmInstallFailureOf(error), detail: error instanceof Error ? error.message : String(error) };
+      this.announce();
+    }
   }
 
   /**
@@ -141,7 +184,6 @@ export class CmRuntime {
     if (!own || this.options.installer.isInstalled(pin.version)) return null;
     return {
       download: async (onProgress) => {
-        this.prefetched.add(pin.version);
         await this.options.installer.install(pin.version, own.bundle, (progress) => onProgress(prefetchFraction(progress)));
       },
     };
@@ -179,31 +221,54 @@ export class CmRuntime {
   }
 
   private report(progress: CmInstallProgress): void {
-    const previous = this.progress;
     this.progress = this.installingStatus(progress);
+    this.announceProgress(progress.phase);
+  }
+
+  /** Tells the windows a download moved on: at most every `PROGRESS_INTERVAL_MS`, and at each change of phase. */
+  private announceProgress(phase: CmInstallProgress['phase']): void {
     const now = this.options.timers.now();
-    const phaseChanged = previous?.kind !== 'installing' || previous.phase !== progress.phase;
-    if (!phaseChanged && now - this.lastProgressAt < PROGRESS_INTERVAL_MS) return;
+    if (phase === this.lastPhase && now - this.lastProgressAt < PROGRESS_INTERVAL_MS) return;
+    this.lastPhase = phase;
     this.lastProgressAt = now;
-    this.options.statusChanged(this.progress);
+    this.announce();
+  }
+
+  /** Tells the windows where it stands; once a `cm` runs, wakes what waited for it and prunes the store. */
+  private announce(): void {
+    const status = this.status();
+    this.options.statusChanged(status);
+    if (status.kind !== 'ready') return;
+    for (const resolve of this.waitingForReady.splice(0)) resolve();
+    this.pruneOnce();
+  }
+
+  /** Once a launch, as a `cm` first runs: what the store holds changes only by this app's own installs after that. */
+  private pruneOnce(): void {
+    if (this.pruned) return;
+    this.pruned = true;
+    this.options.prune(this.pinnedVersion);
   }
 
   private async install(): Promise<void> {
     const { pin, platform, arch, installer } = this.options;
     const bundle = cmBundleFor(pin, platform, arch);
-    if (!bundle) return;
-    const version = this.pinnedVersion;
+    if (!bundle || this.installing) return;
+    this.installing = true;
+    this.lastPhase = null;
     this.report({ phase: 'downloading', receivedBytes: 0, totalBytes: null });
     try {
-      await installer.install(version, bundle.bundle, (progress) => this.report(progress));
+      await installer.install(this.pinnedVersion, bundle.bundle, (progress) => this.report(progress));
       this.attempts = 0;
       this.progress = null;
-      // A choice made while it downloaded may have left the app's own behind.
+      // A choice made while it downloaded may have left the app's own behind: the installed one runs, as announced.
       if (this.chosen.source !== 'managed') return;
       this.options.relocated();
-      this.options.statusChanged(this.status());
+      this.announce();
     } catch (error) {
       await this.failed(error);
+    } finally {
+      this.installing = false;
     }
   }
 
@@ -212,7 +277,7 @@ export class CmRuntime {
     const detail = error instanceof Error ? error.message : String(error);
     this.progress = { kind: 'failed', version: this.pinnedVersion, failure, detail, firstRun: this.firstRun, installedCm: await this.installedCm() };
     if (this.chosen.source !== 'managed') return;
-    this.options.statusChanged(this.progress);
+    this.announce();
     if (retriesByItself(failure)) {
       this.retryTimer = this.options.timers.setTimeout(() => this.retry(), retryDelayAfter(this.attempts++));
     }

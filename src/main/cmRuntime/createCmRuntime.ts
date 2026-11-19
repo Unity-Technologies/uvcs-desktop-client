@@ -40,11 +40,7 @@ export function createCmRuntime({ settings, prunes, relocated, statusChanged }: 
     unpack: (archive, destination) => unpackBundle(archive, destination, process.platform, process.env),
     cmVersionOf: versionOf,
   });
-  // Once the pinned version runs, the others go, but for one an update downloaded to run (`keptVersions`).
-  const prune = (): void => {
-    if (prunes) void installer.prune(runtime.keptVersions());
-  };
-  const runtime = new CmRuntime({
+  return new CmRuntime({
     pin,
     platform: process.platform,
     arch: process.arch,
@@ -55,12 +51,10 @@ export function createCmRuntime({ settings, prunes, relocated, statusChanged }: 
     findInstalled: () => findInstalledCm(),
     versionOf,
     relocated,
-    statusChanged: (status) => {
-      if (status.kind === 'ready') prune();
-      statusChanged(status);
+    statusChanged,
+    prune: (pinned) => {
+      if (prunes) void installer.prune(pinned);
     },
     timers: { now: Date.now, setTimeout: (run, ms) => setTimeout(run, ms), clearTimeout: (timer) => clearTimeout(timer as NodeJS.Timeout) },
   });
-  if (runtime.isReady()) prune();
-  return runtime;
 }

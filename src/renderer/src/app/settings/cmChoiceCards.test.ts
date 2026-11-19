@@ -28,6 +28,22 @@ describe('cmChoiceCards', () => {
     expect(cmChoiceCards({ pinnedVersion: null, installed: INSTALLED, source: 'installed' })[0]).toMatchObject({ description: 'Not available on this computer', disabled: true, selected: false });
   });
 
+  it('shows its own downloading while the installed one keeps running, and a failure to try again', () => {
+    const facts = { pinnedVersion: '11.0.16.10659', installed: INSTALLED, source: 'installed' as const };
+    expect(cmChoiceCards({ ...facts, switchingToOwn: { kind: 'downloading', fraction: 0.42 } })[0]).toMatchObject({
+      description: 'Downloading version 11.0.16.10659… 42%',
+      disabled: true,
+      selected: false,
+    });
+    expect(cmChoiceCards({ ...facts, switchingToOwn: { kind: 'downloading', fraction: null } })[0]?.description).toBe('Downloading version 11.0.16.10659…');
+    expect(cmChoiceCards({ ...facts, switchingToOwn: { kind: 'failed', failure: 'offline', detail: 'net::ERR_INTERNET_DISCONNECTED' } })[0]).toMatchObject({
+      description: 'Couldn’t download it. Choose it to try again.',
+      tip: 'net::ERR_INTERNET_DISCONNECTED',
+      disabled: false,
+      warning: true,
+    });
+  });
+
   it('checks neither when UVCS_CM_PATH runs, and says why', () => {
     expect(cmChoiceCards({ pinnedVersion: '11.0.16.10659', installed: INSTALLED, source: 'environment' }).map((card) => card.selected)).toEqual([false, false]);
     expect(cmChoiceNote('environment')).toBe('UVCS_CM_PATH is set: the app runs that one, whatever is chosen here.');

@@ -136,17 +136,17 @@ describe('CmInstaller', () => {
     expect(waits).toEqual(RENAME_RETRY_DELAYS_MS);
   });
 
-  it('prunes every version but the ones kept', async () => {
+  it('prunes every older version', async () => {
     const { installer, store } = await installerWith();
     await installer.install(VERSION, BUNDLE, () => undefined);
-    for (const name of ['11.0.16.9000', '11.0.16.10700.partial', 'notes']) await mkdir(join(store, name));
-    await installer.prune([VERSION]);
+    for (const name of ['11.0.16.9000', '11.0.16.10600.partial', 'notes']) await mkdir(join(store, name));
+    await installer.prune(VERSION);
     expect((await readdir(store)).sort()).toEqual([VERSION, 'notes'].sort());
     expect(existsSync(installer.cmPathOf(VERSION))).toBe(true);
   });
 
   it('prunes nothing when the store doesn’t exist yet', async () => {
     const { installer } = await installerWith();
-    await expect(installer.prune([VERSION])).resolves.toBeUndefined();
+    await expect(installer.prune(VERSION)).resolves.toBeUndefined();
   });
 });

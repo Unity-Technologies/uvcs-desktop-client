@@ -42,21 +42,22 @@ describe('cmStoreEntries', () => {
 });
 
 describe('storeEntriesToPrune', () => {
-  it('deletes every version but the ones kept, finished or not', () => {
-    const names = ['11.0.16.9000', '11.0.16.10659', '11.0.16.10700.partial', '11.0.16.9000.unpacking', '11.0.16.10800'];
-    expect(storeEntriesToPrune(names, ['11.0.16.10659', '11.0.16.10800'])).toEqual([
-      '11.0.16.10700.partial',
-      '11.0.16.9000',
-      '11.0.16.9000.unpacking',
-    ]);
+  it('deletes every older version, finished or not', () => {
+    const names = ['11.0.16.9000', '11.0.16.10659', '11.0.16.9000.unpacking', '11.0.16.10600.partial'];
+    expect(storeEntriesToPrune(names, '11.0.16.10659')).toEqual(['11.0.16.10600.partial', '11.0.16.9000', '11.0.16.9000.unpacking']);
   });
 
-  it('keeps what is half done of a version kept, which the next attempt resumes', () => {
-    expect(storeEntriesToPrune(['11.0.16.10659.partial'], ['11.0.16.10659'])).toEqual([]);
+  it('keeps the newest version above the pinned one, an update’s, and deletes newer ones it replaced', () => {
+    const names = ['11.0.16.10659', '11.0.16.10700', '11.0.16.10800', '11.0.16.10800.partial'];
+    expect(storeEntriesToPrune(names, '11.0.16.10659')).toEqual(['11.0.16.10700']);
+  });
+
+  it('keeps what is half done of the pinned version, which the next attempt resumes', () => {
+    expect(storeEntriesToPrune(['11.0.16.10659.partial'], '11.0.16.10659')).toEqual([]);
   });
 
   it('leaves alone anything that is not a version', () => {
-    expect(storeEntriesToPrune(['.DS_Store', 'notes', 'latest'], ['11.0.16.10659'])).toEqual([]);
+    expect(storeEntriesToPrune(['.DS_Store', 'notes', 'latest'], '11.0.16.10659')).toEqual([]);
   });
 });
 

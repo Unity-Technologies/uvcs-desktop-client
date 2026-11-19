@@ -45,9 +45,15 @@ export interface InstalledCm {
   version: string;
 }
 
+/** The app's own `cm` downloading to replace the installed one, chosen in Settings, or why it couldn't. */
+export type OwnCmSwitch = { kind: 'downloading'; fraction: number | null } | { kind: 'failed'; failure: CmInstallFailure; detail: string };
+
 export type CmRuntimeStatus =
-  /** `cm` can run; its version is what `system.cmVersion` answers. */
-  | { kind: 'ready'; source: CmSource }
+  /**
+   * `cm` can run; its version is what `system.cmVersion` answers. While the installed one runs, the app's own may be
+   * downloading to replace it (Settings' choice): the installed one keeps running until that's done.
+   */
+  | { kind: 'ready'; source: CmSource; switchingToOwn?: OwnCmSwitch }
   | {
       kind: 'installing';
       version: string;
