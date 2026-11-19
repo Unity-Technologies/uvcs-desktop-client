@@ -82,6 +82,11 @@ loaded, as `cm partial update` would bring them.
 - **The comparison** (`readPartialIncomingItems`) is two listings and a status, whatever the head's distance: what the
   workspace loaded (`cm ls -R`, `LOADED_TREE_FORMAT`) with its local changes (`readPendingChanges`), then the head's
   version of the loaded folders (`cm ls <folders…> --tree=br:<branch>`, `HEAD_TREE_FORMAT`, batched by `fitsCommandLine`).
+  Past `MOST_FOLDERS_LISTED_ONE_BY_ONE` folders, the head is one listing of the whole tree instead (`cm ls / -R
+  --tree=br:<branch>`, `readHeadOfWholeTree`, in a process of its own), keeping only the loaded folders and what lies
+  right inside them. `cm` resolves each path given to `ls --tree` on the server apart, a round of its own each: on a
+  large repository, 180 loaded folders (most of them inside an xlink) took 80 s one by one, and the whole
+  tree of 80,000 items takes 4.5 s. A folder the head moved is still listed by its new path afterwards.
   `compareWithHead` pairs them by item id: changed, moved, removed or added, and a conflict where the item has local
   changes too. An item is added only when it's new (a greater item id than every loaded item, in a later changeset)
   in a folder the workspace loaded whole: a folder that also holds an older item the workspace left out was loaded in

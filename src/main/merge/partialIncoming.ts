@@ -170,6 +170,14 @@ export function treeListingArgs(folders: readonly string[], tree: string): strin
 }
 
 /**
+ * How many loaded folders are listed on the head one by one. `cm ls` with `--tree` resolves each path it's given on
+ * the server apart, a round of its own each (more inside an xlink): on a large repository, about 0.45 s a folder, and
+ * 4.5 s the whole tree of 80,000 items. Past this many folders, the head is read in one listing of the whole tree
+ * (`readHeadOfWholeTree`).
+ */
+export const MOST_FOLDERS_LISTED_ONE_BY_ONE = 10;
+
+/**
  * The loaded folders and their children on the head. A folder the head moved fails to list where it was loaded, but
  * shows up in its parent's listing under its new path: it's listed there in a next pass, one per level moved, so what
  * changed inside it is read too. A folder moved out of every listed folder isn't found, and reads as removed.
@@ -178,12 +186,35 @@ async function readHeadOfFolders(cm: CmClient, workspacePath: string, folders: r
   const head: HeadItem[] = [];
   const listed = new Set<string>();
   let toList = folders.map((folder) => serverPath(folder.path)).sort();
+  if (toList.length > MOST_FOLDERS_LISTED_ONE_BY_ONE) {
+    head.push(...(await readHeadOfWholeTree(cm, workspacePath, toList, branch)));
+    for (const path of toList) listed.add(path);
+    toList = movedFolderPaths(folders, head, listed);
+  }
   while (toList.length > 0) {
     for (const args of treeListingArgs(toList, `br:${branch}`)) head.push(...(await listHead(cm, workspacePath, args)));
     for (const path of toList) listed.add(path);
     toList = movedFolderPaths(folders, head, listed);
   }
   return head;
+}
+
+/**
+ * The `folders` (server paths) and their children on the head, from one listing of its whole tree, xlinks followed:
+ * each row is kept only when it's one of them or lies right inside one, so what is kept weighs what listing them one
+ * by one would. It takes seconds on a big repository, so it runs in a process of its own (`executeRecords`).
+ */
+async function readHeadOfWholeTree(cm: CmClient, workspacePath: string, folders: readonly string[], branch: string): Promise<HeadItem[]> {
+  const listed = new Set(folders);
+  const isListed = (item: HeadItem) => listed.has(serverPath(item.path)) || listed.has(serverPath(parentOf(item.path)));
+  return cm.executeRecords(
+    ['ls', '/', '-R', `--tree=br:${branch}`, HEAD_TREE_FORMAT],
+    (fields) => {
+      const item = readHeadItem(fields);
+      return item && isListed(item) ? item : undefined;
+    },
+    { cwd: workspacePath },
+  );
 }
 
 /**
