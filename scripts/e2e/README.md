@@ -13,10 +13,10 @@ to the dark theme. It fails on any `pageerror` or `console.error`, a view whose 
 until it shows again), any `cm` command the fake couldn't answer, and an answer to the profile pictures question that wasn't
 saved. Beyond that answer, it asserts only that things appear, never pixels or copy.
 About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
-runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `UVCS_E2E_SHOTS` when
-set. A failed step also prints Playwright's call log, what it was waiting for when it gave up, and a view that never
-settles names each element still loading (`stillLoading`): a run that fails now and then can be read only from its
-output.
+runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
+in `UVCS_E2E_SHOTS` when set. A run empties its own folder as it starts, never the one around it. A failed step also
+prints Playwright's call log, what it was waiting for when it gave up, and a view that never settles names each
+element still loading (`stillLoading`): a run that fails now and then can be read only from its output.
 
 A step waits for what it is about to use before it types or presses a key, as a person would: the dialog open, the
 result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (Go to file's paths) can take
