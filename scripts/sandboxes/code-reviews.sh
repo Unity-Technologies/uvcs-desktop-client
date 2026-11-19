@@ -8,9 +8,10 @@
 # question, the discarded request), outdated; and comments far down a long file (two lines apart, which the diff's
 # scrollbar ticks as one) and near its end. The timeline gets a rename and a status change with a comment. Change
 # requests suggest changes (a ```suggestion fence, docs/features/code-reviews.md "Suggested changes"): a line replaced,
-# a line deleted, a line replaced by several, one in a file with Windows line ends, and one outdated, its line changed
-# since; a question holds the same fence, which reads as code. Two more reviews have no comments: one of a changeset,
-# one of a shelve. The workspace ends on the review's branch, where its suggestions can be applied.
+# a line deleted, a line replaced by several, a line wrapped in a new condition, one in a file with Windows line ends,
+# and one outdated, its line changed since; a question holds the same fence, which reads as code. Two more reviews have
+# no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
+# can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -176,6 +177,12 @@ checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
 suggest /Assets/Scripts/SwitchFlow.cs 15 'Say where it switched to:
 ```suggestion
         Log($"Switched to {target.Name}");
+```'
+# A line wrapped in a new condition: the line diff alone would show the condition above the line, as if already there.
+suggest /Assets/Scripts/SwitchFlow.cs 14 'Nothing to bring back when there were no changes:
+```suggestion
+        if (shelve != null)
+            workspace.Apply(shelve);
 ```'
 
 cm switch main >/dev/null
