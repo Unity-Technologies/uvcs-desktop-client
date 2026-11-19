@@ -1145,9 +1145,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   the workspace (`WorkspacePill`: its repository's avatar, name and kind chip, the repository under them; it opens
   the switcher, and a right-click its menu, `currentWorkspaceMenu`), a chevron, its branch pill and incoming chip;
   then the search and the account at the end (`WorkspaceTopBar`). A repository opened without a workspace shows
-  itself in the same place (`RepositoryPill`, `RepositoryTopBar`). The home screen adds nothing. The bar is 52px
-  tall (`TITLE_BAR_HEIGHT`, `--topbar-height`, which `tokens.test.ts` keeps equal) and its pills, search and buttons 36px
-  (`--topbar-control-height`), 8px clear of its edges: at 44px they nearly touched them and the bar read cramped. The workspace
+  itself in the same place (`RepositoryPill`, `RepositoryTopBar`). The home screen adds nothing. The bar is 56px
+  tall (`TITLE_BAR_HEIGHT`, `--topbar-height`, which `tokens.test.ts` keeps equal) and its pills, search and buttons 40px
+  (`--topbar-control-height`), 8px clear of its edges: 36px pills in a 44px bar nearly touched them and read cramped,
+  their two lines tight. The workspace
   comes before the branch because the branch belongs to it, the order the official client shows; a workspace card in
   the sidebar, under the branch, read backwards. In a window 1100px wide or less the workspace pill shrinks to
   its avatar (`PlacePill.module.css`), its tooltip saying the rest and, below, the workspace's folder
