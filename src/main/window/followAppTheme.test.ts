@@ -20,7 +20,7 @@ describe('followAppTheme', () => {
     fakeElectron.nativeTheme.shouldUseDarkColors = true;
     fakeElectron.nativeTheme.emit('updated');
 
-    expect(window.titleBarOverlay).toEqual({ color: '#00000000', symbolColor: '#e6edf3', height: 62 });
+    expect(window.titleBarOverlay).toEqual({ color: '#00000000', symbolColor: '#e6edf3', height: 67 });
   });
 
   it('leaves the traffic lights to the OS’s theme (macOS)', () => {

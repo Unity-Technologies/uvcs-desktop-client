@@ -37,7 +37,7 @@ describe('zoomPage', () => {
 
     const zoom = 1.2 ** -0.5;
     for (const window of [first, second]) {
-      expect(window.windowButtonPosition).toEqual({ x: 16, y: 18 });
+      expect(window.windowButtonPosition).toEqual({ x: 16, y: 20 });
       expect(zoomsSent(window)).toEqual([{ zoom }]);
     }
   });
@@ -47,7 +47,7 @@ describe('zoomPage', () => {
 
     zoomPage(window as never, 'in', 'overlay');
 
-    expect(window.titleBarOverlay).toEqual({ color: '#00000000', symbolColor: '#1f2328', height: 57 });
+    expect(window.titleBarOverlay).toEqual({ color: '#00000000', symbolColor: '#1f2328', height: 61 });
     expect(window.windowButtonPosition).toBeNull();
   });
 
@@ -73,7 +73,7 @@ describe('followPageZoom', () => {
 
     window.webContents.emit('dom-ready');
 
-    expect(window.windowButtonPosition).toEqual({ x: 16, y: 25 });
+    expect(window.windowButtonPosition).toEqual({ x: 16, y: 28 });
     expect(zoomsSent(window)).toEqual([]);
   });
 });
