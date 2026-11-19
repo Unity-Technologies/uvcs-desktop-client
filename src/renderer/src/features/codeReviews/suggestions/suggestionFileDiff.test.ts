@@ -20,6 +20,14 @@ describe('suggestionFileDiff', () => {
     expect(diff.hunks[0]!.hunkContent.map((part) => part.type)).toEqual(['context', 'change']);
   });
 
+  it('reads a line wrapped in a new condition as the line replaced, then the lines suggested', () => {
+    const diff = suggestionFileDiff('a.cs', { replacedText: '    run();\n', suggestedText: '    if (ok)\n        run();\n' });
+    expect(diff.hunks[0]!.hunkContent).toEqual([
+      { type: 'change', deletions: 1, deletionLineIndex: 0, additions: 0, additionLineIndex: 0 },
+      { type: 'change', deletions: 0, deletionLineIndex: 1, additions: 2, additionLineIndex: 0 },
+    ]);
+  });
+
   it('diffs a deletion and a suggestion whose replaced lines are unknown as one side alone', () => {
     expect(suggestionFileDiff('a.ts', { replacedText: 'old();\n', suggestedText: '' }).hunks[0]).toMatchObject({ deletionLines: 1, additionLines: 0 });
     expect(suggestionFileDiff('a.ts', { replacedText: '', suggestedText: 'new();\n' }).hunks[0]).toMatchObject({ deletionLines: 0, additionLines: 1 });

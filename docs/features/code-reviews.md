@@ -451,7 +451,11 @@ ranges changes only it.
 - **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
   cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
-  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`): one column, highlighted in
+  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). It reads as GitHub's and
+  GitLab's suggestions do: each changed part as the lines replaced, then the lines suggested, the lines it keeps between
+  the parts (`replacedThenSuggested`). The line diff alone would split a line wrapped in a new `if` into the `if` added
+  above the line removed and added again, indented, which reads as if the `if` were already there; joined, no words
+  are marked between lines it never paired. One column, highlighted in
   the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it: `useSyntaxHighlighter`), every line
   shown, no line numbers (the comment names its lines, and Pierre would number the snippet from 1). A few lines, so
   drawn whole on the main thread: no workers, and no virtualizer, even inside the code's diff, whose own it would
