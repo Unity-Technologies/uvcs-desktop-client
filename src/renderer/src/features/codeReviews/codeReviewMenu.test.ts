@@ -5,6 +5,8 @@ import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+// The destination's dialog renders the branch list; a test says which branch the user picked in it.
+vi.mock('./DestinationDialog', () => ({ pickDestination: vi.fn() }));
 
 const ran = vi.hoisted(() => [] as string[]);
 vi.mock('../branches/branchOperations', async (importOriginal) => ({
@@ -27,6 +29,7 @@ import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
 import { navigation } from '../../app/navigation/navigationStore';
 import { codeReviewPage } from './codeReviewOperations';
 import { codeReviewCopyTexts, codeReviewMenu, reviewPageMenu } from './codeReviewMenu';
+import { pickDestination } from './DestinationDialog';
 
 const ws = '/ws';
 const summary: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
@@ -191,6 +194,46 @@ describe('merging a merge request', () => {
         task: { branch: { name: '/main/release/task', comment: '' }, mergeRequest: { id: 12, title: 'Add login' }, choices: { markReviewed: false, hideBranch: false } },
       },
     ]);
+  });
+});
+
+describe("changing a merge request's destination", () => {
+  const onTask = { kind: 'branch', branch: '/main/task' } as const;
+  const request = (state: 'Draft' | 'Open' | 'Merged' | 'Closed', id = 12) => codeReviewSummary({ id, title: 'Add login', target: onTask, mergeRequest: { state, destination: '/main' } });
+  const destinationEntry = (menu: MenuEntry[]) => actions(menu).find((entry) => entry.id === 'changeDestination');
+
+  it('offers Change destination… for a draft or open one, next to the reviewers', () => {
+    for (const state of ['Draft', 'Open'] as const) {
+      const menu = codeReviewMenu(workspacePlace(ws), [request(state)]);
+      expect(destinationEntry(menu)?.label).toBe('Change destination…');
+      const ids = actions(menu).map((entry) => entry.id);
+      expect(ids.indexOf('changeDestination')).toBe(ids.indexOf('changeReviewers') + 1);
+    }
+  });
+
+  it('offers it in a window with no workspace too: it changes the server, not the disk', () => {
+    expect(destinationEntry(codeReviewMenu(repositoryPlace('game@local'), [request('Open')]))).toBeDefined();
+  });
+
+  it("offers it for no merged or closed one, no code review, several rows, nor a branch whose name isn't read", () => {
+    for (const state of ['Merged', 'Closed'] as const) expect(destinationEntry(codeReviewMenu(workspacePlace(ws), [request(state)]))).toBeUndefined();
+    expect(destinationEntry(codeReviewMenu(workspacePlace(ws), [reviewOf(onTask)]))).toBeUndefined();
+    expect(destinationEntry(codeReviewMenu(workspacePlace(ws), [request('Open'), request('Open', 13)]))).toBeUndefined();
+    expect(destinationEntry(codeReviewMenu(workspacePlace(ws), [{ ...request('Open'), target: undefined }]))).toBeUndefined();
+  });
+
+  it('leaves it out of the page menu: the page changes it in its headline', () => {
+    expect(destinationEntry(reviewPageMenu(workspacePlace(ws), request('Open')))).toBeUndefined();
+  });
+
+  it('changes it to the branch picked, with one call', async () => {
+    fakeApi.answer('codeReviews.setMergeRequestDestination', () => undefined);
+    vi.mocked(pickDestination).mockResolvedValueOnce({ id: 3, name: '/main/release', parent: '/main', comment: '', owner: 'bob', date: '', headChangeset: 8, guid: '', repository: 'game' });
+
+    await destinationEntry(codeReviewMenu(workspacePlace(ws), [request('Draft')]))!.run();
+
+    expect(vi.mocked(pickDestination).mock.lastCall).toEqual([{ place: workspacePlace(ws), title: 'Add login', changeable: { destination: '/main', source: '/main/task' } }]);
+    expect(fakeApi.argsOf('codeReviews.setMergeRequestDestination')).toEqual([[workspacePlace(ws), 12, '/main/release']]);
   });
 });
 
