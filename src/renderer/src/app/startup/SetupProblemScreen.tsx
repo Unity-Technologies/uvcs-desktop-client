@@ -41,7 +41,7 @@ export function SetupProblemScreen({ problem, checking, onRetry }: SetupProblemS
       }
       footer={
         <>
-          <CopyableCommand note="Or set it up in a terminal:" command={cmCommandLine(problem.cmPath, 'configure', window.uvcs.platform)} />
+          <CopyableCommand note={window.uvcs.platform === 'win32' ? 'Or set it up in PowerShell:' : 'Or set it up in a terminal:'} command={cmCommandLine(problem.cmPath, 'configure', window.uvcs.platform)} />
           <OutputBlock output={`$ ${problem.commandLine}\n${problem.output}`} />
         </>
       }

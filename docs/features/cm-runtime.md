@@ -46,11 +46,13 @@ SHA-256 of that file (`CmVersionPin`, `cmBundles.ts`):
 
 On Windows and Linux, not the user data folder, which roams with the profile on Windows and is `~/.config` on Linux;
 on macOS, inside it. Never a cache folder, which the OS may empty: the app couldn't start offline. Each version is
-`<version>/client/cm[.exe]` (`managedCmPath`); `<version>.partial` is a download cut short, and `<version>.unpacking` a bundle being checked.
+`<version>/client/cm[.exe]` (`managedCmPath`); `<version>.partial` is a download cut short, and `<version>.unpacking`
+a bundle being checked.
 
 **Removing old versions** (`CmInstaller.prune`, `storeEntriesToPrune`): once a `cm` first runs in a launch, packaged
 builds delete every version but the pinned one and the newest above it, which an update downloaded to run and keeps
-until it starts, across restarts. Development builds share the store and never prune. What can't be deleted (a `cm` still running from it) waits for the next start. The Windows
+until it starts, across restarts. Development builds share the store and never prune. What can't be deleted (a `cm`
+still running from it) waits for the next start. The Windows
 uninstaller removes the store, but not on an update, which runs the old version's uninstaller too (`installer.nsh`).
 
 ## Setting it up
@@ -66,7 +68,8 @@ uninstaller removes the store, but not on an update, which runs the old version'
    which reads zip, never Git's GNU tar from the PATH), run in the store and given the entries' plain names, so no
    folder name of the user's reaches its command line. Nothing is quarantined: the app downloads it itself.
 3. Runs its `cm version` (`versionReader`, logged in the command log), which must print the pinned version, then
-   renames the folder to `<version>` in one step, tried again for a few seconds while Windows holds a file just written
+   renames the folder to `<version>` in one step, tried again for a few seconds while Windows holds a file just
+   written
    (`RENAME_RETRY_DELAYS_MS`), and deletes the download. Another copy of the app that set up the same version
    meanwhile wins.
 
@@ -92,7 +95,8 @@ page hears it's back online (`useRetryWhenOnline`). The details name the address
 A change of choice (`cmRuntime.use`) restarts `CmClient`'s shells (`relocate`), and every window asks again which `cm`
 runs and whether it's set up (`cmChanged`; `system.cmVersion` answers per executable, and logs the new one). Going
 back to the app's own before it's there keeps the installed one running while it downloads, Settings showing how far
-(`OwnCmSwitch`), and switches once it's set up; a failure leaves the installed one, and the choice, as they were. The app's own `cm` shares the user's `cm` configuration (the config folder, profiles, tokens):
+(`OwnCmSwitch`), and switches once it's set up; a failure leaves the installed one, and the choice, as they were. The
+app's own `cm` shares the user's `cm` configuration (the config folder, profiles, tokens):
 `cm` reads it backward compatibly, so the app's own and an installed one can be switched freely.
 
 ## The setup screen
@@ -121,7 +125,8 @@ never taken as the app's own. A folder named at launch (Windows, Linux) opens on
 workspace asks `cm` (`handleLaunchRequests`, `CmRuntime.whenReady`).
 
 After it, a computer that never had Unity Version Control has no `cm` configuration: `SetupProblemScreen` shows the
-command that sets it up in a terminal with the app's own `cm` named in full, as it isn't on the PATH (`cmCommandLine`).
+command that sets it up in a terminal with the app's own `cm` named in full, as it isn't on the PATH
+(`cmCommandLine`).
 If the app's own `cm` later doesn't start, `CmUnavailableScreen` says this computer stops it, and asks nothing to be
 installed (`cmUnavailableView`).
 
@@ -136,7 +141,8 @@ failure there never stops the update: the new version sets its `cm` up as it sta
 ## Settings
 
 Settings › Workspaces › Command line client (`CmChoiceGroup`, `cmChoiceCards`): "Included with the app" (its version,
-or its download's progress while it replaces the installed one) and "Installed on this computer" (its version and path, from one `cm version` each time Settings opens; "Not found"
+or its download's progress while it replaces the installed one) and "Installed on this computer" (its version and
+path, from one `cm version` each time Settings opens; "Not found"
 and disabled when there is none; in the caution color when older than the app's own). `UVCS_CM_PATH` overrides both:
 neither is checked, and a line says why.
 

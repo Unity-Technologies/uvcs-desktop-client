@@ -1021,7 +1021,8 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    earlier still.
 6. The one thing that gates it: the app's own `cm` not set up yet (the first run, or an update whose `cm` didn't
    download ahead). Then nothing is read ahead, and the window starts on the setup screen (docs/features/cm-runtime.md
-   "The setup screen"); a launch with it there checks one folder exists, nothing more.
+   "The setup screen"); a launch with it there checks one folder exists, nothing more. A folder named at launch opens
+   once it's set up (`CmRuntime.whenReady`).
 7. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
    (`useWindowSessionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
