@@ -4,6 +4,7 @@ import type { AppsApi } from './apps';
 import type { AttributesApi } from './attributes';
 import type { BranchExplorerApi } from './branchExplorer';
 import type { BranchesApi } from './branches';
+import type { CmRuntimeApi } from './cmRuntime';
 import type { ChangesetsApi } from './changesets';
 import type { CodeReviewsApi } from './codeReviews';
 import type { ContentApi } from './content';
@@ -44,6 +45,7 @@ export interface UvcsApi {
   branchExplorer: BranchExplorerApi;
   branches: BranchesApi;
   changesets: ChangesetsApi;
+  cmRuntime: CmRuntimeApi;
   codeReviews: CodeReviewsApi;
   content: ContentApi;
   diff: DiffApi;

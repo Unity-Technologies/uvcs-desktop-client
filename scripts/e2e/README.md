@@ -18,6 +18,12 @@ in `UVCS_E2E_SHOTS` when set. A run empties its own folder as it starts, never t
 prints Playwright's call log, what it was waiting for when it gave up, and a view that never settles names each
 element still loading (`stillLoading`): a run that fails now and then can be read only from its output.
 
+After each smoke test, `setupScreen.mjs` runs the app's first run with no `cm` of its own (docs/features/cm-runtime.md):
+an empty store in a temp folder (`HOME`, `LOCALAPPDATA`, `XDG_DATA_HOME`), a local download site answering 404, and the
+fake `cm` on the PATH as the installed one. It fails unless the window starts on the setup screen, nothing asks `cm`
+for more than its version meanwhile, and "Use the installed one" brings the app to Home and saves that choice. The
+pinned bundles can't be served, so the download itself is left to the unit tests.
+
 A step waits for what it is about to use before it types or presses a key, as a person would: the dialog open, the
 result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (Go to file's paths) can take
 seconds on a CI runner while it takes milliseconds locally: a step that doesn't wait passes on a laptop and fails now

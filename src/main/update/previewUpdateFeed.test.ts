@@ -56,6 +56,7 @@ describe('a preview update, for seeing What’s New while developing', () => {
       beforeRestart: () => undefined,
       push: (status) => pushed.push(status),
       logFailure: () => undefined,
+      cmPrefetchFor: async () => null,
     });
 
     await updates.check();

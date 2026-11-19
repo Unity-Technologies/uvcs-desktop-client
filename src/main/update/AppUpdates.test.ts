@@ -47,6 +47,7 @@ function updates(feed: ReturnType<typeof fakeFeed>, parts: Partial<AppUpdatesDep
     beforeRestart: vi.fn(),
     push: (status) => pushed.push(status),
     logFailure: vi.fn(),
+    cmPrefetchFor: async () => null,
     ...parts,
   };
   return { updates: new AppUpdates(dependencies), pushed, dependencies };
@@ -131,6 +132,57 @@ describe('checking for updates', () => {
 
     expect(feed.checkForUpdates).not.toHaveBeenCalled();
     expect(pushed).toEqual([{ state: 'unavailable' }]);
+  });
+});
+
+describe('an update whose cm is another', () => {
+  /** A prefetch whose download reports `fractions`, then finishes or fails. */
+  function prefetch(fractions: number[], error?: Error) {
+    return {
+      download: vi.fn(async (onProgress: (fraction: number) => void) => {
+        for (const fraction of fractions) onProgress(fraction);
+        if (error) throw error;
+      }),
+    };
+  }
+
+  it('downloads it after the app, each taking half of the progress, and is ready only then', async () => {
+    const cm = prefetch([0.5, 1]);
+    const { updates: app, pushed } = updates(fakeFeed([found], [50, 100]), { cmPrefetchFor: async () => cm });
+    await app.check();
+    expect(pushed).toEqual([
+      { state: 'checking' },
+      { state: 'downloading', version: '1.2.0', percent: 0 },
+      { state: 'downloading', version: '1.2.0', percent: 25 },
+      { state: 'downloading', version: '1.2.0', percent: 50 },
+      { state: 'downloading', version: '1.2.0', percent: 75 },
+      { state: 'downloading', version: '1.2.0', percent: 100 },
+      { state: 'ready', version: '1.2.0', install: 'restart' },
+    ]);
+  });
+
+  it('splits the progress the same way when a macOS build without a Developer ID downloads the disk image itself', async () => {
+    const { updates: app, pushed } = updates(fakeFeed([found]), { needsManualInstall: vi.fn(async () => true), cmPrefetchFor: async () => prefetch([1]) });
+    await app.check();
+    expect(pushed.map((status) => (status.state === 'downloading' ? status.percent : status.state))).toEqual(['checking', 0, 20, 50, 100, 'ready']);
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'installer' });
+  });
+
+  it('is ready anyway when its cm fails to download: the update sets it up as it starts', async () => {
+    const { updates: app, pushed, dependencies } = updates(fakeFeed([found]), { cmPrefetchFor: async () => prefetch([0.2], new Error('net::ERR_INTERNET_DISCONNECTED')) });
+    await app.check();
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'restart' });
+    expect(dependencies.logFailure).toHaveBeenCalledWith(expect.stringContaining("The cm of 1.2.0 didn't download"));
+  });
+
+  it('is ready anyway when the update’s pin can’t be read', async () => {
+    const { updates: app, pushed } = updates(fakeFeed([found]), {
+      cmPrefetchFor: async () => {
+        throw new Error('HTTP 503');
+      },
+    });
+    await app.check();
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'restart' });
   });
 });
 

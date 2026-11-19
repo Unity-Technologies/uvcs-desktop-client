@@ -32,12 +32,13 @@ The app keeps itself up to date from new releases.
 
 ## Get started
 
-1. Install [Unity Version Control](https://unity.com/solutions/version-control) and sign in once, from the official
-   client or by running `cm` in a terminal. The app runs `cm` for you, so it works with every server `cm` can reach,
-   cloud or on-premises.
-2. Open the app and pick a workspace, or drop its folder on the window.
+1. Open the app. The first time, it sets up its own Unity Version Control command line client, `cm`: nothing else to
+   install. It runs `cm` for you, so it works with every server `cm` can reach, cloud or on-premises.
+2. Sign in once, from the official client or by running `cm` in a terminal, then pick a workspace, or drop its folder
+   on the window.
 
-The app finds `cm` in the standard install locations and on your `PATH`. To use another one, set `UVCS_CM_PATH`.
+To run the `cm` installed on your computer instead, choose it in Settings › Workspaces. To run another one, set
+`UVCS_CM_PATH`.
 
 Three shortcuts get you everywhere (Ctrl instead of ⌘ on Windows and Linux):
 

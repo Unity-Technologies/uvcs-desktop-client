@@ -296,3 +296,14 @@ describe('AppIconProgress', () => {
     expect(last(1)).toEqual({ value: -1 });
   });
 });
+
+describe('AppIconProgress while the app’s own cm is set up', () => {
+  it('shows the setup on every window’s icon, and nothing once it ends', () => {
+    const { windows, last } = fakeWindows();
+    const icon = new AppIconProgress(windows, 'win32');
+    icon.cmSetupReported({ mode: 'measured', value: 0.45 });
+    expect([last(1)?.value, last(2)?.value]).toEqual([0.45, 0.45]);
+    icon.cmSetupReported(null);
+    expect(last(1)?.value).toBe(-1);
+  });
+});

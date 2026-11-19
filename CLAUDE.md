@@ -108,7 +108,8 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
 
 ## Commands
 
-npm (Node ≥ 22.12; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). `cm` must be installed and signed in; set `UVCS_CM_PATH` to use a `cm` that isn't found.
+npm (Node ≥ 22.12; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). The app downloads its own `cm` on the first run (docs/features/cm-runtime.md); sign in once with it or an installed
+one. `UVCS_CM_PATH` runs another `cm`, and `UVCS_CM_BUNDLES_URL` downloads the app's own from another site.
 
 ```bash
 npm run dev          # the app with hot reload
@@ -117,10 +118,13 @@ npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts and scripts/build/**/*.test.ts
-npm run e2e          # the smoke test, every view of the real app against a fake cm, over a development build then a production one (~30 s)
+npm run e2e          # the smoke test, every view of the real app against a fake cm, and the first run's setup screen, over a development build then a production one (~40 s)
 npm run dist         # the installer for this OS, into dist/
 npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
+npm run cm:bump <version>   # pin the cm the app runs (cm-version.json), from the published bundles
+npm run cm:check            # check the pinned bundles are still published as pinned
+npm run cm:setup-check      # set the pinned cm up on this machine with the app's own code, as a first run does
 ```
 
 **Done means** a pull request that passes the QA gate (see "Delivering work: a pull request"): `npm run typecheck`

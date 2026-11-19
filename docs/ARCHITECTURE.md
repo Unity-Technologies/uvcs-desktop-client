@@ -38,6 +38,7 @@ you touch:
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
+| `features/cm-runtime.md`                | The app's own `cm`: the pin (`cm-version.json`, `cm:bump`), the store, setting it up, which `cm` runs, the setup screen, updates that bring their `cm`, Settings' choice |
 | `features/accounts.md`                  | Accounts and sign-in: how profiles make accounts (a Unity account per user, one per server), Home's account switcher, Settings › Accounts; sign-in state, one per server: how `cm` says a server needs a sign-in, the gate that keeps commands from it, keeping sessions alive, the sign-in screen, operations refused and offered again |
 
 ## How a request flows
@@ -89,6 +90,9 @@ you touch:
      it arrives with no size limit but one on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past
      `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError` (`CmOutputTooLargeError`; a session starts a new process), and an
      operation keeps the ends of what it prints and is never stopped for its size.
+   The one `cm` run apart from it: `cm version` of a `cm` that doesn't run yet, the app's own just unpacked or an
+   installed one offered in Settings (`versionReader`, docs/features/cm-runtime.md), logged in the command log with
+   `CmClient.logEntry`.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log), and written to the log file ("The log file"); one that ended without an exit code
    (stopped on a prompt, `cm` not found) is logged with -1, which the log and the error dialog word as "Stopped"
@@ -1015,7 +1019,11 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
 5. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
    page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
    earlier still.
-6. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
+6. The one thing that gates it: the app's own `cm` not set up yet (the first run, or an update whose `cm` didn't
+   download ahead). Then nothing is read ahead, and the window starts on the setup screen (docs/features/cm-runtime.md
+   "The setup screen"); a launch with it there checks one folder exists, nothing more. A folder named at launch opens
+   once it's set up (`CmRuntime.whenReady`).
+7. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
    (`useWindowSessionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
    avatars when rows show them, the menu bar (built by the first window opening, then once per burst of window

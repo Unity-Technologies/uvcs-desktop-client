@@ -24,6 +24,8 @@ import { useIssueTrackersFromMain } from '../components/issues/useIssueTrackers'
 import { useTheme } from './settings/useTheme';
 import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
+import { CmSetupScreen } from './cmSetup/CmSetupScreen';
+import { isSettingUpCm, loadCmRuntimeStatus, useCmRuntimeStore } from './cmSetup/cmRuntimeStore';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { ConnectionProblemCard } from './startup/ConnectionProblemCard';
 import { useServerSessionsFromMain } from './signIn/useServerSessions';
@@ -38,19 +40,24 @@ import { useRequestedPlace } from './workspace/useRequestedPlace';
 import { PlaceScreen } from './workspace/PlaceScreen';
 
 export function App() {
+  const settingUpCm = useCmRuntimeStore((state) => isSettingUpCm(state.status));
+  useEffect(() => void loadCmRuntimeStatus(), []);
   return (
     <QueryClientProvider client={queryClient}>
       {/* Inside, so the dialogs and toasts outside it keep working once it shows its error screen. */}
-      <AppErrorBoundary>
-        <Root />
-      </AppErrorBoundary>
-      <CommandPalette />
-      <CommandShortcuts />
+      <AppErrorBoundary>{settingUpCm ? <CmSetupScreen /> : <Root />}</AppErrorBoundary>
+      {/* Nothing that may ask `cm` while it's set up: the palette's commands, the cards' checks. */}
+      {!settingUpCm && <CommandPalette />}
+      {!settingUpCm && <CommandShortcuts />}
       <DialogHost />
       <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />}>
-        <ConnectionProblemCard />
-        <GravatarPrompt />
-        <UpdateCard />
+        {!settingUpCm && (
+          <>
+            <ConnectionProblemCard />
+            <GravatarPrompt />
+            <UpdateCard />
+          </>
+        )}
       </ToastHost>
       <TooltipLayer />
     </QueryClientProvider>
@@ -75,9 +82,10 @@ function Root() {
   const isPageWindow = usePageWindow((state) => state.isPageWindow);
   useForgetLeftPlace(place);
   const cm = useCmAvailability();
+  const cmSource = useCmRuntimeStore((state) => (state.status.kind === 'ready' ? state.status.source : 'managed'));
   const setup = useSetupCheck(cm.isSuccess);
 
-  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
+  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} source={cmSource} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
   // The app shows meanwhile: the check is local and takes a moment. A server out of reach never stops the app: the
   // open workspace's server is checked apart (`ConnectionProblemCard`, and `SignInCover` for a sign-in it needs), and
   // the home screen asks no server at all.

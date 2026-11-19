@@ -1,11 +1,12 @@
 import type { PendingChangesOnSwitch } from '@shared/domain/switchWithChanges';
 import { Checkbox } from '../../ui/Checkbox';
 import { SegmentedControl } from '../../ui/SegmentedControl';
+import { CmChoiceGroup } from './CmChoiceGroup';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
 import { SettingsGroup } from './SettingsGroup';
 import { useSettings, useUpdateSettings } from './useSettings';
 
-/** Where new workspaces go, what a switch does with pending changes, and incoming notifications. */
+/** Where new workspaces go, what a switch does with pending changes, incoming notifications, and which client runs. */
 export function WorkspacesPane() {
   const settings = useSettings();
   const updateSettings = useUpdateSettings();
@@ -40,6 +41,8 @@ export function WorkspacesPane() {
           onChange={(notifyOnIncoming) => updateSettings({ notifyOnIncoming })}
         />
       </SettingsGroup>
+
+      <CmChoiceGroup />
     </>
   );
 }

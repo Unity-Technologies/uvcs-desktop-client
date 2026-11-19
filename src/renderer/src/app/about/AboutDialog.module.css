@@ -71,8 +71,21 @@
 }
 
 .property dd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   margin: 0;
   font-variant-numeric: tabular-nums;
+}
+
+/* The cm's row (its version, which one it is, its button) and the platform's take the whole width. */
+.wide {
+  grid-column: 1 / -1;
+}
+
+/* A button beside a value (the cm's Reveal in Finder) takes no more height than the row's text. */
+.property dd button {
+  margin: -4px -6px -4px 0;
 }
 
 /* Five links don't fit the card's width in one row: they wrap, centered, rather than spill over its edges. */

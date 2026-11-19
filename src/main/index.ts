@@ -7,7 +7,8 @@ import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { readBranchNames } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
-import { locateCm } from './cm/locateCm';
+import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
+import { createCmRuntime } from './cmRuntime/createCmRuntime';
 import { warnOnOrganizationIds } from './cm/organizationIds';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
 import { findWorkspaceRoot } from './cm/workspaceRoot';
@@ -57,9 +58,20 @@ import { WorkspaceServers } from './workspace/WorkspaceServers';
 import { readWorkspaceOrigin } from './cm/workspaceStatus';
 
 const userData = app.getPath('userData');
-// Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
-const cm = new CmClient(locateCm, join(userData, 'outside-workspaces'));
 const settings = openSettings(userData);
+// Which `cm` runs, and the app's own set up when it isn't there yet (docs/features/cm-runtime.md).
+const cmRuntime = createCmRuntime({
+  settings,
+  prunes: app.isPackaged,
+  relocated: () => cm.relocate(),
+  logCommand: (entry) => cm.logEntry(entry),
+  statusChanged: (status) => {
+    sendEvent('cmRuntimeChanged', status);
+    appIcon.cmSetupReported(cmSetupIconProgress(status));
+  },
+});
+// Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
+const cm = new CmClient(() => cmRuntime.cmPath(), join(userData, 'outside-workspaces'));
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it; each one's server
 // remembered as it's read, for the sign-in gate.
 const workspaceServers = new WorkspaceServers((directory) => readWorkspaceOrigin(cm, directory));
@@ -88,11 +100,12 @@ const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
   beforeRestart: () => quitting.restartToInstall(),
-});
+}, cmRuntime);
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installMenuBar(),
+  cmSetup: () => cmRuntime.setupRunning(),
   onClosed: (viewer) => watchers.release(viewer),
   onRepositoryLeft: (repository) => {
     branchNames.forget(repositoryPlace(repository));
@@ -110,7 +123,7 @@ const closing = new ClosingWithWrites({
   kept: (windowId) => appIcon.windowKept(windowId),
   close: (windowId) => BrowserWindow.fromId(windowId)?.close(),
 });
-const installMenuBar = appMenuInstaller(windows, updates, appLog.file);
+const installMenuBar = appMenuInstaller(windows, updates, appLog.file, cmRuntime);
 const quitting = new Quitting({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
@@ -153,6 +166,7 @@ const api = createServices({
   handedOverDiffs: new HandedOverDiffs(),
   headers,
   updates,
+  cmRuntime,
   workspaceCopies,
   revisionCat,
   revisionDownloads,
@@ -172,13 +186,15 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   void repositoryPaths.removeLeftOvers();
   void removeLeftOverTempDirectories();
   registerApi(api, early);
+  // `net` downloads only once Electron is ready.
+  cmRuntime.start();
   followAppTheme(settings);
   handleQuitting(quitting);
   installDockMenu(windows);
   updates.checkPeriodically();
   registerAsLinkHandler();
   const openFirst = (): void => {
-    openFirstWindow({ cm, windows, early, settings, commandLog }, readAhead);
+    openFirstWindow({ cm, windows, early, settings, commandLog, cmReady: () => cmRuntime.isReady() }, readAhead);
     links.windowsOpened();
   };
   void launched.then(openFirst, openFirst);
@@ -189,10 +205,11 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
 if (isTheRunningApp()) {
   appLog.write(startedText({ appVersion: app.getVersion(), platform: process.platform, osRelease: release(), arch: process.arch, electronVersion: process.versions.electron }));
   logAppHealth(app, appLog);
-  const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
+  const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder), cmRuntime);
   const links = receiveLinks(windows);
-  // `cm` doesn't need Electron ready: the first screen's commands run while it gets there.
-  const readAhead = readFirstScreenAhead({ cm, windows, early, settings }, launchNamesAFolder());
+  // `cm` doesn't need Electron ready: the first screen's commands run while it gets there. Not while the app's own `cm`
+  // still has to be set up: the window shows the setup first, and reads its screen once it's done.
+  const readAhead = cmRuntime.isReady() ? readFirstScreenAhead({ cm, windows, early, settings }, launchNamesAFolder()) : null;
   void app.whenReady().then(() => start(launched, readAhead, links));
 } else {
   app.quit();

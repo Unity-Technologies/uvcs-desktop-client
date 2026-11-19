@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
 import { OutputBlock } from '../../ui/OutputBlock';
 import { ScreenMessage } from '../../ui/ScreenMessage';
+import { cmCommandLine } from './cmCommandLine';
 import { CopyableCommand } from './CopyableCommand';
 import { DOWNLOAD_URL } from './installGuidance';
 
@@ -40,7 +41,7 @@ export function SetupProblemScreen({ problem, checking, onRetry }: SetupProblemS
       }
       footer={
         <>
-          <CopyableCommand note="Or set it up in a terminal:" command="cm configure" />
+          <CopyableCommand note={window.uvcs.platform === 'win32' ? 'Or set it up in PowerShell:' : 'Or set it up in a terminal:'} command={cmCommandLine(problem.cmPath, 'configure', window.uvcs.platform)} />
           <OutputBlock output={`$ ${problem.commandLine}\n${problem.output}`} />
         </>
       }

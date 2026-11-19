@@ -11,16 +11,20 @@ interface SettingsChoiceProps {
   tip?: string;
   selected: boolean;
   onSelect: () => void;
+  /** Can't be chosen now (not there, still looked for): shown, greyed. */
+  disabled?: boolean;
+  /** Its description draws the eye: it may not do all it should. */
+  warning?: boolean;
 }
 
 /** One card of a settings radio group (the theme, the merge tool), checked when selected. */
-export function SettingsChoice({ icon, label, description, tip, selected, onSelect }: SettingsChoiceProps) {
+export function SettingsChoice({ icon, label, description, tip, selected, onSelect, disabled = false, warning = false }: SettingsChoiceProps) {
   return (
-    <button type="button" role="radio" aria-checked={selected} className={styles.choice} data-selected={selected} onClick={onSelect}>
+    <button type="button" role="radio" aria-checked={selected} className={styles.choice} data-selected={selected} disabled={disabled} onClick={onSelect}>
       {icon}
       <span className={styles.choiceText}>
         <span className={styles.choiceLabel}>{label}</span>
-        <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={tip}>
+        <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={tip} data-warning={warning || undefined}>
           {description}
         </span>
       </span>

@@ -66,6 +66,20 @@ describe('the cm version', () => {
   });
 });
 
+describe('the cm version after choosing another cm', () => {
+  it('asks the newly chosen cm, and logs where it is', async () => {
+    let answer = '11.0.16.10659\n';
+    const { service, cm, logged, lines } = system({ version: () => answer });
+    await service.cmVersion();
+    (cm as { executable: string }).executable = '/usr/local/bin/cm';
+    answer = '11.0.16.9000\n';
+
+    expect(await service.cmVersion()).toBe('11.0.16.9000');
+    expect(lines()).toEqual(['version', 'version']);
+    expect(logged).toEqual(['cm 11.0.16.10659 at cm', 'cm 11.0.16.9000 at /usr/local/bin/cm']);
+  });
+});
+
 describe('a window’s unexpected error', () => {
   it('goes to the log file with its stack', async () => {
     const { service, logged } = system({});

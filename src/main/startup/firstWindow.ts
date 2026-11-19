@@ -16,6 +16,11 @@ interface FirstWindow extends FirstScreenSources {
   windows: Pick<WorkspaceWindows, 'firstWorkspace' | 'openFirst'>;
   early: Pick<EarlyCalls, 'start' | 'expireUntaken'>;
   commandLog: Pick<CommandLogRelay, 'windowsOpened'>;
+  /**
+   * Whether `cm` can run (`CmRuntime.isReady`): not while the app's own is set up, which the window shows first; its
+   * screen is read once that's done, by the page.
+   */
+  cmReady: () => boolean;
 }
 
 /**
@@ -53,12 +58,13 @@ export function readFirstScreenAhead({ cm, windows, early, settings }: FirstScre
 
 /**
  * Opens the first window at launch (`openFirst`), its first screen read ahead (`readFirstScreenAhead`) unless that was
- * another or none, which is read now. The answers its page doesn't take then expire, and the commands logged before
+ * another or none, which is read now (once `cm` can run). The answers its page doesn't take then expire, and the commands logged before
  * it opened reach its command log.
  */
-export function openFirstWindow({ cm, windows, early, settings, commandLog }: FirstWindow, readAhead: FirstScreenRead): void {
+export function openFirstWindow({ cm, windows, early, settings, commandLog, cmReady }: FirstWindow, readAhead: FirstScreenRead): void {
   const workspacePath = windows.firstWorkspace();
-  if (readAhead === null || readAhead.workspacePath !== workspacePath) readScreenOf(workspacePath, { cm, early, settings });
+  const readNow = readAhead === null || readAhead.workspacePath !== workspacePath;
+  if (readNow && cmReady()) readScreenOf(workspacePath, { cm, early, settings });
   windows.openFirst();
   early.expireUntaken();
   commandLog.windowsOpened();
