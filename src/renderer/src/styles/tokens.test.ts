@@ -3,14 +3,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { APP_ICON_COLORS } from '@shared/appMark';
-import { WINDOW_BACKGROUND } from '@shared/windowChrome';
+import { TITLE_BAR_HEIGHT, WINDOW_BACKGROUND } from '@shared/windowChrome';
 import { AVATAR_COLORS } from '../lib/avatarColors';
 import { HEADER_HOVER_TINT, HEADER_TINT, headerTextOn } from '../features/branchExplorer/canvas/graphPalette';
 import { BRANCH_HUES, LINE_TONE } from '../features/branchExplorer/model/branchHue';
 import { STABLE_HUES } from '../lib/stableHue';
 import { composite, contrastRatio, hslColor, parseColor, themeTokens } from './contrast';
 
-const themes = themeTokens(readFileSync(join(__dirname, 'tokens.css'), 'utf8'));
+const css = readFileSync(join(__dirname, 'tokens.css'), 'utf8');
+const themes = themeTokens(css);
 
 /** The opaque backgrounds text sits on. */
 const SURFACES = ['--bg-app', '--bg-sidebar', '--bg-surface', '--bg-surface-raised', '--bg-subtle', '--bg-input', '--bg-code'];
@@ -60,6 +61,10 @@ function ratio(tokens: Record<string, string>, foreground: string, background: s
   const behind = parseColor(tokens[background]!).rgb;
   return contrastRatio(composite(parseColor(tokens[foreground]!), behind), behind);
 }
+
+it('draws the top bar as tall as the window centers its traffic lights and caption buttons in (`TITLE_BAR_HEIGHT`)', () => {
+  expect(css).toMatch(new RegExp(`--topbar-height: ${TITLE_BAR_HEIGHT}px;`));
+});
 
 describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
   it("is the window's own background (`WINDOW_BACKGROUND`), so no frame shows another color", () => {
