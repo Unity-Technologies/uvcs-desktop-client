@@ -1,4 +1,4 @@
-import { compareCmVersions, type CmChoice, type CmSource, type InstalledCm } from '@shared/domain/cmRuntime';
+import { compareCmVersions, type CmChoice, type CmSource, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
 
 /** One card of Settings' choice of which Unity Version Control the app runs (`cmChoice`). */
 export interface CmChoiceCard {
@@ -20,11 +20,20 @@ export interface CmChoiceFacts {
   installed: InstalledCm | null | undefined;
   /** The one running now. */
   source: CmSource;
+  /** The app's own downloading to replace the installed one, or why it couldn't. */
+  switchingToOwn?: OwnCmSwitch;
 }
 
-function managedCard({ pinnedVersion, source }: CmChoiceFacts): CmChoiceCard {
+function managedCard({ pinnedVersion, source, switchingToOwn }: CmChoiceFacts): CmChoiceCard {
   const base = { choice: 'managed' as const, label: 'Included with the app', selected: source === 'managed', warning: false };
   if (pinnedVersion === null) return { ...base, description: 'Not available on this computer', disabled: true };
+  if (switchingToOwn?.kind === 'downloading') {
+    const percent = switchingToOwn.fraction === null ? '' : ` ${Math.floor(switchingToOwn.fraction * 100)}%`;
+    return { ...base, description: `Downloading version ${pinnedVersion}…${percent}`, disabled: true };
+  }
+  if (switchingToOwn?.kind === 'failed') {
+    return { ...base, description: 'Couldn’t download it. Choose it to try again.', tip: switchingToOwn.detail, disabled: false, warning: true };
+  }
   return { ...base, description: `Version ${pinnedVersion}, updated with the app`, disabled: false };
 }
 

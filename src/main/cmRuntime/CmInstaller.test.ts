@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rename as fsRename, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CM_BUNDLES_URL, cmBundleUrl, type CmBundle } from './cmBundles';
 import { cmInstallFailureOf, CmInstallError } from './cmInstallFailure';
-import { CmInstaller, type CmInstallProgress } from './CmInstaller';
+import { CmInstaller, RENAME_RETRY_DELAYS_MS, type CmInstallProgress } from './CmInstaller';
 import { fakeBundleSite, sha256Of } from './testing/fakeBundleSite';
 
 const VERSION = '11.0.16.10659';
@@ -14,8 +14,9 @@ const BUNDLE: CmBundle = { file: 'client-linux.tar.gz', sha256: sha256Of(ARCHIVE
 const CM = process.platform === 'win32' ? 'cm.exe' : 'cm';
 
 interface Setup {
-  /** What the unpacked `cm` prints as its version. */
-  printedVersion?: string;
+  /** What the unpacked `cm` prints as its version, or the error running it fails with. */
+  printedVersion?: string | Error;
+  rename?: (from: string, to: string) => Promise<void>;
   unpack?: (archive: string, destination: string) => Promise<void>;
   site?: ReturnType<typeof fakeBundleSite>;
 }
@@ -24,6 +25,7 @@ async function installerWith(setup: Setup = {}) {
   const store = join(await mkdtemp(join(tmpdir(), 'cm-store-')), 'cm');
   const site = setup.site ?? fakeBundleSite({ [cmBundleUrl(VERSION, BUNDLE.file)]: ARCHIVE }, {}, 8);
   const unpacked: string[] = [];
+  const waits: number[] = [];
   const installer = new CmInstaller({
     store,
     platform: process.platform,
@@ -36,9 +38,14 @@ async function installerWith(setup: Setup = {}) {
         await mkdir(join(destination, 'client'));
         await writeFile(join(destination, 'client', CM), 'cm');
       }),
-    cmVersionOf: async () => `${setup.printedVersion ?? VERSION}\n`,
+    cmVersionOf: async () => {
+      if (setup.printedVersion instanceof Error) throw setup.printedVersion;
+      return `${setup.printedVersion ?? VERSION}\n`;
+    },
+    rename: setup.rename,
+    wait: async (ms) => void waits.push(ms),
   });
-  return { installer, store, site, unpacked };
+  return { installer, store, site, unpacked, waits };
 }
 
 describe('CmInstaller', () => {
@@ -97,17 +104,49 @@ describe('CmInstaller', () => {
     expect(installer.isInstalled(VERSION)).toBe(false);
   });
 
-  it('prunes every version but the ones kept', async () => {
+  it('fails as blocked when the cm it unpacked doesn’t run, and keeps the download for Try Again without asking again', async () => {
+    const setup = { printedVersion: new Error('spawn EACCES') as string | Error };
+    const { installer, store, site } = await installerWith(setup);
+    await expect(installer.install(VERSION, BUNDLE, () => undefined).catch(cmInstallFailureOf)).resolves.toBe('blocked');
+    expect(await readdir(store)).toEqual([`${VERSION}.partial`]);
+    setup.printedVersion = VERSION;
+    await installer.install(VERSION, BUNDLE, () => undefined);
+    expect(site.requests).toHaveLength(1);
+    expect(installer.isInstalled(VERSION)).toBe(true);
+  });
+
+  it('tries the final rename again while Windows holds a file for a moment', async () => {
+    let refusals = 2;
+    const rename = async (from: string, to: string) => {
+      if (refusals-- > 0) throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+      await fsRename(from, to);
+    };
+    const { installer, waits } = await installerWith({ rename });
+    await installer.install(VERSION, BUNDLE, () => undefined);
+    expect(installer.isInstalled(VERSION)).toBe(true);
+    expect(waits).toEqual(RENAME_RETRY_DELAYS_MS.slice(0, 2));
+  });
+
+  it('fails as a folder it can’t write once the rename is refused every time', async () => {
+    const rename = async () => {
+      throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+    };
+    const { installer, waits } = await installerWith({ rename });
+    await expect(installer.install(VERSION, BUNDLE, () => undefined).catch(cmInstallFailureOf)).resolves.toBe('notWritable');
+    expect(waits).toEqual(RENAME_RETRY_DELAYS_MS);
+  });
+
+  it('prunes every older version', async () => {
     const { installer, store } = await installerWith();
     await installer.install(VERSION, BUNDLE, () => undefined);
-    for (const name of ['11.0.16.9000', '11.0.16.10700.partial', 'notes']) await mkdir(join(store, name));
-    await installer.prune([VERSION]);
+    for (const name of ['11.0.16.9000', '11.0.16.10600.partial', 'notes']) await mkdir(join(store, name));
+    await installer.prune(VERSION);
     expect((await readdir(store)).sort()).toEqual([VERSION, 'notes'].sort());
     expect(existsSync(installer.cmPathOf(VERSION))).toBe(true);
   });
 
   it('prunes nothing when the store doesn’t exist yet', async () => {
     const { installer } = await installerWith();
-    await expect(installer.prune([VERSION])).resolves.toBeUndefined();
+    await expect(installer.prune(VERSION)).resolves.toBeUndefined();
   });
 });

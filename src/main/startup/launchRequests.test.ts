@@ -39,11 +39,13 @@ function setUp() {
     lookups.push({ answer, resolve });
     return answer;
   };
-  /** `cm` answers the oldest lookup still waiting; settles once the app has acted on the answer. */
+  /** `cm` answers the oldest lookup still waiting (asked once `cm` runs); settles once the app has acted on the answer. */
   const found = async (root: string | null): Promise<void> => {
+    for (let turn = 0; turn < 5 && lookups.length === 0; turn++) await Promise.resolve();
     const lookup = lookups.shift()!;
     lookup.resolve(root);
     await lookup.answer;
+    for (let turn = 0; turn < 5; turn++) await Promise.resolve();
   };
   const requestedIn = (index: number): string | null => {
     const place = windows.takeRequested(fakeElectron.windows()[index]!.webContents.id);
@@ -52,10 +54,29 @@ function setUp() {
   return { windows, findRoot, found, requestedIn, lastUsed };
 }
 
+/** A `cm` that runs. */
+const READY_CM = { isReady: () => true, whenReady: async () => undefined };
+
 describe('handleLaunchRequests', () => {
+  it('opens the first window at once while the app’s own cm is set up, and the folder’s workspace once it runs', async () => {
+    const { windows, findRoot, found } = setUp();
+    let cmReady!: () => void;
+    const cm = { isReady: () => false, whenReady: () => new Promise<void>((resolve) => (cmReady = resolve)) };
+    const launched = handleLaunchRequests(windows, findRoot, cm, { argv: ['uvcs', join(GAME, 'src')], workingDirectory: GAME });
+
+    fakeElectron.app.ready = true;
+    await launched;
+    windows.openFirst();
+    expect(fakeElectron.windows()).toHaveLength(1);
+    cmReady();
+    await found(GAME);
+    // The first window opened on the last workspace used, before `cm` could find the folder's: it opens in its own.
+    expect(windows.shownWorkspaces()).toContain(GAME);
+  });
+
   it('opens the workspace the launch names in the first window, however long cm takes to find it', async () => {
     const { windows, findRoot, found, requestedIn } = setUp();
-    const launched = handleLaunchRequests(windows, findRoot, { argv: ['uvcs', join(GAME, 'src')], workingDirectory: GAME });
+    const launched = handleLaunchRequests(windows, findRoot, READY_CM, { argv: ['uvcs', join(GAME, 'src')], workingDirectory: GAME });
 
     fakeElectron.app.ready = true;
     await found(GAME);
@@ -67,7 +88,7 @@ describe('handleLaunchRequests', () => {
 
   it('opens the last workspace used when the launch names a folder outside any workspace', async () => {
     const { windows, findRoot, found, requestedIn, lastUsed } = setUp();
-    const launched = handleLaunchRequests(windows, findRoot, { argv: ['uvcs', tmpdir()], workingDirectory: GAME });
+    const launched = handleLaunchRequests(windows, findRoot, READY_CM, { argv: ['uvcs', tmpdir()], workingDirectory: GAME });
 
     fakeElectron.app.ready = true;
     await found(null);
@@ -79,7 +100,7 @@ describe('handleLaunchRequests', () => {
 
   it('opens the workspace a later launch names, and brings the app forward when it names none', async () => {
     const { windows, findRoot, found, requestedIn } = setUp();
-    handleLaunchRequests(windows, findRoot, { argv: ['uvcs'], workingDirectory: GAME });
+    handleLaunchRequests(windows, findRoot, READY_CM, { argv: ['uvcs'], workingDirectory: GAME });
     fakeElectron.app.ready = true;
     windows.openFirst();
     requestedIn(0);

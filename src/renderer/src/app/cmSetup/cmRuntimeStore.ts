@@ -46,18 +46,22 @@ export function isSettingUpCm(status: CmRuntimeStatus): boolean {
   return status.kind !== 'ready';
 }
 
-/** Whether another `cm` runs now: one that just became ready, or another source (Settings' choice). */
-export function cmChanged(before: CmRuntimeStatus, after: CmRuntimeStatus): boolean {
+/**
+ * Whether another `cm` runs now: one that just became ready, or another source (Settings' choice). A window that
+ * started ready only guessed its source (`startingStatus`): its first answer changes nothing.
+ */
+export function cmChanged(before: CmRuntimeStatus, after: CmRuntimeStatus, heardFromMain: boolean): boolean {
   if (after.kind !== 'ready') return false;
-  return before.kind !== 'ready' || before.source !== after.source;
+  if (before.kind !== 'ready') return true;
+  return heardFromMain && before.source !== after.source;
 }
 
 function receive(status: CmRuntimeStatus): void {
-  const before = useCmRuntimeStore.getState().status;
+  const { status: before, heardFromMain } = useCmRuntimeStore.getState();
   useCmRuntimeStore.setState(({ rate }) => ({ status, heardFromMain: true, rate: rateAfter(rate, status, performance.now()) }));
   // What asked `cm` before it could run (a window's first reads) failed with "not found", and another one may be
   // another version: asked again now.
-  if (cmChanged(before, status)) {
+  if (cmChanged(before, status, heardFromMain)) {
     void queryClient.resetQueries({ queryKey: queryKeys.cmVersion });
     void queryClient.resetQueries({ queryKey: queryKeys.cmSetup });
   }

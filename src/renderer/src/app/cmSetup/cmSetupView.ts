@@ -1,4 +1,4 @@
-import { CM_SETUP_DOWNLOAD_SHARE, type CmInstallFailure, type CmRuntimeStatus, type InstalledCm } from '@shared/domain/cmRuntime';
+import { CM_SETUP_DOWNLOAD_SHARE, retriesByItself, type CmInstallFailure, type CmRuntimeStatus, type InstalledCm } from '@shared/domain/cmRuntime';
 import { formatSize } from '../../lib/formatDate';
 
 /**
@@ -46,12 +46,13 @@ export function timeLeftText(seconds: number): string {
 
 const REASONS: Readonly<Record<CmInstallFailure, string>> = {
   offline: 'This computer is offline. Setup goes on by itself once it’s back online.',
-  unreachable: 'The download site didn’t answer. Setup tries again in a moment.',
+  unreachable: 'The download site didn’t answer. Setup tries again by itself.',
   proxyAuthentication: 'A proxy on this network asks for a sign-in. Ask whoever runs the network to allow downloads from plasticscm.com.',
   diskFull: 'The disk is full. Free some space, about 400 MB, and try again.',
   notWritable: 'The app can’t write to its folder on this computer. Check that it’s yours to write to, and try again.',
   damaged: 'What arrived isn’t what was published. Try again.',
   unavailable: 'This version isn’t available to download right now.',
+  blocked: 'It downloaded, but this computer didn’t let it run. Its security settings may block apps in your user folder: ask whoever manages it.',
 };
 
 export function cmSetupViewOf(status: CmRuntimeStatus, secondsLeft: number | null): CmSetupView | null {
@@ -61,7 +62,7 @@ export function cmSetupViewOf(status: CmRuntimeStatus, secondsLeft: number | nul
       kind: 'failed',
       title: status.firstRun ? 'Unity Version Control couldn’t be set up' : 'Unity Version Control couldn’t be updated',
       reason: REASONS[status.failure],
-      retriesByItself: status.failure === 'offline' || status.failure === 'unreachable',
+      retriesByItself: retriesByItself(status.failure),
       installedCm: status.installedCm,
       detail: status.detail,
     };

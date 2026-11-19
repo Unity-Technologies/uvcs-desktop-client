@@ -35,10 +35,14 @@ describe('isSettingUpCm', () => {
 
 describe('cmChanged', () => {
   it('says another cm runs once the setup finishes, or the source changes', () => {
-    expect(cmChanged(downloading(0), READY)).toBe(true);
-    expect(cmChanged(READY, { kind: 'ready', source: 'installed' })).toBe(true);
-    expect(cmChanged(READY, READY)).toBe(false);
-    expect(cmChanged(READY, downloading(0))).toBe(false);
+    expect(cmChanged(downloading(0), READY, false)).toBe(true);
+    expect(cmChanged(READY, { kind: 'ready', source: 'installed' }, true)).toBe(true);
+    expect(cmChanged(READY, READY, true)).toBe(false);
+    expect(cmChanged(READY, downloading(0), true)).toBe(false);
+  });
+
+  it('changes nothing on the first answer of a window that started ready, whose source was a guess', () => {
+    expect(cmChanged(READY, { kind: 'ready', source: 'installed' }, false)).toBe(false);
   });
 });
 

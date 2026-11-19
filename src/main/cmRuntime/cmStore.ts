@@ -1,9 +1,11 @@
 import { posix, win32 } from 'node:path';
+import { compareCmVersions } from '@shared/domain/cmRuntime';
 
 /**
- * The folder where the app keeps its `cm`, one subfolder per version (docs/features/cm-runtime.md "The store"). Not
- * the user data folder: on Windows that one roams with the user's profile, and 260 MB has no place there; on Linux it
- * is ~/.config, for settings. Not a cache folder either: the OS may empty those, and the app couldn't start offline.
+ * The folder where the app keeps its `cm`, one subfolder per version (docs/features/cm-runtime.md "The store"). On
+ * Windows and Linux not the user data folder: on Windows that one roams with the user's profile, and 260 MB has no
+ * place there; on Linux it is ~/.config, for settings. On macOS it is inside it, where apps keep what they need. Never
+ * a cache folder: the OS may empty those, and the app couldn't start offline.
  *
  * - Windows: `%LOCALAPPDATA%\Unity Version Control\cm`
  * - macOS:   `~/Library/Application Support/Unity Version Control/cm`
@@ -45,9 +47,15 @@ function versionOfEntry(name: string): string {
 }
 
 /**
- * The entries of the store to delete: every version but the ones kept (the one this app runs, and the one a downloaded
- * update runs), finished or not. Anything else in the folder is left alone.
+ * The entries of the store to delete: every version but the pinned one and the newest above it (one an update
+ * downloaded to run, kept across restarts until it starts: docs/features/cm-runtime.md "Updates bring their cm"),
+ * finished or not. Anything else in the folder is left alone.
  */
-export function storeEntriesToPrune(names: readonly string[], keep: readonly string[]): string[] {
-  return names.filter((name) => /^\d+\.\d+\.\d+\.\d+(\.partial|\.unpacking)?$/.test(name) && !keep.includes(versionOfEntry(name))).sort();
+export function storeEntriesToPrune(names: readonly string[], pinned: string): string[] {
+  const versions = names.filter((name) => VERSION_ENTRY.test(name)).map(versionOfEntry);
+  const newer = versions.filter((version) => compareCmVersions(version, pinned) > 0).sort(compareCmVersions);
+  const keep = [pinned, ...newer.slice(-1)];
+  return names.filter((name) => VERSION_ENTRY.test(name) && !keep.includes(versionOfEntry(name))).sort();
 }
+
+const VERSION_ENTRY = /^\d+\.\d+\.\d+\.\d+(\.partial|\.unpacking)?$/;

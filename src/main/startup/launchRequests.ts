@@ -7,6 +7,15 @@ import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 /** The root of the workspace holding a folder; null outside any workspace (`findWorkspaceRoot`). */
 type FindWorkspaceRoot = (folder: string) => Promise<string | null>;
 
+/**
+ * Whether `cm` can run (`CmRuntime`): finding a folder's workspace asks it, so while the app's own `cm` is set up the
+ * lookup waits for it.
+ */
+export interface CmReadiness {
+  isReady(): boolean;
+  whenReady(): Promise<void>;
+}
+
 /** How this process was launched: its command line and the folder it was run in. */
 interface Launch {
   argv: readonly string[];
@@ -25,17 +34,26 @@ export function isTheRunningApp(): boolean {
  * Opens what a launch of the app asks for: the workspace holding the folder this launch or a later one names (a later
  * launch naming none brings the app forward), and one picked from the Dock's recent workspaces. Called before the app
  * is ready, as that request may be what launched it. Settles once this launch's own request is known: the first window
- * waits for it (`openFirst`), as `cm` may find the workspace after Electron is ready.
+ * waits for it (`openFirst`), as `cm` may find the workspace after Electron is ready; but not for the app's own `cm`
+ * being set up, which the window shows meanwhile.
  */
 export async function handleLaunchRequests(
   windows: WorkspaceWindows,
   findRoot: FindWorkspaceRoot,
+  cm: CmReadiness,
   launch: Launch = { argv: process.argv, workingDirectory: process.cwd() },
 ): Promise<void> {
-  app.on('second-instance', (_event, argv, workingDirectory) => openLaterLaunchRequest(windows, findRoot, { argv, workingDirectory }));
+  const findWhenReady: FindWorkspaceRoot = (folder) => cm.whenReady().then(() => findRoot(folder));
+  app.on('second-instance', (_event, argv, workingDirectory) => openLaterLaunchRequest(windows, findWhenReady, { argv, workingDirectory }));
   handleRecentDocumentRequests(windows);
   const folder = namedFolder(launch);
-  const root = folder && (await findRoot(folder));
+  if (!folder) return;
+  if (!cm.isReady()) {
+    // The first window opens on the setup at once; the folder's workspace opens in it once `cm` can find it.
+    void findWhenReady(folder).then((root) => root && windows.requestWorkspace(root));
+    return;
+  }
+  const root = await findRoot(folder);
   if (root) windows.requestAtLaunch(root);
 }
 

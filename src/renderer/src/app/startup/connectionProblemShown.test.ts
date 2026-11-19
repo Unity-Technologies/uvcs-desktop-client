@@ -31,7 +31,7 @@ describe('serverToCheck', () => {
 
   it('checks none while the setup check runs, or when cm has no configuration', () => {
     expect(serverToCheck(undefined, 'codice@cloud')).toBeUndefined();
-    expect(serverToCheck({ commandLine: 'cm profile list', output: 'not correctly configured' }, 'codice@cloud')).toBeUndefined();
+    expect(serverToCheck({ commandLine: 'cm profile list', output: 'not correctly configured', cmPath: 'cm' }, 'codice@cloud')).toBeUndefined();
   });
 
   it('checks none on the home screen, where no workspace is open', () => {
