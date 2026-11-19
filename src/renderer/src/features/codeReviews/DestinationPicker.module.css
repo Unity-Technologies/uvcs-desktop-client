@@ -42,3 +42,14 @@
   flex: none;
   color: var(--text-tertiary);
 }
+
+/* The chip look (`BranchChip`'s), whose hover it keeps; open, it stays tinted as under the pointer. */
+.chip[data-state='open'] {
+  border-color: var(--border-default);
+  background: var(--bg-hover);
+}
+
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
