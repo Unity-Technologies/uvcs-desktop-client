@@ -205,16 +205,24 @@ async function readHeadOfFolders(cm: CmClient, workspacePath: string, folders: r
  * by one would. It takes seconds on a big repository, so it runs in a process of its own (`executeRecords`).
  */
 async function readHeadOfWholeTree(cm: CmClient, workspacePath: string, folders: readonly string[], branch: string): Promise<HeadItem[]> {
-  const listed = new Set(folders);
-  const isListed = (item: HeadItem) => listed.has(serverPath(item.path)) || listed.has(serverPath(parentOf(item.path)));
+  const isListed = isInFolders(folders);
   return cm.executeRecords(
     ['ls', '/', '-R', `--tree=br:${branch}`, HEAD_TREE_FORMAT],
     (fields) => {
       const item = readHeadItem(fields);
-      return item && isListed(item) ? item : undefined;
+      return item && isListed(item.path) ? item : undefined;
     },
     { cwd: workspacePath },
   );
+}
+
+/**
+ * Whether a path of the head (a workspace path, `Assets/Ship.cs`, or '' for the root) is one of the `folders` (server
+ * paths, `/Assets`) or lies right inside one: what listing those folders one by one would print.
+ */
+export function isInFolders(folders: readonly string[]): (path: string) => boolean {
+  const listed = new Set(folders);
+  return (path) => listed.has(serverPath(path)) || listed.has(serverPath(parentOf(path)));
 }
 
 /**
