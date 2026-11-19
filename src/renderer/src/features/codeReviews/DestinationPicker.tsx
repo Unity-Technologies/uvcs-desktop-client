@@ -48,7 +48,7 @@ export function DestinationPicker({ review, source, destination, look = 'headlin
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <button type="button" className={look === 'chip' ? `${chipStyles.chip} ${styles.chip}` : styles.trigger} disabled={changingTo !== undefined} data-tip="Change where it merges" aria-label={`Destination: ${destination}. Change where it merges`}>
+        <button type="button" className={look === 'chip' ? `${chipStyles.chip} ${styles.chip}` : styles.trigger} disabled={changingTo !== undefined} data-tip="Change destination" aria-label={`Destination: ${destination}. Change destination`}>
           {look === 'chip' && <GitBranch size={12} className={chipStyles.icon} aria-hidden />}
           <span className={styles.name}>
             {/* Keyed by the name: a fitted label measures its width once, so a new name starts it afresh. */}
