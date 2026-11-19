@@ -23,7 +23,7 @@
   flex: 1;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
   min-width: 0;
 }
 
