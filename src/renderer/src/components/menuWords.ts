@@ -77,6 +77,7 @@ import {
   Search,
   ServerCog,
   ShieldCheck,
+  Signpost,
   Square,
   SquareArrowOutUpRight,
   SquareCheckBig,
@@ -191,6 +192,8 @@ export const MENU_WORDS = {
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
   changeReviewers: word('act', UserPlus, 'Change reviewers…'),
+  // Where a merge request merges, picked from the branches (`changeableDestinationOf` says when it can change).
+  changeDestination: word('act', Signpost, 'Change destination…'),
   // A merge request's state (`mergeRequestMoves`), each in the glyph of the state it moves to. Closing isn't a danger:
   // Reopen undoes it.
   readyForReview: word('act', GitPullRequest, 'Ready for review'),

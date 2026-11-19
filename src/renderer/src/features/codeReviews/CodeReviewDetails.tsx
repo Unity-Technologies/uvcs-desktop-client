@@ -14,6 +14,8 @@ import { AttributesDetailsSection } from '../attributes/AttributesDetailsSection
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
+import { changeableDestinationOf } from './changeableDestination';
+import { DestinationPicker } from './DestinationPicker';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { reviewedChangesOf, reviewNoun } from './mergeRequestState';
@@ -33,6 +35,8 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
   const changes = reviewedChangesOf(review);
   const sections = reviewDetailsSections(review);
   const status = reviewStatusCellOf(review);
+  // Where it merges changes from its chip while it can, as in its page's headline.
+  const changeable = changeableDestinationOf(review);
 
   return (
     <DetailsPanel
@@ -45,7 +49,8 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
         changes.kind === 'branch' && <BranchChip key="target" name={changes.branch} />,
         changes.kind === 'merge' && (
           <span key="target" className={styles.merge}>
-            <BranchChip name={changes.source} /> into <BranchChip name={changes.destination} />
+            <BranchChip name={changes.source} /> into{' '}
+            {changeable ? <DestinationPicker review={review} source={changeable.source} destination={changeable.destination} look="chip" /> : <BranchChip name={changes.destination} />}
           </span>
         ),
         target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what={copiedWhat('Changeset', 'spec')} />,

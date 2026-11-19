@@ -4,7 +4,9 @@ import { api } from '../../api/client';
 import { queryClient } from '../../app/queryClient';
 import { runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList, isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
+import type { ChangeableDestination } from './changeableDestination';
 import { codeReviewKey } from './codeReviewKey';
+import { pickDestination } from './DestinationDialog';
 import { showMergeRequestChangedInListsIn } from './listedReview';
 import { moveFailureTitle, type MergeRequestMove } from './mergeRequestState';
 
@@ -36,6 +38,15 @@ export function setMergeRequestDestination(place: Place, review: Pick<CodeReview
     },
     isAffectedByCodeReviews,
   );
+}
+
+/**
+ * Asks where the merge request merges, in a dialog with the page's branch list (`pickDestination`), from its row's menu:
+ * picking the branch it merges into already, or nothing, changes nothing.
+ */
+export async function chooseMergeRequestDestination(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title'>, changeable: ChangeableDestination): Promise<void> {
+  const picked = await pickDestination({ place, title: review.title, changeable });
+  if (picked && picked.name !== changeable.destination) await setMergeRequestDestination(place, review, picked.name);
 }
 
 /**
