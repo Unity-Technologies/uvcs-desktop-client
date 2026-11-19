@@ -100,7 +100,7 @@ const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installMenuBar(),
-  settingUpCm: () => !cmRuntime.isReady(),
+  cmSetup: () => cmRuntime.setupRunning(),
   onClosed: (viewer) => watchers.release(viewer),
   onRepositoryLeft: (repository) => {
     branchNames.forget(repositoryPlace(repository));

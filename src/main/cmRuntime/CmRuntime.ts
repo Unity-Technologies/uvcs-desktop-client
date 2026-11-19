@@ -1,4 +1,5 @@
 import type { CmChoice, CmRuntimeStatus, InstalledCm } from '@shared/domain/cmRuntime';
+import type { CmSetupStart } from '@shared/startingPlace';
 import { cmExecutableName } from '../cm/findInstalledCm';
 import { chooseCm, type ChosenCm } from './chooseCm';
 import { cmBundleFor, type CmVersionPin } from './cmBundles';
@@ -67,6 +68,12 @@ export class CmRuntime {
   /** Whether that `cm` can run now: false while the app's own is still being set up. */
   isReady(): boolean {
     return this.chosen.source !== 'managed' || this.options.installer.isInstalled(this.pinnedVersion);
+  }
+
+  /** The setup running, if any, as a window opened now names it in its address (`cmSetupQuery`). */
+  setupRunning(): CmSetupStart | null {
+    if (this.isReady()) return null;
+    return this.firstRun ? 'settingUp' : 'updating';
   }
 
   status(): CmRuntimeStatus {

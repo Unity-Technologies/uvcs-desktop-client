@@ -86,6 +86,7 @@ describe('CmRuntime', () => {
     const { runtime, installer } = runtimeWith({ installed: [VERSION] });
     runtime.start();
     expect(runtime.status()).toEqual({ kind: 'ready', source: 'managed' });
+    expect(runtime.setupRunning()).toBeNull();
     expect(runtime.cmPath()).toBe(MANAGED);
     expect(installer.installs).toBe(0);
   });
@@ -95,6 +96,7 @@ describe('CmRuntime', () => {
     runtime.start();
     expect(runtime.isReady()).toBe(false);
     expect(runtime.status()).toMatchObject({ kind: 'installing', phase: 'downloading', receivedBytes: 0, totalBytes: null, firstRun: true });
+    expect(runtime.setupRunning()).toBe('settingUp');
     await installer.succeed();
     expect(runtime.status()).toEqual({ kind: 'ready', source: 'managed' });
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
@@ -105,6 +107,7 @@ describe('CmRuntime', () => {
     const { runtime } = runtimeWith({ installed: ['11.0.16.9000'] });
     runtime.start();
     expect(runtime.status()).toMatchObject({ kind: 'installing', firstRun: false });
+    expect(runtime.setupRunning()).toBe('updating');
   });
 
   it('sends a download’s progress at most every interval, and every change of phase', () => {

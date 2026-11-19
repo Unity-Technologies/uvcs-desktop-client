@@ -5,6 +5,7 @@ import pin from '../../../cm-version.json';
 import { findInstalledCm } from '../cm/findInstalledCm';
 import { runCmProcess } from '../cm/runCmProcess';
 import type { SettingsStore } from '../settings/SettingsStore';
+import { CM_BUNDLES_URL } from './cmBundles';
 import { CmInstaller } from './CmInstaller';
 import { CmRuntime } from './CmRuntime';
 import { cmStoreFolder } from './cmStore';
@@ -34,6 +35,7 @@ export function createCmRuntime({ settings, prunes, relocated, statusChanged }: 
   const installer = new CmInstaller({
     store: cmStoreFolder(process.platform, process.env, homedir()),
     platform: process.platform,
+    bundlesUrl: process.env.UVCS_CM_BUNDLES_URL || CM_BUNDLES_URL,
     fetch: (url, init) => net.fetch(url, init),
     unpack: (archive, destination) => unpackBundle(archive, destination, process.platform, process.env),
     cmVersionOf: versionOf,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from './domain/place';
-import { pageWindowQuery, settingUpCmIn, settingUpCmQuery, startingPageIn, startingPlaceIn, startingPlaceQuery, startingSeedIn, startingViewIn } from './startingPlace';
+import { cmSetupIn, cmSetupQuery, pageWindowQuery, startingPageIn, startingPlaceIn, startingPlaceQuery, startingSeedIn, startingViewIn } from './startingPlace';
 
 /** The query as Electron's `loadFile(path, { query })` writes it into the page's address. */
 const search = (query: Record<string, string>): string => `?${new URLSearchParams(query)}`;
@@ -58,10 +58,11 @@ describe('startingPlace', () => {
   });
 });
 
-describe('settingUpCm', () => {
-  it('names the app’s own cm being set up, and nothing once it runs', () => {
-    expect(settingUpCmIn(`?${new URLSearchParams({ workspace: '/wk', ...settingUpCmQuery(true) })}`)).toBe(true);
-    expect(settingUpCmQuery(false)).toEqual({});
-    expect(settingUpCmIn('?workspace=%2Fwk')).toBe(false);
+describe('cmSetup', () => {
+  it('names the app’s own cm being set up or updated, and nothing once it runs', () => {
+    expect(cmSetupIn(search({ workspace: '/wk', ...cmSetupQuery('updating') }))).toBe('updating');
+    expect(cmSetupIn(search(cmSetupQuery('settingUp')))).toBe('settingUp');
+    expect(cmSetupQuery(null)).toEqual({});
+    expect(cmSetupIn('?workspace=%2Fwk')).toBeNull();
   });
 });

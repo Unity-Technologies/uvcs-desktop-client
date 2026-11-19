@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { CmInstallError } from './cmInstallFailure';
+import { cmInstallFailureOf, CmInstallError } from './cmInstallFailure';
 import type { CmBundle } from './cmBundles';
 import { cmBundleUrl } from './cmBundles';
 import { cmStoreEntries, managedCmPath, storeEntriesToPrune } from './cmStore';
@@ -16,6 +16,8 @@ export interface CmInstallerOptions {
   /** The folder the versions are kept in (`cmStoreFolder`). */
   store: string;
   platform: NodeJS.Platform;
+  /** Where the bundles are published (`CM_BUNDLES_URL`, or `UVCS_CM_BUNDLES_URL`). */
+  bundlesUrl: string;
   fetch: Fetch;
   /** Unpacks an archive into an existing folder (`unpackBundle`). */
   unpack: (archive: string, destination: string) => Promise<void>;
@@ -68,14 +70,21 @@ export class CmInstaller {
     const { store, platform, fetch } = this.options;
     const entries = cmStoreEntries(store, version, platform);
     await mkdir(store, { recursive: true });
-    await downloadBundle({
-      fetch,
-      url: cmBundleUrl(version, bundle.file),
-      partialPath: entries.partial,
-      sha256: bundle.sha256,
-      onProgress: (receivedBytes, totalBytes) => onProgress({ phase: 'downloading', receivedBytes, totalBytes }),
-      signal,
-    });
+    const url = cmBundleUrl(version, bundle.file, this.options.bundlesUrl);
+    try {
+      await downloadBundle({
+        fetch,
+        url,
+        partialPath: entries.partial,
+        sha256: bundle.sha256,
+        onProgress: (receivedBytes, totalBytes) => onProgress({ phase: 'downloading', receivedBytes, totalBytes }),
+        signal,
+      });
+    } catch (error) {
+      // Chromium's errors don't name the address; the details a user copies into a report should.
+      const message = error instanceof Error ? error.message : String(error);
+      throw new CmInstallError(cmInstallFailureOf(error), message.includes(url) ? message : `${url}\n${message}`);
+    }
     onProgress({ phase: 'finishing' });
     await rm(entries.unpacking, { recursive: true, force: true });
     await mkdir(entries.unpacking);

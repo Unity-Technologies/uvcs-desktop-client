@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { cmBundleUrl, type CmBundle } from './cmBundles';
+import { CM_BUNDLES_URL, cmBundleUrl, type CmBundle } from './cmBundles';
 import { cmInstallFailureOf, CmInstallError } from './cmInstallFailure';
 import { CmInstaller, type CmInstallProgress } from './CmInstaller';
 import { fakeBundleSite, sha256Of } from './testing/fakeBundleSite';
@@ -27,6 +27,7 @@ async function installerWith(setup: Setup = {}) {
   const installer = new CmInstaller({
     store,
     platform: process.platform,
+    bundlesUrl: CM_BUNDLES_URL,
     fetch: site.fetch,
     unpack:
       setup.unpack ??
@@ -88,10 +89,11 @@ describe('CmInstaller', () => {
     expect(await readdir(store)).toEqual([`${VERSION}.partial`]);
   });
 
-  it('fails as offline with nothing in place when there is no network', async () => {
+  it('fails as offline, naming the address, with nothing in place when there is no network', async () => {
     const site = fakeBundleSite({}, { error: new Error('net::ERR_INTERNET_DISCONNECTED') });
     const { installer } = await installerWith({ site });
-    await expect(installer.install(VERSION, BUNDLE, () => undefined).catch(cmInstallFailureOf)).resolves.toBe('offline');
+    const failure = await installer.install(VERSION, BUNDLE, () => undefined).catch((error: Error) => ({ kind: cmInstallFailureOf(error), message: error.message }));
+    expect(failure).toEqual({ kind: 'offline', message: `${cmBundleUrl(VERSION, BUNDLE.file)}\nnet::ERR_INTERNET_DISCONNECTED` });
     expect(installer.isInstalled(VERSION)).toBe(false);
   });
 

@@ -81,6 +81,8 @@ const uvcs: UvcsBridge = { platform: 'darwin', initialZoom: 1, invoke, on: on as
 const fakeWindow = Object.assign(new EventTarget(), {
   uvcs,
   localStorage: storage,
+  // A window opened on the home screen, with nothing in its address (`startingPlaceQuery`).
+  location: { search: '', pathname: '/index.html' },
   matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
 });
 const fakeDocument = Object.assign(new EventTarget(), { visibilityState: 'visible', hasFocus: () => true, activeElement: null, body: null });

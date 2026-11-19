@@ -46,9 +46,12 @@ export function cmBundleFor(pin: CmVersionPin, platform: string, arch: string): 
   return bundle ? { key, bundle } : null;
 }
 
-/** The address of one version's bundle. Never `latest`, which lags behind the versions published. */
-export function cmBundleUrl(version: string, file: string): string {
-  return `${CM_BUNDLES_URL}/${encodeURIComponent(version)}/${encodeURIComponent(file)}`;
+/**
+ * The address of one version's bundle. Never `latest`, which lags behind the versions published. `bundlesUrl` is
+ * another site laid out the same way (`UVCS_CM_BUNDLES_URL`: the smoke test's, a failure shown on purpose).
+ */
+export function cmBundleUrl(version: string, file: string, bundlesUrl: string = CM_BUNDLES_URL): string {
+  return `${bundlesUrl.replace(/\/+$/, '')}/${encodeURIComponent(version)}/${encodeURIComponent(file)}`;
 }
 
 /** A version as `cm version` prints it: four numbers. */

@@ -24,6 +24,8 @@ import { useIssueTrackersFromMain } from '../components/issues/useIssueTrackers'
 import { useTheme } from './settings/useTheme';
 import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
+import { CmSetupScreen } from './cmSetup/CmSetupScreen';
+import { isSettingUpCm, loadCmRuntimeStatus, useCmRuntimeStore } from './cmSetup/cmRuntimeStore';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { ConnectionProblemCard } from './startup/ConnectionProblemCard';
 import { useServerSessionsFromMain } from './signIn/useServerSessions';
@@ -38,19 +40,24 @@ import { useRequestedPlace } from './workspace/useRequestedPlace';
 import { PlaceScreen } from './workspace/PlaceScreen';
 
 export function App() {
+  const settingUpCm = useCmRuntimeStore((state) => isSettingUpCm(state.status));
+  useEffect(() => void loadCmRuntimeStatus(), []);
   return (
     <QueryClientProvider client={queryClient}>
       {/* Inside, so the dialogs and toasts outside it keep working once it shows its error screen. */}
-      <AppErrorBoundary>
-        <Root />
-      </AppErrorBoundary>
-      <CommandPalette />
-      <CommandShortcuts />
+      <AppErrorBoundary>{settingUpCm ? <CmSetupScreen /> : <Root />}</AppErrorBoundary>
+      {/* Nothing that may ask `cm` while it's set up: the palette's commands, the cards' checks. */}
+      {!settingUpCm && <CommandPalette />}
+      {!settingUpCm && <CommandShortcuts />}
       <DialogHost />
       <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />}>
-        <ConnectionProblemCard />
-        <GravatarPrompt />
-        <UpdateCard />
+        {!settingUpCm && (
+          <>
+            <ConnectionProblemCard />
+            <GravatarPrompt />
+            <UpdateCard />
+          </>
+        )}
       </ToastHost>
       <TooltipLayer />
     </QueryClientProvider>

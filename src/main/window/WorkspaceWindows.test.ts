@@ -8,6 +8,7 @@ import type { SavedWindow } from '@shared/domain/settings';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
+import type { CmSetupStart } from '@shared/startingPlace';
 import { fakeElectron, type FakeWindow } from './testing/fakeElectron';
 import { WorkspaceWindows } from './WorkspaceWindows';
 
@@ -45,10 +46,10 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const closeLeftBehind = vi.fn((windowId: number) => fakeElectron.windows().find((window) => window.id === windowId)?.close());
   const onCloseRequested = vi.fn((windowId: number, event: { preventDefault(): void }) => heldBack.has(windowId) && event.preventDefault());
   const settings = memorySettings({ recentWorkspacePaths, openWindows });
-  const cm = { settingUp: false };
+  const cm = { setup: null as CmSetupStart | null };
   const windows = new WorkspaceWindows({
     settings,
-    settingUpCm: () => cm.settingUp,
+    cmSetup: () => cm.setup,
     onLastWindowClosing,
     workspaceOf: (viewer) => shown.get(viewer),
     onWindowsChanged,
@@ -116,11 +117,11 @@ describe('one window per workspace', () => {
 describe('the app’s own cm being set up', () => {
   it('opens a window on the setup while it runs, and the next ones as usual once it’s done', () => {
     const { windows, cm } = setUp();
-    cm.settingUp = true;
+    cm.setup = 'settingUp';
     windows.open();
-    cm.settingUp = false;
+    cm.setup = null;
     windows.open();
-    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.settingUpCm)).toEqual([true, false]);
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.cmSetup)).toEqual(['settingUp', null]);
   });
 });
 

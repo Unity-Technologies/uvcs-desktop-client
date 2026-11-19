@@ -57,6 +57,12 @@ describe('cmBundleUrl', () => {
   });
 });
 
+describe('cmBundleUrl on another site', () => {
+  it('lays the version and file out the same way', () => {
+    expect(cmBundleUrl('11.0.16.10659', 'client-linux.tar.gz', 'http://127.0.0.1:8123/bundles/')).toBe('http://127.0.0.1:8123/bundles/11.0.16.10659/client-linux.tar.gz');
+  });
+});
+
 describe('compareCmVersions', () => {
   it('compares number by number, not as text', () => {
     expect(compareCmVersions('11.0.16.9876', '11.0.16.10659')).toBeLessThan(0);

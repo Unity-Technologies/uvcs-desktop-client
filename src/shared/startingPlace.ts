@@ -14,7 +14,7 @@ const REPOSITORY_PARAMETER = 'repository';
 const VIEW_PARAMETER = 'view';
 const PAGE_PARAMETER = 'page';
 const SEED_PARAMETER = 'seed';
-const SETTING_UP_CM_PARAMETER = 'settingUpCm';
+const CM_SETUP_PARAMETER = 'cmSetup';
 
 /** The page address's query for a window opened for `place` (none for the home screen), on `view` if given. */
 export function startingPlaceQuery(place: Place | undefined, view?: string): Record<string, string> {
@@ -37,16 +37,20 @@ function placeParameter(place: Place): Record<string, string> {
 }
 
 /**
- * A window opened while the app's own `cm` is still being set up names that too, so its page starts on the setup
- * screen from its first frame, rather than drawing its place and then the setup over it (docs/features/cm-runtime.md).
+ * A window opened while the app's own `cm` is still being set up names that too, and whether it's the first one or an
+ * update's, so its page starts on the setup screen from its first frame, with its own title, rather than drawing its
+ * place and then the setup over it (docs/features/cm-runtime.md "The setup screen").
  */
-export function settingUpCmQuery(settingUp: boolean): Record<string, string> {
-  return settingUp ? { [SETTING_UP_CM_PARAMETER]: '1' } : {};
+export type CmSetupStart = 'settingUp' | 'updating';
+
+export function cmSetupQuery(setup: CmSetupStart | null): Record<string, string> {
+  return setup ? { [CM_SETUP_PARAMETER]: setup } : {};
 }
 
-/** Whether a page address's query says the app's own `cm` was being set up as the window opened. */
-export function settingUpCmIn(search: string): boolean {
-  return new URLSearchParams(search).has(SETTING_UP_CM_PARAMETER);
+/** The setup a page address's query says was running as the window opened; null when `cm` was ready. */
+export function cmSetupIn(search: string): CmSetupStart | null {
+  const setup = new URLSearchParams(search).get(CM_SETUP_PARAMETER);
+  return setup === 'settingUp' || setup === 'updating' ? setup : null;
 }
 
 /** The view a page address's query names (a renderer `ViewId`, unchecked), or null. */
