@@ -102,9 +102,42 @@ function commandsRun() {
  */
 const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
-/** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
+const LOADING = 'main [aria-busy="true"], main [aria-label="Loading"]';
+
+/**
+ * Waits until nothing in the page is loading (skeletons and spinners say `Loading`). If something still is when the
+ * wait gives up, the failure names it (`stillLoading`): a run that fails now and then can be read only from its output.
+ */
 async function settled() {
-  await window.waitForFunction(() => !document.querySelector('main [aria-busy="true"], main [aria-label="Loading"]'));
+  try {
+    await window.waitForFunction((loading) => !document.querySelector(loading), LOADING);
+  } catch (error) {
+    const loading = await withTimeout(window.evaluate(stillLoading, LOADING), TIMEOUT_MS, 'what is still loading').catch((reason) => [reason.message]);
+    throw new Error(`${error.message.split('\n')[0]}\nStill loading:\n  ${loading.join('\n  ')}`, { cause: error });
+  }
+}
+
+/**
+ * Runs in the page: each element still loading, as its tag, role, label and whether it is shown, with the nearest
+ * landmark and heading around it, so a failure says which view (shown, or kept hidden in an `Activity`) waits on what.
+ */
+function stillLoading(loading) {
+  const describe = (element) => {
+    const attributes = ['role', 'aria-label', 'aria-busy', 'class'].map((name) => element.getAttribute(name) && `${name}="${element.getAttribute(name)}"`);
+    return `<${element.tagName.toLowerCase()} ${attributes.filter(Boolean).join(' ')}>`;
+  };
+  const headingAround = (element) => {
+    for (let node = element; node; node = node.parentElement) {
+      const heading = node.querySelector('h1, h2, h3, [role="heading"]');
+      if (heading) return heading.textContent.trim().slice(0, 60);
+    }
+    return '(no heading)';
+  };
+  return [...document.querySelectorAll(loading)].map((element) => {
+    const region = element.closest('aside, section, [role="region"], [role="dialog"], main');
+    const shown = element.checkVisibility() ? 'shown' : 'hidden';
+    return `${describe(element)} ${shown}, in ${region ? describe(region) : '(no region)'} under "${headingAround(element)}"`;
+  });
 }
 
 async function step(name, run) {
