@@ -29,7 +29,9 @@ SHA-256 of that file (`CmVersionPin`, `cmBundles.ts`):
   one published when the pin was written: changed on the way (a proxy, a mirror, a compromised host) or republished
   under the same version. Either way it fails loudly (`damaged`) rather than run something else under a known version.
 - **Checked** before a release (the Release workflow's "Check the pinned cm bundles", `npm run cm:check`) and every
-  day (`.github/workflows/cm-bundles.yml`): a bundle gone or changed would stop every new install. `cmBundles.test.ts`
+  day (`.github/workflows/cm-bundles.yml`): a bundle gone or changed would stop every new install. That workflow also
+  sets the pinned `cm` up with the app's own code on macOS, Windows x64 and arm64 and Linux (`npm run cm:setup-check`,
+  `scripts/build/cmSetupCheck.ts`), every day and on pull requests that change it or the pin. `cmBundles.test.ts`
   checks the file's shape (`pinProblems`).
 - The Release workflow attaches the pin to each release (`cm-version.json`), which a running app reads before
   restarting into it ("Updates bring their cm").

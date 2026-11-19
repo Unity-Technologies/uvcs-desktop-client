@@ -2,12 +2,22 @@ name: cm bundles
 
 # Every day, the bundles cm-version.json pins are downloaded again and their SHA-256 compared with the pin: a bundle
 # republished with other bytes, or gone, would stop every new install of the app, which downloads it
-# (docs/features/cm-runtime.md "The pin"). A failure here is found before a user meets it.
+# (docs/features/cm-runtime.md "The pin"). A failure here is found before a user meets it. And on every OS the app
+# ships for, the app's own code sets the pinned cm up as on a first run (`npm run cm:setup-check`): the zip and
+# Windows' tar, the emulated x64 cm on Windows on Arm, the rename, cm version from the store. Pull requests that change
+# that code or the pin run both too.
 
 on:
   schedule:
     - cron: '17 6 * * *'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - cm-version.json
+      - src/main/cmRuntime/**
+      - scripts/build/cmVersion.ts
+      - scripts/build/cmSetupCheck.ts
+      - .github/workflows/cm-bundles.yml
 
 permissions:
   contents: read
@@ -21,3 +31,22 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts check
+
+  set-up:
+    name: Set up on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macOS arm64, os: macos-latest }
+          - { name: Windows x64, os: windows-latest }
+          - { name: Windows arm64, os: windows-11-arm }
+          - { name: Linux x64, os: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/install
+        with:
+          reuse-node-modules: 'true'
+      - run: npm run cm:setup-check
+
