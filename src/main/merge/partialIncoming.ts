@@ -171,11 +171,13 @@ export function treeListingArgs(folders: readonly string[], tree: string): strin
 
 /**
  * How many loaded folders are listed on the head one by one. `cm ls` with `--tree` resolves each path it's given on
- * the server apart, a round of its own each (more inside an xlink): on a large repository, about 0.45 s a folder, and
- * 4.5 s the whole tree of 80,000 items. Past this many folders, the head is read in one listing of the whole tree
- * (`readHeadOfWholeTree`).
+ * the server apart, a round of its own each: on a large repository, about 0.3 s a folder, 0.45 s inside an xlink. The
+ * whole tree (`readHeadOfWholeTree`) costs what the repository holds instead: 4.5 s for 80,000 items, about what 15
+ * folders cost one by one. Past this many folders, the head is that one listing. The limit sits above that crossover
+ * because the whole tree grows with the repository and the folders don't: a repository many times larger pays more
+ * for the whole tree, while a workspace past this many folders already waits seconds one by one.
  */
-export const MOST_FOLDERS_LISTED_ONE_BY_ONE = 10;
+export const MOST_FOLDERS_LISTED_ONE_BY_ONE = 20;
 
 /**
  * The loaded folders and their children on the head. A folder the head moved fails to list where it was loaded, but
