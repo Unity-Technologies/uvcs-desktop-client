@@ -96,11 +96,18 @@ async function readChildrenWhenLoaded(
     group.requested.add(folder.path);
     byTree.set(key, group);
   }
+  // The listings are small reads of immutable trees, a few at most (one per changeset the folders were loaded at): they
+  // run together, sharing the workspace's pooled shells, rather than each waiting for the one before.
+  const groups = [...byTree.values()];
+  const rowsOfGroups = await Promise.all(
+    groups.map(async ({ listing, serverPaths }) => {
+      const listings = treeListingArgs([...serverPaths].sort(), listing.tree).map((args) => listHead(cm, workspacePath, args));
+      return (await Promise.all(listings)).flat();
+    }),
+  );
   const children = new Map<string, HeadItem[]>();
-  for (const { listing, serverPaths, requested } of byTree.values()) {
-    const rows: HeadItem[] = [];
-    for (const args of treeListingArgs([...serverPaths].sort(), listing.tree)) rows.push(...(await listHead(cm, workspacePath, args)));
-    const inWorkspace = rows.map((row) => ({ ...row, path: workspacePathOf(row.path, listing) }));
+  groups.forEach(({ listing, requested }, index) => {
+    const inWorkspace = rowsOfGroups[index]!.map((row) => ({ ...row, path: workspacePathOf(row.path, listing) }));
     for (const row of inWorkspace) if (row.isDirectory && requested.has(row.path) && !children.has(row.path)) children.set(row.path, []);
     // A requested folder is printed as its own row and, when its parent is requested too, as one of its children:
     // every row lands once in its parent's children, so a parent keeps the subfolders it held.
@@ -113,7 +120,7 @@ async function readChildrenWhenLoaded(
       siblings.push(row);
       placed.add(row.path);
     }
-  }
+  });
   return children;
 }
 
