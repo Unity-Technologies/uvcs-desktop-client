@@ -1,4 +1,6 @@
+import type { QueryClient } from '@tanstack/react-query';
 import type { WorkspaceHead, WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
+import { queryKeys } from '../../api/queryKeys';
 
 /** What the top bar can show of a workspace before its own info is read: what the home screen already read of it. */
 export interface WorkspacePreview {
@@ -28,4 +30,11 @@ export function workspacePreview(
 /** What the top bar shows of the workspace: its own info once read, else its preview. Unknown parts show as placeholders. */
 export function shownWorkspace(info: Pick<WorkspaceInfo, 'name' | 'repository' | 'selector'> | undefined, preview: WorkspacePreview): WorkspacePreview {
   return info ? { name: info.name, repository: info.repository, selector: info.selector } : preview;
+}
+
+/** The preview from what `workspaceListQuery` and any `workspaceHeadsQuery` left in `client`. */
+export function workspacePreviewFromCache(client: QueryClient, path: string): WorkspacePreview {
+  const workspaces = client.getQueryData<WorkspaceSummary[]>(queryKeys.workspaces);
+  const heads = client.getQueriesData<Record<string, WorkspaceHead>>({ queryKey: queryKeys.everyWorkspaceHeads });
+  return workspacePreview(path, workspaces, heads.map(([, data]) => data));
 }
