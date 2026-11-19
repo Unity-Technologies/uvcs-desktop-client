@@ -1,13 +1,12 @@
+/* As tall as the pills at the bar's start, and bordered like them: one row of fields across the bar. */
 .search {
+  composes: control from '../../ui/ToolbarControl.module.css';
+
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 240px;
-  height: var(--control-height);
-  padding: 0 6px 0 10px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
+  padding: 0 var(--space-2) 0 10px;
   color: var(--text-tertiary);
   font-size: var(--text-sm);
 }
@@ -19,5 +18,4 @@
 
 .search:hover {
   color: var(--text-secondary);
-  border-color: var(--border-default);
 }
