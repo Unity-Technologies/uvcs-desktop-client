@@ -80,11 +80,12 @@ export function replacedLinesIn(text: Read<string | null>, change: LineRange): R
  * out as the code's diff (`suggestionFileDiff`). While the replaced lines are read, a place as tall as their rows, so nothing
  * moves as they arrive; when they can't be read, the suggested lines alone, added, and for a deletion nothing; when
  * they're the suggested lines exactly, a note saying so (`unchangedSuggestionNote`), as a diff of no change is no rows.
- * `rowCount` is the rows the diff takes at most (a line kept shows once), for the place it holds while Pierre loads.
+ * `firstLine` numbers its rows as the file's lines. `rowCount` is the rows the diff takes, every line replaced and every
+ * line suggested, for the place it holds while Pierre loads.
  */
 export type SuggestionBody =
   | { kind: 'reading'; rowCount: number }
-  | { kind: 'diff'; replacedText: string; suggestedText: string; rowCount: number }
+  | { kind: 'diff'; replacedText: string; suggestedText: string; firstLine: number; rowCount: number }
   | { kind: 'unchanged'; note: string }
   | { kind: 'empty' };
 
@@ -94,7 +95,7 @@ export function suggestionBody(change: LineRange & Pick<SuggestedChange, 'lines'
   if (unchanged) return { kind: 'unchanged', note: unchanged };
   const replacedLines = replaced.kind === 'read' ? replaced.value : [];
   if (replacedLines.length === 0 && change.lines.length === 0) return { kind: 'empty' };
-  return { kind: 'diff', replacedText: asFile(replacedLines), suggestedText: asFile(change.lines), rowCount: replacedLines.length + change.lines.length };
+  return { kind: 'diff', replacedText: asFile(replacedLines), suggestedText: asFile(change.lines), firstLine: change.firstLine, rowCount: replacedLines.length + change.lines.length };
 }
 
 /**

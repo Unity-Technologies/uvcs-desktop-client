@@ -452,12 +452,14 @@ ranges changes only it.
   cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
   word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). It reads as GitHub's and
-  GitLab's suggestions do: each changed part as the lines replaced, then the lines suggested, the lines it keeps between
-  the parts (`replacedThenSuggested`). The line diff alone would split a line wrapped in a new `if` into the `if` added
-  above the line removed and added again, indented, which reads as if the `if` were already there; joined, no words
-  are marked between lines it never paired. One column, highlighted in
+  GitLab's suggestions do: every line replaced, then every line suggested, the lines it keeps among them, numbered as
+  the file's lines from the first one commented (`replacedThenSuggested`: one hunk starting there, in a diff kept whole, as Pierre loads the full files of a partial one). The line
+  diff alone would mix them: a line wrapped in a new `if` became the `if` added above the line removed and added again,
+  indented, which read as if the `if` were already there. Words are marked only when the suggested lines take the
+  replaced ones' places one for one (every change of the line diff adds as many lines as it removes), as Pierre marks
+  the n-th line removed against the n-th added. One column, highlighted in
   the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it: `useSyntaxHighlighter`), every line
-  shown, no line numbers (the comment names its lines, and Pierre would number the snippet from 1). A few lines, so
+  shown. A few lines, so
   drawn whole on the main thread: no workers, and no virtualizer, even inside the code's diff, whose own it would
   otherwise join. Inside a thread in the code, the box is a diff in the code's annotation row: its pointer events stay
   in it (`keepCodePointerToItself`), and the code's menu doesn't take its rows for the code's lines (`rowUnderPointer`).

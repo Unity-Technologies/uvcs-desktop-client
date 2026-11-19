@@ -75,13 +75,12 @@ const SNIPPET_ROWS_EDGE_TO_EDGE_CSS = ':host{--diffs-gap-block:0px;--diffs-gap-s
 
 /**
  * A few lines' diff shown whole inside a comment (a change request's Suggested change): the code's diff as the viewer
- * shows it (its colors, bars and word marks), one column, with no line numbers (the comment names its lines, and they'd
- * number the snippet from 1, not the file), every line shown and no tints for comment rows, as it holds none.
+ * shows it (its colors, bars, word marks and line numbers, which the suggestion gives as the file's), one column, every
+ * line shown and no tints for comment rows, as it holds none.
  */
 export function pierreSnippetDiffOptions(theme: ResolvedTheme): FileDiffOptions<undefined, undefined> {
   return {
     ...pierreDiffOptions({ theme, layout: 'unified', collapseUnchanged: false, wrapLines: false }),
-    disableLineNumbers: true,
     unsafeCSS: PIERRE_SURFACE_CSS + SNIPPET_ROWS_EDGE_TO_EDGE_CSS,
   };
 }
