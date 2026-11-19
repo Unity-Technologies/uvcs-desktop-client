@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CmInstallError } from './cmInstallFailure';
@@ -42,6 +42,15 @@ export class CmInstaller {
 
   isInstalled(version: string): boolean {
     return existsSync(this.cmPathOf(version));
+  }
+
+  /** Whether any version was ever set up and is still kept: the next one updates it, rather than setting up anew. */
+  hasAnyVersion(): boolean {
+    try {
+      return readdirSync(this.options.store).some((name) => /^\d+\.\d+\.\d+\.\d+$/.test(name));
+    } catch {
+      return false;
+    }
   }
 
   /** Sets up a version, unless it's there already; resolves with its `cm`. */

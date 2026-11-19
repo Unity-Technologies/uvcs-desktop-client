@@ -3,7 +3,7 @@ import { app, BrowserWindow, nativeTheme, shell, type Event } from 'electron';
 import type { Place } from '@shared/domain/place';
 import type { PageSeed, PageWindowPage } from '@shared/domain/pageWindow';
 import type { SavedWindow } from '@shared/domain/settings';
-import { pageWindowQuery, startingPlaceQuery } from '@shared/startingPlace';
+import { pageWindowQuery, settingUpCmQuery, startingPlaceQuery } from '@shared/startingPlace';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -37,6 +37,11 @@ interface MainWindowOptions {
   page?: PageWindowPage;
   /** What the page shows, already read where it opened (`PageSeed`). */
   seed?: PageSeed;
+  /**
+   * The app's own `cm` is still being set up (`CmRuntime.isReady`): its page starts on the setup screen, from its
+   * first frame (`settingUpCmQuery`), and opens its place once that's done.
+   */
+  settingUpCm?: boolean;
   /** The window was asked to close; the first `close` listener, which may hold it back (`WorkspaceWindows`' `onCloseRequested`). */
   onCloseRequested?: (windowId: number, event: Event) => void;
 }
@@ -47,7 +52,7 @@ interface MainWindowOptions {
  */
 export function createMainWindow(
   settings: SettingsStore,
-  { cascadeFrom, place, reopen, inBackground, page, seed, onCloseRequested }: MainWindowOptions = {},
+  { cascadeFrom, place, reopen, inBackground, page, seed, onCloseRequested, settingUpCm = false }: MainWindowOptions = {},
 ): BrowserWindow {
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
@@ -91,7 +96,7 @@ export function createMainWindow(
     return { action: 'deny' };
   });
 
-  loadPage(window, page && place ? pageWindowQuery(place, page, seed) : startingPlaceQuery(place, reopen?.view));
+  loadPage(window, page && place ? pageWindowQuery(place, page, seed) : { ...startingPlaceQuery(place, reopen?.view), ...settingUpCmQuery(settingUpCm) });
   return window;
 }
 

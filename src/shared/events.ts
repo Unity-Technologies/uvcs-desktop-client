@@ -1,3 +1,4 @@
+import type { CmRuntimeStatus } from './domain/cmRuntime';
 import type { FoundPath, FoundPathsSource } from './domain/explorer';
 import type { UpdateStatus } from './domain/appUpdate';
 import type { OperationProgress } from './domain/operation';
@@ -76,6 +77,8 @@ export interface UvcsEvents {
   incomingNotificationClicked: { workspacePath: string };
   /** Closing the window, quitting or reloading waits for unsaved edits: settle them, then `windows.continueLeaving`. */
   leaveRequested: Record<string, never>;
+  /** The app's `cm` moved on: its setup progressed, failed or finished, or another one runs (`cmRuntime.status`). */
+  cmRuntimeChanged: CmRuntimeStatus;
   /** The app's update moved on (`updates.status`); every window gets it. */
   updateStatusChanged: UpdateStatus;
   /**

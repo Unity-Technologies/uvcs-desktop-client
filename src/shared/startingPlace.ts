@@ -14,6 +14,7 @@ const REPOSITORY_PARAMETER = 'repository';
 const VIEW_PARAMETER = 'view';
 const PAGE_PARAMETER = 'page';
 const SEED_PARAMETER = 'seed';
+const SETTING_UP_CM_PARAMETER = 'settingUpCm';
 
 /** The page address's query for a window opened for `place` (none for the home screen), on `view` if given. */
 export function startingPlaceQuery(place: Place | undefined, view?: string): Record<string, string> {
@@ -33,6 +34,19 @@ export function startingPlaceIn(search: string): Place | null {
 
 function placeParameter(place: Place): Record<string, string> {
   return place.kind === 'workspace' ? { [WORKSPACE_PARAMETER]: place.workspacePath } : { [REPOSITORY_PARAMETER]: place.repository };
+}
+
+/**
+ * A window opened while the app's own `cm` is still being set up names that too, so its page starts on the setup
+ * screen from its first frame, rather than drawing its place and then the setup over it (docs/features/cm-runtime.md).
+ */
+export function settingUpCmQuery(settingUp: boolean): Record<string, string> {
+  return settingUp ? { [SETTING_UP_CM_PARAMETER]: '1' } : {};
+}
+
+/** Whether a page address's query says the app's own `cm` was being set up as the window opened. */
+export function settingUpCmIn(search: string): boolean {
+  return new URLSearchParams(search).has(SETTING_UP_CM_PARAMETER);
 }
 
 /** The view a page address's query names (a renderer `ViewId`, unchecked), or null. */
