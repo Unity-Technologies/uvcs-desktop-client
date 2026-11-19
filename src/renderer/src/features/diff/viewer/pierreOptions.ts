@@ -67,9 +67,9 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
 
 /**
  * A snippet's rows run edge to edge in their box, from the border above them to the one below: Pierre leaves a gap
- * (`--diffs-gap-block`, 8px) above the first row and under the last, which reads as the box's own padding. With no
- * line numbers its gutter is the change bar alone, and Pierre's line between gutter and code (`--diffs-gap-style`, 2px
- * of the surface) would split the bar from the row's tint: none, so the tint runs on from the bar.
+ * (`--diffs-gap-block`, 8px) above the first row and under the last, which reads as the box's own padding. Pierre's
+ * line between the gutter and the code (`--diffs-gap-style`, 2px of the surface) would split each row's tint in two,
+ * the line number's from the code's: none, so the tint runs on from the change bar to the box's edge.
  */
 const SNIPPET_ROWS_EDGE_TO_EDGE_CSS = ':host{--diffs-gap-block:0px;--diffs-gap-style:none}';
 
