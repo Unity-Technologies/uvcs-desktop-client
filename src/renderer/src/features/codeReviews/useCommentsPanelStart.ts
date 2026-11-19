@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { detailsWidthOf, useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
-import { FILES_WIDTH } from '../diff/DiffBrowserLayout';
+import { pageDiffFilesWidthOf } from '../diff/diffFilesWidth';
 import { useDiffPreferences } from '../diff/viewer/diffPreferencesStore';
 import { commentsPanelStartsHidden, diffWidthBesidePanel } from './inline/commentsPanel';
 
@@ -24,9 +24,10 @@ export function useCommentsPanelStart(codeThreads: number | null, tab: RefObject
   useLayoutEffect(() => {
     if (decided.current || codeThreads === null) return;
     decided.current = true;
-    const panelWidth = detailsWidthOf(useDetailsPaneStore.getState(), COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH);
-    // The files' list at its starting width: `SplitPane` keeps no width it was dragged to, so every diff opens with it.
-    const diffWidth = diffWidthBesidePanel({ tabWidth: tab.current?.clientWidth ?? 0, filesWidth: FILES_WIDTH, panelWidth });
+    const widths = useDetailsPaneStore.getState();
+    const panelWidth = detailsWidthOf(widths, COMMENTS_PANEL_KEY, COMMENTS_PANEL_WIDTH);
+    // The files' list as wide as it was last left: the review's diff opens with it.
+    const diffWidth = diffWidthBesidePanel({ tabWidth: tab.current?.clientWidth ?? 0, filesWidth: pageDiffFilesWidthOf(widths), panelWidth });
     const { layout } = useDiffPreferences.getState();
     if (commentsPanelStartsHidden({ codeThreads, diffWidth, layout })) startHidden(COMMENTS_PANEL_KEY, owner);
   }, [codeThreads, startHidden, tab, owner]);
