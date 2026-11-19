@@ -2,12 +2,12 @@ import { parseDiffFromFile, type FileDiffMetadata } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { replacedThenSuggested } from './replacedThenSuggested';
 
-function diffOf(replaced: readonly string[], suggested: readonly string[]): FileDiffMetadata {
+function diffOf(replaced: readonly string[], suggested: readonly string[], firstLine = 1): FileDiffMetadata {
   const asFile = (lines: readonly string[]) => lines.map((line) => `${line}\n`).join('');
-  return replacedThenSuggested(parseDiffFromFile({ name: 'a.cs', contents: asFile(replaced) }, { name: 'a.cs', contents: asFile(suggested) }));
+  return replacedThenSuggested(parseDiffFromFile({ name: 'a.cs', contents: asFile(replaced) }, { name: 'a.cs', contents: asFile(suggested) }), firstLine);
 }
 
-/** The rows as the box shows them, top to bottom: `-` removed, `+` added, a space for a line the suggestion keeps. */
+/** The rows as the box shows them, top to bottom: `-` removed, `+` added, a space for a line shown unchanged. */
 function rowsOf(diff: FileDiffMetadata): string[] {
   const text = (line: string | undefined) => (line ?? '').replace(/\n$/, '');
   return diff.hunks.flatMap((hunk) =>
@@ -39,7 +39,7 @@ describe('replacedThenSuggested', () => {
     expect(rowsOf(diff)).toEqual(['-     result |= Show;', '+     if (!info.IsXlink)', '+         result |= Show;']);
   });
 
-  it('marks no words between a replaced line and a suggested one it was never paired with', () => {
+  it("marks no words when the suggestion's lines don't take the replaced ones' places one for one", () => {
     const diff = diffOf(['    result |= Show;'], ['    if (!info.IsXlink)', '        result |= Show;']);
     expect(wordMarkedPairsOf(diff)).toEqual([]);
   });
@@ -50,20 +50,40 @@ describe('replacedThenSuggested', () => {
     expect(wordMarkedPairsOf(diff)).toEqual([['public int frameRate = 30;', 'public int frameRate = 60;']]);
   });
 
-  it('reads each changed part of a range as its lines replaced, then those suggested, around the lines it keeps', () => {
-    const diff = diffOf(
-      ['x = 1;', 'keep();', 'y = 2;', 'end();'],
-      ['if (ok)', '    x = 1;', 'keep();', 'y = 3;', 'end();', 'done();'],
-    );
-    expect(rowsOf(diff)).toEqual(['- x = 1;', '+ if (ok)', '+     x = 1;', '  keep();', '- y = 2;', '+ y = 3;', '  end();', '+ done();']);
-    expect(wordMarkedPairsOf(diff)).toEqual([['y = 2;', 'y = 3;']]);
+  it('reads a range as all its lines replaced, then all the lines suggested, the lines it keeps among them', () => {
+    const diff = diffOf(['x = 1;', 'keep();', 'y = 2;', 'end();'], ['if (ok)', '    x = 1;', 'keep();', 'y = 3;', 'end();', 'done();']);
+    expect(rowsOf(diff)).toEqual([
+      '- x = 1;', '- keep();', '- y = 2;', '- end();',
+      '+ if (ok)', '+     x = 1;', '+ keep();', '+ y = 3;', '+ end();', '+ done();',
+    ]);
+    expect(wordMarkedPairsOf(diff)).toEqual([]);
   });
 
-  it('lays the rows out in the split view as many as each side needs', () => {
-    const diff = diffOf(['    result |= Show;'], ['    if (!info.IsXlink)', '        result |= Show;']);
-    const splitRows = (parts: FileDiffMetadata['hunks'][number]['hunkContent']) =>
-      parts.reduce((rows, part) => rows + (part.type === 'context' ? part.lines : Math.max(part.deletions, part.additions)), 0);
-    expect(diff.hunks.map((hunk) => hunk.splitLineCount)).toEqual(diff.hunks.map((hunk) => splitRows(hunk.hunkContent)));
-    expect(diff.splitLineCount).toBe(diff.hunks.reduce((rows, hunk) => rows + hunk.splitLineCount, 0));
+  it('marks the changed words of a range whose lines are each edited in place', () => {
+    const diff = diffOf(['a = 1;', 'keep();', 'b = 2;'], ['a = 2;', 'keep();', 'b = 3;']);
+    expect(rowsOf(diff)).toEqual(['- a = 1;', '- keep();', '- b = 2;', '+ a = 2;', '+ keep();', '+ b = 3;']);
+    expect(wordMarkedPairsOf(diff)).toEqual([['a = 1;', 'a = 2;'], ['keep();', 'keep();'], ['b = 2;', 'b = 3;']]);
+  });
+
+  it("numbers both sides from the commented line, as the file's lines", () => {
+    const diff = diffOf(['    result |= Show;'], ['    if (!info.IsXlink)', '        result |= Show;'], 273);
+    // Never partial: Pierre's FileDiff would ask for the whole files of a partial diff, which a suggestion hasn't.
+    expect(diff.isPartial).toBe(false);
+    expect(diff.hunks).toHaveLength(1);
+    expect(diff.hunks[0]).toMatchObject({ collapsedBefore: 0, deletionStart: 273, deletionCount: 1, additionStart: 273, additionCount: 2 });
+  });
+
+  it('shows a deletion as the lines removed alone', () => {
+    const diff = diffOf(['old();', 'older();'], [], 40);
+    expect(rowsOf(diff)).toEqual(['- old();', '- older();']);
+    expect(diff.hunks[0]).toMatchObject({ deletionStart: 40, deletionCount: 2, additionCount: 0 });
+  });
+
+  it('counts the rows each layout takes', () => {
+    const wrapped = diffOf(['    result |= Show;'], ['    if (!info.IsXlink)', '        result |= Show;']);
+    expect(wrapped).toMatchObject({ unifiedLineCount: 3, splitLineCount: 3 });
+    expect(wrapped.hunks[0]).toMatchObject({ unifiedLineCount: 3, splitLineCount: 3 });
+    const edited = diffOf(['a = 1;', 'b = 2;'], ['a = 2;', 'b = 3;']);
+    expect(edited).toMatchObject({ unifiedLineCount: 4, splitLineCount: 2 });
   });
 });

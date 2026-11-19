@@ -46,8 +46,9 @@ describe('pierreSnippetDiffOptions: a few lines of diff in a comment', () => {
     expect(options).toMatchObject({ theme: 'pierre-dark', themeType: 'dark', diffStyle: 'unified', diffIndicators: 'bars', ...WORD_MARKS });
   });
 
-  it('shows every line, unnumbered, with no header, scrolling long lines sideways', () => {
-    expect(options).toMatchObject({ expandUnchanged: true, disableLineNumbers: true, disableFileHeader: true, overflow: 'scroll' });
+  it('shows every line, numbered, with no header, scrolling long lines sideways', () => {
+    expect(options).toMatchObject({ expandUnchanged: true, disableFileHeader: true, overflow: 'scroll' });
+    expect(options.disableLineNumbers).toBeFalsy();
   });
 
   it('draws on the surface every diff does', () => {
