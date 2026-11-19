@@ -141,7 +141,7 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   "wanted to merge … into" once closed. Both badges stay: they say
   different things (where the request stands, where its review stands), and side by side they read as two, not noise.
 - **The destination** changes in place while Draft or Open and its source branch is named (`DestinationPicker`;
-  `reviewHeadline` decides): it reads as the headline's other
+  `changeableDestinationOf` decides, for the headline, the list's menu and the details panel): it reads as the headline's other
   branch with a small chevron, a quiet tint under the pointer; it opens the branch list (`BranchSearchList`) with the
   source's **Ancestors** first, nearest first, read from the source's name alone (`ancestorsOf`), then **Other
   branches**, newest first, to find by typing (`destinationGroups`), never the source nor a branch made from it. The branches are read only once
@@ -149,7 +149,11 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   a top-level source (`/release`, branched from `/main`) has no ancestor there, and its parent shows under Other
   branches. A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
   (`setMergeRequestDestination`); the name shows at once, with a spinner while it's written. Merged and closed show it
-  as text.
+  as text. The same change is one step away in the list: the row's **Change destination…** (`changeDestination`,
+  `chooseMergeRequestDestination`) opens that branch list in a dialog (`pickDestination`), and the details panel's
+  destination chip opens it as the headline does (`DestinationPicker`'s `chip` look). Picking the destination it has
+  changes nothing; a pick shows in the row and its details at once, then the reviews are read again
+  (`isAffectedByCodeReviews`). A window with no workspace offers it too: it changes the server, not the disk.
 - **The conversation's events** (`conversationOf`, `reviewEventRow`), from the server's notes:
 
   | Note | Reads |
@@ -328,6 +332,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - **The details panel** says "Merge request" (`reviewNoun`) and the state's badge, its verdict left to the Review
   section under it (`reviewStatusCellOf`; a code review, its status's badge), its number to copy, and the source "into" the destination
   (`reviewedChangesOf`, which the Changes column follows too), said once: its Changes property names the branch alone.
+  The destination's chip has a chevron and opens the destination's picker while it can change ("The review's page").
   Under it (`reviewDetailsSections` decides): **Review**, where the review stands as the request's summary says it
   (`ReviewStanding`; when the summary says it); **Reviewers**, each with the status they gave
   (`ReviewerList`, read only: the page changes them); **Branch attributes**, the reviewed branch's, edited in place
