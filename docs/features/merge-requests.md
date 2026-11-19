@@ -316,8 +316,12 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   by a branch: a merge request its verdict (a check, a cross, a quiet dot while it waits; its state already leads
   the row), a code review its review status's icon, each named by its tooltip (`reviewStatusCellOf`). The marks line up,
   and the room a Status column of words took goes to the title. The Status chip still filters by the review's status, for both kinds.
-- **Changes** says `task → main` for a merge request: the source gives way when narrow, the arrow and the destination
-  stay whole (the destination is usually short). Its tooltip: "Merge /main/task into /main".
+- **Changes** says `task → main` for a merge request, each branch by its name alone (`PathLabel`'s `nameOnly`), so
+  the column stays narrow: the source gives way when narrow, the arrow and the destination stay whole. Its tooltip
+  says it in a sentence, the branches whole (`reviewedChangesTip`), which also tells apart two branches of one name:
+  "Jane Doe wants to merge /main/task into /main" while active, "wanted to" once closed, and "Merged /main/task into
+  /main", naming no one, as whoever merged it may not be the author. A code review of a branch shows its name, the
+  whole branch in its tooltip.
 - **The Kind chip** (`kind`, `ReviewKindFilter`): **Any kind**, where it rests, or **Merge requests** or **Code
   reviews** alone (`matchesKind`), narrowed locally from the same read: switching it runs no command. With Code reviews
   alone the State chip hides and its state is left out of the read (`stateUnderKind`, `showsStateChip`): a code
