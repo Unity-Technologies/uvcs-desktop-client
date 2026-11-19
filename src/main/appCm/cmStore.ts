@@ -1,7 +1,7 @@
 import { posix, win32 } from 'node:path';
 
 /**
- * The folder where the app keeps its `cm`, one subfolder per version (docs/features/cm-runtime.md "The store"). Not
+ * The folder where the app keeps its `cm`, one subfolder per version (docs/features/app-cm.md "The store"). Not
  * the user data folder: on Windows that one roams with the user's profile, and 260 MB has no place there; on Linux it
  * is ~/.config, for settings. Not a cache folder either: the OS may empty those, and the app couldn't start offline.
  *

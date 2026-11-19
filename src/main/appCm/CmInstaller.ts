@@ -24,7 +24,7 @@ export interface CmInstallerOptions {
 }
 
 /**
- * Downloads, unpacks and checks the app's `cm` into its store, one folder per version (docs/features/cm-runtime.md
+ * Downloads, unpacks and checks the app's `cm` into its store, one folder per version (docs/features/app-cm.md
  * "Setting it up"). Nothing runs from a version until it's whole: it downloads into `<version>.partial`, unpacks into
  * `<version>.unpacking`, and only once its `cm version` prints the version pinned is that folder renamed to
  * `<version>`, in one step. A failure leaves the download to resume, and the next start or retry goes on from there.

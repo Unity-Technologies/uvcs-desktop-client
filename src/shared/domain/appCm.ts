@@ -1,13 +1,13 @@
 /**
- * The `cm` the app runs (docs/features/cm-runtime.md): the one it downloads and keeps for itself, pinned per app
+ * The `cm` the app runs (docs/features/app-cm.md): the one it downloads and keeps for itself, pinned per app
  * version, or one installed on the computer.
  */
 
 /** Where the `cm` running comes from: the app's own, the one installed on the computer, or `UVCS_CM_PATH`. */
-export type CmSource = 'managed' | 'installed' | 'environment';
+export type CmSource = 'app' | 'installed' | 'environment';
 
 /** Which `cm` the user chose in Settings: the app's own (the default), or the one installed on the computer. */
-export type CmChoice = 'managed' | 'installed';
+export type CmChoice = 'app' | 'installed';
 
 /** Why the app's `cm` couldn't be set up, each said to the user in its own plain words. */
 export type CmInstallFailure =
@@ -33,7 +33,8 @@ export interface InstalledCm {
 }
 
 export type CmRuntimeStatus =
-  | { kind: 'ready'; version: string; source: CmSource }
+  /** `cm` can run; its version is what `system.cmVersion` answers. */
+  | { kind: 'ready'; source: CmSource }
   | {
       kind: 'installing';
       version: string;
