@@ -104,6 +104,7 @@ function commandsRun() {
  */
 const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
+// `checkVisibility()` (`settled`) takes an element laid out with `display: contents` for hidden: no loader may use it.
 const LOADING = 'main [aria-busy="true"], main [aria-label="Loading"]';
 
 /**
