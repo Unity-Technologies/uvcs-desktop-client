@@ -1,5 +1,6 @@
 import type { ReactNode, Ref } from 'react';
-import { SplitPane } from '../../ui/SplitPane';
+import type { DetailsWidthLimits } from '../../components/detailsPaneStore';
+import { RememberedSplitPane } from '../../components/RememberedSplitPane';
 import styles from './MergePanes.module.css';
 
 interface MergePanesProps {
@@ -12,15 +13,18 @@ interface MergePanesProps {
   detail: ReactNode;
 }
 
+/** The list of what a merge does: remembered as it was left, for the next merge, giving way first as the window narrows. */
+const LIST_WIDTH: DetailsWidthLimits = { initial: 360, min: 240, max: 640, restMin: 480 };
+const LIST_WIDTH_KEY = 'mergeList';
+
 /** The merge page's layout, the same while the plan is calculated as once it's in. */
 export function MergePanes({ header, list, listRef, detail }: MergePanesProps) {
   return (
     <div className={styles.session}>
       {header}
-      <SplitPane
-        initialSize={360}
-        minSize={240}
-        maxSize={640}
+      <RememberedSplitPane
+        widthKey={LIST_WIDTH_KEY}
+        widthLimits={LIST_WIDTH}
         first={
           <div ref={listRef} className={styles.list}>
             {list}

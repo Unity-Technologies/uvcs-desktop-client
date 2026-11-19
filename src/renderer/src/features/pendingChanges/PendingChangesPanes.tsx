@@ -21,7 +21,8 @@ import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
-import { SplitPane } from '../../ui/SplitPane';
+import type { DetailsWidthLimits } from '../../components/detailsPaneStore';
+import { RememberedSplitPane } from '../../components/RememberedSplitPane';
 import { Stowable } from '../../ui/Stowable';
 import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
@@ -81,6 +82,10 @@ interface PendingChangesPanesProps {
   /** When the snapshot was read: locks are read again with the changes, at most every 30 s. */
   readAt: number;
 }
+
+/** The list of changes and the check-in panel: remembered as they were left, giving way first as the window narrows so the diff beside them keeps room. */
+const LIST_WIDTH: DetailsWidthLimits = { initial: 380, min: 260, max: 720, restMin: 480 };
+const LIST_WIDTH_KEY = 'pendingChangesList';
 
 /**
  * The list of changes and the check-in panel, beside the diff of the change selected. It keeps this shape from the
@@ -270,10 +275,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           </div>
         </Stowable>
       )}
-      <SplitPane
-        initialSize={380}
-        minSize={260}
-        maxSize={720}
+      <RememberedSplitPane
+        widthKey={LIST_WIDTH_KEY}
+        widthLimits={LIST_WIDTH}
         // Expanded, the list and the check-in stay mounted out of sight: stepping past the last change goes on to the next file.
         stowed={diffExpanded ? 'first' : undefined}
         first={
