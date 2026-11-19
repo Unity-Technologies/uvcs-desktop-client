@@ -148,6 +148,12 @@ path, from one `cm version` each time Settings opens; "Not found"
 and disabled when there is none; in the caution color when older than the app's own). `UVCS_CM_PATH` overrides both:
 neither is checked, and a line says why.
 
+## Seeing which cm runs
+
+About's `cm` row says its version and which one it is ("11.0.16.10659, included with the app", `aboutCmValue`), and
+its button shows that `cm` in the file manager (`cmRuntime.reveal`, `CmRuntime.revealCm`), as Help ▸ Show Command Line
+Client does from the menu bar: the app's own in its store, or the installed one.
+
 ## Rejected
 
 - **Shipping `cm` in the installers**: the bundles are 45-130 MB (unpacked 100-260 MB), which every installer and

@@ -1,4 +1,6 @@
 import { retriesByItself, type CmChoice, type CmRuntimeStatus, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
+import { existsSync } from 'node:fs';
+import { isAbsolute } from 'node:path';
 import type { CmSetupStart } from '@shared/startingPlace';
 import { cmExecutableName } from '../cm/findInstalledCm';
 import { chooseCm, type ChosenCm } from './chooseCm';
@@ -46,6 +48,8 @@ export interface CmRuntimeOptions {
    * development builds, sharing the store, prune nothing.
    */
   prune: (pinnedVersion: string) => void;
+  /** Shows a file in the OS's file manager (`shell.showItemInFolder`). */
+  reveal: (path: string) => void;
   timers: CmRuntimeTimers;
 }
 
@@ -87,6 +91,15 @@ export class CmRuntime {
   /** Whether the app has a `cm` of its own here: a bundle for this platform (none for Linux on Arm). */
   hasOwnCm(): boolean {
     return cmBundleFor(this.options.pin, this.options.platform, this.options.arch) !== null;
+  }
+
+  /**
+   * Shows the `cm` that runs in the file manager (Help ▸ Show Command Line Client, About): the app's own in its store,
+   * or the installed one. Nothing for one not found, named only by its bare name.
+   */
+  revealCm(): void {
+    const path = this.cmPath();
+    if (isAbsolute(path) && existsSync(path)) this.options.reveal(path);
   }
 
   /** The executable `CmClient` runs. */
