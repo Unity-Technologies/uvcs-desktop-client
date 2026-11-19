@@ -1,0 +1,4 @@
+/* As tall as the search beside it and the pills: one row of controls across the bar. */
+.createWorkspace {
+  height: var(--topbar-control-height);
+}

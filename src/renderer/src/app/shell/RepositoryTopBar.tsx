@@ -6,6 +6,7 @@ import { useSession } from '../workspace/sessionStore';
 import { RepositoryPill } from './RepositoryPill';
 import { TopBar } from './TopBar';
 import { TopBarSearch } from './TopBarSearch';
+import styles from './RepositoryTopBar.module.css';
 
 /**
  * The top bar of a repository explored without a workspace: the repository after the home button, then the search,
@@ -19,6 +20,7 @@ export function RepositoryTopBar({ repository }: { repository: string }) {
       <TopBarSearch tip="Fuzzy search branches, labels, changesets, shelves, merge requests and commands" />
       <Button
         variant="primary"
+        className={styles.createWorkspace}
         icon={<FolderPlus size={14} />}
         data-tip="Download the repository to a folder on this computer and work in it, right here"
         onClick={() => createWorkspaceOfExplored(repository)}
