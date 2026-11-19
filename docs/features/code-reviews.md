@@ -4,11 +4,9 @@ A code review asks people to review a branch, a changeset or a shelve. A merge r
 server, with a destination branch and a state: what this doc says of reviews holds for both, and what is a merge
 request's alone (its states, the Merge requests view's State chip, its chips) is in docs/features/merge-requests.md.
 
-Reviews need `cm` 11.0.16.10616 or later: the fields `cm find review` reads (`FOUND_REVIEWS`) and the reviewer
-commands are that version's, and with `--format` a field an older `cm` doesn't know fails the whole command, so the
-list, the branch chips and the palette's reviews would read nothing. The app relies on that version for every review
-command, but those an older `cm` would misread as another command, creating a review: those are offered only from the
-version that has them (`isCmVersionAtLeast`; the email subscription, see "Email notifications").
+Every review command relies on the `cm` the app runs, which is never older than its own (cm-runtime.md "Which cm
+runs"): with `--format`, a field an older `cm` didn't know would fail the whole command, and a subcommand it didn't
+know (`cm codereview subscription`) would be read as a review to create.
 
 ## Reviewers and their status
 
@@ -212,9 +210,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 - Nothing shows while it's read, when the read fails (a server without the command: no error, the section is optional,
   and it isn't asked again while that failure is kept, `asksForSubscription`, so writes and Refresh don't repeat it)
   or when the repository sends no review emails (`emails` "disabled", also when the user can't see the trigger): a
-  button that changes nothing they'd notice would be noise. Nor from a `cm` older than 11.0.16.10616
-  (`readsReviewSubscriptions`, `isCmVersionAtLeast`), which isn't asked: it takes `cm codereview
-  subscription 6` for a review of `subscription` to create.
+  button that changes nothing they'd notice would be noise.
 
 ## The conversation
 

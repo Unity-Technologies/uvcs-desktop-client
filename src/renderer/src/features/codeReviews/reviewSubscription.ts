@@ -1,26 +1,12 @@
 import type { ReviewSubscription, ReviewSubscriptionReason } from '@shared/domain/codeReview';
-import { isCmVersionAtLeast, type CmVersionNumbers } from '../../lib/cmVersion';
 
 /**
- * The first `cm` with `cm codereview subscription`, `subscribe` and `unsubscribe`: cm 11.0.16.10616 prints their help
- * (`cm codereview subscription --help`), and it's the version reviews need already (docs/features/code-reviews.md). An
- * older one doesn't fail on them: `cm codereview <a> <b>` creates a review of `a` titled `b`, so asking would try to
- * create one instead.
+ * Whether the review's subscription is to be read (`useReviewSubscription`), by how its last read went: no more once a
+ * read failed (a server without the command fails it every time), so a write or a Refresh on the page doesn't ask it
+ * again for nothing.
  */
-const FIRST_CM_WITH_REVIEW_SUBSCRIPTIONS: CmVersionNumbers = [11, 0, 16, 10616];
-
-/** Whether this `cm` (its version as `cm version` prints it) can read and change a review's email subscription. */
-export function readsReviewSubscriptions(cmVersion: string | undefined): boolean {
-  return isCmVersionAtLeast(cmVersion, FIRST_CM_WITH_REVIEW_SUBSCRIPTIONS);
-}
-
-/**
- * Whether the review's subscription is to be read (`useReviewSubscription`), by how its last read went: never from a
- * `cm` without the command, and no more once a read failed (a server without it fails it every time), so a write or a
- * Refresh on the page doesn't ask it again for nothing.
- */
-export function asksForSubscription(cmVersion: string | undefined, lastRead: 'pending' | 'error' | 'success'): boolean {
-  return readsReviewSubscriptions(cmVersion) && lastRead !== 'error';
+export function asksForSubscription(lastRead: 'pending' | 'error' | 'success'): boolean {
+  return lastRead !== 'error';
 }
 
 /** What the review page's Notifications shows: why the user gets its emails or doesn't, and the one button. */

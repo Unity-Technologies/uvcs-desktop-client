@@ -1,9 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
 import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
 import type { BranchInfo } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
-import { cmVersionQuery } from '../../app/startup/useCmAvailability';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
 import { placeId } from '@shared/domain/place';
@@ -25,7 +23,6 @@ import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard'
 import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
 import { diffBranch, saveBranchComment } from './branchOperations';
-import { editsBranchComments } from './editsBranchComments';
 
 interface BranchDetailsProps {
   branch: BranchInfo;
@@ -39,11 +36,10 @@ interface BranchDetailsProps {
 export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const place = usePlace();
-  const { data: cmVersion } = useQuery(cmVersionQuery);
   // The review its chip shows, read with the branches in view (`useBranchReview`): a merge request gets a section.
   const request = asMergeRequest(useBranchReview(branch.id, useSettled()) ?? undefined);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
-  const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
+  const saveComment = (comment: string) => saveBranchComment(place, branch, comment);
 
   return (
     <DetailsPanel

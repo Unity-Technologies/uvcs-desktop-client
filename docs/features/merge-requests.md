@@ -13,7 +13,7 @@ included.
 - `cm find review` prints `{mergerequeststatusname}`, the state in English whatever the client's language (`None`,
   `Draft`, `Open`, `Closed`, `Merged`), and `{destination}`, the destination branch's spec (`br:/main`), empty for a
   plain review (`FOUND_REVIEWS`). `{mergerequeststatus}` translates the state and adds a prefix: never read. Both
-  fields are in `cm` 11.0.16.10616, the version reviews already need (code-reviews.md), so no read asks for a newer one.
+  fields are in every `cm` the app runs (cm-runtime.md "Which cm runs").
 - A review is a merge request when its state is one of the four **and** it has a destination (`mergeRequestOf`,
   `CodeReviewSummary.mergeRequest`, `MergeRequestInfo`); anything else, a state this version doesn't know included, is
   a plain code review. The destination is kept as a branch name, `br:` stripped.
