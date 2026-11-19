@@ -17,7 +17,39 @@ export interface BundleDownload {
   /** The SHA-256 the pin holds: anything else is deleted and fails as `damaged`. */
   sha256: string;
   onProgress: (receivedBytes: number, totalBytes: number | null) => void;
-  signal?: AbortSignal;
+  /** Timers for the stall watch (`STALL_TIMEOUT_MS`); the tests' own. */
+  timers?: StallTimers;
+}
+
+export interface StallTimers {
+  setTimeout: (run: () => void, ms: number) => unknown;
+  clearTimeout: (timer: unknown) => void;
+}
+
+const SYSTEM_TIMERS: StallTimers = { setTimeout: (run, ms) => setTimeout(run, ms), clearTimeout: (timer) => clearTimeout(timer as NodeJS.Timeout) };
+
+/**
+ * How long a download may go without a byte before it fails as `unreachable` (and is tried again, resuming): a
+ * connection a captive portal or a proxy keeps open without sending anything never ends by itself, and Chromium sets no
+ * limit on a body that stopped arriving.
+ */
+export const STALL_TIMEOUT_MS = 60_000;
+
+/** Aborts what it watches once `STALL_TIMEOUT_MS` pass without `alive()`. */
+function stallWatch(url: string, timers: StallTimers) {
+  const controller = new AbortController();
+  const stall = (): void => controller.abort(new CmInstallError('unreachable', `No data for ${STALL_TIMEOUT_MS / 1000} s from ${url}`));
+  let timer = timers.setTimeout(stall, STALL_TIMEOUT_MS);
+  return {
+    signal: controller.signal,
+    alive: (): void => {
+      timers.clearTimeout(timer);
+      timer = timers.setTimeout(stall, STALL_TIMEOUT_MS);
+    },
+    stop: (): void => timers.clearTimeout(timer),
+    /** The stall's own error, when it was what stopped the download. */
+    reasonFor: (error: unknown): unknown => (controller.signal.aborted ? controller.signal.reason : error),
+  };
 }
 
 async function sizeOf(path: string): Promise<number> {
@@ -43,7 +75,7 @@ function totalOf(response: Response, resumedFrom: number): number | null {
  * site answers 206), and checks its SHA-256. A site that answers the whole file again (200) starts it over.
  */
 export async function downloadBundle(download: BundleDownload): Promise<void> {
-  const { fetch, url, partialPath, sha256, onProgress, signal } = download;
+  const { url, partialPath, sha256, onProgress } = download;
   let resumedFrom = await sizeOf(partialPath);
   const kept = createHash('sha256');
   if (resumedFrom > 0) await hashFile(partialPath, kept);
@@ -52,6 +84,30 @@ export async function downloadBundle(download: BundleDownload): Promise<void> {
     onProgress(resumedFrom, resumedFrom);
     return;
   }
+  const watch = stallWatch(url, download.timers ?? SYSTEM_TIMERS);
+  const hash = createHash('sha256');
+  try {
+    resumedFrom = await receive(download, resumedFrom, kept, hash, watch);
+  } catch (error) {
+    throw watch.reasonFor(error);
+  } finally {
+    watch.stop();
+  }
+  const received = (resumedFrom > 0 ? kept : hash).digest('hex');
+  if (received !== sha256) {
+    await rm(partialPath, { force: true });
+    throw new CmInstallError('damaged', `${url} has SHA-256 ${received}; the app expects ${sha256}`);
+  }
+}
+
+/**
+ * Asks for the bundle, or the rest of it, and writes what arrives to `partialPath`, into `kept` when it resumes or
+ * `fresh` when it starts over. Returns where it resumed from: 0 when it started over.
+ */
+async function receive(download: BundleDownload, from: number, kept: Hash, fresh: Hash, watch: ReturnType<typeof stallWatch>): Promise<number> {
+  const { fetch, url, partialPath, onProgress } = download;
+  const signal = watch.signal;
+  let resumedFrom = from;
   let response = await fetch(url, { headers: resumedFrom > 0 ? { Range: `bytes=${resumedFrom}-` } : {}, signal });
   if (response.status === 416) {
     // What was kept is no beginning of the bundle (it's as long or longer): start over.
@@ -62,13 +118,14 @@ export async function downloadBundle(download: BundleDownload): Promise<void> {
   if (!response.ok || !response.body) throw new CmInstallError(httpFailure(response.status), `HTTP ${response.status} from ${url}`);
   if (response.status !== 206) resumedFrom = 0;
 
-  const hash = resumedFrom > 0 ? kept : createHash('sha256');
+  const hash = resumedFrom > 0 ? kept : fresh;
   const totalBytes = totalOf(response, resumedFrom);
   let receivedBytes = resumedFrom;
   onProgress(receivedBytes, totalBytes);
   const file = await open(partialPath, resumedFrom > 0 ? 'a' : 'w');
   try {
     for await (const chunk of response.body) {
+      watch.alive();
       hash.update(chunk);
       await file.write(chunk);
       receivedBytes += chunk.byteLength;
@@ -77,9 +134,5 @@ export async function downloadBundle(download: BundleDownload): Promise<void> {
   } finally {
     await file.close();
   }
-  const received = hash.digest('hex');
-  if (received !== sha256) {
-    await rm(partialPath, { force: true });
-    throw new CmInstallError('damaged', `${url} has SHA-256 ${received}; the app expects ${sha256}`);
-  }
+  return resumedFrom;
 }

@@ -14,6 +14,8 @@ export interface FakeBundleSiteOptions {
   status?: number;
   /** Fails every request as a network error would. */
   error?: Error;
+  /** Sends this many bytes, then nothing more, the connection left open until the request is aborted. */
+  stallsAfter?: number;
 }
 
 /** The SHA-256 of some bytes, as the pin holds it. */
@@ -37,10 +39,12 @@ export function fakeBundleSite(files: Record<string, Uint8Array>, options: FakeB
     const start = range && options.honorsRanges !== false ? Number(/bytes=(\d+)-/.exec(range)?.[1] ?? 0) : 0;
     if (start >= file.length && start > 0) return new Response(null, { status: 416 });
     const body = file.subarray(start);
+    const sent = options.stallsAfter === undefined ? body : body.subarray(0, options.stallsAfter);
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
-        for (let offset = 0; offset < body.length; offset += chunkSize) controller.enqueue(body.subarray(offset, offset + chunkSize));
-        controller.close();
+        for (let offset = 0; offset < sent.length; offset += chunkSize) controller.enqueue(sent.subarray(offset, offset + chunkSize));
+        if (options.stallsAfter === undefined) controller.close();
+        else init.signal?.addEventListener('abort', () => controller.error(init.signal?.reason));
       },
     });
     return new Response(stream, { status: start > 0 ? 206 : 200, headers: { 'content-length': String(body.length) } });

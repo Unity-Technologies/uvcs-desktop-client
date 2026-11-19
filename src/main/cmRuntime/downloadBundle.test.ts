@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmInstallFailureOf } from './cmInstallFailure';
-import { downloadBundle } from './downloadBundle';
+import { downloadBundle, STALL_TIMEOUT_MS } from './downloadBundle';
 import { fakeBundleSite, sha256Of } from './testing/fakeBundleSite';
 
 const URL = 'https://downloads.example/11.0.16.10659/client-linux.tar.gz';
@@ -69,6 +69,27 @@ describe('downloadBundle', () => {
     const download = downloadBundle({ fetch: site.fetch, url: URL, partialPath: path, sha256: 'f'.repeat(64), onProgress: () => undefined });
     await expect(download.catch(cmInstallFailureOf)).resolves.toBe('damaged');
     expect(existsSync(path)).toBe(false);
+  });
+
+  it('fails as unreachable, keeping what arrived to resume, when nothing arrives for a while', async () => {
+    const site = fakeBundleSite({ [URL]: BUNDLE }, { stallsAfter: 8 });
+    const path = await partialPath();
+    let stall: (() => void) | null = null;
+    const timers = { setTimeout: (run: () => void, ms: number) => (expect(ms).toBe(STALL_TIMEOUT_MS), (stall = run)), clearTimeout: () => undefined };
+    let arrived!: () => void;
+    const eightBytes = new Promise<void>((resolve) => (arrived = resolve));
+    const download = downloadBundle({
+      fetch: site.fetch,
+      url: URL,
+      partialPath: path,
+      sha256: sha256Of(BUNDLE),
+      onProgress: (received) => received === 8 && arrived(),
+      timers,
+    }).catch((error: Error) => ({ kind: cmInstallFailureOf(error), message: error.message }));
+    await eightBytes;
+    stall!();
+    expect(await download).toEqual({ kind: 'unreachable', message: `No data for 60 s from ${URL}` });
+    expect((await readFile(path)).length).toBe(8);
   });
 
   it('fails as unavailable when the site has no such bundle', async () => {

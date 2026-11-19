@@ -85,15 +85,15 @@ export class CmInstaller {
   }
 
   /** Sets up a version, unless it's there already; resolves with its `cm`. */
-  install(version: string, bundle: CmBundle, onProgress: (progress: CmInstallProgress) => void, signal?: AbortSignal): Promise<string> {
+  install(version: string, bundle: CmBundle, onProgress: (progress: CmInstallProgress) => void): Promise<string> {
     const running = this.running.get(version);
     if (running) return running;
-    const install = this.installNow(version, bundle, onProgress, signal).finally(() => this.running.delete(version));
+    const install = this.installNow(version, bundle, onProgress).finally(() => this.running.delete(version));
     this.running.set(version, install);
     return install;
   }
 
-  private async installNow(version: string, bundle: CmBundle, onProgress: (progress: CmInstallProgress) => void, signal?: AbortSignal): Promise<string> {
+  private async installNow(version: string, bundle: CmBundle, onProgress: (progress: CmInstallProgress) => void): Promise<string> {
     const cmPath = this.cmPathOf(version);
     if (existsSync(cmPath)) return cmPath;
     const { store, platform, fetch } = this.options;
@@ -107,7 +107,6 @@ export class CmInstaller {
         partialPath: entries.partial,
         sha256: bundle.sha256,
         onProgress: (receivedBytes, totalBytes) => onProgress({ phase: 'downloading', receivedBytes, totalBytes }),
-        signal,
       });
     } catch (error) {
       // Chromium's errors don't name the address; the details a user copies into a report should.
