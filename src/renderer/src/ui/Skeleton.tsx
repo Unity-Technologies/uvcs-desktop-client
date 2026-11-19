@@ -16,6 +16,15 @@ export function SkeletonBar({ width }: { width: string }) {
   return <span className={styles.bar} style={{ width }} />;
 }
 
+/** A bar standing for one line of text in its place: as tall as the line, so nothing moves when the text arrives. */
+export function SkeletonLine({ width }: { width: string }) {
+  return (
+    <span className={styles.line}>
+      <span className={styles.bar} style={{ width }} />
+    </span>
+  );
+}
+
 interface SkeletonRowsProps {
   /** The real rows' height, so nothing jumps when they arrive. */
   rowHeight: number;

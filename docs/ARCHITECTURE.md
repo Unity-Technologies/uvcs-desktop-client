@@ -1153,12 +1153,25 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   the workspace (`WorkspacePill`: its repository's avatar, name and kind chip, the repository under them; it opens
   the switcher, and a right-click its menu, `currentWorkspaceMenu`), a chevron, its branch pill and incoming chip;
   then the search and the account at the end (`WorkspaceTopBar`). A repository opened without a workspace shows
-  itself in the same place (`RepositoryPill`, `RepositoryTopBar`). The home screen adds nothing. The workspace
-  comes before the branch because the branch belongs to it, the order the official client shows; a workspace card in
+  itself in the same place (`RepositoryPill`, `RepositoryTopBar`). The home screen adds nothing. The bar is 52px
+  tall (`TITLE_BAR_HEIGHT`, `--topbar-height`, which `tokens.test.ts` keeps equal) and its pills 40px
+  (`--topbar-control-height`), 6px clear of its edges, their two lines with no gap between them: 36px pills in a 44px
+  bar read cramped and small, and a 56px bar looked heavier than other apps'. The search and a repository's Create
+  workspace keep the standard 28px (`--control-height`): at 40px the search read as one more card. The macOS traffic
+  lights are centered on the bar as macOS draws them, about 14 points tall (`trafficLightsAt`). The workspace comes
+  before the branch because the branch belongs to it, the order the official client shows; a workspace card in
   the sidebar, under the branch, read backwards. In a window 1100px wide or less the workspace pill shrinks to
   its avatar (`PlacePill.module.css`), its tooltip saying the rest and, below, the workspace's folder
   (`workspacePillTip`), so the branch keeps the room. Sidebars (`ui/nav/SidebarNav`) have no title band of their
   own, nor a workspace card.
+  - While the workspace's info loads, the pills show what the home screen already read of it (`workspacePreview`:
+    its name, repository and branch, from the cache, never asking `cm`), so opening a workspace from the home screen
+    shows them whole at once; what isn't known yet, and the branch's comment while it loads
+    (`workingObjectCommentLine`), is a placeholder bar as tall as its line (`SkeletonLine`), so the pills don't
+    change height or jump when it arrives. A window opened straight into a workspace (the app's start) shows
+    placeholders until its info is read. A partial or dynamic workspace's kind chip comes only with the info, which
+    widens its pill then. The home screen's account switcher shares the pills' look (`ToolbarControl`) but keeps
+    its own 36px, set by the sidebar's rows.
   - Home is one click (or ⇧⌘H, `app.home`, File ▸ Home) from anywhere: in a workspace it leaves for the home
     screen, on the home screen it goes back to its welcome (`WELCOME`), where the house is lit. It sits in the top
     bar, not the sidebar, so it stays put whether the sidebar is folded or not and costs no sidebar entry. It is a

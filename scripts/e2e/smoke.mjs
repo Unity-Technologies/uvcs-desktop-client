@@ -2,7 +2,7 @@
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
 // model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
 // error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
-// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>.
+// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`/<checkout>-<hash>.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -22,9 +22,11 @@ const VIEWPORT = { width: 1400, height: 880 };
 
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
-// One folder per checkout: runs in other worktrees at the same time (parallel agents) empty only their own.
+// One folder per checkout, emptied as a run starts: runs in other worktrees at the same time (parallel agents) empty
+// only their own. It sits in `UVCS_E2E_SHOTS` when set (CI's, kept when the run fails), never emptied itself.
 const checkoutHash = createHash('sha1').update(projectFolder).digest('hex').slice(0, 8);
-const shots = join(tmpdir(), 'uvcs-e2e-shots', `${basename(projectFolder)}-${checkoutHash}`);
+const shotsParent = process.env.UVCS_E2E_SHOTS || join(tmpdir(), 'uvcs-e2e-shots');
+const shots = join(shotsParent, `${basename(projectFolder)}-${checkoutHash}`);
 rmSync(shots, { recursive: true, force: true });
 mkdirSync(shots, { recursive: true });
 const workspace = join(temp, 'demo');
@@ -102,9 +104,45 @@ function commandsRun() {
  */
 const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
-/** Waits until nothing in the page is loading (skeletons and spinners say `Loading`). */
+// `checkVisibility()` (`settled`) takes an element laid out with `display: contents` for hidden: no loader may use it.
+const LOADING = 'main [aria-busy="true"], main [aria-label="Loading"]';
+
+/**
+ * Waits until nothing shown is loading (skeletons and spinners say `Loading`). Only what shows: a view left while it
+ * loaded stays mounted, hidden by its `Activity` (`MOUNTED_VIEWS`), with its effects stopped, so it shows its skeleton
+ * until it is shown again and reads its data then. If something still is when the wait gives up, the failure names it
+ * (`stillLoading`): a run that fails now and then can be read only from its output.
+ */
 async function settled() {
-  await window.waitForFunction(() => !document.querySelector('main [aria-busy="true"], main [aria-label="Loading"]'));
+  try {
+    await window.waitForFunction((loading) => ![...document.querySelectorAll(loading)].some((element) => element.checkVisibility()), LOADING);
+  } catch (error) {
+    const loading = await withTimeout(window.evaluate(stillLoading, LOADING), TIMEOUT_MS, 'what is still loading').catch((reason) => [reason.message]);
+    throw new Error(`${error.message.split('\n')[0]}\nStill loading:\n  ${loading.join('\n  ')}`, { cause: error });
+  }
+}
+
+/**
+ * Runs in the page: each element still loading, as its tag, role, label and whether it is shown, with the nearest
+ * landmark and heading around it, so a failure says which view (shown, or kept hidden in an `Activity`) waits on what.
+ */
+function stillLoading(loading) {
+  const describe = (element) => {
+    const attributes = ['role', 'aria-label', 'aria-busy', 'class'].map((name) => element.getAttribute(name) && `${name}="${element.getAttribute(name)}"`);
+    return `<${element.tagName.toLowerCase()} ${attributes.filter(Boolean).join(' ')}>`;
+  };
+  const headingAround = (element) => {
+    for (let node = element; node; node = node.parentElement) {
+      const heading = node.querySelector('h1, h2, h3, [role="heading"]');
+      if (heading) return heading.textContent.trim().slice(0, 60);
+    }
+    return '(no heading)';
+  };
+  return [...document.querySelectorAll(loading)].map((element) => {
+    const region = element.closest('aside, section, [role="region"], [role="dialog"], main');
+    const shown = element.checkVisibility() ? 'shown' : 'hidden';
+    return `${describe(element)} ${shown}, in ${region ? describe(region) : '(no region)'} under "${headingAround(element)}"`;
+  });
 }
 
 async function step(name, run) {
@@ -384,6 +422,8 @@ try {
     await window.getByRole('menuitem', { name: 'Explore', exact: true }).click();
     await main.getByRole('heading', { level: 1, name: 'Branch Explorer', exact: true }).waitFor();
     await window.getByRole('button', { name: 'Create workspace' }).waitFor();
+    // Its graph read before the next step hides the view: hidden, it would show its skeleton until shown again.
+    await settled();
   });
   for (const view of REPOSITORY_VIEWS) {
     await step(`${view} of a repository`, async () => {
