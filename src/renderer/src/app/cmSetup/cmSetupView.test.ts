@@ -39,7 +39,7 @@ describe('cmSetupViewOf', () => {
   });
 
   it('says a failure in plain words, never the app’s inner names', () => {
-    const failures: CmInstallFailure[] = ['offline', 'unreachable', 'proxyAuthentication', 'diskFull', 'notWritable', 'damaged', 'unavailable'];
+    const failures: CmInstallFailure[] = ['offline', 'unreachable', 'proxyAuthentication', 'diskFull', 'notWritable', 'damaged', 'unavailable', 'blocked'];
     for (const failure of failures) {
       const screen = cmSetupViewOf(failed(failure), null);
       expect(screen?.kind).toBe('failed');

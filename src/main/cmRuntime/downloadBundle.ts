@@ -45,6 +45,13 @@ function totalOf(response: Response, resumedFrom: number): number | null {
 export async function downloadBundle(download: BundleDownload): Promise<void> {
   const { fetch, url, partialPath, sha256, onProgress, signal } = download;
   let resumedFrom = await sizeOf(partialPath);
+  const kept = createHash('sha256');
+  if (resumedFrom > 0) await hashFile(partialPath, kept);
+  // What an earlier attempt kept is the whole bundle already (it failed after downloading): nothing to ask.
+  if (resumedFrom > 0 && kept.copy().digest('hex') === sha256) {
+    onProgress(resumedFrom, resumedFrom);
+    return;
+  }
   let response = await fetch(url, { headers: resumedFrom > 0 ? { Range: `bytes=${resumedFrom}-` } : {}, signal });
   if (response.status === 416) {
     // What was kept is no beginning of the bundle (it's as long or longer): start over.
@@ -55,8 +62,7 @@ export async function downloadBundle(download: BundleDownload): Promise<void> {
   if (!response.ok || !response.body) throw new CmInstallError(httpFailure(response.status), `HTTP ${response.status} from ${url}`);
   if (response.status !== 206) resumedFrom = 0;
 
-  const hash = createHash('sha256');
-  if (resumedFrom > 0) await hashFile(partialPath, hash);
+  const hash = resumedFrom > 0 ? kept : createHash('sha256');
   const totalBytes = totalOf(response, resumedFrom);
   let receivedBytes = resumedFrom;
   onProgress(receivedBytes, totalBytes);

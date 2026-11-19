@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { mkdir, readdir, rename as fsRename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cmExecutableName } from '../cm/findInstalledCm';
 import { cmInstallFailureOf, CmInstallError } from './cmInstallFailure';
 import type { CmBundle } from './cmBundles';
 import { cmBundleUrl } from './cmBundles';
@@ -23,6 +24,34 @@ export interface CmInstallerOptions {
   unpack: (archive: string, destination: string) => Promise<void>;
   /** What `cm version` prints for the `cm` at a path. */
   cmVersionOf: (cmPath: string) => Promise<string>;
+  /** `fs.rename`, and a pause between its tries: the tests' own. */
+  rename?: (from: string, to: string) => Promise<void>;
+  wait?: (ms: number) => Promise<void>;
+}
+
+/** The pauses between tries of the final rename, which Windows refuses while a file is held for a moment. */
+export const RENAME_RETRY_DELAYS_MS = [100, 200, 400, 800, 1600];
+
+/** The errors of a file held for a moment by another program (Windows' antivirus, its indexer). */
+const HELD_FOR_A_MOMENT = new Set(['EPERM', 'EBUSY', 'EACCES']);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function codeOf(error: unknown): string | undefined {
+  return typeof error === 'object' && error !== null ? (error as { code?: string }).code : undefined;
+}
+
+/**
+ * The kind of a failure after the download checked out as published: never the network's. A full disk or a folder
+ * that can't be written say so; anything else is this computer not letting it unpack or run (`blocked`).
+ */
+export function localFailureOf(error: unknown): CmInstallError {
+  if (error instanceof CmInstallError) return error;
+  const message = error instanceof Error ? error.message : String(error);
+  const failure = cmInstallFailureOf(error);
+  return new CmInstallError(failure === 'diskFull' || failure === 'notWritable' ? failure : 'blocked', message);
 }
 
 /**
@@ -86,40 +115,56 @@ export class CmInstaller {
       throw new CmInstallError(cmInstallFailureOf(error), message.includes(url) ? message : `${url}\n${message}`);
     }
     onProgress({ phase: 'finishing' });
-    await rm(entries.unpacking, { recursive: true, force: true });
-    await mkdir(entries.unpacking);
     try {
-      await this.unpackAndCheck(entries.partial, entries.unpacking, version);
-    } catch (error) {
-      // A bundle that unpacks into something else than the version pinned is downloaded again next time.
-      if (error instanceof CmInstallError && error.failure === 'damaged') await rm(entries.partial, { force: true });
       await rm(entries.unpacking, { recursive: true, force: true });
-      throw error;
+      await mkdir(entries.unpacking);
+      await this.unpackAndCheck(entries.partial, entries.unpacking, version);
+      await this.moveIntoPlace(entries.unpacking, entries.installed, cmPath);
+    } catch (error) {
+      await rm(entries.unpacking, { recursive: true, force: true }).catch(() => undefined);
+      const failure = localFailureOf(error);
+      // What unpacks into another version is downloaded again next time; anything else here is this computer's doing,
+      // and the download, checked as published, is kept for Try Again.
+      if (failure.failure === 'damaged') await rm(entries.partial, { force: true });
+      throw failure;
     }
-    await this.moveIntoPlace(entries.unpacking, entries.installed, cmPath);
     await rm(entries.partial, { force: true });
     return cmPath;
   }
 
   private async unpackAndCheck(archive: string, folder: string, version: string): Promise<void> {
     await this.options.unpack(archive, folder);
-    const cmPath = join(folder, 'client', this.options.platform === 'win32' ? 'cm.exe' : 'cm');
-    if (!existsSync(cmPath)) throw new CmInstallError('damaged', `The bundle of ${version} has no client/${this.options.platform === 'win32' ? 'cm.exe' : 'cm'}`);
-    const printed = (await this.options.cmVersionOf(cmPath)).trim();
+    const { platform } = this.options;
+    const cmPath = join(folder, 'client', cmExecutableName(platform));
+    if (!existsSync(cmPath)) throw new CmInstallError('damaged', `The bundle of ${version} has no client/${cmExecutableName(platform)}`);
+    const printed = await this.options.cmVersionOf(cmPath).then(
+      (output) => output.trim(),
+      (error: unknown) => {
+        throw new CmInstallError('blocked', `${cmPath} didn't run: ${error instanceof Error ? error.message : String(error)}`);
+      },
+    );
     if (printed !== version) throw new CmInstallError('damaged', `The bundle of ${version} holds cm ${printed}`);
   }
 
   /**
-   * Renames the checked folder to the version's, in one step. Another copy of the app (a development build beside the
-   * installed one) may have set up the same version meanwhile: its folder stands, and this one goes.
+   * Renames the checked folder to the version's, in one step. Windows often refuses it for a moment, while Defender or
+   * the indexer still holds a file just written or run: it's tried again a few times (`RENAME_RETRY_DELAYS_MS`), as
+   * graceful-fs does. Another copy of the app (a development build beside the installed one) may have set up the same
+   * version meanwhile: its folder stands, and this one goes.
    */
   private async moveIntoPlace(unpacking: string, installed: string, cmPath: string): Promise<void> {
-    try {
-      await rm(installed, { recursive: true, force: true });
-      await rename(unpacking, installed);
-    } catch (error) {
-      await rm(unpacking, { recursive: true, force: true });
-      if (!existsSync(cmPath)) throw error;
+    const { rename = fsRename, wait = sleep } = this.options;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rm(installed, { recursive: true, force: true });
+        await rename(unpacking, installed);
+        return;
+      } catch (error) {
+        if (existsSync(cmPath)) return;
+        const delay = RENAME_RETRY_DELAYS_MS[attempt];
+        if (delay === undefined || !HELD_FOR_A_MOMENT.has(codeOf(error) ?? '')) throw error;
+        await wait(delay);
+      }
     }
   }
 

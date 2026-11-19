@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { CmRuntimeStatus } from '@shared/domain/cmRuntime';
+import { retriesByItself, type CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import { api } from '../../api/client';
 
 /**
@@ -7,7 +7,7 @@ import { api } from '../../api/client';
  * (`installRetries`), which may be minutes away.
  */
 export function useRetryWhenOnline(status: CmRuntimeStatus): void {
-  const waitsForNetwork = status.kind === 'failed' && (status.failure === 'offline' || status.failure === 'unreachable');
+  const waitsForNetwork = status.kind === 'failed' && retriesByItself(status.failure);
   useEffect(() => {
     if (!waitsForNetwork) return;
     const retry = (): void => void api.cmRuntime.retry();

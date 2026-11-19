@@ -36,6 +36,16 @@ describe('downloadBundle', () => {
     expect(progress[0]).toBe('9/24');
   });
 
+  it('asks nothing when what was kept is the whole bundle already, as published', async () => {
+    const site = fakeBundleSite({ [URL]: BUNDLE });
+    const path = await partialPath();
+    await writeFile(path, BUNDLE);
+    const progress: string[] = [];
+    await downloadBundle({ fetch: site.fetch, url: URL, partialPath: path, sha256: sha256Of(BUNDLE), onProgress: (received, total) => progress.push(`${received}/${total}`) });
+    expect(site.requests).toEqual([]);
+    expect(progress).toEqual(['24/24']);
+  });
+
   it('starts over when the site answers the whole file to a range', async () => {
     const site = fakeBundleSite({ [URL]: BUNDLE }, { honorsRanges: false });
     const path = await partialPath();

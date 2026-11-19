@@ -1,11 +1,11 @@
-import type { CmChoice, CmRuntimeStatus, InstalledCm } from '@shared/domain/cmRuntime';
+import { retriesByItself, type CmChoice, type CmRuntimeStatus, type InstalledCm } from '@shared/domain/cmRuntime';
 import type { CmSetupStart } from '@shared/startingPlace';
 import { cmExecutableName } from '../cm/findInstalledCm';
 import { chooseCm, type ChosenCm } from './chooseCm';
 import { cmBundleFor, type CmVersionPin } from './cmBundles';
 import { cmInstallFailureOf } from './cmInstallFailure';
 import type { CmInstaller, CmInstallProgress } from './CmInstaller';
-import { retryDelayAfter, retriesByItself } from './installRetries';
+import { retryDelayAfter } from './installRetries';
 
 /** A download of another version's `cm`, ahead of the update that runs it. */
 export interface CmPrefetch {

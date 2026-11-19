@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { retriesByItself, retryDelayAfter } from './installRetries';
+import { retriesByItself } from '@shared/domain/cmRuntime';
+import { retryDelayAfter } from './installRetries';
 
 describe('retryDelayAfter', () => {
   it('waits longer after each failure, then every five minutes', () => {
@@ -11,6 +12,6 @@ describe('retriesByItself', () => {
   it('retries only what the network may fix by itself', () => {
     expect(retriesByItself('offline')).toBe(true);
     expect(retriesByItself('unreachable')).toBe(true);
-    for (const failure of ['diskFull', 'notWritable', 'proxyAuthentication', 'damaged', 'unavailable'] as const) expect(retriesByItself(failure)).toBe(false);
+    for (const failure of ['diskFull', 'notWritable', 'proxyAuthentication', 'damaged', 'unavailable', 'blocked'] as const) expect(retriesByItself(failure)).toBe(false);
   });
 });

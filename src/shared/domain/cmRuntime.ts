@@ -24,7 +24,20 @@ export type CmInstallFailure =
   /** What was downloaded isn't what was published: its SHA-256 differs, it doesn't unpack or it isn't that version. */
   | 'damaged'
   /** The download site doesn't have that version (any more). */
-  | 'unavailable';
+  | 'unavailable'
+  /**
+   * It downloaded as published, but this computer didn't let it be unpacked or run: a policy that blocks programs in
+   * the user's folders, a library missing, a file held by another program.
+   */
+  | 'blocked';
+
+/**
+ * Only the network's failures pass by themselves: those are tried again without the user (`installRetries`, and as
+ * the page hears it's back online). The rest wait for the user to fix them and press Try Again.
+ */
+export function retriesByItself(failure: CmInstallFailure): boolean {
+  return failure === 'offline' || failure === 'unreachable';
+}
 
 /** A `cm` installed on the computer, offered when the app's own can't be set up. */
 export interface InstalledCm {
