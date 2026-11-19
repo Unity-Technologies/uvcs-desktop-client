@@ -332,7 +332,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - **The details panel** says "Merge request" (`reviewNoun`) and the state's badge, its verdict left to the Review
   section under it (`reviewStatusCellOf`; a code review, its status's badge), its number to copy, and the source "into" the destination
   (`reviewedChangesOf`, which the Changes column follows too), said once: its Changes property names the branch alone.
-  The destination's chip has a chevron and opens the destination's picker while it can change ("The review's page").
+  The destination's chip has a chevron and opens the destination's picker while it can change ("The page").
   Under it (`reviewDetailsSections` decides): **Review**, where the review stands as the request's summary says it
   (`ReviewStanding`; when the summary says it); **Reviewers**, each with the status they gave
   (`ReviewerList`, read only: the page changes them); **Branch attributes**, the reviewed branch's, edited in place
