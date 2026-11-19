@@ -1,4 +1,4 @@
-import type { CmInstallFailure } from '@shared/domain/appCm';
+import type { CmInstallFailure } from '@shared/domain/cmRuntime';
 
 /** A failure to set up the app's `cm` whose kind is already known: an HTTP answer, a hash that differs. */
 export class CmInstallError extends Error {

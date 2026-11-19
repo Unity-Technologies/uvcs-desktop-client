@@ -2,7 +2,7 @@ name: cm bundles
 
 # Every day, the bundles cm-version.json pins are downloaded again and their SHA-256 compared with the pin: a bundle
 # republished with other bytes, or gone, would stop every new install of the app, which downloads it
-# (docs/features/app-cm.md "The pin"). A failure here is found before a user meets it.
+# (docs/features/cm-runtime.md "The pin"). A failure here is found before a user meets it.
 
 on:
   schedule:

@@ -1,6 +1,6 @@
 /**
  * The `cm` this version of the app runs, as `cm-version.json` at the repository's root pins it: one exact version, and
- * per platform the bundle that holds it and the SHA-256 of that file (docs/features/app-cm.md "The pin").
+ * per platform the bundle that holds it and the SHA-256 of that file (docs/features/cm-runtime.md "The pin").
  *
  * No imports: `scripts/build/cmVersion.ts` runs this module with Node as it is, to bump and check the pin.
  */

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { win32 } from 'node:path';
-import type { CmInstallFailure } from '@shared/domain/appCm';
+import type { CmInstallFailure } from '@shared/domain/cmRuntime';
 import { CmInstallError } from './cmInstallFailure';
 
 /**
