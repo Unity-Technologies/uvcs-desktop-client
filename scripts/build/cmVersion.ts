@@ -25,6 +25,7 @@ import {
   type CmBundleKey,
   type CmVersionPin,
 } from '../../src/main/cmRuntime/cmBundles.ts';
+import { tarPath } from '../../src/main/cmRuntime/tarPath.ts';
 
 const PIN_FILE = resolve(import.meta.dirname, '../../cm-version.json');
 
@@ -82,7 +83,8 @@ function checkRunsHere(pin: CmVersionPin, folder: string): void {
   }
   const unpacked = join(folder, 'unpacked');
   mkdirSync(unpacked);
-  const tar = spawnSync('tar', ['-xf', join(folder, own.bundle.file), '-C', unpacked], { stdio: 'inherit' });
+  // The system's tar, as the app unpacks: on Windows System32's, which reads the zip (Git's GNU tar doesn't).
+  const tar = spawnSync(tarPath(process.platform, process.env), ['-xf', join(folder, own.bundle.file), '-C', unpacked], { stdio: 'inherit' });
   if (tar.status !== 0) throw new Error(`Couldn't unpack ${own.bundle.file}`);
   const cm = join(unpacked, 'client', process.platform === 'win32' ? 'cm.exe' : 'cm');
   const printed = spawnSync(cm, ['version'], { encoding: 'utf8' }).stdout?.trim();

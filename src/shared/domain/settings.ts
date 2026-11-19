@@ -50,7 +50,7 @@ export interface AppSettings {
   autoRefresh: boolean;
   /**
    * Which `cm` the app runs: its own, pinned to this version of the app (the default), or the one installed on the
-   * computer (Settings › General, docs/features/cm-runtime.md "Which cm runs").
+   * computer (Settings › Workspaces, docs/features/cm-runtime.md "Which cm runs").
    */
   cmChoice: CmChoice;
   /** Folder new workspaces are created in; empty means the home folder. */

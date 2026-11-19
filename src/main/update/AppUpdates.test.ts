@@ -161,6 +161,13 @@ describe('an update whose cm is another', () => {
     ]);
   });
 
+  it('splits the progress the same way when a macOS build without a Developer ID downloads the disk image itself', async () => {
+    const { updates: app, pushed } = updates(fakeFeed([found]), { needsManualInstall: vi.fn(async () => true), cmPrefetchFor: async () => prefetch([1]) });
+    await app.check();
+    expect(pushed.map((status) => (status.state === 'downloading' ? status.percent : status.state))).toEqual(['checking', 0, 20, 50, 100, 'ready']);
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'installer' });
+  });
+
   it('is ready anyway when its cm fails to download: the update sets it up as it starts', async () => {
     const { updates: app, pushed, dependencies } = updates(fakeFeed([found]), { cmPrefetchFor: async () => prefetch([0.2], new Error('net::ERR_INTERNET_DISCONNECTED')) });
     await app.check();

@@ -2,9 +2,10 @@ import { posix, win32 } from 'node:path';
 import { compareCmVersions } from '@shared/domain/cmRuntime';
 
 /**
- * The folder where the app keeps its `cm`, one subfolder per version (docs/features/cm-runtime.md "The store"). Not
- * the user data folder: on Windows that one roams with the user's profile, and 260 MB has no place there; on Linux it
- * is ~/.config, for settings. Not a cache folder either: the OS may empty those, and the app couldn't start offline.
+ * The folder where the app keeps its `cm`, one subfolder per version (docs/features/cm-runtime.md "The store"). On
+ * Windows and Linux not the user data folder: on Windows that one roams with the user's profile, and 260 MB has no
+ * place there; on Linux it is ~/.config, for settings. On macOS it is inside it, where apps keep what they need. Never
+ * a cache folder: the OS may empty those, and the app couldn't start offline.
  *
  * - Windows: `%LOCALAPPDATA%\Unity Version Control\cm`
  * - macOS:   `~/Library/Application Support/Unity Version Control/cm`

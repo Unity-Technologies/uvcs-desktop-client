@@ -44,13 +44,13 @@ SHA-256 of that file (`CmVersionPin`, `cmBundles.ts`):
 | macOS   | `~/Library/Application Support/Unity Version Control/cm`  |
 | Linux   | `$XDG_DATA_HOME/unity-version-control/cm` (`~/.local/share`) |
 
-Not the user data folder, which roams with the profile on Windows and is `~/.config` on Linux, nor a cache folder,
-which the OS may empty: the app couldn't start offline. Each version is `<version>/client/cm[.exe]`
-(`managedCmPath`); `<version>.partial` is a download cut short, and `<version>.unpacking` a bundle being checked.
+On Windows and Linux, not the user data folder, which roams with the profile on Windows and is `~/.config` on Linux;
+on macOS, inside it. Never a cache folder, which the OS may empty: the app couldn't start offline. Each version is
+`<version>/client/cm[.exe]` (`managedCmPath`); `<version>.partial` is a download cut short, and `<version>.unpacking` a bundle being checked.
 
-**Removing old versions** (`CmInstaller.prune`, `storeEntriesToPrune`): once the pinned version runs, packaged builds
-delete every other version but one an update downloaded to run (`CmRuntime.keptVersions`). Development builds share
-the store and never prune. What can't be deleted (a `cm` still running from it) waits for the next start. The Windows
+**Removing old versions** (`CmInstaller.prune`, `storeEntriesToPrune`): once a `cm` first runs in a launch, packaged
+builds delete every version but the pinned one and the newest above it, which an update downloaded to run and keeps
+until it starts, across restarts. Development builds share the store and never prune. What can't be deleted (a `cm` still running from it) waits for the next start. The Windows
 uninstaller removes the store, but not on an update, which runs the old version's uninstaller too (`installer.nsh`).
 
 ## Setting it up
@@ -59,17 +59,24 @@ uninstaller removes the store, but not on an update, which runs the old version'
 
 1. Downloads the bundle with Electron's `net` (the system's proxy, PAC script and certificates, as Chromium; Node's
    `fetch` knows none of them) into `<version>.partial`, resuming what an earlier attempt left (`downloadBundle`: a
-   `Range` request; a site that answers the whole file again starts over), and checks its SHA-256.
-2. Unpacks it into `<version>.unpacking` with the system's `tar` (`unpackBundle`; on Windows System32's, which reads
-   zip, never Git's GNU tar from the PATH). Nothing is quarantined: the app downloads it itself.
-3. Runs its `cm version`, which must print the pinned version, then renames the folder to `<version>` in one step and
-   deletes the download. Another copy of the app that set up the same version meanwhile wins.
+   `Range` request; a site that answers the whole file again starts over; one already whole and as published asks
+   nothing), and checks its SHA-256. A download that gets no byte for a minute fails as `unreachable`
+   (`STALL_TIMEOUT_MS`): a captive portal or a proxy can keep a connection open without sending anything.
+2. Unpacks it into `<version>.unpacking` with the system's `tar` (`unpackBundle`, `tarPath`; on Windows System32's,
+   which reads zip, never Git's GNU tar from the PATH), run in the store and given the entries' plain names, so no
+   folder name of the user's reaches its command line. Nothing is quarantined: the app downloads it itself.
+3. Runs its `cm version` (`versionReader`, logged in the command log), which must print the pinned version, then
+   renames the folder to `<version>` in one step, tried again for a few seconds while Windows holds a file just written
+   (`RENAME_RETRY_DELAYS_MS`), and deletes the download. Another copy of the app that set up the same version
+   meanwhile wins.
 
 A failure has a kind (`CmInstallFailure`, `cmInstallFailureOf`): `offline`, `unreachable`, `proxyAuthentication`,
-`diskFull`, `notWritable`, `damaged` (the download is deleted, so the next attempt starts over) or `unavailable` (the
-site has no such bundle). Only the network's pass by themselves: those retry after 5 s, 15 s, 1 min and then every 5
-min (`installRetries`), and as soon as the page hears it's back online (`useRetryWhenOnline`). The details name the
-address and the error.
+`unavailable` (the site has no such bundle) or `damaged` (not as published: the download is deleted, so the next
+attempt starts over) while downloading; once it checked out as published, never the network's (`localFailureOf`):
+`diskFull`, `notWritable`, or `blocked` (this computer didn't let it unpack or run: a policy against programs in the
+user's folders, a library missing), which keep the download for Try Again. Only the network's pass by themselves
+(`retriesByItself`): those retry after 5 s, 15 s, 1 min and then every 5 min (`installRetries`), and as soon as the
+page hears it's back online (`useRetryWhenOnline`). The details name the address and the error.
 
 ## Which cm runs
 
@@ -82,8 +89,10 @@ address and the error.
 4. Where the app has none of its own (Linux on Arm), the installed one, found or not: one not found shows
    `CmUnavailableScreen`, as before.
 
-A change of choice (`cmRuntime.use`) restarts `CmClient`'s shells (`relocate`), and every window asks `cm` again what
-it read (`cmChanged`). The app's own `cm` shares the user's `cm` configuration (the config folder, profiles, tokens):
+A change of choice (`cmRuntime.use`) restarts `CmClient`'s shells (`relocate`), and every window asks again which `cm`
+runs and whether it's set up (`cmChanged`; `system.cmVersion` answers per executable, and logs the new one). Going
+back to the app's own before it's there keeps the installed one running while it downloads, Settings showing how far
+(`OwnCmSwitch`), and switches once it's set up; a failure leaves the installed one, and the choice, as they were. The app's own `cm` shares the user's `cm` configuration (the config folder, profiles, tokens):
 `cm` reads it backward compatibly, so the app's own and an installed one can be switched freely.
 
 ## The setup screen
@@ -108,7 +117,13 @@ ready, and then the window's place or Home, with no click. What it shows is `cmS
   folded under Details.
 
 Users of a version before the app had its own `cm` see the screen once too, as on a first run: an installed `cm` is
-never taken as the app's own.
+never taken as the app's own. A folder named at launch (Windows, Linux) opens once the setup is done: finding its
+workspace asks `cm` (`handleLaunchRequests`, `CmRuntime.whenReady`).
+
+After it, a computer that never had Unity Version Control has no `cm` configuration: `SetupProblemScreen` shows the
+command that sets it up in a terminal with the app's own `cm` named in full, as it isn't on the PATH (`cmCommandLine`).
+If the app's own `cm` later doesn't start, `CmUnavailableScreen` says this computer stops it, and asks nothing to be
+installed (`cmUnavailableView`).
 
 ## Updates bring their cm
 
@@ -120,8 +135,8 @@ failure there never stops the update: the new version sets its `cm` up as it sta
 
 ## Settings
 
-Settings › Workspaces › Command line client (`CmChoiceGroup`, `cmChoiceCards`): "Included with the app" (its version)
-and "Installed on this computer" (its version and path, from one `cm version` each time Settings opens; "Not found"
+Settings › Workspaces › Command line client (`CmChoiceGroup`, `cmChoiceCards`): "Included with the app" (its version,
+or its download's progress while it replaces the installed one) and "Installed on this computer" (its version and path, from one `cm version` each time Settings opens; "Not found"
 and disabled when there is none; in the caution color when older than the app's own). `UVCS_CM_PATH` overrides both:
 neither is checked, and a line says why.
 
