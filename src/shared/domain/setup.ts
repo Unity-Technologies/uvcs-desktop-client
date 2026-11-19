@@ -2,6 +2,11 @@
 export interface SetupProblem {
   commandLine: string;
   output: string;
+  /**
+   * The `cm` that runs, as a path: the app's own isn't on the PATH, so the command that sets it up in a terminal names
+   * it in full (`cmCommandLine`).
+   */
+  cmPath: string;
 }
 
 /**

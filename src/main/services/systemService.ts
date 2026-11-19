@@ -42,7 +42,7 @@ export function createSystemService({ cm, operations, windows, settings, diagnos
     }
     return version();
   };
-  const setupProblem = untilSucceeded(() => checkSetup(profiles), (problem) => problem === null);
+  const setupProblem = untilSucceeded(() => checkSetup(profiles, cm.executable), (problem) => problem === null);
 
   return {
     cmVersion,

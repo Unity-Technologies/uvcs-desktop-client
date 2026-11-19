@@ -82,9 +82,10 @@ function Root() {
   const isPageWindow = usePageWindow((state) => state.isPageWindow);
   useForgetLeftPlace(place);
   const cm = useCmAvailability();
+  const cmSource = useCmRuntimeStore((state) => (state.status.kind === 'ready' ? state.status.source : 'managed'));
   const setup = useSetupCheck(cm.isSuccess);
 
-  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
+  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} source={cmSource} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
   // The app shows meanwhile: the check is local and takes a moment. A server out of reach never stops the app: the
   // open workspace's server is checked apart (`ConnectionProblemCard`, and `SignInCover` for a sign-in it needs), and
   // the home screen asks no server at all.
