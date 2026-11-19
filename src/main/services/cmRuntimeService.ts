@@ -7,6 +7,6 @@ export function createCmRuntimeService({ cmRuntime }: ServiceContext): CmRuntime
     retry: async () => cmRuntime.retry(),
     use: async (choice) => cmRuntime.use(choice),
     installedCm: () => cmRuntime.installedCm(),
-    pinnedVersion: async () => cmRuntime.pinnedVersion,
+    pinnedVersion: async () => (cmRuntime.hasOwnCm() ? cmRuntime.pinnedVersion : null),
   };
 }

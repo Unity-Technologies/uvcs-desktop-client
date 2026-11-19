@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../queryClient';
-import { isSettingUpCm, loadCmRuntimeStatus, rateAfter, startingStatus, useCmRuntimeStore } from './cmRuntimeStore';
+import { cmChanged, isSettingUpCm, loadCmRuntimeStatus, rateAfter, startingStatus, useCmRuntimeStore } from './cmRuntimeStore';
 
 const initial = useCmRuntimeStore.getState();
 const READY: CmRuntimeStatus = { kind: 'ready', source: 'managed' };
@@ -30,6 +30,15 @@ describe('isSettingUpCm', () => {
     expect(isSettingUpCm(downloading(0))).toBe(true);
     expect(isSettingUpCm({ kind: 'failed', version: '11.0.16.10659', failure: 'offline', detail: '', firstRun: true, installedCm: null })).toBe(true);
     expect(isSettingUpCm(READY)).toBe(false);
+  });
+});
+
+describe('cmChanged', () => {
+  it('says another cm runs once the setup finishes, or the source changes', () => {
+    expect(cmChanged(downloading(0), READY)).toBe(true);
+    expect(cmChanged(READY, { kind: 'ready', source: 'installed' })).toBe(true);
+    expect(cmChanged(READY, READY)).toBe(false);
+    expect(cmChanged(READY, downloading(0))).toBe(false);
   });
 });
 

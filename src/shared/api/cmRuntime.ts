@@ -13,6 +13,6 @@ export interface CmRuntimeApi {
   use(choice: CmChoice): Promise<void>;
   /** The `cm` installed on the computer and its version (one `cm version` of it); null when there is none. */
   installedCm(): Promise<InstalledCm | null>;
-  /** The version of the app's own `cm`, the one this version of the app pins. */
-  pinnedVersion(): Promise<string>;
+  /** The version of the app's own `cm`, the one this version of the app pins; null where it has none (Linux on Arm). */
+  pinnedVersion(): Promise<string | null>;
 }

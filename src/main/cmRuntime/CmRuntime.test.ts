@@ -189,6 +189,7 @@ describe('CmRuntime', () => {
   it('runs the installed cm where the platform has no bundle', () => {
     const { runtime, installer } = runtimeWith({ arch: 'arm64' });
     runtime.start();
+    expect(runtime.hasOwnCm()).toBe(false);
     expect(runtime.status()).toEqual({ kind: 'ready', source: 'installed' });
     expect(installer.installs).toBe(0);
   });

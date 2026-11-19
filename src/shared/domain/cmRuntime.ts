@@ -56,3 +56,14 @@ export type CmRuntimeStatus =
       /** The `cm` installed on the computer, which the user may run instead; null when none was found. */
       installedCm: InstalledCm | null;
     };
+
+/** Compares two `cm` versions number by number (`11.0.16.9876` is older than `11.0.16.10659`): negative when `a` is older. */
+export function compareCmVersions(a: string, b: string): number {
+  const left = a.split('.').map(Number);
+  const right = b.split('.').map(Number);
+  for (let index = 0; index < Math.max(left.length, right.length); index++) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}

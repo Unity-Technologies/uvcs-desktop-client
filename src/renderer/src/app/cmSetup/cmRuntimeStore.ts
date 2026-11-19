@@ -46,11 +46,18 @@ export function isSettingUpCm(status: CmRuntimeStatus): boolean {
   return status.kind !== 'ready';
 }
 
+/** Whether another `cm` runs now: one that just became ready, or another source (Settings' choice). */
+export function cmChanged(before: CmRuntimeStatus, after: CmRuntimeStatus): boolean {
+  if (after.kind !== 'ready') return false;
+  return before.kind !== 'ready' || before.source !== after.source;
+}
+
 function receive(status: CmRuntimeStatus): void {
-  const wasSettingUp = isSettingUpCm(useCmRuntimeStore.getState().status);
+  const before = useCmRuntimeStore.getState().status;
   useCmRuntimeStore.setState(({ rate }) => ({ status, heardFromMain: true, rate: rateAfter(rate, status, performance.now()) }));
-  // What asked `cm` before it could run (a window's first reads) failed with "not found": asked again now.
-  if (wasSettingUp && !isSettingUpCm(status)) {
+  // What asked `cm` before it could run (a window's first reads) failed with "not found", and another one may be
+  // another version: asked again now.
+  if (cmChanged(before, status)) {
     void queryClient.resetQueries({ queryKey: queryKeys.cmVersion });
     void queryClient.resetQueries({ queryKey: queryKeys.cmSetup });
   }

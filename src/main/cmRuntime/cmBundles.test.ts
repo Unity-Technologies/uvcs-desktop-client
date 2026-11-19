@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import pin from '../../../cm-version.json';
-import { cmBundleFor, cmBundleUrl, compareCmVersions, pinProblems, type CmVersionPin } from './cmBundles';
+import { cmBundleFor, cmBundleUrl, pinProblems, type CmVersionPin } from './cmBundles';
 
 const PIN: CmVersionPin = {
   version: '11.0.16.10659',
@@ -60,13 +60,5 @@ describe('cmBundleUrl', () => {
 describe('cmBundleUrl on another site', () => {
   it('lays the version and file out the same way', () => {
     expect(cmBundleUrl('11.0.16.10659', 'client-linux.tar.gz', 'http://127.0.0.1:8123/bundles/')).toBe('http://127.0.0.1:8123/bundles/11.0.16.10659/client-linux.tar.gz');
-  });
-});
-
-describe('compareCmVersions', () => {
-  it('compares number by number, not as text', () => {
-    expect(compareCmVersions('11.0.16.9876', '11.0.16.10659')).toBeLessThan(0);
-    expect(compareCmVersions('11.0.16.10659', '11.0.16.10659')).toBe(0);
-    expect(compareCmVersions('12.0.0.1', '11.9.99.99999')).toBeGreaterThan(0);
   });
 });

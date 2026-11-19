@@ -60,6 +60,11 @@ export class CmRuntime {
     return this.options.pin.version;
   }
 
+  /** Whether the app has a `cm` of its own here: a bundle for this platform (none for Linux on Arm). */
+  hasOwnCm(): boolean {
+    return cmBundleFor(this.options.pin, this.options.platform, this.options.arch) !== null;
+  }
+
   /** The executable `CmClient` runs. */
   cmPath(): string {
     return this.chosen.path;
