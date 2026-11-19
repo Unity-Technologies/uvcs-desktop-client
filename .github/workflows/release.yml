@@ -42,7 +42,7 @@ jobs:
         with:
           node-version-file: .nvmrc
       # The cm the release pins (cm-version.json) must be downloadable as it was pinned, byte for byte, before anything
-      # is tagged: every new install downloads it (docs/features/cm-runtime.md "The pin").
+      # is tagged: every new install downloads it (docs/features/app-cm.md "The pin").
       - name: Check the pinned cm bundles
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts check
       # The last release tag, not main's package.json, is the version to bump from: main never gets the bump commit.
@@ -85,7 +85,7 @@ jobs:
             "$RUNNER_TEMP/pull-requests.json" "$changelog" > "$RUNNER_TEMP/notes.md"
           gh release create "$TAG" --draft --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
       # The pin, beside the installers: a running app reads it before restarting into this release, to download the
-      # cm the release runs alongside the update (docs/features/cm-runtime.md "Updates bring their cm").
+      # cm the release runs alongside the update (docs/features/app-cm.md "Updates bring their cm").
       - name: Attach the cm pin
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

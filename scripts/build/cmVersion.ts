@@ -1,5 +1,5 @@
 /**
- * Writes and checks `cm-version.json`, the `cm` this version of the app runs (docs/features/cm-runtime.md "The pin").
+ * Writes and checks `cm-version.json`, the `cm` this version of the app runs (docs/features/app-cm.md "The pin").
  *
  *   npm run cm:bump <version>   downloads that version's bundles, runs this machine's `cm version` from its bundle, and
  *                               writes the pin with each bundle's SHA-256; fails when any bundle is missing
@@ -24,7 +24,7 @@ import {
   pinProblems,
   type CmBundleKey,
   type CmVersionPin,
-} from '../../src/main/cmRuntime/cmBundles.ts';
+} from '../../src/main/appCm/cmBundles.ts';
 
 const PIN_FILE = resolve(import.meta.dirname, '../../cm-version.json');
 
