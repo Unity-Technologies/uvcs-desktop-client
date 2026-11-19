@@ -3,7 +3,7 @@ import type { PartialIncomingItem } from '@shared/domain/incoming';
 import { change, formatOutput, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { readIncomingChanges } from './incoming';
-import { loadedListingOf, MOST_FOLDERS_LISTED_ONE_BY_ONE, treeListingArgs, workspacePathOf } from './partialIncoming';
+import { isInFolders, loadedListingOf, MOST_FOLDERS_LISTED_ONE_BY_ONE, treeListingArgs, workspacePathOf } from './partialIncoming';
 
 const WORKSPACE = '/work';
 
@@ -154,10 +154,13 @@ describe('incoming in a partial workspace', () => {
     expect(headListings.map((command) => command.args.filter((arg) => arg.startsWith('/')))).toEqual([['/', '/Code']]);
   });
 
-  it('names what the head brings inside an xlink, reading what a folder held when loaded from the xlinked repository', async () => {
-    // A partial workspace that loaded one folder of an xlink: the head changed CarnageMain.cs, removed GetUnityToken.cs
-    // and added SetEvictionConfig.cs, whose ids and changesets are pnunit's, not the workspace's.
+  // A partial workspace that loaded one folder of an xlink, as `cm` prints it (a row inside an xlink at its workspace
+  // path, the xlink's own row with its name): the head changed CarnageMain.cs, removed GetUnityToken.cs and added
+  // SetEvictionConfig.cs, whose ids and changesets are pnunit's, not the workspace's. `folders` more folders loaded at
+  // the root, unchanged, take it past what is listed one by one.
+  const pnunitWorkspace = (folders = 0) => {
     const name = (changeset: number) => `03pnunit -> wxlink -> / ${changeset}@pnunit@ [relative] codice@cloud`;
+    const more = Array.from({ length: folders }, (_, index) => ({ id: String(10 + index), revision: String(60 + index), path: `Folder ${index}` }));
     const loaded = formatOutput(
       ['2', '4', '-1', 'dir', '', '0', ''],
       ['2', '850279', '849994', 'dir', '03pnunit', '27890', '', name(27894)],
@@ -167,6 +170,7 @@ describe('incoming in a partial workspace', () => {
       ['838894', '838899', '-1', 'txt', '03pnunit\\test\\carnagetest\\accelerator\\CarnageMain.cs', '27275', ''],
       ['838963', '845883', '-1', 'txt', '03pnunit\\test\\carnagetest\\accelerator\\GetUnityToken.cs', '27570', ''],
       ['833905', '834386', '-1', 'txt', '03pnunit\\test\\carnagetest\\accelerator\\Stats.cs', '27024', ''],
+      ...more.map(({ id, revision, path }) => [id, revision, '-1', 'dir', path, '1', '']),
     );
     const head = formatOutput(
       ['2', '5000', 'dir', '/', '27898'],
@@ -177,6 +181,7 @@ describe('incoming in a partial workspace', () => {
       ['838894', '849822', 'txt', '/03pnunit/test/carnagetest/accelerator/CarnageMain.cs', '27855'],
       ['849844', '850274', 'txt', '/03pnunit/test/carnagetest/accelerator/SetEvictionConfig.cs', '27889'],
       ['833905', '834386', 'txt', '/03pnunit/test/carnagetest/accelerator/Stats.cs', '27024'],
+      ...more.map(({ id, revision, path }) => [id, revision, 'dir', `/${path}`, '1']),
     );
     const acceleratorWhenLoaded = formatOutput(
       ['833552', '850282', 'dir', '/test/carnagetest/accelerator', '27890'],
@@ -184,7 +189,7 @@ describe('incoming in a partial workspace', () => {
       ['838963', '845883', 'txt', '/test/carnagetest/accelerator/GetUnityToken.cs', '27570'],
       ['833905', '834386', 'txt', '/test/carnagetest/accelerator/Stats.cs', '27024'],
     );
-    const { cm, commands } = fakeCmClient({
+    return fakeCmClient({
       'status --header --xml': statusHeader('/main', { changeset: -1 }),
       'status --controlledchanged --changed': pendingStatus(WORKSPACE),
       'ls -R': loaded,
@@ -192,21 +197,29 @@ describe('incoming in a partial workspace', () => {
       'ls /test/carnagetest/accelerator': acceleratorWhenLoaded,
       'find changeset': formatOutput([27898]),
     });
+  };
+  const pnunitRepository = 'pnunit@codice@cloud';
+  const pnunitIncoming = [
+    item({ kind: 'changed', path: '03pnunit/test/carnagetest/accelerator/CarnageMain.cs', loadedRevisionId: 838899, headRevisionId: 849822, repository: pnunitRepository }),
+    item({ kind: 'removed', path: '03pnunit/test/carnagetest/accelerator/GetUnityToken.cs', loadedRevisionId: 845883, repository: pnunitRepository }),
+    item({ kind: 'added', path: '03pnunit/test/carnagetest/accelerator/SetEvictionConfig.cs', headRevisionId: 850274, repository: pnunitRepository }),
+  ];
+  const listingsOf = (commands: readonly { args: string[] }[], tree: string) =>
+    commands.filter((command) => command.args.some((arg) => arg.startsWith(tree))).map((command) => command.args.filter((arg) => !arg.startsWith('--format=')));
 
-    const changes = await readIncomingChanges(cm, WORKSPACE);
+  it('names what the head brings inside an xlink, reading what a folder held when loaded from the xlinked repository', async () => {
+    const { cm, commands } = pnunitWorkspace();
 
-    const repository = 'pnunit@codice@cloud';
-    expect(changes).toMatchObject({
-      items: [
-        item({ kind: 'changed', path: '03pnunit/test/carnagetest/accelerator/CarnageMain.cs', loadedRevisionId: 838899, headRevisionId: 849822, repository }),
-        item({ kind: 'removed', path: '03pnunit/test/carnagetest/accelerator/GetUnityToken.cs', loadedRevisionId: 845883, repository }),
-        item({ kind: 'added', path: '03pnunit/test/carnagetest/accelerator/SetEvictionConfig.cs', headRevisionId: 850274, repository }),
-      ],
-    });
-    const loadedListings = commands.filter((command) => command.args.some((arg) => arg.startsWith('--tree=cs:')));
-    expect(loadedListings.map((command) => command.args.filter((arg) => !arg.startsWith('--format=')))).toEqual([
-      ['ls', '/test/carnagetest/accelerator', '--tree=cs:27890@pnunit@codice@cloud'],
-    ]);
+    expect(await readIncomingChanges(cm, WORKSPACE)).toMatchObject({ items: pnunitIncoming });
+    expect(listingsOf(commands, '--tree=cs:')).toEqual([['ls', '/test/carnagetest/accelerator', '--tree=cs:27890@pnunit@codice@cloud']]);
+  });
+
+  it('names what the head brings inside an xlink from the listing of the whole tree too', async () => {
+    const { cm, commands } = pnunitWorkspace(MOST_FOLDERS_LISTED_ONE_BY_ONE);
+
+    expect(await readIncomingChanges(cm, WORKSPACE)).toMatchObject({ items: pnunitIncoming });
+    expect(listingsOf(commands, '--tree=br:')).toEqual([['ls', '/', '-R', '--tree=br:/main']]);
+    expect(listingsOf(commands, '--tree=cs:')).toEqual([['ls', '/test/carnagetest/accelerator', '--tree=cs:27890@pnunit@codice@cloud']]);
   });
 
   it('rethrows a failure that names no folder', async () => {
@@ -280,6 +293,26 @@ describe('incoming in a partial workspace', () => {
     ]);
   });
 
+  it('lists as many loaded folders as are worth it one by one, never the whole tree', async () => {
+    // The root and Folder 0…n, as many folders as are still listed one by one.
+    const folders = Array.from({ length: MOST_FOLDERS_LISTED_ONE_BY_ONE - 1 }, (_, index) => `Folder ${index}`);
+    const { cm, commands } = fakeCmClient({
+      'status --header --xml': statusHeader('/main', { changeset: -1 }),
+      'status --controlledchanged --changed': pendingStatus(WORKSPACE),
+      'ls -R': formatOutput(['3', '5', '-1', 'dir', '', '0', ''], ...folders.map((path, index) => [String(100 + index), String(500 + index), '-1', 'dir', path, '1', ''])),
+      'ls / -R': cmFails('The whole tree is never listed for this few folders'),
+      'ls /': formatOutput(['3', '5', 'dir', '/', '1'], ...folders.map((path, index) => [String(100 + index), String(500 + index), 'dir', `/${path}`, '1'])),
+      'find changeset': formatOutput([3]),
+    });
+
+    const changes = await readIncomingChanges(cm, WORKSPACE);
+
+    expect(changes).toMatchObject({ items: [] });
+    const headListings = commands.filter((command) => command.args.includes('--tree=br:/main'));
+    expect(headListings.flatMap((command) => command.args.filter((arg) => arg.startsWith('/'))).sort()).toEqual(['/', ...folders.map((path) => `/${path}`)].sort());
+    expect(headListings.some((command) => command.args.includes('-R'))).toBe(false);
+  });
+
   it('splits the folders across listings when they would overflow one command line', () => {
     const folders = Array.from({ length: 2_000 }, (_, index) => `/Assets/Folder number ${index}`);
     const batches = treeListingArgs(folders, 'br:/main');
@@ -313,5 +346,22 @@ describe('loadedListingOf', () => {
     expect(listing).toMatchObject({ tree: 'cs:40@thirdparty@acme@cloud', serverPath: '/vendor' });
     expect(workspacePathOf('vendor', listing)).toBe('Libs');
     expect(workspacePathOf('vendor/README', listing)).toBe('Libs/README');
+  });
+});
+
+describe('isInFolders', () => {
+  // The workspace loaded the root, Code and Libs/zlib (inside the xlink Libs).
+  const isListed = isInFolders(['/', '/Code', '/Libs/zlib']);
+
+  it('keeps the loaded folders themselves, the root among them', () => {
+    expect(['', 'Code', 'Libs/zlib'].map(isListed)).toEqual([true, true, true]);
+  });
+
+  it('keeps what lies right inside a loaded folder, a folder left out among it', () => {
+    expect(['Audio', 'Code/Ship.cs', 'Libs', 'Libs/zlib/inflate.c'].map(isListed)).toEqual([true, true, true, true]);
+  });
+
+  it('drops what lies deeper, or inside a folder left out', () => {
+    expect(['Code/Engine/Core.cs', 'Audio/Theme.ogg', 'Libs/png/png.c', 'Libs/zlib/src/deflate.c'].map(isListed)).toEqual([false, false, false, false]);
   });
 });
