@@ -4,7 +4,7 @@ export const CODE_REVIEW_STATUSES = ['Under review', 'Reviewed', 'Rework require
 
 export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
 
-/** Where a merge request stands, as `cm` names it (`{mergerequeststatusname}`, English whatever the language). */
+/** Where a merge request stands, as `cm` names it (`{mergerequeststatus}`, English whatever the language). */
 export const MERGE_REQUEST_STATES = ['Draft', 'Open', 'Merged', 'Closed'] as const;
 
 export type MergeRequestState = (typeof MERGE_REQUEST_STATES)[number];

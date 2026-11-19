@@ -3,8 +3,8 @@ import { FOUND_REVIEWS, mergeRequestOf } from './codeReviewRecords';
 import { recordsIn, recordsOutput } from './testing/cmOutput';
 
 /** The fields of a review `cm find review` prints, with the merge request's two as a sandbox printed them. */
-function found(id: number, title: string, mergerequeststatusname: string, destination: string) {
-  return { id, title, codereviewstatusname: 'Under review', mergerequeststatusname, destination, targettype: 'Branch', target: 'id:20', reviewers: '', comments: 0, unresolvedissues: 0 };
+function found(id: number, title: string, mergerequeststatus: string, destination: string) {
+  return { id, title, codereviewstatus: 'Under review', mergerequeststatus, destination, targettype: 'Branch', target: 'id:20', reviewers: '', comments: 0, unresolvedissues: 0 };
 }
 
 describe('merge requests in cm find review', () => {

@@ -10,18 +10,18 @@ export interface RawCodeReview extends CodeReviewSummary {
 }
 
 /**
- * `{codereviewstatusname}` prints the status alone and always in English; `{status}` translates it and adds a prefix.
+ * `{codereviewstatus}` prints the status alone and always in English; `{status}` translates it and adds a prefix.
  * `{unresolvedissues}` counts the change requests neither applied nor discarded and the questions with no reply.
- * `{mergerequeststatusname}` and `{destination}` make it a merge request (`mergeRequestOf`); a plain review prints
+ * `{mergerequeststatus}` and `{destination}` make it a merge request (`mergeRequestOf`); a plain review prints
  * `None` and nothing. The records' separators keep a destination's spaces, as a title's.
  */
 export const FOUND_REVIEWS = foundObjects(
   'review',
-  ['id', 'title', 'codereviewstatusname', 'owner', 'reviewers', 'date', 'modifieddate', 'comments', 'unresolvedissues', 'targettype', 'target', 'mergerequeststatusname', 'destination'],
+  ['id', 'title', 'codereviewstatus', 'owner', 'reviewers', 'date', 'modifieddate', 'comments', 'unresolvedissues', 'targettype', 'target', 'mergerequeststatus', 'destination'],
   (value): RawCodeReview => ({
     id: integerValue(value('id')),
     title: value('title').trim(),
-    status: toStatus(value('codereviewstatusname')),
+    status: toStatus(value('codereviewstatus')),
     owner: value('owner'),
     reviewers: parseReviewers(value('reviewers')),
     date: value('date'),
@@ -30,7 +30,7 @@ export const FOUND_REVIEWS = foundObjects(
     openIssueCount: integerValue(value('unresolvedissues')),
     targetType: toTargetType(value('targettype')),
     targetId: integerValue(value('target').replace(/^id:/, '')),
-    mergeRequest: mergeRequestOf(value('mergerequeststatusname'), value('destination')),
+    mergeRequest: mergeRequestOf(value('mergerequeststatus'), value('destination')),
   }),
 );
 
