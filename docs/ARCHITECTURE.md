@@ -1161,7 +1161,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     shows them whole at once; what isn't known yet, and the branch's comment while it loads
     (`workingObjectCommentLine`), is a placeholder bar as tall as its line (`SkeletonLine`), so the pills don't
     change height or jump when it arrives. A window opened straight into a workspace (the app's start) shows
-    placeholders until its info is read.
+    placeholders until its info is read. A partial or dynamic workspace's kind chip comes only with the info, which
+    widens its pill then. The home screen's account switcher shares the pills' look (`ToolbarControl`) but keeps
+    its own 36px, set by the sidebar's rows.
   - Home is one click (or ⇧⌘H, `app.home`, File ▸ Home) from anywhere: in a workspace it leaves for the home
     screen, on the home screen it goes back to its welcome (`WELCOME`), where the house is lit. It sits in the top
     bar, not the sidebar, so it stays put whether the sidebar is folded or not and costs no sidebar entry. It is a
