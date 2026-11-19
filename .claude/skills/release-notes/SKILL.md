@@ -63,8 +63,9 @@ anything at all (faster, a different word on screen, a crash gone), it gets a no
 ## The title
 
 - **What the user gets**, in one short line: under 60 characters when it can be, never past 80.
-- **The effect, not the mechanism**: "Make the account switcher easier to spot", not "The account switcher on Home sits
-  on a card". The how belongs in the description, if anywhere.
+- **The effect, not the mechanism**: "The account switcher on Home is easier to spot", not "The account switcher on
+  Home sits on a card". The how belongs in the description, if anywhere. (A pull request's title is an order instead;
+  the `writing-for-people` skill's "Three kinds of title" tells them apart.)
 - **New** and **Improved** say what the user can now do or see: "Run your own tools on files, changesets and branches",
   "Hide the details panel the same way in every view".
 - **Fixed** says what no longer goes wrong, from what the user saw: "Closing a window no longer stops what it's
@@ -266,9 +267,8 @@ changeset, label, shelve, checkin, merge, xlink, code review, pending changes. N
 | Fix ProcessPool leak when cm shell stdout closes | **Fixed:** The app stays fast after a long day of work |
 | Stream cm status records instead of reading XML | **Improved:** Pending changes load quickly in very large workspaces |
 | Add ToolsService and tool runner with placeholders | **New:** Run your own tools on files, changesets and branches |
-| The account switcher on Home stands out from the list below it | **Improved:** Make the account switcher easier to spot |
+| A roomier top bar | **Improved:** More space around the workspace and branch at the top of the window |
 | When your session ends, one clear screen says so as you come back | **Improved:** See one sign-in screen when your session ends |
-| Incoming lists its changesets as a branch diff does | **Improved:** Fold Incoming's changesets to see the whole update |
 
 And a description, before and after:
 
