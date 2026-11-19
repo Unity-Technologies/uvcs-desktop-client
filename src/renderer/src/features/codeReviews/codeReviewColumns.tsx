@@ -10,7 +10,7 @@ import { commentCountsSortValue } from './commentCounts';
 import { ReviewCommentCounts } from './ReviewCommentCounts';
 import { REVIEWERS_COLUMN_WIDTH } from './reviewers';
 import { ReviewerStack } from './ReviewerStack';
-import { reviewedChangesOf } from './mergeRequestState';
+import { reviewedChangesOf, reviewedChangesTip } from './mergeRequestState';
 import { MergeRequestStateIcon } from './MergeRequestStateIcon';
 import { MergeVerdictIcon } from './MergeVerdictIcon';
 import { reviewStatusCellOf } from './reviewStatusCell';
@@ -80,8 +80,8 @@ export function codeReviewColumns(user: string | undefined): Column<CodeReview>[
     {
       id: 'target',
       header: 'Changes',
-      // A merge request shows two branches here.
-      grow: 2,
+      // A merge request shows two branch names here.
+      grow: 1,
       secondary: true,
       hideBelow: 900,
       render: (review) => <ReviewedChanges review={review} />,
@@ -105,21 +105,31 @@ function WaitingDot({ review, user }: { review: CodeReview; user: string | undef
   return <span className={styles.waiting} role="img" aria-label={tip} data-tip={tip} />;
 }
 
-/** What a review reviews; for a merge request, its branch into its destination, the destination kept when narrow. */
+/**
+ * What a review reviews; for a merge request, its branch into its destination. Branches show by their names alone,
+ * the destination kept when narrow; the tooltip names them whole (`reviewedChangesTip`).
+ */
 function ReviewedChanges({ review }: { review: CodeReview }) {
   const changes = reviewedChangesOf(review);
+  const tip = reviewedChangesTip(changes);
   if (changes.kind === 'text') return <Highlight text={changes.text} />;
-  if (changes.kind === 'branch') return <PathLabel path={changes.branch} />;
+  if (changes.kind === 'branch') {
+    return (
+      <span className={styles.merge} data-tip={tip?.text}>
+        <PathLabel path={changes.branch} nameOnly tooltip={false} />
+      </span>
+    );
+  }
   return (
-    <span className={styles.merge} data-tip={`Merge ${changes.source} into ${changes.destination}`}>
+    <span className={styles.merge} data-tip={tip?.text} data-tip-sub={tip?.sub}>
       <span className={styles.source}>
-        <PathLabel path={changes.source} tooltip={false} fitContent />
+        <PathLabel path={changes.source} nameOnly tooltip={false} fitContent />
       </span>
       <span className={styles.arrow} role="img" aria-label="into">
         →
       </span>
       <span className={styles.destination}>
-        <PathLabel path={changes.destination} tooltip={false} fitContent />
+        <PathLabel path={changes.destination} nameOnly tooltip={false} fitContent />
       </span>
     </span>
   );

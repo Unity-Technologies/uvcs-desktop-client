@@ -88,3 +88,13 @@ export function reviewedChangesOf({ target, mergeRequest }: Pick<CodeReview, 'ta
   if (target.kind !== 'branch') return { kind: 'text', text: describeTarget(target) };
   return mergeRequest ? { kind: 'merge', source: target.branch, destination: mergeRequest.destination } : { kind: 'branch', branch: target.branch };
 }
+
+/**
+ * The tooltip of a review's Changes, which show branches by their names alone: the whole branches, a merge request's
+ * source over where it merges, so two branches of one name under different parents tell apart.
+ */
+export function reviewedChangesTip(changes: ReviewedChanges): { text: string; sub?: string } | undefined {
+  if (changes.kind === 'merge') return { text: `Merge ${changes.source}`, sub: `into ${changes.destination}` };
+  if (changes.kind === 'branch') return { text: changes.branch };
+  return undefined;
+}

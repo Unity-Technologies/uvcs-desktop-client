@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { CodeReviewTarget, MergeRequestInfo } from '@shared/domain/codeReview';
-import { asMergeRequest, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewNoun } from './mergeRequestState';
+import { asMergeRequest, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewedChangesTip, reviewNoun } from './mergeRequestState';
 
 const request = (state: MergeRequestInfo['state'], destination = '/main'): { mergeRequest: MergeRequestInfo } => ({ mergeRequest: { state, destination } });
 
@@ -59,5 +59,14 @@ describe('what a review is called and what its changes show', () => {
     expect(reviewedChangesOf({ target: branch, ...request('Open') })).toEqual({ kind: 'merge', source: '/main/task', destination: '/main' });
     expect(reviewedChangesOf({ target: branch })).toEqual({ kind: 'branch', branch: '/main/task' });
     expect(reviewedChangesOf({ target: { kind: 'changeset', changesetId: 4 } })).toEqual({ kind: 'text', text: 'Changeset 4' });
+  });
+
+  it('names the whole branches in the tooltip, as the column shows only their names', () => {
+    expect(reviewedChangesTip({ kind: 'merge', source: '/main/scm1/scm2', destination: '/main/scm1' })).toEqual({
+      text: 'Merge /main/scm1/scm2',
+      sub: 'into /main/scm1',
+    });
+    expect(reviewedChangesTip({ kind: 'branch', branch: '/main/task' })).toEqual({ text: '/main/task' });
+    expect(reviewedChangesTip({ kind: 'text', text: 'Changeset 4' })).toBeUndefined();
   });
 });

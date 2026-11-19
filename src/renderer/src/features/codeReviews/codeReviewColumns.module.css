@@ -43,8 +43,8 @@
 }
 
 
-/* A merge request's changes, `task → main`, each branch a fitted `PathLabel`: when narrow the source gives way, down
-   to nothing; the arrow and the destination (usually short) stay whole. */
+/* A merge request's changes, `task → main`, each branch's name a fitted `PathLabel`: when narrow the source gives way, down
+   to nothing; the arrow and the destination stay whole. */
 .merge {
   display: flex;
   align-items: center;
