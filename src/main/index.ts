@@ -99,7 +99,7 @@ const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
   beforeRestart: () => quitting.restartToInstall(),
-});
+}, cmRuntime);
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
