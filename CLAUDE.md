@@ -119,6 +119,7 @@ npm run release      # dist, uploaded to the GitHub release (the Release workflo
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
 npm run cm:bump <version>   # pin the cm the app runs (cm-version.json), from the published bundles
 npm run cm:check            # check the pinned bundles are still published as pinned
+npm run cm:setup-check      # set the pinned cm up on this machine with the app's own code, as a first run does
 ```
 
 **Done means** a pull request that passes the QA gate (see "Delivering work: a pull request"): `npm run typecheck`

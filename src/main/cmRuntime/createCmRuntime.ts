@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { net } from 'electron';
+import { net, shell } from 'electron';
 import type { CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import type { CommandLogEntry } from '@shared/events';
 import pin from '../../../cm-version.json';
@@ -62,6 +62,7 @@ export function createCmRuntime({ settings, prunes, relocated, logCommand, statu
     versionOf,
     relocated,
     statusChanged,
+    reveal: (path) => shell.showItemInFolder(path),
     prune: (pinned) => {
       if (prunes) void installer.prune(pinned);
     },

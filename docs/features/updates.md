@@ -6,7 +6,8 @@ The version at the end of a workspace's status bar (`StatusBarVersion`) opens it
 (Windows, Linux) and the palette (`app.about`). Once an update is downloaded the version reads "Update ready", in the
 accent, until the app restarts into it (`versionItem`): the corner card can be put off, this quiet reminder stays. It shows the version, where the update
 stands with its one button (Check for Updates, or install once one is ready: `aboutUpdateLine`, `aboutUpdateAction`),
-and what the app runs on: the `cm` found (`cmVersionQuery`, asked once at start: no command of its own), the OS and
+and what the app runs on: the `cm` that runs (`cmVersionQuery`, asked once at start: no command of its own; which one
+it is and a button that shows it, docs/features/cm-runtime.md "Seeing which cm runs"), the OS and
 architecture, Electron and Chromium. Copy Details copies those as text for an issue (`aboutDetails`); its other links
 open the documentation, a bug report with those details filled in (`aboutBugReportUrl`), a feature request
 (`featureRequestUrl`) and the third-party notices (`openThirdPartyNotices`, at `thirdPartyNoticesPath`). With every window closed on

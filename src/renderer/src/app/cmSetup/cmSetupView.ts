@@ -52,7 +52,7 @@ const REASONS: Readonly<Record<CmInstallFailure, string>> = {
   notWritable: 'The app can’t write to its folder on this computer. Check that it’s yours to write to, and try again.',
   damaged: 'What arrived isn’t what was published. Try again.',
   unavailable: 'This version isn’t available to download right now.',
-  blocked: 'It downloaded, but this computer didn’t let it run. Its security settings may block apps in your user folder: ask whoever manages it.',
+  blocked: 'It downloaded, but didn’t start on this computer, which may block apps in your user folder or lack something they need: Details say what.',
 };
 
 export function cmSetupViewOf(status: CmRuntimeStatus, secondsLeft: number | null): CmSetupView | null {

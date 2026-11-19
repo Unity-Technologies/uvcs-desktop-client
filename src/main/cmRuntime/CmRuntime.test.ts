@@ -64,6 +64,7 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
   let choice: CmChoice = chosen ?? 'managed';
   let relocations = 0;
   const pruned: string[] = [];
+  const revealed: string[] = [];
   const runtime = new CmRuntime({
     pin: PIN,
     platform: 'linux',
@@ -77,10 +78,11 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
     relocated: () => relocations++,
     statusChanged: (status) => statuses.push(status),
     prune: (pinned) => pruned.push(pinned),
+    reveal: (path) => revealed.push(path),
     timers: { now: () => now, setTimeout: (run, ms) => timers.push({ ms, run }), clearTimeout: () => timers.splice(0) },
     ...overrides,
   });
-  return { runtime, installer, statuses, timers, pruned, advance: (ms: number) => (now += ms), relocations: () => relocations, choice: () => choice };
+  return { runtime, installer, statuses, timers, pruned, revealed, advance: (ms: number) => (now += ms), relocations: () => relocations, choice: () => choice };
 }
 
 describe('CmRuntime', () => {
@@ -310,5 +312,17 @@ describe('CmRuntime with choices made during its setup', () => {
     runtime.retry();
     runtime.use('managed');
     expect(installer.installs).toBe(1);
+  });
+});
+
+describe('CmRuntime showing its cm', () => {
+  it('shows the cm that runs, and nothing for one known only by its bare name', () => {
+    const real = runtimeWith({ environmentPath: process.execPath });
+    real.runtime.revealCm();
+    expect(real.revealed).toEqual([process.execPath]);
+
+    const missing = runtimeWith({ arch: 'arm64', findInstalled: () => null });
+    missing.runtime.revealCm();
+    expect(missing.revealed).toEqual([]);
   });
 });

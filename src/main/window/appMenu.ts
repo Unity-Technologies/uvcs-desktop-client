@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
+import type { CmRuntime } from '../cmRuntime/CmRuntime';
 import { windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import { coalesced } from '../system/coalesced';
@@ -52,12 +53,12 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
  * title, once for each burst of such changes (opening a window focuses it and sets its title: a build takes 3-5 ms).
  * The first window opening installs it first.
  */
-export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string): () => void {
-  return coalesced(() => installAppMenu(windows, updates, logFile));
+export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>): () => void {
+  return coalesced(() => installAppMenu(windows, updates, logFile, cmRuntime));
 }
 
-/** `logFile` is the log file Help ▸ Show Log Files shows (`appLog`). */
-function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string): void {
+/** `logFile` is the log file Help ▸ Show Log Files shows (`appLog`); `cmRuntime` the `cm` Show Command Line Client shows. */
+function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>): void {
   const template = appMenuTemplate({
     platform: process.platform,
     isPackaged: app.isPackaged,
@@ -67,6 +68,7 @@ function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile:
     openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
     reportIssue: () => void shell.openExternal(BUG_REPORT_URL),
     showLogFiles: () => showLogFiles(logFile),
+    showCmClient: () => cmRuntime.revealCm(),
     requestFeature: () => void shell.openExternal(FEATURE_REQUEST_URL),
     showAboutPanel: () => app.showAboutPanel(),
     checkForUpdates: () => void updates.check(),

@@ -15,6 +15,8 @@ export interface AppMenuContext {
   reportIssue: () => void;
   /** Shows the log file (`appLog`) in the OS's file manager, for the user to attach to a bug report. */
   showLogFiles: () => void;
+  /** Shows the `cm` the app runs in the file manager: its own (docs/features/cm-runtime.md), or the one installed. */
+  showCmClient: () => void;
   requestFeature: () => void;
   /**
    * About with no window to show the app's dialog in (macOS keeps running with every window closed): the OS's panel,
@@ -42,7 +44,7 @@ export function shownAccelerator(accelerator: string, isMac: boolean): string | 
  * Alt opens an item with (the menu bar shows it underlined); macOS has no such letters, so they're dropped there.
  */
 export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOptions[] {
-  const { platform, isPackaged, windowItems, newWindow, openDocumentation, reportIssue, showLogFiles, requestFeature, showAboutPanel, checkForUpdates, zoomPage } = context;
+  const { platform, isPackaged, windowItems, newWindow, openDocumentation, reportIssue, showLogFiles, showCmClient, requestFeature, showAboutPanel, checkForUpdates, zoomPage } = context;
   const isMac = platform === 'darwin';
   const label = (text: string): string => (isMac ? text.replaceAll('&', '') : text);
   const commandItem: AppMenuContext['commandItem'] = (text, commandId, accelerator, withoutWindow) =>
@@ -130,6 +132,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('&Keyboard Shortcuts', 'app.shortcuts'),
         { label: label('&Report an Issue'), click: reportIssue },
         { label: label('Show &Log Files'), click: showLogFiles },
+        { label: label('Show Command Line &Client'), click: showCmClient },
         { label: label('Request a &Feature'), click: requestFeature },
         ...(isMac ? [] : [separator, checkForUpdatesItem, aboutItem]),
       ],

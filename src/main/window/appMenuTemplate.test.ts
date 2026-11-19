@@ -13,6 +13,7 @@ function templateOn(platform: NodeJS.Platform, links: Partial<AppMenuContext> = 
     openDocumentation: () => {},
     reportIssue: () => {},
     showLogFiles: () => {},
+    showCmClient: () => {},
     requestFeature: () => {},
     showAboutPanel: () => {},
     checkForUpdates: () => {},
