@@ -6,9 +6,10 @@
   background: var(--bg-app);
 }
 
+/* Where the top bar would be: the window's buttons sit there, and the window drags by it. */
 .dragRegion {
   flex: none;
-  height: 48px;
+  height: var(--topbar-height);
   -webkit-app-region: drag;
 }
 
