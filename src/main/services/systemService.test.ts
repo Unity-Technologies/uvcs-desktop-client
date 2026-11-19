@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import type { CmRuntime } from '../cmRuntime/CmRuntime';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { readDraggedPath } from '../system/dragPasteboard';
 import { gravatarUrl } from '../system/gravatar';
@@ -27,12 +28,18 @@ vi.mock('../system/dragPasteboard', () => ({ readDraggedPath: vi.fn(async () => 
 // It needs the app's windows, which only a running app has.
 vi.mock('../window/incomingNotification', () => ({ showIncomingNotification: vi.fn() }));
 
-function system(answers: Record<string, CmAnswer>, settings: Partial<AppSettings> = {}) {
+/** The app's `cm` as the version read sees it: it admits every version unless a test says otherwise. */
+function fakeCmRuntime(overrides: Partial<Pick<CmRuntime, 'admits' | 'isReady'>> = {}): CmRuntime {
+  const runtime: Pick<CmRuntime, 'admits' | 'isReady' | 'pinnedVersion'> = { admits: () => true, isReady: () => true, pinnedVersion: '11.0.16.10659', ...overrides };
+  return runtime as CmRuntime;
+}
+
+function system(answers: Record<string, CmAnswer>, settings: Partial<AppSettings> = {}, cmRuntime = fakeCmRuntime()) {
   const fake = fakeCmClient(answers);
   const relocate = vi.spyOn(fake.cm, 'relocate');
   const logged: string[] = [];
   const diagnosticLog = { write: (text: string) => void logged.push(text) };
-  return { ...fake, relocate, logged, service: createSystemService(serviceContext(fake.cm, { settings: memorySettings(settings), diagnosticLog }), profilesContext(fake.cm)) };
+  return { ...fake, relocate, logged, service: createSystemService(serviceContext(fake.cm, { cmRuntime, settings: memorySettings(settings), diagnosticLog }), profilesContext(fake.cm)) };
 }
 
 describe('the cm version', () => {
@@ -63,6 +70,38 @@ describe('the cm version', () => {
     await service.cmVersion();
 
     expect(logged).toEqual([`cm 11.0.16.9876 at ${cm.executable}`]);
+  });
+});
+
+describe('the cm version of an installed cm older than the app’s own', () => {
+  it('asks the app’s own instead once it runs it, with no other command', async () => {
+    const { service, cm, lines } = system({ version: () => (cm.executable === '/store/cm' ? '11.0.16.10659\n' : '11.0.16.9000\n') }, {}, fakeCmRuntime({
+      admits: (executable) => {
+        if (executable === '/store/cm') return true;
+        (cm as { executable: string }).executable = '/store/cm';
+        return false;
+      },
+    }));
+
+    expect(await service.cmVersion()).toBe('11.0.16.10659');
+    expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('fails, naming both versions, while the app’s own sets up or where it has none', async () => {
+    const { service } = system({ version: '11.0.16.9000\n' }, {}, fakeCmRuntime({ admits: () => false, isReady: () => false }));
+
+    await expect(service.cmVersion()).rejects.toThrow('The installed Unity Version Control is version 11.0.16.9000. This app needs version 11.0.16.10659 or later.');
+  });
+
+  it('asks again on Check Again, as the user may have updated it', async () => {
+    let answer = '11.0.16.9000\n';
+    const { service, lines } = system({ version: () => answer }, {}, fakeCmRuntime({ admits: (_executable, version) => version !== '11.0.16.9000', isReady: () => false }));
+
+    await expect(service.cmVersion()).rejects.toThrow('version 11.0.16.9000');
+    answer = '11.0.16.10700\n';
+
+    expect(await service.cmVersion()).toBe('11.0.16.10700');
+    expect(lines()).toEqual(['version', 'version']);
   });
 });
 
