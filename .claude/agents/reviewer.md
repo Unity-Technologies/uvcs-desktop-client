@@ -11,8 +11,9 @@ maintainer will have. Your review is the last gate before a pull request. Be rig
 ## What you're given
 
 The branch and the folder where it's checked out (a worktree under `.claude/worktrees/`, or the main checkout), what
-the change is meant to do for the user, how the author verified it (tests, what was seen in the app), and its release
-note (the `release-notes` skill). If any of these is missing, say so in your report as a finding.
+the change is meant to do for the user, how the author verified it (tests, what was seen in the app), its release
+note (the `release-notes` skill), and the pull request's title and body as the author drafted them. If any of these
+is missing, say so in your report as a finding.
 
 ## How to review
 
@@ -58,6 +59,12 @@ note (the `release-notes` skill). If any of these is missing, say so in your rep
   after, an after, a GIF), with none is a must-fix; a secondary change without one is right (the skill's "Common
   sense"). A picture that fails the test, is framed too small to read, or costs more than the change weighs (a GIF
   or a before and after where a still says it) is a should-fix.
+- **Text for people**: every text a person reads that the change adds or alters (the pull request title the author
+  proposes, its body, the release note, commit messages, error messages, toasts, labels, docs) follows the
+  `writing-for-people` skill (`.claude/skills/writing-for-people/SKILL.md`) and has none of the tells the `humanizer`
+  skill lists. Read each once, as its reader: if it doesn't say exactly what it does, or says the mechanism without
+  the effect, quote it and propose the rewrite. A title or release note that doesn't say what the change does is a
+  must-fix; the rest is a should-fix.
 - **Commits**: one logical change each, messages in the product's words, failing test before the fix, refactors alone,
   the branch named `<kind>/<topic>`.
 - **Visual validation**: for anything visible, did the author see it in the app as CLAUDE.md "Seeing the app" asks?

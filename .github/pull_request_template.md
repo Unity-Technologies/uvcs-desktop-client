@@ -1,6 +1,12 @@
 ## What does this pull request do?
 
-One or two sentences, in the product's words.
+<!--
+The title says exactly what this pull request does, as an order with its effect ("Make the account switcher stand out
+on Home"): the writing-for-people skill's "Pull request titles". Everything here is written with that skill, then the
+humanizer skill (.claude/skills/).
+-->
+
+One or two plain sentences: what changes, and how it helps.
 
 ## Release note
 
