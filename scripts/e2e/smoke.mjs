@@ -2,7 +2,7 @@
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
 // model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
 // error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
-// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>.
+// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -22,9 +22,10 @@ const VIEWPORT = { width: 1400, height: 880 };
 
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
-// One folder per checkout: runs in other worktrees at the same time (parallel agents) empty only their own.
+// One folder per checkout: runs in other worktrees at the same time (parallel agents) empty only their own. CI names
+// its own (`UVCS_E2E_SHOTS`), which it keeps when the run fails.
 const checkoutHash = createHash('sha1').update(projectFolder).digest('hex').slice(0, 8);
-const shots = join(tmpdir(), 'uvcs-e2e-shots', `${basename(projectFolder)}-${checkoutHash}`);
+const shots = process.env.UVCS_E2E_SHOTS || join(tmpdir(), 'uvcs-e2e-shots', `${basename(projectFolder)}-${checkoutHash}`);
 rmSync(shots, { recursive: true, force: true });
 mkdirSync(shots, { recursive: true });
 const workspace = join(temp, 'demo');
