@@ -30,7 +30,9 @@
     "e2e": "electron-vite build --mode development && node scripts/e2e/smoke.mjs && electron-vite build && node scripts/e2e/smoke.mjs",
     "postinstall": "install-electron",
     "dist": "electron-vite build && electron-builder",
-    "release": "electron-vite build && electron-builder --publish always"
+    "release": "electron-vite build && electron-builder --publish always",
+    "cm:bump": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts bump",
+    "cm:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts check"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",
