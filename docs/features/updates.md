@@ -281,21 +281,30 @@ update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
 
 A pull request joins main through GitHub's merge queue (`gh pr merge --auto --merge`, or "Merge when ready"): once
 its own CI passes, the queue builds a merge commit of main, the pull requests queued ahead of it and this one, runs the
-required checks (the four `ci.yml` jobs, and the Release note check, which skips itself there: it read the pull
+required checks (`ci.yml`'s CI result, and the Release note check, which skips itself there: it read the pull
 request's note already) on it, and merges it only if they pass; if they fail, the pull request leaves
 the queue and main is untouched. So no one updates a branch by hand, and main always passes. Each pull request runs CI
 twice, on its own and in the queue: at about 4 minutes a run, splitting a lighter pull-request CI from a full queue
 CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger of both workflows,
 without which nothing merges.
 
+Of `ci.yml`, branch protection requires one check, CI result (the `ci-result` job), never the jobs themselves: it
+fails unless every other job passed, so adding or renaming a job needs no change to the protection rules, and no job
+can fail while the queue merges. It runs with `if: always()`, because a job skipped after a failure counts as passed
+for a required check. `scripts/build/ciResultGate.test.ts` checks it waits for every job.
+
 `.github/workflows/ci.yml` runs on every push to main, every pull request and every merge-queue entry: the tests and the build on macOS
-arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test (`npm run e2e`) inside the
-macOS and Windows x64 jobs. The shared install step (`.github/actions/install`) pins Node, restores `node_modules` from
+arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test on macOS and Windows x64,
+in four jobs of their own (`npm run e2e:development`, `npm run e2e:production`) beside the tests rather than after them:
+in one job, the tests then both smoke runs took about 6 minutes on macOS. The jobs share their disk setup
+(`.github/actions/build-on-local-ssd`, `.github/actions/temp-in-memory`) and their install (`.github/actions/install`), which pins Node, restores `node_modules` from
 the last install of the same lockfile (`reuse-node-modules`, CI only: releases install clean), or else caches npm's and
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
 Drive and builds there (`BUILD_DIR`). On macOS the temp folder is a disk in memory: the runner's own disk now and
 then holds writes for seconds, which timed out tests writing a temp file. A failed smoke test keeps its screenshots,
-written in that temp folder, as the job's artifact `smoke-screenshots-<job>`. How fast the tests run on CI's 2-CPU
+written in that temp folder, as the job's artifact `smoke-screenshots-<platform>-<build>`. Splitting the unit tests across
+two jobs per Windows runner (`vitest --shard`) was rejected: every job pays the setup again (about 95 s on Windows
+arm64), so four more runners would have cut CI by about 40 s. How fast the tests run on CI's 2-CPU
 runners, and why: `vitest.config.ts`.
 
 CI's runners are slow and uneven: a test runs up to ten times slower there than on a laptop, and several times slower
