@@ -16,6 +16,14 @@ describe('a drag from the "+"', () => {
     expect(lineActionDragMoved(lineActionDragTo(lineActionDragFrom(at(12)), at(9)))).toBe(true);
   });
 
+  it('stops short of lines the place takes no comment on, whichever way it goes', () => {
+    const offers = ({ firstLineNumber, lineNumber }: { firstLineNumber: number; lineNumber: number }) => lineNumber < 20 && firstLineNumber > 5;
+    expect(lineActionDragLines(lineActionDragTo(lineActionDragFrom(at(12)), at(30), offers))).toEqual({ side: 'additions', firstLineNumber: 12, lineNumber: 19 });
+    expect(lineActionDragLines(lineActionDragTo(lineActionDragFrom(at(12)), at(1), offers))).toEqual({ side: 'additions', firstLineNumber: 6, lineNumber: 12 });
+    const drag = lineActionDragFrom(at(19));
+    expect(lineActionDragTo(drag, at(25), offers)).toBe(drag);
+  });
+
   it("stays where it was over the other side's lines", () => {
     const drag = lineActionDragTo(lineActionDragFrom(at(12)), at(15));
     expect(lineActionDragTo(drag, at(20, 'deletions'))).toEqual(drag);

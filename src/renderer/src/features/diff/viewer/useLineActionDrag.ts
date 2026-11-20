@@ -27,7 +27,7 @@ export interface LineActionDragging {
  * The "+" pressed and dragged over other lines, as on GitHub: the pointer is followed over the code's rows
  * (`rowUnderPointer`), the lines dragged over are outlined in the accent with a "+" on the first and the last
  * (`LineActionDragMarks`), and released, the action runs on all of them (`lineActionDragLines`). Released on the line
- * it started on, it's the click it was; Esc drops it. No gutter selection: its fill across both panes was noise for a comment.
+ * it started on, it's the click it was; Esc, or losing the pointer, drops it. No gutter selection: its fill across both panes was noise for a comment.
  */
 export function useLineActionDrag(action: LineAction | undefined, hover: LineHover): LineActionDragging {
   const latest = useRef(action);
@@ -40,7 +40,7 @@ export function useLineActionDrag(action: LineAction | undefined, hover: LineHov
       const row = rowUnderPointer(event.composedPath());
       const line = row && lineUnderPointer(row);
       if (!current || !line) return;
-      const drag = lineActionDragTo(current.drag, line);
+      const drag = lineActionDragTo(current.drag, line, (lines) => latest.current?.offers(lines) ?? false);
       if (drag !== current.drag && drag.to.lineNumber !== current.drag.to.lineNumber) shown.setState({ ...current, drag }, true);
     };
     // No text selected as the pointer drags across the code: the press's own `preventDefault` stops it only while
@@ -51,18 +51,24 @@ export function useLineActionDrag(action: LineAction | undefined, hover: LineHov
       document.removeEventListener('pointerup', release, true);
       document.removeEventListener('selectstart', noTextSelection, true);
       document.removeEventListener('keydown', cancelOnEscape, true);
+      document.removeEventListener('pointercancel', cancel, true);
+      window.removeEventListener('blur', cancel);
       document.documentElement.style.removeProperty('user-select');
     };
-    // Esc drops the drag: released then, the pointer acts on nothing, the click that follows included.
-    const cancelOnEscape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      event.stopPropagation();
+    // Dropped (Esc, or the pointer taken away: the system took it, or the window lost the focus mid-drag, so no
+    // release may come): released then, the pointer acts on nothing, the click that follows included.
+    const cancel = (): void => {
       stop();
       shown.setState(null, true);
       hover.release();
       actedOnRelease = true;
       document.addEventListener('pointerup', () => setTimeout(() => (actedOnRelease = false)), { capture: true, once: true });
+    };
+    const cancelOnEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      cancel();
     };
     const release = (): void => {
       stop();
@@ -86,6 +92,8 @@ export function useLineActionDrag(action: LineAction | undefined, hover: LineHov
         document.addEventListener('pointerup', release, true);
         document.addEventListener('selectstart', noTextSelection, true);
         document.addEventListener('keydown', cancelOnEscape, true);
+        document.addEventListener('pointercancel', cancel, true);
+        window.addEventListener('blur', cancel);
         // Inherited into Pierre's shadow DOM, where `selectstart` on the document may come too late.
         document.documentElement.style.setProperty('user-select', 'none');
         window.getSelection()?.removeAllRanges();
