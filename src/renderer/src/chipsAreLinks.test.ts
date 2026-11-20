@@ -11,6 +11,7 @@ const CHIPS_NOT_LINKS: Record<string, string> = {
   'features/shelves/MyShelveRow.tsx': 'the row is clicked as a whole',
   'features/branches/BranchSearchItem.tsx': "the branch search's option is clicked as a whole",
   'features/changesets/ChangesetPickerDialog.tsx': "the picker's option is clicked as a whole",
+  'features/codeReviews/rounds/CheckinsRow.tsx': "a check-in's line opens it in the review's Changes when clicked",
   'features/codeReviews/conversation/ReviewThreadCard.tsx': "a folded thread's line unfolds it when clicked",
   'components/comments/ChipHoverCard.tsx': "a chip's card shows the comment it names, the chip itself the link",
   'components/commentEditor/EditorTable.tsx': 'the editor: a click places the cursor',
