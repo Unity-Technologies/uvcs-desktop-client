@@ -42,12 +42,13 @@ export function lineActionTarget(lines: FocusedLines): ChangedLines {
 
 /**
  * The lines the gutter's button acts on, by the line under the pointer: the lines selected when it's one of them, on
- * its side, as GitHub comments on a selection; that line alone otherwise.
+ * its side, and the place takes them all (`offers`), as GitHub comments on a selection; that line alone otherwise.
  */
-export function lineActionTargetAt(line: ChangedLine, selected: FocusedLines | null | undefined): ChangedLines {
+export function lineActionTargetAt(line: ChangedLine, selected: FocusedLines | null | undefined, offers: (lines: ChangedLines) => boolean = () => true): ChangedLines {
   if (selected) {
     const range = lineActionTarget(selected);
-    if (range.side === line.side && line.lineNumber >= range.firstLineNumber && line.lineNumber <= range.lineNumber) return range;
+    const holdsLine = range.side === line.side && line.lineNumber >= range.firstLineNumber && line.lineNumber <= range.lineNumber;
+    if (holdsLine && offers(range)) return range;
   }
   return { ...line, firstLineNumber: line.lineNumber };
 }

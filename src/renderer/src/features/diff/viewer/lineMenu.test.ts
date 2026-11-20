@@ -80,4 +80,9 @@ describe('lineActionTargetAt', () => {
     expect(lineActionTargetAt({ side: 'deletions', lineNumber: 45 }, selected)).toEqual({ side: 'deletions', firstLineNumber: 45, lineNumber: 45 });
     expect(lineActionTargetAt({ side: 'additions', lineNumber: 45 }, null)).toEqual({ side: 'additions', firstLineNumber: 45, lineNumber: 45 });
   });
+
+  it("acts on its own line where the place doesn't take the lines selected", () => {
+    const onlyOneLine = (lines: { firstLineNumber: number; lineNumber: number }) => lines.firstLineNumber === lines.lineNumber;
+    expect(lineActionTargetAt({ side: 'additions', lineNumber: 45 }, selected, onlyOneLine)).toEqual({ side: 'additions', firstLineNumber: 45, lineNumber: 45 });
+  });
 });

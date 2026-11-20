@@ -84,8 +84,7 @@ function LineActionOverlayButton({ hovered, hover, action, selected }: LineActio
   // Gone from under the pointer (the place stopped offering it), it never says it was left.
   useEffect(() => hover.release, [hover]);
   if (!shown) return null;
-  const range = lineActionTargetAt(shown.line, selected);
-  const target = action.offers(range) ? range : lineActionTargetAt(shown.line, null);
+  const target = lineActionTargetAt(shown.line, selected, action.offers);
   const label = action.label(target);
   return (
     <button
