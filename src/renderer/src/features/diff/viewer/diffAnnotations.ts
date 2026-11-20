@@ -126,11 +126,16 @@ export function bandRect(box: LineBox): { top: number; left: number; width: numb
 }
 
 /**
- * The box a band's lines take, from its first line's (`first`, for a range) to its last's: what of them is rendered, as
- * a big file renders only the lines in view. None when neither is.
+ * The box a band's lines take, from its first line's (`first`, for a range) to its last's. A big file renders only the
+ * lines in view: an end beyond them (`LineBox.outside`) stands at the rendered rows' edge, so the outline runs on out
+ * of view; none when the whole range is beyond the same edge, or neither end was measured.
  */
 export function rangeBox(first: LineBox | undefined, last: LineBox | undefined): LineBox | undefined {
-  if (!first || !last) return last ?? first;
+  if (!first || !last) {
+    const one = last ?? first;
+    return one && !one.outside ? one : undefined;
+  }
+  if (first.outside && first.outside === last.outside) return undefined;
   return { top: first.top, bottom: last.bottom, contentLeft: last.contentLeft, paneRight: last.paneRight };
 }
 

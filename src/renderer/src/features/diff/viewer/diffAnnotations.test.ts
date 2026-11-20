@@ -63,6 +63,16 @@ describe('a band on a range of lines', () => {
     expect(rangeBox(undefined, undefined)).toBeUndefined();
   });
 
+  it('runs on out of the rendered rows when an end is beyond them, and is none when the whole range is', () => {
+    const above = { ...box(40, 40), outside: 'above' } as const;
+    const below = { ...box(900, 900), outside: 'below' } as const;
+    expect(rangeBox(above, box(160, 180))).toEqual(box(40, 180));
+    expect(rangeBox(box(100, 120), below)).toEqual({ ...box(100, 900), contentLeft: below.contentLeft, paneRight: below.paneRight });
+    expect(rangeBox(above, below)).toEqual({ ...box(40, 900), contentLeft: below.contentLeft, paneRight: below.paneRight });
+    expect(rangeBox(above, { ...above })).toBeUndefined();
+    expect(rangeBox(undefined, below)).toBeUndefined();
+  });
+
   it('unfolds every line above its own, which a fold could cut through', () => {
     expect(rangeLinesOf([band]).map((row) => row.lineNumber)).toEqual([6, 7, 8]);
     expect(rangeLinesOf([{ ...band, firstLineNumber: undefined }])).toEqual([]);

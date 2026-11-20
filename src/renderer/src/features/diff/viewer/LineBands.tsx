@@ -17,7 +17,7 @@ interface LineBandsProps {
  */
 export function LineBands({ containerRef, bands, layout }: LineBandsProps) {
   const lines = useMemo(() => bandLines(bands), [bands]);
-  const boxes = useLineBoxes(containerRef, lines, lines.map((line) => `${line.key}@${line.lineNumber}`).join('|'), layout);
+  const boxes = useLineBoxes(containerRef, lines, lines.map((line) => `${line.key}@${line.lineNumber}`).join('|'), layout, { measuresOutside: true });
   return (
     <>
       {bands.map((band) => {
