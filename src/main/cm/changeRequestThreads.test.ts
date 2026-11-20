@@ -4,17 +4,17 @@ import { recordsIn, recordsOutput } from './testing/cmOutput';
 
 describe('changeRequestGuidCondition', () => {
   it('finds a request named by the first eight digits of its guid as the guids starting with them', () => {
-    expect(changeRequestGuidCondition('abaa4cd8')).toBe("guid like 'abaa4cd8%'");
+    expect(changeRequestGuidCondition('c0d1ce00')).toBe("guid like 'c0d1ce00%'");
   });
 
   it('finds a request named by its whole guid as that guid, in lower case', () => {
-    expect(changeRequestGuidCondition('ABAA4CD8-F4A4-4447-8570-A9B9278E4A6C')).toBe("guid = 'abaa4cd8-f4a4-4447-8570-a9b9278e4a6c'");
+    expect(changeRequestGuidCondition('C0D1CE00-B457-4424-99FF-A3F1C0FA2582')).toBe("guid = 'c0d1ce00-b457-4424-99ff-a3f1c0fa2582'");
   });
 
   it('finds nothing for what no comment can name a request by, so nothing reaches the query unchecked', () => {
-    expect(changeRequestGuidCondition('ABAA4CD8')).toBeUndefined();
-    expect(changeRequestGuidCondition('abaa4cd')).toBeUndefined();
-    expect(changeRequestGuidCondition("abaa4cd8' or 1=1")).toBeUndefined();
+    expect(changeRequestGuidCondition('C0D1CE00')).toBeUndefined();
+    expect(changeRequestGuidCondition('c0d1ce0')).toBeUndefined();
+    expect(changeRequestGuidCondition("c0d1ce00' or 1=1")).toBeUndefined();
     expect(changeRequestGuidCondition('')).toBeUndefined();
   });
 });
@@ -24,7 +24,7 @@ describe('changeRequestThreadOf', () => {
     recordsIn(recordsOutput(FOUND_CHANGE_REQUEST_THREADS, ...records), FOUND_CHANGE_REQUEST_THREADS);
 
   it("reads the request's review and its thread, as cm prints them", () => {
-    expect(changeRequestThreadOf(read({ id: 31420112, reviewid: 31415956, type: 'change' }))).toEqual({ reviewId: 31415956, threadId: 31420112 });
+    expect(changeRequestThreadOf(read({ id: 51, reviewid: 43, type: 'change' }))).toEqual({ reviewId: 43, threadId: 51 });
   });
 
   it('keeps the change request among other comments whose guid starts the same', () => {

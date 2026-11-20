@@ -267,22 +267,22 @@ describe('writing on a review', () => {
 describe("finding a change request's thread", () => {
   it('finds the request a check-in names by its first eight digits with one cm find, read as it arrives', async () => {
     const { service, commands } = reviewComments({
-      'find changereviewcomment': recordsOutput(FOUND_CHANGE_REQUEST_THREADS, { id: 31420112, reviewid: 31415956, type: 'change' }),
+      'find changereviewcomment': recordsOutput(FOUND_CHANGE_REQUEST_THREADS, { id: 51, reviewid: 43, type: 'change' }),
     });
 
-    const thread = await service.changeRequestThread(IN_WORKSPACE, 'abaa4cd8');
+    const thread = await service.changeRequestThread(IN_WORKSPACE, 'c0d1ce00');
 
     expect(commands).toMatchObject([
-      { via: 'query', readsRecords: true, args: findQueryArgs(FOUND_CHANGE_REQUEST_THREADS, "where guid like 'abaa4cd8%'"), options: { cwd: WORKSPACE } },
+      { via: 'query', readsRecords: true, args: findQueryArgs(FOUND_CHANGE_REQUEST_THREADS, "where guid like 'c0d1ce00%'"), options: { cwd: WORKSPACE } },
     ]);
-    expect(thread).toEqual({ reviewId: 31415956, threadId: 31420112 });
+    expect(thread).toEqual({ reviewId: 43, threadId: 51 });
   });
 
   it('names the repository outside every workspace', async () => {
     const { service, commands } = reviewComments({ 'find changereviewcomment': '' });
 
-    expect(await service.changeRequestThread(ON_REPOSITORY, 'abaa4cd8')).toBeNull();
-    expect(commands[0]?.args[2]).toBe("where guid like 'abaa4cd8%' on repository 'game@local'");
+    expect(await service.changeRequestThread(ON_REPOSITORY, 'c0d1ce00')).toBeNull();
+    expect(commands[0]?.args[2]).toBe("where guid like 'c0d1ce00%' on repository 'game@local'");
   });
 
   it('asks the server nothing for what names no change request', async () => {
