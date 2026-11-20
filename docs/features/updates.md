@@ -302,7 +302,9 @@ the last install of the same lockfile (`reuse-node-modules`, CI only: releases i
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
 Drive and builds there (`BUILD_DIR`). On macOS the temp folder is a disk in memory: the runner's own disk now and
 then holds writes for seconds, which timed out tests writing a temp file. A failed smoke test keeps its screenshots,
-written in that temp folder, as the job's artifact `smoke-screenshots-<platform>-<build>`. How fast the tests run on CI's 2-CPU
+written in that temp folder, as the job's artifact `smoke-screenshots-<platform>-<build>`. Splitting the unit tests across
+two jobs per Windows runner (`vitest --shard`) was rejected: every job pays the setup again (about 95 s on Windows
+arm64), so four more runners would have cut CI by about 40 s. How fast the tests run on CI's 2-CPU
 runners, and why: `vitest.config.ts`.
 
 CI's runners are slow and uneven: a test runs up to ten times slower there than on a laptop, and several times slower
