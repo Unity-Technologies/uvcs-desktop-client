@@ -26,4 +26,11 @@ describe("a comment's chips", () => {
       .sort();
     expect(turnedOff).toEqual(Object.keys(CHIPS_NOT_LINKS).sort());
   });
+
+  it("wear the links' accent only when they are links: a person, never one, reads as a name", () => {
+    const css = readFileSync(join(__dirname, 'components', 'comments', 'ReferenceChip.module.css'), 'utf8');
+    const person = /\.person\s*\{([^}]*)\}/.exec(css)?.[1];
+    expect(person).toBeDefined();
+    expect(person).not.toContain('--accent-text');
+  });
 });
