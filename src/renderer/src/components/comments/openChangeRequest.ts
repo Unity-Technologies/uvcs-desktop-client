@@ -4,6 +4,10 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { toast } from '../../ui/toast/toastStore';
 import type { ChangeRequestOpening } from '../../features/codeReviews/changeRequests/changeRequests';
 import { conversationAt } from '../../features/codeReviews/inline/reviewComments';
+import { shortGuid } from '../../lib/comments/commentReferences';
+
+/** The guids a click is still finding: a second click meanwhile asks the server nothing more. */
+const finding = new Set<string>();
 
 /**
  * Opens a change request's review at its thread, brought into view and lit, as Show in conversation does: at once for one
@@ -16,11 +20,16 @@ export async function openChangeRequest(place: Place, opening: ChangeRequestOpen
     return;
   }
   const { guid } = opening;
+  if (finding.has(guid)) return;
+  finding.add(guid);
+  const number = shortGuid(guid);
   try {
     const thread = await api.reviewComments.changeRequestThread(place, guid);
     if (thread) navigation.openPage(conversationAt(thread.reviewId, thread.threadId));
-    else toast.info(`Change request ${guid} not found`, "It was deleted, or it's in a code review you can't see.");
+    else toast.info(`Change request ${number} not found`, "It was deleted, or it's in a code review you can't see.");
   } catch (error) {
-    toast.error(`Couldn't open change request ${guid}`, error);
+    toast.error(`Couldn't open change request ${number}`, error);
+  } finally {
+    finding.delete(guid);
   }
 }
