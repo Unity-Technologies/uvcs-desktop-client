@@ -15,7 +15,7 @@ describe('suggestionFileDiff', () => {
 
   it('shows every line replaced, then every line suggested, stacked (`replacedThenSuggested`)', () => {
     const diff = suggestionFileDiff('a.cs', { replacedText: 'keep();\nold();\n', suggestedText: 'keep();\nnew();\n', firstLine: 3 }, 'stacked');
-    expect(diff.hunks[0]!.hunkContent.map((part) => [part.type, part.type === 'change' ? part.deletions : 0, part.type === 'change' ? part.additions : 0])).toEqual([['change', 2, 2]]);
+    expect(diff.hunks[0]!.hunkContent.map((part) => [part.type, part.type === 'change' ? part.deletions : 0, part.type === 'change' ? part.additions : 0])).toEqual([['change', 2, 0], ['change', 0, 2]]);
   });
 
   it('shows the lines kept once, between the lines changed, as a diff (`suggestionLineDiff`)', () => {

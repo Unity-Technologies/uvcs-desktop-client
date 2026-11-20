@@ -81,10 +81,10 @@ describe('a suggested change as Pierre draws it, stacked', () => {
     expect(marks).toEqual({ deletions: [], additions: [] });
   });
 
-  it('marks the changed words of a range edited line by line', async () => {
+  it("draws no word marks of Pierre's on a range edited line by line: they're drawn over the rows (`stackedWordMarks`)", async () => {
     const { rows, marks } = await rendered('a = 1;\nkeep();\nb = 2;\n', 'a = 2;\nkeep();\nb = 3;\n', 10, 'stacked');
     expect(rows).toEqual(['10 - a = 1;', '11 - keep();', '12 - b = 2;', '10 + a = 2;', '11 + keep();', '12 + b = 3;']);
-    expect(marks).toEqual({ deletions: ['1', '2'], additions: ['2', '3'] });
+    expect(marks).toEqual({ deletions: [], additions: [] });
   });
 
   it("marks no words in a range whose lines don't take the replaced ones' places one for one", async () => {

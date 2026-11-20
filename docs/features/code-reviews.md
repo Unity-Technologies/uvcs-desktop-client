@@ -453,8 +453,10 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
   word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). Two views, the user's
   choice for every suggestion (`useSuggestionViewStore`, switched by the header's diff icon, `suggestionViewToggle`):
   **stacked**, the default, as GitHub and GitLab show one: every line replaced, then every line suggested
-  (`replacedThenSuggested`), its words marked only when the suggestion has as many lines as it replaces, as Pierre
-  pairs the n-th line removed with the n-th added; and **as a diff**: the line diff of the two, the lines kept shown
+  (`replacedThenSuggested`), each line edited marked against the line it became as the line diff pairs them, whatever
+  lines the suggestion adds or removes (`stackedWordMarks`, drawn over the rows by `useWordMarks` in Pierre's own word
+  colors; Pierre's own marks are off there, as it pairs the n-th line removed with the n-th added, which marks the
+  wrong lines once the suggestion has another number of lines); and **as a diff**: the line diff of the two, the lines kept shown
   once and untinted, only the lines changed removed and added, their words marked (`suggestionLineDiff`, one hunk
   holding every line, so nothing folds). Stacked reads a heavy rewrite best, where a diff interleaves pieces of both;
   the diff reads a few words changed in a longer range best, where stacked shows the lines kept twice. Both are
