@@ -5,7 +5,7 @@ import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, type Point } from './curves';
-import { boundsOf, crossesView } from './linkVisibility';
+import { boundsOf, type Bounds } from './linkVisibility';
 import { mergeLinkPath, pathPoints } from './mergeLinkPath';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, nodePoint, pendingPoint, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelChips } from './labelPlacement';
@@ -189,7 +189,12 @@ function hitMergeLink(layout: GraphLayout, point: Point, distance: number): Grap
 /** Whether the point is on the merge link drawn between the two changesets. */
 function nearLink(from: Point, to: Point, point: Point, distance: number): boolean {
   const path = mergeLinkPath(from, to);
-  return crossesView(boundsOf(pathPoints(path)), { left: point.x, right: point.x, top: point.y, bottom: point.y }, distance) && path.some((curve) => distanceToCurve(curve, point) <= distance);
+  return nearBounds(boundsOf(pathPoints(path)), point, distance) && path.some((curve) => distanceToCurve(curve, point) <= distance);
+}
+
+/** Whether the point lies within `distance` of the box: a quick test before measuring to the line itself. */
+function nearBounds(bounds: Bounds, point: Point, distance: number): boolean {
+  return point.x >= bounds.left - distance && point.x <= bounds.right + distance && point.y >= bounds.top - distance && point.y <= bounds.bottom + distance;
 }
 
 function hitPendingMergeLink(layout: GraphLayout, point: Point, distance: number): GraphTarget | null {
