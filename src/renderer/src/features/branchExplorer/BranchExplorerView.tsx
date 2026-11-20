@@ -57,6 +57,7 @@ import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import { useCreatedBranchReveal } from './useCreatedBranchReveal';
 import { useGraphLayout } from './useGraphLayout';
+import { useFirstHitArrival } from './useFirstHitArrival';
 import { useGraphSearch } from './useGraphSearch';
 import { useOpeningView } from './useOpeningView';
 import { usePendingChangeset } from './usePendingChangeset';
@@ -237,6 +238,7 @@ export function BranchExplorerView() {
     const hit = search.step(direction, fullLayout, searchHits);
     if (hit) goToHit(hit);
   };
+  useFirstHitArrival(search, searchHits.length, () => stepSearch(1));
 
   const menuFor = (target: GraphTarget | null) =>
     graphMenu(target, {
