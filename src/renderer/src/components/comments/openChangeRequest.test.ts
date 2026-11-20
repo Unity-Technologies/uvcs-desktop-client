@@ -33,6 +33,27 @@ describe('openChangeRequest', () => {
     expect(shownToasts()).toEqual([{ kind: 'info', title: 'Change request c0d1ce00 not found', detail: "It was deleted, or it's in a code review you can't see." }]);
   });
 
+  it('names one its whole guid names by its number, as its chip does', async () => {
+    fakeApi.answer('reviewComments.changeRequestThread', () => null);
+
+    await openChangeRequest(PLACE, { kind: 'find', guid: 'C0D1CE00-B457-4424-99FF-A3F1C0FA2582' });
+
+    expect(shownToasts().map((shown) => shown.title)).toEqual(['Change request c0d1ce00 not found']);
+  });
+
+  it('asks once while a click is still finding the same request', async () => {
+    let answer: (thread: unknown) => void = () => {};
+    fakeApi.answer('reviewComments.changeRequestThread', () => new Promise((resolve) => (answer = resolve)));
+
+    const first = openChangeRequest(PLACE, { kind: 'find', guid: 'c0d1ce00' });
+    await openChangeRequest(PLACE, { kind: 'find', guid: 'c0d1ce00' });
+    answer({ reviewId: 43, threadId: 51 });
+    await first;
+
+    expect(fakeApi.methods()).toEqual(['reviewComments.changeRequestThread']);
+    expect(whereTheWindowIs().pages).toEqual([AT_THREAD]);
+  });
+
   it('says what failed when it could not be looked up', async () => {
     fakeApi.answer('reviewComments.changeRequestThread', () => {
       throw commandFailure('Connection refused');

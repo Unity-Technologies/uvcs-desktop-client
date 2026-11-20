@@ -273,7 +273,7 @@ describe("finding a change request's thread", () => {
     const thread = await service.changeRequestThread(IN_WORKSPACE, 'c0d1ce00');
 
     expect(commands).toMatchObject([
-      { via: 'query', readsRecords: true, args: findQueryArgs(FOUND_CHANGE_REQUEST_THREADS, "where guid like 'c0d1ce00%'"), options: { cwd: WORKSPACE } },
+      { via: 'query', readsRecords: true, args: findQueryArgs(FOUND_CHANGE_REQUEST_THREADS, "where guid like 'c0d1ce00%' and type = 'change'"), options: { cwd: WORKSPACE } },
     ]);
     expect(thread).toEqual({ reviewId: 43, threadId: 51 });
   });
@@ -282,7 +282,7 @@ describe("finding a change request's thread", () => {
     const { service, commands } = reviewComments({ 'find changereviewcomment': '' });
 
     expect(await service.changeRequestThread(ON_REPOSITORY, 'c0d1ce00')).toBeNull();
-    expect(commands[0]?.args[2]).toBe("where guid like 'c0d1ce00%' on repository 'game@local'");
+    expect(commands[0]?.args[2]).toBe("where guid like 'c0d1ce00%' and type = 'change' on repository 'game@local'");
   });
 
   it('asks the server nothing for what names no change request', async () => {
