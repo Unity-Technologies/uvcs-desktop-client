@@ -1,6 +1,6 @@
 import type { PageOf } from '../../../app/navigation/pages';
-import { commentLineText } from '../../../lib/comments/commentText';
 import { anchorPath, isLineThread } from '../inline/fileThreads';
+import { commentLineTextOf } from '../suggestions/suggestionPreview';
 import type { ReviewThread } from './reviewThreads';
 import { commentLocationPage } from './threadBadges';
 
@@ -144,7 +144,7 @@ export function openItemsOf(reviewId: number, open: readonly ReviewThread[], pic
   return open.map((thread) => ({
     threadId: thread.root.id,
     thread,
-    text: commentLineText(thread.root.text),
+    text: commentLineTextOf(thread.root),
     current: pick?.threadId === thread.root.id,
     inChanges: isLineThread(thread) ? { page: commentLocationPage(reviewId, thread.root), path: anchorPath(thread.root.anchor) } : undefined,
   }));

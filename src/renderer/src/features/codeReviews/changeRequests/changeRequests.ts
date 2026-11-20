@@ -4,7 +4,7 @@ import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { changeRequestsNamedIn } from '@shared/applyChange';
 import type { CheckinMode } from '../../pendingChanges/checkinButton';
 import type { ChipCard } from '../../../components/comments/chipContent';
-import { commentLineText } from '../../../lib/comments/commentText';
+import { changeRequestLineText } from '../suggestions/suggestionPreview';
 import { shortGuid } from '../../../lib/comments/commentReferences';
 import { displayName } from '../../../lib/userName';
 import { threadsOf, writtenOrder, type ThreadState } from '../conversation/reviewThreads';
@@ -164,7 +164,7 @@ export function changeRequestChip(request: ReviewChangeRequest | undefined, guid
     const label = `change request ${number}`;
     return { lead: LEAD, label, name: `Applies ${label}`, title, card: { title, meta: [] } };
   }
-  const label = commentLineText(request.text) || title;
+  const label = changeRequestLineText(request.text, request.location) || title;
   return {
     lead: LEAD,
     label,

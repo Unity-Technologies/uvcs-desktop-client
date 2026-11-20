@@ -101,6 +101,12 @@ describe('changeRequestChip', () => {
     });
   });
 
+  it('reads as the lines it replaces when it opens with its suggestion, not its first line of code', () => {
+    const [request] = changeRequestsOf(43, conversationOf(comment(1, { text: '```suggestion\nclass Tabs\n```', anchor: { ...ON_LINE, firstLine: 1, lastLine: 8 } })));
+
+    expect(changeRequestChip(request, 'c0d1ce01', ago).label).toBe('Suggested change on lines 1–8');
+  });
+
   it('says where an applied or a discarded one stands', () => {
     const [applied, discarded] = changeRequestsOf(43, conversationOf(comment(1, { appliedInChangeset: 7 }), comment(2), comment(3, { kind: 'discard', parentId: 2 })));
 

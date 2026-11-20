@@ -7,6 +7,7 @@ import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
+import { suggestionNameOf } from '../suggestions/suggestionPreview';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
@@ -197,7 +198,7 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
         </span>
       )}
       <button type="button" className={styles.rowText} onClick={onOpen}>
-        <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={thread.root.text} interactive={false} />}</span>
+        <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={suggestionNameOf(thread.root) ?? thread.root.text} interactive={false} />}</span>
       </button>
     </section>
   );
@@ -393,7 +394,7 @@ function FoldedThread({ thread, onOpen, excerpt, pointerOnly = false }: { thread
       <span className={styles.author}>
         <Highlight text={displayName(author)} />
       </span>
-      <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={thread.root.text} interactive={false} />}</span>
+      <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={suggestionNameOf(thread.root) ?? thread.root.text} interactive={false} />}</span>
     </button>
   );
 }

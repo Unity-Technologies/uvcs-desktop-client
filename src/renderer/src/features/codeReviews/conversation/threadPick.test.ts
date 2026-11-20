@@ -195,6 +195,11 @@ describe('openItemsOf', () => {
     expect(items[0]!.text).toBe('Rename this');
   });
 
+  it('says a change request that opens with its suggestion as the lines it replaces', () => {
+    const suggestion = openThreads(threadsOf([comment(1, { kind: 'changeRequest', anchor: ON_LINE, text: '```suggestion\n{\n```' })]));
+    expect(openItemsOf(41, suggestion, undefined)[0]!.text).toMatch(/^Suggested change on line/);
+  });
+
   it('marks none current while the picked thread is no longer open', () => {
     expect(openItemsOf(41, open, pickThread(undefined, 9)).some((item) => item.current)).toBe(false);
   });
