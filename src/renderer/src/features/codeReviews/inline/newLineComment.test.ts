@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShownFile } from './fileThreads';
-import { DEFAULT_LINE_COMMENT_KIND, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { DEFAULT_LINE_COMMENT_KIND, crossesCommentBeingWritten, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 
 const WHOLE = { kind: 'whole' } as const;
 const CHANGESET_8 = { kind: 'changeset', changesetId: 8 } as const;
@@ -189,5 +189,24 @@ describe('lineCommentLabel', () => {
   it('names the line, or the lines selected', () => {
     expect(lineCommentLabel({ side: 'additions', firstLineNumber: 42, lineNumber: 42 })).toBe('Comment on line 42');
     expect(lineCommentLabel({ side: 'additions', firstLineNumber: 40, lineNumber: 42 })).toBe('Comment on lines 40–42');
+  });
+});
+
+describe('crossesCommentBeingWritten', () => {
+  const writing = [spot({ firstLine: 10, lastLine: 20 })];
+  const at = (firstLine: number, lastLine: number) => ({ revisionId: 30, firstLine, lastLine });
+
+  it('refuses lines inside, or across, a comment being written on other lines', () => {
+    expect(crossesCommentBeingWritten(writing, at(12, 12))).toBe(true);
+    expect(crossesCommentBeingWritten(writing, at(5, 10))).toBe(true);
+    expect(crossesCommentBeingWritten(writing, at(18, 25))).toBe(true);
+    expect(crossesCommentBeingWritten(writing, at(5, 25))).toBe(true);
+  });
+
+  it('takes the same lines, which go back to the comment being written, and lines beside it', () => {
+    expect(crossesCommentBeingWritten(writing, at(10, 20))).toBe(false);
+    expect(crossesCommentBeingWritten(writing, at(9, 9))).toBe(false);
+    expect(crossesCommentBeingWritten(writing, at(21, 30))).toBe(false);
+    expect(crossesCommentBeingWritten([], at(12, 12))).toBe(false);
   });
 });
