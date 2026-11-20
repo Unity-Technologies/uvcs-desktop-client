@@ -30,8 +30,9 @@ export type LineHover = ReturnType<typeof lineHover<HoveredLine>>;
 
 /**
  * The place's line action (`DiffAnnotations.lineAction`, a review's "Comment on line 42") as a button by the number of
- * the line under the pointer, on the lines it takes; on the lines `selected` when it's one of them. `hovers`: what else follows the pointer over the lines (the hint on
- * line numbers, `useLineLinks`), which Pierre takes as one pair of callbacks.
+ * the line under the pointer, on the lines it takes; on the lines `selected` when it's one of them, and on those it's
+ * dragged over (`useLineActionDrag`). `hovers`: what else follows the pointer over the lines (the hint on line
+ * numbers, `useLineLinks`), which Pierre takes as one pair of callbacks.
  *
  * The button is drawn over the diff, in its scrolling container (`overlay`), not in Pierre's gutter slot: Pierre
  * isolates its code (`isolation: isolate` on `[data-diff]` and `[data-code]`), so nothing in the slot can be drawn above
@@ -81,7 +82,6 @@ export function useLineActionButton(
     ),
   };
 }
-
 
 interface LineActionOverlayButtonProps {
   hovered: LineActionStore;
