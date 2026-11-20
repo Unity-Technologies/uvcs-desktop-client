@@ -12,12 +12,14 @@ interface LineBandsProps {
 }
 
 /**
- * A light outline around each line (or range of lines) a row or a marker is about (`LineBand`), across its pane's code: what a comment is
- * about reads at a glance, its card shown or folded into a marker. The one gone to is in the accent its card is.
+ * A light outline around each line (or range of lines) a row or a marker is about (`LineBand`), across its pane's
+ * code: what a comment is about reads at a glance, its card shown or folded into a marker. The one gone to is in the
+ * accent its card is.
  */
 export function LineBands({ containerRef, bands, layout }: LineBandsProps) {
   const lines = useMemo(() => bandLines(bands), [bands]);
-  const boxes = useLineBoxes(containerRef, lines, lines.map((line) => `${line.key}@${line.lineNumber}`).join('|'), layout, { measuresOutside: true });
+  const linesKey = lines.map((line) => `${line.key}@${line.lineNumber}`).join('|');
+  const boxes = useLineBoxes(containerRef, lines, linesKey, layout, { measuresOutside: true });
   return (
     <>
       {bands.map((band) => {

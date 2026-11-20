@@ -454,25 +454,27 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
   cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
   word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). Two views, the user's
-  choice for every suggestion (`useSuggestionViewStore`, switched by the header's small **Stacked | Diff** control, words rather than an icon,
-  which read only once used; the box clicked stays where it is on screen while every suggestion resizes,
-  `keepElementInPlace`; shown only when the two differ, `viewsDiffer`: a suggestion keeping none of the lines it
-  replaces, as most one-line ones, reads the same both ways):
+  choice for every suggestion (`useSuggestionViewStore`, switched by the header's small **Stacked | Diff** control;
+  the box clicked stays where it is on screen while every suggestion resizes, `keepElementInPlace`; shown only when
+  the two differ, `viewsDiffer`: a suggestion keeping none of the lines it replaces, as most one-line ones, reads the
+  same both ways):
   **stacked**, the default, as GitHub and GitLab show one: every line replaced, then every line suggested
   (`replacedThenSuggested`), each line edited marked against the line it became as the line diff pairs them, whatever
   lines the suggestion adds or removes (`stackedWordMarks`, drawn over the rows by `useWordMarks` in Pierre's own word
   colors; Pierre's own marks are off there, as it pairs the n-th line removed with the n-th added, which marks the
-  wrong lines once the suggestion has another number of lines); and **as a diff**: the line diff of the two, the lines kept shown
-  once and untinted, only the lines changed removed and added, their words marked (`suggestionLineDiff`). Three
+  wrong lines once the suggestion has another number of lines); and **as a diff**: the line diff of the two, the
+  lines kept shown once and untinted, only the lines changed removed and added, their words marked (`suggestionLineDiff`). Three
   lines kept stay around each change (`SUGGESTION_CONTEXT_LINES`), and a run of more than ten kept lines folds behind
   a bar that unfolds it (`SNIPPET_FOLDS_OVER`, Pierre's `collapsedContextThreshold`): a method whose first and last
   lines change reads as its two changes, while a shorter run shows whole, as a bar to click there saves nothing.
-  Stacked never folds: it is the old block, then the new one. Stacked reads a heavy rewrite best, where a diff interleaves pieces of both;
-  the diff reads a few words changed in a longer range best, where stacked shows the lines kept twice. Both are
+  Stacked never folds: it is the old block, then the new one. Stacked reads a heavy rewrite best, where a diff
+  interleaves pieces of both; the diff reads a few words changed in a longer range best, where stacked shows the lines kept twice. Both are
   numbered as the file's lines from the first one commented, in a diff kept whole, as Pierre loads the full files of a
-  partial one. **Compare in a larger view** (a page with + and −, the diff it opens; an expand icon read as "make the box bigger"), beside it, opens the line diff in the code comparison dialog
+  partial one. **Compare in a larger view**, beside it, opens the line diff in the code comparison dialog
   (`openSuggestionComparison`, the moved code's, `openCodeComparisonDialog`), wide enough for the two side by side,
-  with the diff's own Split | Unified switch: a comment, as narrow as its thread, has no room for them. One
+  with the diff's own Split | Unified switch: a comment, as narrow as its thread, has no room for them. Its controls
+  are words and a diff icon (a page with + and −): icons alone read only once used, and an expand icon read as "make
+  the box bigger". One
   column, highlighted in the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it:
   `useSyntaxHighlighter`), every line shown. A few lines, so drawn whole on the main thread: no workers, and no
   virtualizer, even inside the code's diff, whose own it would otherwise join. Inside a thread in the code, the box is

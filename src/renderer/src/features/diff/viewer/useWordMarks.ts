@@ -4,7 +4,7 @@ import { lineRowSelector, rowTextRange } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
 import type { WordMarksByLine } from './wordMarkRows';
 
-/** The background of each side's marks: a CSS color, read inside the diff's shadow root (Pierre's variables resolve there). */
+/** Each side's marks' background: a CSS color, read in the diff's shadow root (Pierre's variables resolve there). */
 export interface WordMarkColors {
   deletions: string;
   additions: string;
@@ -16,8 +16,9 @@ export const MOVED_WORD_COLORS: WordMarkColors = { deletions: 'var(--diff-moved-
 /**
  * Marks words of a diff's lines where Pierre's own pairing would mark the wrong ones (moved code, `movedWordMarks`; a
  * stacked suggestion, `stackedWordMarks`) in the rows of the diff (`root`, `useDiffShadowRoot`), with the browser's
- * highlights (`CSS.highlights`) in each side's color (`colors`). They're drawn over the rows on screen, whatever Pierre renders: its rows come and go as the diff scrolls (it renders
- * the lines in view), is typed into or highlighted, and the marks are drawn again each time (a `MutationObserver`).
+ * highlights (`CSS.highlights`) in each side's color (`colors`). They're drawn over the rows on screen, whatever Pierre
+ * renders: its rows come and go as the diff scrolls (it renders the lines in view), is typed into or highlighted, and
+ * the marks are drawn again each time (a `MutationObserver`).
  * Marking Pierre's own rows instead (`refreshWordMarks`) was rejected: every render of Pierre's (its worker's colors,
  * a keystroke) would draw its own marks back over them.
  */
