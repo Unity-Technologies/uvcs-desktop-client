@@ -32,12 +32,13 @@ jobs:
           - { name: Linux x64, os: ubuntu-latest }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Windows' local SSD and macOS' temp folder in memory: why, in the action.
-      - uses: ./.github/actions/fast-disks
+      # Why each: in the action. The temp folder moves after the install, which needs more room than the disk in memory.
+      - uses: ./.github/actions/build-on-local-ssd
       - uses: ./.github/actions/install
         with:
           working-directory: ${{ env.BUILD_DIR || github.workspace }}
           reuse-node-modules: 'true'
+      - uses: ./.github/actions/temp-in-memory
       # Once: tsc answers the same on every OS, and Linux's case-sensitive disk makes it the strictest about import paths.
       - if: runner.os == 'Linux'
         run: npm run typecheck
@@ -66,11 +67,12 @@ jobs:
         build: [development, production]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/fast-disks
+      - uses: ./.github/actions/build-on-local-ssd
       - uses: ./.github/actions/install
         with:
           working-directory: ${{ env.BUILD_DIR || github.workspace }}
           reuse-node-modules: 'true'
+      - uses: ./.github/actions/temp-in-memory
       - run: npm run e2e:${{ matrix.build }}
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
         env:
