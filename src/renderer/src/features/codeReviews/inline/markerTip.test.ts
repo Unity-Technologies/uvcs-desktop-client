@@ -36,6 +36,10 @@ describe('markerTip', () => {
     expect(tipOf(placed(comment(1, { text: 'Reads well.', author: 'ana.garcia' })))).toBe('Reads well.\nComment · Ana Garcia');
   });
 
+  it('says a change request that is only a suggestion by the lines it replaces, not its code', () => {
+    expect(tipOf(placed(comment(1, { kind: 'changeRequest', text: '```suggestion\n{\n```' }))).split('\n')[0]).toBe('Suggested change on line 20');
+  });
+
   it('reads Markdown as plain text, its lines as one', () => {
     const text = '**Retry** with a `for` reads\n\n- backwards\n- [the docs](https://example.com)';
     expect(tipOf(placed(comment(1, { text }))).split('\n')[0]).toBe('Retry with a for reads • backwards • the docs');
