@@ -23,7 +23,7 @@ interface ShownLink {
 
 export function drawMergeLinks(draw: DrawContext): void {
   const { scene, visible } = draw;
-  const { search, selectedChangeset, hoveredChangeset } = scene;
+  const { search, selectedChangeset, hoveredChangeset, hoveredMergeLink } = scene;
   const shown: ShownLink[] = [];
   for (const link of mergeLinksAcross(scene.layout, visible.left - MARGIN, visible.right + MARGIN)) {
     const path = mergeLinkPath(nodePoint(scene.layout, link.sourceChangeset)!, nodePoint(scene.layout, link.destinationChangeset)!);
@@ -38,7 +38,7 @@ export function drawMergeLinks(draw: DrawContext): void {
       color: linkColor(draw, link),
       dash: mergeLinkDash(link.type),
       cap: 'butt',
-      emphasized: involves(link, selectedChangeset) || involves(link, hoveredChangeset),
+      emphasized: link === hoveredMergeLink || involves(link, selectedChangeset) || involves(link, hoveredChangeset),
       lit,
     });
   }
@@ -61,7 +61,7 @@ export function drawPendingMergeLinks(draw: DrawContext): void {
       // Zero-length dashes with round caps: dots.
       cap: 'round',
       emphasized:
-        scene.hoveredPending || scene.hoveredChangeset === link.sourceChangeset || scene.selectedChangeset === link.sourceChangeset,
+        link === scene.hoveredMergeLink || scene.hoveredPending || scene.hoveredChangeset === link.sourceChangeset || scene.selectedChangeset === link.sourceChangeset,
       lit: !scene.search,
     });
   }

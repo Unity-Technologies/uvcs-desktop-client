@@ -68,7 +68,7 @@ export function pointerCardStays(target: PointerCardTarget): boolean {
 }
 
 /** What the frame lights up under the pointer. */
-export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending'>;
+export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending' | 'hoveredMergeLink'>;
 
 /** The pointer on a "+N" node lights it as its changeset; on a code review chip, the chip. */
 export function hoverHighlight(hovered: GraphTarget | null): HoverHighlight {
@@ -77,6 +77,7 @@ export function hoverHighlight(hovered: GraphTarget | null): HoverHighlight {
     hoveredBranch: hovered?.kind === 'branch' ? hovered.lane.branch.name : null,
     hoveredReview: hovered?.kind === 'codeReview' ? hovered.review.id : null,
     hoveredPending: hovered?.kind === 'pending',
+    hoveredMergeLink: hovered?.kind === 'mergeLink' || hovered?.kind === 'pendingMergeLink' ? hovered.link : null,
   };
 }
 

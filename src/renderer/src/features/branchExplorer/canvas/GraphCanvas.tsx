@@ -123,7 +123,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const [awayFromEnd, setAwayFromEnd] = useState(false);
 
   const hover = hoverHighlight(hovered);
-  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending } = hover;
+  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredMergeLink } = hover;
   /** What the next frame draws, read by callbacks that outlive this render. */
   const sceneRef = useRef({ layout, highlights, palette, hover });
   sceneRef.current = { layout, highlights, palette, hover };
@@ -190,7 +190,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     setAwayFromEnd(awayFromNewest(sceneRef.current.layout, view.viewportRef.current, sizeRef.current));
   }
 
-  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, scheduleDraw]);
+  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredMergeLink, scheduleDraw]);
   // A filter can reshape, shrink or grow the graph: keep the user's place in it (unless a glide is taking them
   // somewhere) and keep it on screen.
   const laidOutRef = useRef(layout);

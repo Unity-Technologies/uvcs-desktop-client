@@ -228,13 +228,21 @@ describe('hoverCardFor', () => {
 
 describe('hoverHighlight', () => {
   it('lights a "+N" node as its changeset, a branch, a code review chip and the pending changes', () => {
-    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false };
+    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false, hoveredMergeLink: null };
     const node = layout.nodes.get(5)!;
     expect(hoverHighlight(null)).toEqual(none);
     expect(hoverHighlight({ kind: 'collapsed', node })).toEqual({ ...none, hoveredChangeset: node.changeset.id });
     expect(hoverHighlight({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! })).toEqual({ ...none, hoveredBranch: '/main/a' });
     expect(hoverHighlight({ kind: 'codeReview', review: { id: 7 } as CodeReview })).toEqual({ ...none, hoveredReview: 7 });
     expect(hoverHighlight({ kind: 'pending' })).toEqual({ ...none, hoveredPending: true });
+  });
+
+  it('lights a merge link, or a merge in progress, under the pointer as when its changesets are', () => {
+    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false, hoveredMergeLink: null };
+    const link = layout.mergeLinks[0]!;
+    expect(hoverHighlight({ kind: 'mergeLink', link })).toEqual({ ...none, hoveredMergeLink: link });
+    const inProgress = { type: 'merge' as const, sourceChangeset: 7 };
+    expect(hoverHighlight({ kind: 'pendingMergeLink', link: inProgress })).toEqual({ ...none, hoveredMergeLink: inProgress });
   });
 });
 
