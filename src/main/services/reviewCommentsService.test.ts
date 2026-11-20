@@ -6,6 +6,7 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
 import { findQueryArgs } from '../cm/findQuery';
+import { FOUND_CHANGE_REQUEST_THREADS } from '../cm/changeRequestThreads';
 import { FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
 import { formatOutput, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -260,5 +261,34 @@ describe('writing on a review', () => {
 
     expect(commands.map(({ args }) => args.at(-1))).toEqual(Array(8).fill('--repository=game@local'));
     expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
+  });
+});
+
+describe("finding a change request's thread", () => {
+  it('finds the request a check-in names by its first eight digits with one cm find, read as it arrives', async () => {
+    const { service, commands } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_CHANGE_REQUEST_THREADS, { id: 31420112, reviewid: 31415956, type: 'change' }),
+    });
+
+    const thread = await service.changeRequestThread(IN_WORKSPACE, 'abaa4cd8');
+
+    expect(commands).toMatchObject([
+      { via: 'query', readsRecords: true, args: findQueryArgs(FOUND_CHANGE_REQUEST_THREADS, "where guid like 'abaa4cd8%'"), options: { cwd: WORKSPACE } },
+    ]);
+    expect(thread).toEqual({ reviewId: 31415956, threadId: 31420112 });
+  });
+
+  it('names the repository outside every workspace', async () => {
+    const { service, commands } = reviewComments({ 'find changereviewcomment': '' });
+
+    expect(await service.changeRequestThread(ON_REPOSITORY, 'abaa4cd8')).toBeNull();
+    expect(commands[0]?.args[2]).toBe("where guid like 'abaa4cd8%' on repository 'game@local'");
+  });
+
+  it('asks the server nothing for what names no change request', async () => {
+    const { service, commands } = reviewComments({});
+
+    expect(await service.changeRequestThread(IN_WORKSPACE, "x' or '1'='1")).toBeNull();
+    expect(commands).toEqual([]);
   });
 });
