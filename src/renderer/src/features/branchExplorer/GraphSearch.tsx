@@ -6,7 +6,7 @@ import styles from './GraphSearch.module.css';
 interface GraphSearchProps {
   search: string;
   onSearchChange: (search: string) => void;
-  /** Null while there is no search; `current` is 0 before stepping through the matches. */
+  /** Null while there is no search; `current` is 0 until the search goes to its first match. */
   position: { current: number; total: number } | null;
   onStep: (direction: 1 | -1) => void;
   inputRef: Ref<HTMLInputElement>;
