@@ -3,7 +3,7 @@
 A light pass over the real built app, to catch what unit tests can't: wiring, startup, a view that fails to render.
 `npm run e2e` runs it twice: over a development build (`electron-vite build --mode development`, React's development
 build, as `npm run dev` serves it), then over the production build, which it leaves in `out/`; `npm run
-e2e:development` and `npm run e2e:production` run one each, as CI's two smoke jobs do. The development build
+e2e:development` and `npm run e2e:production` run one each, as CI's smoke jobs do, one per build. The development build
 is what catches a bug only `npm run dev` shows: StrictMode mounts every component, unmounts it and mounts it again,
 so an effect whose cleanup leaves something its second run can't use (a WebGL canvas whose context was lost) fails
 there, while the production build, which ships, runs each effect once. Each run builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway

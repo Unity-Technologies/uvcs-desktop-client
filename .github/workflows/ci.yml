@@ -88,3 +88,18 @@ jobs:
           if-no-files-found: ignore
           # A re-run of the job replaces the screenshots it kept, rather than failing on the name.
           overwrite: true
+
+  # The one check branch protection requires of this workflow (docs/features/updates.md "CI"): it fails unless every
+  # job passed, so a new or renamed job needs no change to the protection rules. `if: always()`, because a job skipped
+  # after a failure counts as passed for a required check; a skipped job here counts as failed.
+  ci-result:
+    name: CI result
+    needs: [build, smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "::error::A CI job failed, was cancelled or was skipped."
+          exit 1
+      - run: echo "Every CI job passed."
