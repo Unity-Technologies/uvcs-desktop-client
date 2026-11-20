@@ -245,7 +245,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedBehaviorOf`, `placeInView`): from Open it glides, the page opened at it jumps at once, and either way
-  its card lands a fifth down the viewport, even when already on screen (ARCHITECTURE.md "Going to a thing"). It's unfolded, lit for a moment
+  its card lands a fifth down the viewport, even when already on screen (ARCHITECTURE.md "Going to a thing"). It goes
+  there once the conversation is laid out for good (`conversationLaidOut`: read, and the review's changesets settled,
+  as they group the entries into rounds and move the threads below). It's unfolded, lit for a moment
   and ringed in the accent until another is gone to, as a thread selected in the code is (`threadMarkOf`: the card's
   `highlight` and `selected`); its Open entry keeps the Comments panel's accent bar. Each pick counts, so going to the
   thread already on screen, or to the same one again, lights it again: without it, a click on what's already in view

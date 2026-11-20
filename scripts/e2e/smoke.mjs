@@ -220,6 +220,30 @@ try {
     await question.getByRole('button', { name: 'Not now' }).click();
     await question.waitFor({ state: 'detached' });
   });
+  await step("A comment's chips open what they name", async () => {
+    // Every place showing a comment draws its references as links (`chipsAreLinks.test.ts`); here a click proves one
+    // opens what it names: a changeset, and a change request no review read yet, found by its number then opened at
+    // its thread, in view. The fake's conversation is short, so a scroll gone wrong on a long one isn't caught here:
+    // `conversationLaidOut` holds that rule.
+    const back = process.platform === 'darwin' ? 'Meta+BracketLeft' : 'Alt+ArrowLeft';
+    await main.getByRole('row').filter({ hasText: 'Tune the camera' }).click();
+    const details = main.getByRole('complementary');
+    await details.getByRole('link', { name: /^Changeset 2\b/ }).click();
+    await main.getByRole('heading', { name: /Add the player/ }).filter({ visible: true }).first().waitFor();
+    await window.keyboard.press(back);
+    await details.getByRole('link', { name: /^Applies change request/ }).click();
+    await main.getByRole('tab', { name: /^Conversation/ }).filter({ visible: true }).waitFor();
+    const request = main.getByText('Jump only when grounded.').filter({ visible: true }).first();
+    await request.waitFor();
+    const inView = await request.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return box.top >= 0 && box.bottom <= window.innerHeight;
+    });
+    if (!inView) throw new Error("The change request's thread opened out of view");
+    await window.keyboard.press(back);
+    await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).waitFor();
+    await settled();
+  });
   for (const view of VIEWS) {
     await step(view, async () => {
       // A view's button may carry a count (`Changes 2`).

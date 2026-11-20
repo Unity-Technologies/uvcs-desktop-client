@@ -47,7 +47,8 @@ const CHANGESETS = [
   changeset(0, '/main', -1, 30, 'Root dir'),
   changeset(1, '/main', 0, 28, 'Add the project'),
   changeset(2, '/main', 1, 25, 'Add the player'),
-  changeset(3, '/main', 2, 20, 'Tune the camera'),
+  // References a chip opens (the smoke's "A comment's chips open what they name"): a changeset, and review 80's change request.
+  changeset(3, '/main', 2, 20, 'Tune the camera after cs:2, as [apply-change:ffffffff] asked'),
   changeset(4, '/main', 3, 15, 'Release notes'),
   changeset(5, '/main/task-001', 4, 10, 'VCS-12 Player jumps\n\nAlso fixes VCS-13 and VCS-99, as https://acme.atlassian.net/browse/VCS-14 asked.'),
   changeset(6, '/main/task-002', 4, 9, 'Warmer lights'),

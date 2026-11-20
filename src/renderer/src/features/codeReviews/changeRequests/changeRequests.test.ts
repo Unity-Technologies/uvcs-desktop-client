@@ -97,7 +97,7 @@ describe('changeRequestChip', () => {
       name: 'Applies change request: Shelve first',
       title: 'Change request c0d1ce01',
       card: { comment: 'Shelve **first**\n\nThe undo fails.', title: 'Change request c0d1ce01', meta: ['Change request c0d1ce01', 'Open', 'Code review 43', 'Ana', 'ago 10:01'] },
-      opens: { reviewId: 43, threadId: 1 },
+      opens: { kind: 'thread', reviewId: 43, threadId: 1 },
     });
   });
 
@@ -114,13 +114,14 @@ describe('changeRequestChip', () => {
     expect(changeRequestChip(discarded, 'c0d1ce02', ago).card.meta[1]).toBe('Discarded');
   });
 
-  it('names one the window has not read by its number, opening nothing', () => {
+  it('names one the window has not read by its number, finding it when clicked', () => {
     expect(changeRequestChip(undefined, 'deadbeef', ago)).toEqual({
       lead: 'Applies:',
       label: 'change request deadbeef',
       name: 'Applies change request deadbeef',
       title: 'Change request deadbeef',
       card: { title: 'Change request deadbeef', meta: [] },
+      opens: { kind: 'find', guid: 'deadbeef' },
     });
   });
 });

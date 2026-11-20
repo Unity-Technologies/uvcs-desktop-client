@@ -103,6 +103,15 @@ export function commentLightShown(shown: ShownCommentLight | undefined, light: C
   return { ...lit, seq: (shown?.seq ?? 0) + 1 };
 }
 
+/**
+ * Whether the conversation stands where it will stay, so going to a thread (or to where the reviewer left off) lands on
+ * it: read, and the review's changesets settled, as they group the entries into rounds and move every thread below.
+ * Going there as soon as the conversation is read left a review opened for the first time on other threads.
+ */
+export function conversationLaidOut({ read, changesetsSettled }: { read: boolean; changesetsSettled: boolean }): boolean {
+  return read && changesetsSettled;
+}
+
 /** The element the conversation brings into view for a pick: the thread's, or the reply's it goes to. */
 export function pickedElementId(pick: ThreadPick): string {
   return pick.replyId === undefined ? threadElementId(pick.threadId) : commentElementId(pick.replyId);

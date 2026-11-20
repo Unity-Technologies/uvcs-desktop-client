@@ -14,7 +14,7 @@ import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard } from './ReviewThreadCard';
 import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
-import { openItemsOf, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { conversationLaidOut, openItemsOf, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
 import { openItemsIn } from '../mergeCard';
@@ -91,15 +91,14 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   const scrollerRef = useRef<HTMLDivElement>(null);
   const elementById = (id: string): HTMLElement | null | undefined => scrollerRef.current?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
 
-  // Brought into view once read, after its card unfolds; not again as the view shows again.
-  const read = conversation !== undefined;
+  // Brought into view once laid out for good, after its card unfolds; not again as the view shows again.
+  const placed = conversationLaidOut({ read: conversation !== undefined, changesetsSettled });
   useNewValuesEffect(() => {
     const element = pick && elementById(pickedElementId(pick));
-    if (read && pick && element) placeInView(element, pickedBehaviorOf(pick));
-  }, [read, pick]);
+    if (placed && pick && element) placeInView(element, pickedBehaviorOf(pick));
+  }, [placed, pick]);
 
   // Opened where the reviewer left off, once: their own status set meanwhile moves the line, never the page.
-  const placed = read && changesetsSettled;
   const [openedAtSince, setOpenedAtSince] = useState(false);
   useEffect(() => {
     if (!placed || openedAtSince) return;

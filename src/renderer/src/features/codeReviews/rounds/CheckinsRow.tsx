@@ -5,7 +5,8 @@ import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import type { CheckinsEntry } from './reviewRounds';
-import { checkinCommentText, checkinsText, shownCheckins } from './roundText';
+import { checkinsText, shownCheckins } from './roundText';
+import { CommentLine } from '../../../components/comments/CommentLine';
 import conversation from '../conversation/ReviewConversation.module.css';
 import styles from './ReviewRounds.module.css';
 
@@ -45,7 +46,10 @@ export function CheckinsRow({ entry, onOpenChangeset }: { entry: CheckinsEntry; 
                     <ChangesetIcon size={13} strokeWidth={2.25} aria-hidden />
                     {changeset.id}
                   </span>
-                  <span className={styles.checkinComment}>{checkinCommentText(changeset)}</span>
+                  {/* Its references as chips, as a row's first line shows them; no links: the line is the button. */}
+                  <span className={styles.checkinComment}>
+                    <CommentLine comment={changeset.comment} interactive={false} placeholder="No comment" />
+                  </span>
                 </button>
               </li>
             ))}

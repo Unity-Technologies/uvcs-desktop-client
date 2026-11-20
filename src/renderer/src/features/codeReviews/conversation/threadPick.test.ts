@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, openItemsOf, type CardLight, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
+import { cardLightOf, commentElementId, conversationLaidOut, commentLightShown, nextAnswerLight, openItemsOf, type CardLight, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
 import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
 
@@ -83,6 +83,14 @@ describe('threadMarkOf', () => {
 
   it('marks nothing before a thread is picked', () => {
     expect(threadMarkOf(7, undefined)).toEqual({ highlight: undefined, selected: false });
+  });
+});
+
+describe('conversationLaidOut', () => {
+  it('waits for the conversation and the review\'s changesets: they group the entries into rounds, moving every thread below', () => {
+    expect(conversationLaidOut({ read: false, changesetsSettled: true })).toBe(false);
+    expect(conversationLaidOut({ read: true, changesetsSettled: false })).toBe(false);
+    expect(conversationLaidOut({ read: true, changesetsSettled: true })).toBe(true);
   });
 });
 

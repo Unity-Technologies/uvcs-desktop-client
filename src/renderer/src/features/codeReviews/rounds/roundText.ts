@@ -1,5 +1,4 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { commentLineText } from '../../../lib/comments/commentText';
 import type { DayFormat } from '../../../lib/formatDate';
 import { pluralize } from '../../../lib/text';
 import { displayName, sameUser } from '../../../lib/userName';
@@ -68,9 +67,4 @@ export function shownCheckins(changesets: readonly Changeset[], showsAll: boolea
   // "1 more" would take the row the changeset itself takes.
   if (showsAll || changesets.length <= MAX_SHOWN_CHECKINS + 1) return { shown: changesets, more: 0 };
   return { shown: changesets.slice(0, MAX_SHOWN_CHECKINS), more: changesets.length - MAX_SHOWN_CHECKINS };
-}
-
-/** A changeset's line in a batch: its comment's first line, or that it has none. */
-export function checkinCommentText(changeset: Pick<Changeset, 'comment'>): string {
-  return commentLineText(changeset.comment) || 'No comment';
 }

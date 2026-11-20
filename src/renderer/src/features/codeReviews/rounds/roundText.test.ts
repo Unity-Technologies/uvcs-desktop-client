@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { checkinCommentText, checkinsText, roundText, shownCheckins, sinceText, MAX_SHOWN_CHECKINS } from './roundText';
+import { checkinsText, roundText, shownCheckins, sinceText, MAX_SHOWN_CHECKINS } from './roundText';
 import type { ReviewRound } from './reviewRounds';
 
 const IN_MADRID = { locale: 'en-US', timeZone: 'Europe/Madrid' };
@@ -96,12 +96,5 @@ describe('shownCheckins', () => {
     const batch = [1, 2, 3, 4, 5, 6].map(changeset);
 
     expect(shownCheckins(batch, false)).toEqual({ shown: batch, more: 0 });
-  });
-});
-
-describe('checkinCommentText', () => {
-  it("reads a changeset's comment's first line, or says it has none", () => {
-    expect(checkinCommentText({ comment: 'Cap a single wave too\n\nAnd the boss wave' })).toBe('Cap a single wave too');
-    expect(checkinCommentText({ comment: '' })).toBe('No comment');
   });
 });

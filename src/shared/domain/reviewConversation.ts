@@ -110,3 +110,9 @@ export interface ReviewConversation {
   comments: ReviewComment[];
   events: ReviewEvent[];
 }
+
+/** Where a change request is discussed: its review and its thread, the request's own comment. */
+export interface ChangeRequestThread {
+  reviewId: number;
+  threadId: number;
+}
