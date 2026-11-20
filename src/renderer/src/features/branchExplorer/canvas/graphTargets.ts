@@ -4,7 +4,9 @@ import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
-import { distanceToCurve, linkCurve, type Point } from './curves';
+import { distanceToCurve, type Point } from './curves';
+import { boundsOf, crossesView } from './linkVisibility';
+import { mergeLinkPath, pathPoints } from './mergeLinkPath';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, nodePoint, pendingPoint, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
@@ -185,12 +187,8 @@ function hitMergeLink(layout: GraphLayout, point: Point, distance: number): Grap
 
 /** Whether the point is on the merge link drawn between the two changesets. */
 function nearLink(from: Point, to: Point, point: Point, distance: number): boolean {
-  const outsideBounds =
-    point.x < Math.min(from.x, to.x) - distance ||
-    point.x > Math.max(from.x, to.x) + distance ||
-    point.y < Math.min(from.y, to.y) - distance ||
-    point.y > Math.max(from.y, to.y) + distance;
-  return !outsideBounds && distanceToCurve(linkCurve(from, to), point) <= distance;
+  const path = mergeLinkPath(from, to);
+  return crossesView(boundsOf(pathPoints(path)), { left: point.x, right: point.x, top: point.y, bottom: point.y }, distance) && path.some((curve) => distanceToCurve(curve, point) <= distance);
 }
 
 function hitPendingMergeLink(layout: GraphLayout, point: Point, distance: number): GraphTarget | null {
