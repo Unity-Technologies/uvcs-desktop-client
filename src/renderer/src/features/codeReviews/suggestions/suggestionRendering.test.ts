@@ -4,7 +4,7 @@ import { warmUpPierre } from '../../diff/viewer/pierreSessionFixture';
 import { wordMarksIn, type RenderedNode, type WordMarks } from '../../diff/viewer/renderedWordMarks';
 import { suggestionFileDiff } from './suggestionFileDiff';
 
-// The box's diff is one hunk of the commented lines numbered from the first (`replacedThenSuggested`), which Pierre
+// The box's diff is one hunk of the commented lines numbered from the first (`suggestionLineDiff`), which Pierre
 // never builds itself: its own hunks index their lines from where they start in a whole file. These render it as the
 // box does, so a Pierre that read the lines or numbered the rows another way fails here, not on screen.
 beforeAll(warmUpPierre);
@@ -42,10 +42,15 @@ function textOf(node: RenderedNode): string {
 }
 
 describe('a suggested change as Pierre draws it', () => {
-  it('draws a line wrapped in a new condition as the line replaced, then the lines suggested, numbered from it, and nothing else', async () => {
-    const { rows, marks } = await rendered('    run();\n', '    if (ok)\n        run();\n', 273);
-    expect(rows).toEqual(['273 -     run();', '273 +     if (ok)', '274 +         run();']);
-    expect(marks).toEqual({ deletions: [], additions: [] });
+  it('draws a line wrapped in a new condition as the code diff does, numbered from it, and nothing else', async () => {
+    const { rows } = await rendered('    run();\n', '    if (ok)\n        run();\n', 273);
+    expect(rows).toEqual(['273 +     if (ok)', '273 -     run();', '274 +         run();']);
+  });
+
+  it('draws the lines a rewrite keeps once, untinted, and marks the words of the lines edited though it adds others', async () => {
+    const { rows, marks } = await rendered('{\n    var s = A();\n    Undo();\n}\n', '{\n    Shelve s = A();\n    Undo(B);\n    Log();\n}\n', 9);
+    expect(rows).toEqual(['9   {', '10 -     var s = A();', '11 -     Undo();', '10 +     Shelve s = A();', '11 +     Undo(B);', '12 +     Log();', '13   }']);
+    expect(marks).toEqual({ deletions: ['var'], additions: ['Shelve', 'B'] });
   });
 
   it('draws a deletion as the lines removed alone', async () => {
@@ -62,12 +67,8 @@ describe('a suggested change as Pierre draws it', () => {
 
   it('marks the changed words of a range edited line by line', async () => {
     const { rows, marks } = await rendered('a = 1;\nkeep();\nb = 2;\n', 'a = 2;\nkeep();\nb = 3;\n', 10);
-    expect(rows).toEqual(['10 - a = 1;', '11 - keep();', '12 - b = 2;', '10 + a = 2;', '11 + keep();', '12 + b = 3;']);
+    expect(rows).toEqual(['10 - a = 1;', '10 + a = 2;', '11   keep();', '12 - b = 2;', '12 + b = 3;']);
     expect(marks).toEqual({ deletions: ['1', '2'], additions: ['2', '3'] });
   });
 
-  it("marks no words in a range whose lines don't take the replaced ones' places one for one", async () => {
-    const { marks } = await rendered('x = 1;\ny = 2;\n', 'if (ok)\n    x = 1;\ny = 3;\n', 10);
-    expect(marks).toEqual({ deletions: [], additions: [] });
-  });
 });

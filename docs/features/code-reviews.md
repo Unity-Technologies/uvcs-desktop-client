@@ -450,13 +450,14 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
 - **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
   cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
-  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). It reads as GitHub's and
-  GitLab's suggestions do: every line replaced, then every line suggested, the lines it keeps among them, numbered as
-  the file's lines from the first one commented (`replacedThenSuggested`: one hunk starting there, in a diff kept
-  whole, as Pierre loads the full files of a partial one). The line diff alone would mix them: a line wrapped in a new
-  `if` became the `if` added above the line removed and added again, indented, which read as if the `if` were already
-  there. Words are marked only when the suggested lines take the replaced ones' places one for one (every change of
-  the line diff adds as many lines as it removes), as Pierre marks the n-th line removed against the n-th added. One
+  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). It reads as the code's diff
+  does: the line diff of the commented lines against the suggested ones, the lines it keeps shown once and untinted,
+  only the lines it changes removed and added, their changed words marked, numbered as the file's lines from the first
+  one commented (`suggestionLineDiff`: one hunk holding every line, so nothing folds, in a diff kept whole, as Pierre
+  loads the full files of a partial one). GitHub's layout, every line replaced then every line suggested, was used
+  while a suggestion replaced one line, and dropped once it could replace a whole method: the lines it kept read twice,
+  red then green, and words were marked only when the suggestion had as many lines as it replaced, as Pierre pairs the
+  n-th line removed with the n-th added. One
   column, highlighted in the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it:
   `useSyntaxHighlighter`), every line shown. A few lines, so drawn whole on the main thread: no workers, and no
   virtualizer, even inside the code's diff, whose own it would otherwise join. Inside a thread in the code, the box is

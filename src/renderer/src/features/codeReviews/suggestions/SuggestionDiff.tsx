@@ -35,7 +35,7 @@ export function SuggestionDiff({ path, body }: SuggestionDiffProps) {
     container.current = element;
     return keepCodePointerToItself(element);
   }, []);
-  if (!highlighterReady) return <SuggestionPlaceholder rowCount={body.rowCount} />;
+  if (!highlighterReady) return <SuggestionPlaceholder rowCount={fileDiff.unifiedLineCount} />;
   return (
     <div ref={holdContainer} className={styles.diff}>
       <VirtualizerContext.Provider value={undefined}>
