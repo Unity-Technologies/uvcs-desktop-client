@@ -27,7 +27,7 @@ export interface LineActionDragging {
  * The "+" pressed and dragged over other lines, as on GitHub: the pointer is followed over the code's rows
  * (`rowUnderPointer`), the lines dragged over are outlined in the accent with a "+" on the first and the last
  * (`LineActionDragMarks`), and released, the action runs on all of them (`lineActionDragLines`). Released on the line
- * it started on, it's the click it was. No gutter selection: its fill across both panes was noise for a comment.
+ * it started on, it's the click it was; Esc drops it. No gutter selection: its fill across both panes was noise for a comment.
  */
 export function useLineActionDrag(action: LineAction | undefined, hover: LineHover): LineActionDragging {
   const latest = useRef(action);
@@ -50,7 +50,19 @@ export function useLineActionDrag(action: LineAction | undefined, hover: LineHov
       document.removeEventListener('pointermove', move, true);
       document.removeEventListener('pointerup', release, true);
       document.removeEventListener('selectstart', noTextSelection, true);
+      document.removeEventListener('keydown', cancelOnEscape, true);
       document.documentElement.style.removeProperty('user-select');
+    };
+    // Esc drops the drag: released then, the pointer acts on nothing, the click that follows included.
+    const cancelOnEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      stop();
+      shown.setState(null, true);
+      hover.release();
+      actedOnRelease = true;
+      document.addEventListener('pointerup', () => setTimeout(() => (actedOnRelease = false)), { capture: true, once: true });
     };
     const release = (): void => {
       stop();
@@ -73,6 +85,7 @@ export function useLineActionDrag(action: LineAction | undefined, hover: LineHov
         document.addEventListener('pointermove', move, true);
         document.addEventListener('pointerup', release, true);
         document.addEventListener('selectstart', noTextSelection, true);
+        document.addEventListener('keydown', cancelOnEscape, true);
         // Inherited into Pierre's shadow DOM, where `selectstart` on the document may come too late.
         document.documentElement.style.setProperty('user-select', 'none');
         window.getSelection()?.removeAllRanges();
