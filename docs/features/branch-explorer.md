@@ -40,12 +40,15 @@ line, and the elbow down from its base changeset. Merges own slants, arrowheads 
 - **Glow** (`mergeLinkGlow`): every lit link glows faintly in its color, strongest at the line and fading out over
   `GLOW_REACH` in `GLOW_LAYERS` faint layers, with no hard edge. A gap of the background, solid at the line and fading
   out over `GAP_REACH`, lies between line and glow, so the link reads as passing over the bands and lines it crosses.
-  Links of one color glow as one shape, so a bundle of merges sharing a route glows once instead of piling up. The
-  glow fades out zoomed out (`glowAtZoom`), where it only fattened the line; on a dark graph it lightens what is under
-  it (`screen`) and is stronger, as a faint tint on near-black is lost. Links that recede while searching don't glow.
+  Links of one color glow as one shape (`glowingPathsByColor`), so a bundle of merges sharing a route glows once
+  instead of piling up, and every gap is one shape too, drawn before any line: a link's gap never cuts through another
+  link's line. The glow and the gap fade out zoomed out (`glowAtZoom`, `gapLayerAlpha`), where they only fattened the
+  line; on a dark graph the glow lightens what is under it (`screen`) and is stronger, as a faint tint on near-black is
+  lost. Links that recede while searching get neither. Merges in progress glow as the others do.
 
 A link is emphasized (wider, opaque, glowing more) while its source or destination is hovered or selected, and while
-the pointer is on the link itself (`hoveredMergeLink`).
+the pointer is on the link itself (`hoveredMergeLink`). Lines are drawn receded first, then lit, the emphasized last
+(`inDrawingOrder`), so a hovered merge stays on top of the others sharing its run.
 
 ## Display options
 
