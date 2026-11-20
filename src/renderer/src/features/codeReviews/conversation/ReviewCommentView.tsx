@@ -11,6 +11,9 @@ import { placeInView } from '../../../lib/scrollPlacement';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
+import type { CommentFieldHandle } from '../../../components/commentEditor/commentFieldProps';
+import { EditSuggestButton } from '../suggestions/EditSuggestButton';
+import { editOffersSuggestion } from '../suggestions/suggestButton';
 import { SuggestedChangeBlock } from '../suggestions/SuggestedChangeBlock';
 import { suggestedChangeOf, type SuggestedChange } from '../suggestions/suggestedChange';
 import { CommentComposer } from './CommentComposer';
@@ -69,6 +72,8 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
   }, [startsEditing, onEditorOpened]);
   const suggestion = useMemo(() => suggestedChangeOf(comment), [comment]);
   const menu = useCommentMenu({ review, comment, thread, user, edit: () => setEditing(true), threadActions });
+  const editDraftKey = commentDraftKey(placeId(place), 'reviewCommentEdit', comment.guid);
+  const editor = useRef<CommentFieldHandle | null>(null);
 
   return (
     <article ref={element} id={elementId} className={styles.comment} data-highlight={lit === undefined ? undefined : lit.seq % 2} aria-label={`${displayName(comment.author)}'s comment`}>
@@ -89,8 +94,11 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
           <CommentMenuButton entries={menu} />
         </header>
         {editing ? (
+          <>
+          {comment.anchor.kind === 'line' && editOffersSuggestion(comment) && <EditSuggestButton anchor={comment.anchor} postedText={comment.text} draftKey={editDraftKey} field={editor} />}
           <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewCommentEdit', comment.guid)}
+            fieldRef={editor}
+            draftKey={editDraftKey}
             initialText={comment.text}
             placeholder="Write a comment"
             label="Edit comment"
@@ -103,6 +111,7 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
             }}
             onCancel={() => setEditing(false)}
           />
+          </>
         ) : (
           <div className={`${styles.markdown} selectable`}>
             <Markdown text={comment.text} comment suggestion={suggestion ? <CommentSuggestion review={review} comment={comment} thread={thread} change={suggestion} /> : undefined} />

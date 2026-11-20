@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { refusalShown, SUGGEST_LINES_TIP, SUGGEST_TIP, suggestButtonOf, suggestLineLabel, suggestRequestOutcome, withSuggestionInserted } from './suggestButton';
+import { editOffersSuggestion, refusalShown, SUGGEST_LINES_TIP, SUGGEST_TIP, suggestButtonOf, suggestLineLabel, suggestRequestOutcome, withSuggestionInserted } from './suggestButton';
 import { FAILED, READING, readValue } from './suggestedChange';
 
 const LINE = { firstLine: 7, lastLine: 7 };
@@ -68,5 +68,19 @@ describe('withSuggestionInserted', () => {
       caret: 'Why not 60?\n```suggestion\n  speed = 60;'.length,
       kind: 'changeRequest',
     });
+  });
+});
+
+describe('editOffersSuggestion', () => {
+  const onLines = { kind: 'line', revisionId: 30, itemId: 7, path: '/a.cs', firstLine: 3, lastLine: 5 } as const;
+
+  it('offers a suggestion while editing a change request on lines', () => {
+    expect(editOffersSuggestion({ kind: 'changeRequest', anchor: onLines })).toBe(true);
+  });
+
+  it('offers none for a question, a plain comment, or a comment on the review', () => {
+    expect(editOffersSuggestion({ kind: 'question', anchor: onLines })).toBe(false);
+    expect(editOffersSuggestion({ kind: 'comment', anchor: onLines })).toBe(false);
+    expect(editOffersSuggestion({ kind: 'general', anchor: { kind: 'review' } })).toBe(false);
   });
 });

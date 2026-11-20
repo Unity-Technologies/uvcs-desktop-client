@@ -1,4 +1,4 @@
-import type { LineRange } from '@shared/domain/reviewConversation';
+import type { LineRange, ReviewComment } from '@shared/domain/reviewConversation';
 import { holdsSuggestion, withSuggestionAt } from '../../../lib/reviewSuggestion';
 import { rangeWordsInline } from '../../../lib/rangeWords';
 import type { ReplacedLines } from './suggestedChange';
@@ -64,4 +64,13 @@ export function refusalShown(refusal: SuggestRefusal | null, text: string): stri
 /** The code menu's entry beside "Comment on line 42": the comment opened with the lines' suggestion in it. */
 export function suggestLineLabel(lines: { firstLineNumber: number; lineNumber: number }): string {
   return `Suggest change on ${rangeWordsInline({ firstLine: lines.firstLineNumber, lastLine: lines.lineNumber })}`;
+}
+
+/**
+ * Whether a comment's editor offers Suggest change: a change request on lines, the only comment a suggestion is one in
+ * (`suggestedChangeOf`). A question or a plain comment keeps its kind once posted, so a fence there would be a code block;
+ * a reply has no lines of its own. One that suggests already shows the button disabled, saying so (`suggestButtonOf`).
+ */
+export function editOffersSuggestion(comment: Pick<ReviewComment, 'kind' | 'anchor'>): boolean {
+  return comment.kind === 'changeRequest' && comment.anchor.kind === 'line';
 }
