@@ -1,6 +1,6 @@
 import type { MergeLink } from '@shared/domain/branchExplorer';
 import type { GraphLayout, Lane } from '../model/layoutGraph';
-import { linkCurve } from './curves';
+import { mergeLinkPath, pathPoints } from './mergeLinkPath';
 import { nodePoint } from './geometry';
 import { laneShape } from './laneShape';
 import { boundsOf } from './linkVisibility';
@@ -23,7 +23,7 @@ function spansOf(layout: GraphLayout): LayoutSpans {
       // The band, and the elbow down from its base changeset on the parent's band.
       return { left: Math.min(shape.left, base?.x ?? shape.left), right: shape.right };
     });
-    const links = layout.mergeLinks.map((link) => boundsOf(linkCurve(nodePoint(layout, link.sourceChangeset)!, nodePoint(layout, link.destinationChangeset)!)));
+    const links = layout.mergeLinks.map((link) => boundsOf(pathPoints(mergeLinkPath(nodePoint(layout, link.sourceChangeset)!, nodePoint(layout, link.destinationChangeset)!))));
     spans = {
       lanes: new SpanIndex(lanes.map((span) => span.left), lanes.map((span) => span.right)),
       mergeLinks: new SpanIndex(links.map((span) => span.left), links.map((span) => span.right)),

@@ -107,6 +107,13 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     },
   );
 
+  it.each(['--graph-merge-link', '--graph-cherry-pick-link', '--status-deleted'])(
+    'draws Branch Explorer merge links in %s at 3:1 on the graph (--bg-surface)',
+    (line) => {
+      expect(ratio(tokens, line, '--bg-surface')).toBeGreaterThanOrEqual(3);
+    },
+  );
+
   it("draws the Branch Explorer Timeline's label ticks (--label-mark) at 3:1 on its strip (--bg-subtle)", () => {
     expect(ratio(tokens, '--label-mark', '--bg-subtle')).toBeGreaterThanOrEqual(3);
   });

@@ -17,8 +17,38 @@ count that work (`countCalls`), never time it.
 The world is drawn relative to a per-frame origin near the screen (`OriginPen`, `draw.pen`, the
 world transform carrying the origin in doubles) and bands only as far as the screen, so the canvas, which keeps points in
 float32, never sees the millions of px of a whole history (jagged circles and pills zoomed in otherwise); hit tests stay in world doubles.
-A link is hit within 6 px of the line itself (`distanceToCurve` cuts it into pieces of 8 px at most, however long),
+A link is hit within 6 px of the line itself, along every curve of its path (`distanceToCurve` cuts each into pieces of 8 px at most, however long),
 in screen px when zoomed out.
+
+## Merge links
+
+A merge link must never read as a branch's own line. Branches own right angles and their colors: a band's parent
+line, and the elbow down from its base changeset. Merges own slants, arrowheads and a glow:
+
+- **Shape** (`mergeLinkPath`): a steep link is the S-curve (`linkCurve`). Once it reaches `SHALLOW_RATIO` times farther
+  across than up or down, or joins two changesets on the same row, the S-curve would leave its source flat and arrive
+  flat, running along both bands under their parent lines, its arrow pointing against theirs. Such a link leaves its
+  source on a slant, runs flat through the free strip beside the destination's row on the source's side (`runY`:
+  `RUN_ABOVE` under the captions of the row above, `RUN_BELOW` under the destination's own; level rows take the strip
+  above), and comes onto the destination on a slant. It crosses bands only across them. Merges sharing a source run
+  together and split off into each changeset. A route with right-angled corners was tried: it read as a branch start.
+- **Color** (`GraphPalette.mergeLinks`): one per kind, whatever branches the link joins: `--graph-merge-link` (green)
+  for merges and intervals, `--graph-cherry-pick-link` (violet) for cherry picks, `--status-deleted` (red) for
+  subtractive merges, each 3:1 on the graph. Single cherry picks and subtractives are dashed, intervals dotted
+  (`mergeLinkDash`). Taking the source branch's color made a merge look like that branch's line; a neutral gray was
+  tried and dropped.
+- **Glow** (`mergeLinkGlow`): every lit link glows faintly in its color, strongest at the line and fading out over
+  `GLOW_REACH` in `GLOW_LAYERS` faint layers, with no hard edge. A gap of the background, solid at the line and fading
+  out over `GAP_REACH`, lies between line and glow, so the link reads as passing over the bands and lines it crosses.
+  Links of one color glow as one shape (`glowingPathsByColor`), so a bundle of merges sharing a route glows once
+  instead of piling up, and every gap is one shape too, drawn before any line: a link's gap never cuts through another
+  link's line. The glow and the gap fade out zoomed out (`glowAtZoom`, `gapLayerAlpha`), where they only fattened the
+  line; on a dark graph the glow lightens what is under it (`screen`) and is stronger, as a faint tint on near-black is
+  lost. Links that recede while searching get neither. Merges in progress glow as the others do.
+
+A link is emphasized (wider, opaque, glowing more) while its source or destination is hovered or selected, and while
+the pointer is on the link itself (`hoveredMergeLink`). Lines are drawn receded first, then lit, the emphasized last
+(`inDrawingOrder`), so a hovered merge stays on top of the others sharing its run.
 
 ## Display options
 

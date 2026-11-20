@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
+import { focusAs } from '../../../lib/focusRing';
 import { MAIN_FOCUS } from '../../../lib/mainFocus';
 import { isModPressed } from '../../../lib/shortcuts';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
@@ -123,7 +124,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const [awayFromEnd, setAwayFromEnd] = useState(false);
 
   const hover = hoverHighlight(hovered);
-  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending } = hover;
+  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredMergeLink } = hover;
   /** What the next frame draws, read by callbacks that outlive this render. */
   const sceneRef = useRef({ layout, highlights, palette, hover });
   sceneRef.current = { layout, highlights, palette, hover };
@@ -190,7 +191,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     setAwayFromEnd(awayFromNewest(sceneRef.current.layout, view.viewportRef.current, sizeRef.current));
   }
 
-  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, scheduleDraw]);
+  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredMergeLink, scheduleDraw]);
   // A filter can reshape, shrink or grow the graph: keep the user's place in it (unless a glide is taking them
   // somewhere) and keep it on screen.
   const laidOutRef = useRef(layout);
@@ -285,10 +286,15 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   /** Floating controls over the canvas handle their own pointer events. */
   const onCanvas = (event: React.SyntheticEvent): boolean => event.target === canvasRef.current;
 
+  /** A click focuses the graph ringless: a plain `focus()` from code shows the keyboard ring once a key was pressed. */
+  const focusByPointer = (): void => {
+    if (containerRef.current) focusAs(containerRef.current, 'pointer');
+  };
+
   const onPointerDown = (event: React.PointerEvent): void => {
     if (!onCanvas(event)) return;
     clippedTip.hide();
-    containerRef.current?.focus();
+    focusByPointer();
     if (event.button === 2) {
       // The menu covers the hover card's place: it would linger under the menu.
       clearHover();
@@ -361,7 +367,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           selectedBranch={highlights.selectedBranch}
           homeChangeset={highlights.homeChangeset}
           pendingChangeCount={highlights.pendingChangeCount}
-          focusGraph={() => containerRef.current?.focus()}
+          focusGraph={focusByPointer}
         />
       )}
       <ActionContextMenu entries={() => contextMenu(contextTargetRef.current)}>

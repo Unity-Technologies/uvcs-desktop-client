@@ -60,8 +60,11 @@ export interface GraphPalette {
   labelMark: string;
   /** Under a small badge drawn over the canvas. */
   badgeShadow: string;
-  /** Link colors for everything but plain merges, which take the source branch's color. */
-  mergeLinks: Record<Exclude<MergeLinkType, 'merge'>, string>;
+  /**
+   * Merge link colors, one per kind whatever branches they join, so a merge never reads as a branch's own line: merges
+   * green, cherry picks violet, subtractive merges red, as UVCS users know them.
+   */
+  mergeLinks: Record<MergeLinkType, string>;
   /** Code review chips, colored like the status badges elsewhere. */
   reviewStatus: Record<CodeReviewStatus, string>;
   /** A merge request's state glyph, leading its review chip, in the state's color. */
@@ -115,9 +118,10 @@ export function readGraphPalette(element: Element): GraphPalette {
     labelMark: variable('--label-mark'),
     badgeShadow: variable('--badge-shadow'),
     mergeLinks: {
-      interval: variable('--status-added'),
-      cherryPick: variable('--status-changed'),
-      intervalCherryPick: variable('--status-changed'),
+      merge: variable('--graph-merge-link'),
+      interval: variable('--graph-merge-link'),
+      cherryPick: variable('--graph-cherry-pick-link'),
+      intervalCherryPick: variable('--graph-cherry-pick-link'),
       subtractive: variable('--status-deleted'),
       intervalSubtractive: variable('--status-deleted'),
     },

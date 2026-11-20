@@ -4,7 +4,9 @@ import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
-import { distanceToCurve, linkCurve, type Point } from './curves';
+import { distanceToCurve, type Point } from './curves';
+import { boundsOf, type Bounds } from './linkVisibility';
+import { mergeLinkPath, pathPoints } from './mergeLinkPath';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, nodePoint, pendingPoint, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
@@ -66,7 +68,7 @@ export function pointerCardStays(target: PointerCardTarget): boolean {
 }
 
 /** What the frame lights up under the pointer. */
-export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending'>;
+export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending' | 'hoveredMergeLink'>;
 
 /** The pointer on a "+N" node lights it as its changeset; on a code review chip, the chip. */
 export function hoverHighlight(hovered: GraphTarget | null): HoverHighlight {
@@ -75,6 +77,7 @@ export function hoverHighlight(hovered: GraphTarget | null): HoverHighlight {
     hoveredBranch: hovered?.kind === 'branch' ? hovered.lane.branch.name : null,
     hoveredReview: hovered?.kind === 'codeReview' ? hovered.review.id : null,
     hoveredPending: hovered?.kind === 'pending',
+    hoveredMergeLink: hovered?.kind === 'mergeLink' || hovered?.kind === 'pendingMergeLink' ? hovered.link : null,
   };
 }
 
@@ -185,12 +188,13 @@ function hitMergeLink(layout: GraphLayout, point: Point, distance: number): Grap
 
 /** Whether the point is on the merge link drawn between the two changesets. */
 function nearLink(from: Point, to: Point, point: Point, distance: number): boolean {
-  const outsideBounds =
-    point.x < Math.min(from.x, to.x) - distance ||
-    point.x > Math.max(from.x, to.x) + distance ||
-    point.y < Math.min(from.y, to.y) - distance ||
-    point.y > Math.max(from.y, to.y) + distance;
-  return !outsideBounds && distanceToCurve(linkCurve(from, to), point) <= distance;
+  const path = mergeLinkPath(from, to);
+  return nearBounds(boundsOf(pathPoints(path)), point, distance) && path.some((curve) => distanceToCurve(curve, point) <= distance);
+}
+
+/** Whether the point lies within `distance` of the box: a quick test before measuring to the line itself. */
+function nearBounds(bounds: Bounds, point: Point, distance: number): boolean {
+  return point.x >= bounds.left - distance && point.x <= bounds.right + distance && point.y >= bounds.top - distance && point.y <= bounds.bottom + distance;
 }
 
 function hitPendingMergeLink(layout: GraphLayout, point: Point, distance: number): GraphTarget | null {

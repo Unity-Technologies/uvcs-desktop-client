@@ -154,6 +154,10 @@
   --danger-hover: #a40e26;
 
   --status-added: #1a7f37;
+  /* Branch Explorer merge links, a fixed color per kind (`GraphPalette.mergeLinks`): merges a green lighter than
+     --status-added, which looks heavy on a white graph, still 3:1 on it as a line; cherry picks violet. */
+  --graph-merge-link: #2ea043;
+  --graph-cherry-pick-link: #8250df;
   --status-changed: #9a6700;
   --status-deleted: #cf222e;
   --status-moved: #0e7c86;
@@ -323,6 +327,8 @@
   --danger-hover: #b62324;
 
   --status-added: #3fb950;
+  --graph-merge-link: #3fb950;
+  --graph-cherry-pick-link: #a371f7;
   --status-changed: #d29922;
   --status-deleted: #f85149;
   --status-moved: #39c5cf;
