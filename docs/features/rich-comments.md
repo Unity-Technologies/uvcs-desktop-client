@@ -73,12 +73,12 @@ before.
   them out of `excludedRanges` and `markLink`); micromark, with no definition for it, doesn't. Until the window read its
   review's conversation it reads "Applies: change request c0d1ce00", and a click finds the request first
   (`openChangeRequest`, "What a chip reads").
-- A **person** is their avatar and name in the text's color (never a link, so never in the links' accent), their card the name `cm` knows them by; an **emoji** is itself, its name in
-  the tooltip.
-- Inside something clicked as a whole (a button, a picker's option: Incoming's list, the branch search, My shelves,
-  the changeset picker), a folded thread's line, the editor and a chip's own card, a chip reads the same but is no link
-  (`interactive={false}`), so the click stays the row's. Anywhere else it opens what it names, the Branch Explorer's
-  card over a changeset's comment included (`chipsAreLinks.test.ts` keeps the list).
+- A **person** is their avatar and name in the color of the text around them (never a link, so never in the links'
+  accent), their card the name `cm` knows them by; an **emoji** is itself, its name in the tooltip.
+- Inside something clicked as a whole (a button, a picker's option: the branch search, My shelves, the changeset
+  picker, the review timeline's check-ins), a folded thread's line, the editor and a chip's own card, a chip reads the
+  same but is no link (`interactive={false}`), so the click goes to what holds it. Anywhere else it opens what it
+  names, the Branch Explorer's card over a changeset's comment included (`chipsAreLinks.test.ts` keeps the list).
 
 ## What a chip reads
 
@@ -522,7 +522,7 @@ checked in both themes when it draws something.
     empty, and the caret waits at the description's end.
 20. **The Branch Explorer's card.** Hover the caption of a changeset whose title has references and whose comment is
     longer than the window (720 px tall): the title shows its chips, the card stops above the status bar, its bottom
-    edge in sight, and its body scrolls.
+    edge in sight, and its body scrolls. A click on a chip in its title opens what it names.
 21. **Two editors in a development build.** With the check-in's description holding chips, open Edit comment on a
     changeset with chips: the console shows no "Cannot update a component while rendering a different component".
 22. **Copying a shown comment.** In a details panel, drag over a whole comment with a list, bold and a chip, its title
