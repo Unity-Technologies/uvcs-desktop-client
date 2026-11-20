@@ -8,7 +8,10 @@ import type { ChangedLine } from './changeBlocks';
 import type { LineAction } from './diffAnnotations';
 import type { CodeLayout } from './lineActions';
 import type { LineActionSpot } from './lineActionSpot';
-import { lineActionTargetAt } from './lineMenu';
+import { lineActionDragMoved } from './lineActionDrag';
+import { LineActionDragMarks } from './LineActionDragMarks';
+import { useLineActionDrag, type LineActionDragging } from './useLineActionDrag';
+import { lineActionTargetAt, lineActionTip } from './lineMenu';
 import { lineHover } from './lineHover';
 import { spotIn, useFollowedLine } from './useFollowedLine';
 import styles from './LineActionButton.module.css';
@@ -47,12 +50,15 @@ export function useLineActionButton(
   const [hover] = useState<LineHover>(() => lineHover<HoveredLine>((shown) => hovered.setState(shown, true)));
   useEffect(() => hover.dispose, [hover]);
   const followed = useFollowedLine(hovered, hover, containerRef, layout);
+  const drag = useLineActionDrag(action, hover);
   const options = useMemo<LineHoverOptions>(() => {
     if (!action) return {};
     return {
       onLineEnter: (props) => {
         hovers.onLineEnter?.(props);
         const line = { side: props.annotationSide, lineNumber: props.lineNumber };
+        // Dragged from the "+": the drag follows the pointer itself (`useLineActionDrag`).
+        if (drag.active()) return;
         const container = containerRef.current;
         if (!container || !action.offers(lineActionTargetAt(line, null))) return hover.enter(null);
         followed.watch(props.numberElement);
@@ -63,27 +69,39 @@ export function useLineActionButton(
         hover.leave();
       },
     };
-  }, [action, hovers, hover, containerRef, followed]);
+  }, [action, hovers, hover, containerRef, followed, drag]);
   if (!action) return { options };
-  return { options, overlay: <LineActionOverlayButton hovered={hovered} hover={hover} action={action} selected={selected} /> };
+  return {
+    options,
+    overlay: (
+      <>
+        <LineActionOverlayButton hovered={hovered} hover={hover} action={action} selected={selected} drag={drag} />
+        <LineActionDragMarks dragging={drag} containerRef={containerRef} layout={layout} />
+      </>
+    ),
+  };
 }
+
 
 interface LineActionOverlayButtonProps {
   hovered: LineActionStore;
   hover: LineHover;
   action: LineAction;
   selected: FocusedLines | null;
+  drag: LineActionDragging;
 }
 
 /**
  * The button of the line under the pointer, which keeps its line while the pointer is on it: it acts on the lines
  * selected when the line is one of them and the place takes them all, else on the line.
  */
-function LineActionOverlayButton({ hovered, hover, action, selected }: LineActionOverlayButtonProps) {
+function LineActionOverlayButton({ hovered, hover, action, selected, drag }: LineActionOverlayButtonProps) {
   const shown = useStore(hovered);
+  const dragShown = useStore(drag.shown);
   // Gone from under the pointer (the place stopped offering it), it never says it was left.
   useEffect(() => hover.release, [hover]);
-  if (!shown) return null;
+  // Once dragged off its line, the drag's own marks stand for it; pressed and released in place, it's a click on it.
+  if (!shown || (dragShown && lineActionDragMoved(dragShown.drag))) return null;
   const target = lineActionTargetAt(shown.line, selected, action.offers);
   const label = action.label(target);
   return (
@@ -91,11 +109,16 @@ function LineActionOverlayButton({ hovered, hover, action, selected }: LineActio
       type="button"
       className={styles.button}
       style={shown.spot}
-      data-tip={label}
+      data-tip={lineActionTip(label, target)}
       aria-label={label}
       onPointerEnter={hover.hold}
-      onPointerLeave={hover.release}
-      onClick={() => action.run(target)}
+      onPointerLeave={() => !drag.active() && hover.release()}
+      // No text selected as the pointer drags across the code, nor the focus moved.
+      onMouseDown={(event) => event.preventDefault()}
+      onPointerDown={(event) => event.button === 0 && drag.start(shown.line, shown.spot.left)}
+      onClick={() => {
+        if (!drag.endedDrag()) action.run(target);
+      }}
     >
       <Plus size={14} strokeWidth={2.75} aria-hidden />
     </button>

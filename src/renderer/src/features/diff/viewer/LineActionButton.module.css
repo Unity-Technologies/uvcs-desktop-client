@@ -24,3 +24,19 @@
 .button:hover {
   background: var(--accent-fill-hover);
 }
+
+/* A drag's "+" on its first and last line (`LineActionDragMarks`): drawn as the button, never in the pointer's way. */
+.button[data-mark] {
+  pointer-events: none;
+}
+
+/* The line joining a drag's two "+" (`dragSpanRect`), behind them: the two read as the ends of one handle. */
+.dragSpan {
+  position: absolute;
+  z-index: 2;
+  width: 2px;
+  translate: -50% 0;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
