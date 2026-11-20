@@ -1,13 +1,14 @@
 import { MessageSquareDiff } from 'lucide-react';
-import { useEffect, useState, type RefObject } from 'react';
+import type { RefObject } from 'react';
 import type { CommentFieldHandle } from '../../../components/commentEditor/commentFieldProps';
 import { useCommentDraftStore } from '../../../components/commentDraftStore';
 import { Button } from '../../../ui/Button';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
 import { anchorPath, type LineAnchor } from '../inline/fileThreads';
-import { suggestButtonOf, withSuggestionInserted } from './suggestButton';
+import { suggestButtonOf } from './suggestButton';
 import { useReplacedLines } from './useReplacedLines';
+import { useSuggestionInsert } from './useSuggestionInsert';
 
 interface EditSuggestButtonProps {
   anchor: LineAnchor;
@@ -27,17 +28,9 @@ export function EditSuggestButton({ anchor, postedText, draftKey, field }: EditS
   const text = composerText(useCommentDraftStore((state) => state.drafts[draftKey]), postedText);
   const lines = useReplacedLines({ path: anchorPath(anchor), revisionId: anchor.revisionId, firstLine: anchor.firstLine, lastLine: anchor.lastLine });
   const suggest = suggestButtonOf(lines, text, anchor);
-  // The caret to put back once the text with the suggestion shows: the field takes a new text on its next render.
-  const [caretAfterInsert, setCaretAfterInsert] = useState<number | null>(null);
-  useEffect(() => {
-    if (caretAfterInsert === null) return;
-    if (field.current?.focusAtSelection({ anchor: caretAfterInsert, head: caretAfterInsert }) !== false) setCaretAfterInsert(null);
-  });
+  const insertSuggestion = useSuggestionInsert(field, draftKey, text);
   const insert = (): void => {
-    if (lines.kind !== 'read') return;
-    const inserted = withSuggestionInserted(text, field.current?.selection()?.head ?? text.length, lines.value);
-    useCommentDraftStore.getState().keep(draftKey, { summary: '', description: inserted.text });
-    setCaretAfterInsert(inserted.caret);
+    if (lines.kind === 'read') insertSuggestion(lines.value);
   };
   return (
     <Tooltip content={suggest.tip}>
