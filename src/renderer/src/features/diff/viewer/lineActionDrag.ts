@@ -47,18 +47,3 @@ export function lineActionDragEnds(drag: LineActionDrag): (ChangedLine & { key: 
 }
 
 const LINE_ACTION_DRAG_KEY = 'line-action-drag';
-
-/** How wide the "+" is (`LineActionButton.module.css`): the line joining two runs down its middle. */
-export const LINE_ACTION_BUTTON_SIZE = 22;
-
-/**
- * The line joining a drag's two "+" (`LineActionDragMarks`), from the middle of the first line's row to the last's,
- * down the middle of the buttons that start at `left`: the two read as the ends of one handle. None until both rows
- * are rendered, or for one line.
- */
-export function dragSpanRect(first: { top: number; bottom: number } | undefined, last: { top: number; bottom: number } | undefined, left: number): { top: number; left: number; height: number } | null {
-  if (!first || !last) return null;
-  const top = (first.top + first.bottom) / 2;
-  const bottom = (last.top + last.bottom) / 2;
-  return bottom > top ? { top, left: left + LINE_ACTION_BUTTON_SIZE / 2, height: bottom - top } : null;
-}

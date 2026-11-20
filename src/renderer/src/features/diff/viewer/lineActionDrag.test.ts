@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dragSpanRect, LINE_ACTION_BUTTON_SIZE, lineActionDragBand, lineActionDragFrom, lineActionDragEnds, lineActionDragLines, lineActionDragMoved, lineActionDragTo } from './lineActionDrag';
+import { lineActionDragBand, lineActionDragFrom, lineActionDragEnds, lineActionDragLines, lineActionDragMoved, lineActionDragTo } from './lineActionDrag';
 
 const at = (lineNumber: number, side: 'additions' | 'deletions' = 'additions') => ({ side, lineNumber });
 
@@ -31,16 +31,5 @@ describe('a drag from the "+"', () => {
     const drag = lineActionDragFrom(at(12));
     expect(lineActionDragBand(drag)).not.toHaveProperty('firstLineNumber');
     expect(lineActionDragEnds(drag).map((end) => end.lineNumber)).toEqual([12]);
-  });
-});
-
-describe('dragSpanRect', () => {
-  it('joins the middles of the first and last rows, down the middle of the "+"', () => {
-    expect(dragSpanRect({ top: 100, bottom: 120 }, { top: 200, bottom: 220 }, 40)).toEqual({ top: 110, left: 40 + LINE_ACTION_BUTTON_SIZE / 2, height: 100 });
-  });
-
-  it('draws nothing until both rows are rendered, or for one line', () => {
-    expect(dragSpanRect(undefined, { top: 200, bottom: 220 }, 40)).toBeNull();
-    expect(dragSpanRect({ top: 100, bottom: 120 }, { top: 100, bottom: 120 }, 40)).toBeNull();
   });
 });

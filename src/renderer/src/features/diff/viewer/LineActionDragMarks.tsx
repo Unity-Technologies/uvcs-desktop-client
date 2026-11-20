@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import { useMemo, type RefObject } from 'react';
 import { useStore } from 'zustand';
 import type { CodeLayout } from './lineActions';
-import { dragSpanRect, lineActionDragBand, lineActionDragEnds, lineActionDragMoved } from './lineActionDrag';
+import { lineActionDragBand, lineActionDragEnds, lineActionDragMoved } from './lineActionDrag';
 import { LineBands } from './LineBands';
 import { useLineBoxes } from './useLineBoxes';
 import type { LineActionDragging } from './useLineActionDrag';
@@ -24,11 +24,9 @@ export function LineActionDragMarks({ dragging, containerRef, layout }: LineActi
   const ends = useMemo(() => (shown ? lineActionDragEnds(shown.drag) : []), [shown]);
   const boxes = useLineBoxes(containerRef, ends, ends.map((end) => `${end.key}@${end.lineNumber}`).join('|'), layout);
   if (!shown || !lineActionDragMoved(shown.drag)) return null;
-  const span = dragSpanRect(boxes.get('first'), boxes.get('last'), shown.left);
   return (
     <>
       <LineBands containerRef={containerRef} bands={bands} layout={layout} />
-      {span && <span className={styles.dragSpan} style={span} aria-hidden />}
       {ends.map((end) => {
         const box = boxes.get(end.key);
         return box ? (
