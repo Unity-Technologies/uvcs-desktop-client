@@ -10,8 +10,7 @@ import type { SuggestionBody } from './suggestedChange';
 import { suggestionFileDiff } from './suggestionFileDiff';
 import { useDiffShadowRoot } from '../../diff/viewer/useDiffShadowRoot';
 import { useWordMarks, type WordMarkColors } from '../../diff/viewer/useWordMarks';
-import type { WordMarksByLine } from '../../diff/viewer/wordMarkRows';
-import { stackedWordMarks } from './stackedWordMarks';
+import { suggestionWordMarks } from './stackedWordMarks';
 import { SuggestionPlaceholder } from './SuggestionPlaceholder';
 import { useSuggestionViewStore } from './suggestionViewStore';
 import styles from './SuggestedChangeBlock.module.css';
@@ -37,8 +36,7 @@ export function SuggestionDiff({ path, body }: SuggestionDiffProps) {
   const fileDiff = useMemo(() => suggestionFileDiff(path, { replacedText, suggestedText, firstLine }, view), [path, replacedText, suggestedText, firstLine, view]);
   const options = useMemo(() => pierreSnippetDiffOptions(theme), [theme]);
   const container = useRef<HTMLDivElement | null>(null);
-  // Stacked, the words are marked over the rows, as the line diff pairs the lines (Pierre would pair them by position).
-  const wordMarks = useMemo(() => (view === 'stacked' ? stackedWordMarks(replacedText, suggestedText, firstLine) : NO_WORD_MARKS), [view, replacedText, suggestedText, firstLine]);
+  const wordMarks = useMemo(() => suggestionWordMarks(view, replacedText, suggestedText, firstLine), [view, replacedText, suggestedText, firstLine]);
   useWordMarks(container, useDiffShadowRoot(container), wordMarks, DIFF_WORD_COLORS);
   const holdContainer = useCallback((element: HTMLDivElement | null) => {
     container.current = element;
@@ -55,7 +53,6 @@ export function SuggestionDiff({ path, body }: SuggestionDiffProps) {
   );
 }
 
-const NO_WORD_MARKS: WordMarksByLine = { deletions: new Map(), additions: new Map() };
 
 /** Pierre's own colors for the words it marks, so the stacked marks read as the code's diff's. */
 const DIFF_WORD_COLORS: WordMarkColors = { deletions: 'var(--diffs-bg-deletion-emphasis)', additions: 'var(--diffs-bg-addition-emphasis)' };

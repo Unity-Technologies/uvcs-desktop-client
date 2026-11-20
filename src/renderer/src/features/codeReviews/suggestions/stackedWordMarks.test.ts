@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stackedWordMarks } from './stackedWordMarks';
+import { stackedWordMarks, suggestionWordMarks } from './stackedWordMarks';
 
 const text = (...lines: string[]) => lines.map((line) => `${line}\n`).join('');
 
@@ -25,5 +25,12 @@ describe('stackedWordMarks', () => {
   it('marks nothing on lines kept, added or removed', () => {
     expect(markedText(text('keep();', 'gone();'), text('keep();'), 1)).toEqual({ deletions: [], additions: [] });
     expect(markedText(text('keep();'), text('keep();', 'new();'), 1)).toEqual({ deletions: [], additions: [] });
+  });
+});
+
+describe('suggestionWordMarks', () => {
+  it('marks words over the rows stacked, and none as a diff, where Pierre marks them', () => {
+    expect(suggestionWordMarks('stacked', 'a = 1;\n', 'a = 2;\n', 10)).toEqual(stackedWordMarks('a = 1;\n', 'a = 2;\n', 10));
+    expect(suggestionWordMarks('diff', 'a = 1;\n', 'a = 2;\n', 10)).toEqual({ deletions: new Map(), additions: new Map() });
   });
 });

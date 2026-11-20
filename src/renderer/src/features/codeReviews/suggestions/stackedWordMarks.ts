@@ -1,6 +1,7 @@
 import { WORD_MARKS } from '../../diff/viewer/pierreOptions';
 import { coveredMarks, lineWordMarks, type WordMarksByLine } from '../../diff/viewer/wordMarkRows';
 import { suggestionLineDiff } from './suggestionLineDiff';
+import type { SuggestionView } from './suggestionViewStore';
 
 /**
  * The words a stacked suggestion marks (`replacedThenSuggested`): each line the suggestion edits against the line it
@@ -24,3 +25,13 @@ export function stackedWordMarks(replacedText: string, suggestedText: string, fi
   }
   return marks;
 }
+
+/**
+ * The words the box marks over its rows itself: stacked, those `stackedWordMarks` pairs (Pierre would pair the lines by
+ * position); as a diff, none, as Pierre marks them.
+ */
+export function suggestionWordMarks(view: SuggestionView, replacedText: string, suggestedText: string, firstLine: number): WordMarksByLine {
+  return view === 'stacked' ? stackedWordMarks(replacedText, suggestedText, firstLine) : NO_WORD_MARKS;
+}
+
+const NO_WORD_MARKS: WordMarksByLine = { deletions: new Map(), additions: new Map() };
