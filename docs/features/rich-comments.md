@@ -71,7 +71,8 @@ before.
   Applied in changeset 7, Discarded), its review, who asked and when; a click opens the review at its thread
   (`conversationAt`). The editor's Markdown reader takes its brackets for a link's (`isChangeRequestReference` keeps
   them out of `excludedRanges` and `markLink`); micromark, with no definition for it, doesn't. Until the window read its
-  review's conversation it reads "Applies: change request c0d1ce00" and opens nothing.
+  review's conversation it reads "Applies: change request c0d1ce00", and a click finds the request first
+  (`openChangeRequest`, "What a chip reads").
 - A **person** is their avatar and name, their card the name `cm` knows them by; an **emoji** is itself, its name in
   the tooltip.
 - Inside something clicked as a whole (a button, a picker's option: Incoming's list, the branch search, My shelves,
@@ -118,8 +119,14 @@ before.
   `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't read it from art", no access or out of reach). The chip keeps "1201 art"
   either way. Kept as immutable though comments can be edited: a chip's summary of another repository's object is a
   reminder of what it points at, and the object's own page reads it fresh.
-- **A change request** reads nothing: the chip looks through the review conversations the window read
-  (`useCachedChangeRequest`: a review's page, the check-in's change requests to apply), and wakes as one is read.
+- **A change request** reads nothing to show itself: the chip looks through the review conversations the window read
+  (`useCachedChangeRequest`: a review's page, the check-in's change requests to apply), and wakes as one is read. A
+  click on one the window hasn't read (a changeset's comment, from its details) asks once,
+  `ReviewCommentsApi.changeRequestThread`: one `cm find changereviewcomment "where guid like 'c0d1ce00%'"` (the server
+  takes `like` on a guid; a whole guid is matched with `=`), printing `{id}`, `{reviewid}` and `{type}`, the request
+  being the `change` among them (`changeRequestThreadOf`). Text that names no request (`changeRequestGuidCondition`)
+  asks nothing. Then the review opens at the thread, as a merge request when it is one; a request not found says so
+  ("Change request c0d1ce00 not found").
 - A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review (its target's name read
   too) of another repository aren't read.
 
