@@ -44,8 +44,9 @@ describe('refusalShown', () => {
 });
 
 describe('suggestLineLabel', () => {
-  it('names the line, as "Comment on line 42" does', () => {
-    expect(suggestLineLabel({ lineNumber: 42 })).toBe('Suggest change on line 42');
+  it('names the lines, as "Comment on line 42" does', () => {
+    expect(suggestLineLabel({ firstLineNumber: 42, lineNumber: 42 })).toBe('Suggest change on line 42');
+    expect(suggestLineLabel({ firstLineNumber: 40, lineNumber: 42 })).toBe('Suggest change on lines 40–42');
   });
 });
 

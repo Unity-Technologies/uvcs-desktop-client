@@ -128,7 +128,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
             fieldClassName={styles.field}
             draftKey={draftKey}
             placeholder={words.placeholder}
-            label={lineCommentLabel({ side: spot.side, lineNumber: spot.comment.firstLine })}
+            label={lineCommentLabel({ side: spot.side, firstLineNumber: spot.comment.firstLine, lineNumber: spot.comment.lastLine })}
             submitLabel={words.submit}
             autoFocus={mountedFor.current !== null}
             asksBeforeDiscarding

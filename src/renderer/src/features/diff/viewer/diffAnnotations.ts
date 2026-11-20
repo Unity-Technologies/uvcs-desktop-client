@@ -35,20 +35,29 @@ export interface DiffAnnotations {
 }
 
 /**
- * What a place does with one line of the diff (`DiffAnnotations.lineAction`): offered on the lines it takes, in the
- * button by the one under the pointer (`useLineActionButton`) and in the code's menu (`lineMenuEntries`).
+ * Lines of one side a place acts on: one line, or the lines selected, from `firstLineNumber` to `lineNumber`, the last
+ * (where a review's comment shows). One line is `firstLineNumber === lineNumber`.
+ */
+export interface ChangedLines extends ChangedLine {
+  firstLineNumber: number;
+}
+
+/**
+ * What a place does with lines of the diff (`DiffAnnotations.lineAction`): offered on the lines it takes, in the button
+ * by the one under the pointer (`useLineActionButton`; the lines selected when it's one of them) and in the code's menu
+ * (`lineMenuEntries`, on the lines selected).
  */
 export interface LineAction {
   /** The lines it takes: a review comments only on the revisions its diff names. */
-  offers: (line: ChangedLine) => boolean;
-  /** What it does to a line, as its button's tooltip and its menu entry say it ("Comment on line 42"). */
-  label: (line: ChangedLine) => string;
-  run: (line: ChangedLine) => void;
+  offers: (lines: ChangedLines) => boolean;
+  /** What it does to the lines, as its button's tooltip and its menu entry say it ("Comment on lines 40–42"). */
+  label: (lines: ChangedLines) => string;
+  run: (lines: ChangedLines) => void;
   /**
    * Another way to do it, after it in the code's menu only, the gutter's button staying the one: a review's "Suggest
-   * change on line 42", the comment opened with the line's suggestion in it.
+   * change on line 42", the comment opened with the lines' suggestion in it.
    */
-  variant?: { label: (line: ChangedLine) => string; run: (line: ChangedLine) => void };
+  variant?: { label: (lines: ChangedLines) => string; run: (lines: ChangedLines) => void };
 }
 
 /** A line a row or a marker is about, or lines: from `firstLineNumber` to `lineNumber`, the row's. */

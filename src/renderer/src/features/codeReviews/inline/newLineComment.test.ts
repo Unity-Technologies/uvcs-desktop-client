@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShownFile } from './fileThreads';
-import { DEFAULT_LINE_COMMENT_KIND, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { DEFAULT_LINE_COMMENT_KIND, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 
 const WHOLE = { kind: 'whole' } as const;
 const CHANGESET_8 = { kind: 'changeset', changesetId: 8 } as const;
@@ -16,25 +16,31 @@ const spot = (fields: Partial<NewLineCommentSpot['comment']> & { reviewId?: numb
 
 describe('lineCommentAt', () => {
   it("takes a line of the newer side, on the revision it shows", () => {
-    expect(lineCommentAt(WHOLE, CHANGED, { side: 'additions', lineNumber: 42 })).toEqual({ revisionId: 30, firstLine: 42, lastLine: 42 });
-    expect(lineCommentAt(WHOLE, ADDED, { side: 'additions', lineNumber: 1 })).toEqual({ revisionId: 31, firstLine: 1, lastLine: 1 });
+    expect(lineCommentAt(WHOLE, CHANGED, { side: 'additions', firstLineNumber: 42, lineNumber: 42 })).toEqual({ revisionId: 30, firstLine: 42, lastLine: 42 });
+    expect(lineCommentAt(WHOLE, ADDED, { side: 'additions', firstLineNumber: 1, lineNumber: 1 })).toEqual({ revisionId: 31, firstLine: 1, lastLine: 1 });
   });
 
   it("takes no line of the older side of a changed file: cm comments only on the revision the diff shows", () => {
-    expect(lineCommentAt(WHOLE, CHANGED, { side: 'deletions', lineNumber: 42 })).toBeNull();
+    expect(lineCommentAt(WHOLE, CHANGED, { side: 'deletions', firstLineNumber: 42, lineNumber: 42 })).toBeNull();
   });
 
   it("takes a deleted file's lines, on its last revision, the one side it has", () => {
-    expect(lineCommentAt(WHOLE, DELETED, { side: 'deletions', lineNumber: 3 })).toEqual({ revisionId: 12, firstLine: 3, lastLine: 3 });
-    expect(lineCommentAt(WHOLE, DELETED, { side: 'additions', lineNumber: 3 })).toBeNull();
+    expect(lineCommentAt(WHOLE, DELETED, { side: 'deletions', firstLineNumber: 3, lineNumber: 3 })).toEqual({ revisionId: 12, firstLine: 3, lastLine: 3 });
+    expect(lineCommentAt(WHOLE, DELETED, { side: 'additions', firstLineNumber: 3, lineNumber: 3 })).toBeNull();
   });
 
   it('takes no row above the code', () => {
-    expect(lineCommentAt(WHOLE, CHANGED, { side: 'additions', lineNumber: 0 })).toBeNull();
+    expect(lineCommentAt(WHOLE, CHANGED, { side: 'additions', firstLineNumber: 0, lineNumber: 0 })).toBeNull();
+  });
+
+  it('takes the lines selected on the side it comments on', () => {
+    expect(lineCommentAt(WHOLE, CHANGED, { side: 'additions', firstLineNumber: 12, lineNumber: 18 })).toEqual({ revisionId: 30, firstLine: 12, lastLine: 18 });
+    expect(lineCommentAt(WHOLE, CHANGED, { side: 'deletions', firstLineNumber: 12, lineNumber: 18 })).toBeNull();
+    expect(lineCommentAt(WHOLE, CHANGED, { side: 'additions', firstLineNumber: 18, lineNumber: 12 })).toBeNull();
   });
 
   it("is written in the changeset shown, one of the branch's", () => {
-    expect(lineCommentAt(CHANGESET_8, CHANGED, { side: 'additions', lineNumber: 5 })).toEqual({ revisionId: 30, firstLine: 5, lastLine: 5, changesetId: 8 });
+    expect(lineCommentAt(CHANGESET_8, CHANGED, { side: 'additions', firstLineNumber: 5, lineNumber: 5 })).toEqual({ revisionId: 30, firstLine: 5, lastLine: 5, changesetId: 8 });
   });
 });
 
@@ -46,6 +52,8 @@ describe('newLineCommentKey', () => {
       newLineCommentKey(41, 'src/Enemy.cs', { firstLine: 7, lastLine: 7 }),
       newLineCommentKey(41, 'src/Player.cs', { firstLine: 7, lastLine: 7, changesetId: 8 }),
       newLineCommentKey(42, 'src/Player.cs', { firstLine: 7, lastLine: 7 }),
+      newLineCommentKey(41, 'src/Player.cs', { firstLine: 7, lastLine: 9 }),
+      newLineCommentKey(41, 'src/Player.cs', { firstLine: 5, lastLine: 9 }),
     ];
     expect(new Set(keys).size).toBe(keys.length);
   });
@@ -95,6 +103,10 @@ describe('withNewLineCommentRows', () => {
     expect(withNewLineCommentRows([threadsAt9], [spot({ firstLine: 3, lastLine: 3 })])).toEqual([threadsAt9, { side: 'additions', lineNumber: 3, metadata: 'additions:3' }]);
   });
 
+  it('adds the row of a range under its last line', () => {
+    expect(withNewLineCommentRows([], [spot({ firstLine: 3, lastLine: 6 })])).toEqual([{ side: 'additions', lineNumber: 6, metadata: 'additions:6' }]);
+  });
+
   it('adds none for a line already showing its threads: the new comment goes in that row', () => {
     expect(withNewLineCommentRows([threadsAt9], [spot({ firstLine: 9, lastLine: 9 })])).toEqual([threadsAt9]);
   });
@@ -110,6 +122,11 @@ describe('withNewLineCommentBands', () => {
   it("marks a line with threads once, in the accent, while a comment is written on it", () => {
     expect(withNewLineCommentBands([threadsAt9], [spot({ firstLine: 9, lastLine: 9 })])).toEqual([{ ...threadsAt9, selected: true }]);
   });
+
+  it('outlines a range being commented on from its first line, a line with threads too', () => {
+    expect(withNewLineCommentBands([], [spot({ firstLine: 3, lastLine: 6 })])).toEqual([{ key: 'additions:6', side: 'additions', lineNumber: 6, firstLineNumber: 3, selected: true }]);
+    expect(withNewLineCommentBands([threadsAt9], [spot({ firstLine: 5, lastLine: 9 })])).toEqual([{ ...threadsAt9, firstLineNumber: 5, selected: true }]);
+  });
 });
 
 describe('lineRowContent', () => {
@@ -123,6 +140,11 @@ describe('lineRowContent', () => {
   it('holds only the comment written on a line whose threads are hidden', () => {
     const written = spot({ firstLine: 9, lastLine: 9 });
     expect(lineRowContent('additions:9', [], [written])).toEqual({ line: undefined, spot: written });
+  });
+
+  it('holds a range being commented on in its last line\'s row', () => {
+    const written = spot({ firstLine: 5, lastLine: 9 });
+    expect(lineRowContent('additions:9', [lineAt9], [written])).toEqual({ line: lineAt9, spot: written });
   });
 
   it('holds nothing for a row of neither', () => {
@@ -146,5 +168,12 @@ describe('focusOnRequest', () => {
 
   it('asked once, answered once: after the request is taken, running again does nothing (StrictMode)', () => {
     expect(focusOnRequest(1, null)).toBe('none');
+  });
+});
+
+describe('lineCommentLabel', () => {
+  it('names the line, or the lines selected', () => {
+    expect(lineCommentLabel({ side: 'additions', firstLineNumber: 42, lineNumber: 42 })).toBe('Comment on line 42');
+    expect(lineCommentLabel({ side: 'additions', firstLineNumber: 40, lineNumber: 42 })).toBe('Comment on lines 40–42');
   });
 });

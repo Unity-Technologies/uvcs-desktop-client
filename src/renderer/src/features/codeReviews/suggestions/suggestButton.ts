@@ -1,4 +1,5 @@
 import { holdsSuggestion, withSuggestionAt } from '../../../lib/reviewSuggestion';
+import { rangeWordsInline } from '../rangeWords';
 import type { ReplacedLines } from './suggestedChange';
 
 /** What a new line comment's Suggest change offers: whether it can insert the fence now, and its tooltip saying so. */
@@ -56,7 +57,7 @@ export function refusalShown(refusal: SuggestRefusal | null, text: string): stri
   return refusal && refusal.text === text ? refusal.reason : null;
 }
 
-/** The code menu's entry beside "Comment on line 42": the comment opened with the line's suggestion in it. */
-export function suggestLineLabel(line: { lineNumber: number }): string {
-  return `Suggest change on line ${line.lineNumber}`;
+/** The code menu's entry beside "Comment on line 42": the comment opened with the lines' suggestion in it. */
+export function suggestLineLabel(lines: { firstLineNumber: number; lineNumber: number }): string {
+  return `Suggest change on ${rangeWordsInline({ firstLine: lines.firstLineNumber, lastLine: lines.lineNumber })}`;
 }

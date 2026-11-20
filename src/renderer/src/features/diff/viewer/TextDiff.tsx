@@ -18,7 +18,7 @@ import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
 import { linesLayoutOf } from './keptPlace';
 import { linesSelectable, shownSelection } from './lineLinkMode';
-import { selectedRangeOf } from './linkedLines';
+import { linkedLinesOf, selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { scrollToAnnotationRow } from './annotationRowScroll';
 import { LineBands } from './LineBands';
@@ -242,7 +242,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     lineAction: annotations?.lineAction,
   });
   // What the place does with a line (a review's comment on it), a button by the line under the pointer.
-  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container, layout);
+  const selectedForAction = useMemo(() => linkedLinesOf(lineLinks.range), [lineLinks.range]);
+  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container, layout, selectedForAction);
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,

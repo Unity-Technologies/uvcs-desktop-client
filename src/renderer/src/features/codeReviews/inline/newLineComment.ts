@@ -1,14 +1,14 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import type { LineCommentKind, NewLineComment } from '@shared/domain/reviewConversation';
-import type { ChangedLine } from '../../diff/viewer/changeBlocks';
-import type { LineBand } from '../../diff/viewer/diffAnnotations';
+import type { ChangedLines, LineBand } from '../../diff/viewer/diffAnnotations';
+import { rangeWordsInline } from '../rangeWords';
 import { topSideOf } from './fileComments';
 import type { ReviewDiffView, ShownFile, ThreadSide } from './fileThreads';
 import { lineKey } from './threadRows';
 
 /**
- * A comment being written on a line of a review's diff (`useNewLineCommentsStore`): where it goes, as what, and the
- * line it shows under. Kept while the window lives, as its text is (`useCommentDraftStore`), so moving to another file,
+ * A comment being written on lines of a review's diff (`useNewLineCommentsStore`): where it goes, as what, and the
+ * side it shows on, under its last line. Kept while the window lives, as its text is (`useCommentDraftStore`), so moving to another file,
  * tab or mode and back finds it where it was: nothing asks to save it on the way.
  */
 export interface NewLineCommentSpot {
@@ -28,21 +28,22 @@ export const DEFAULT_LINE_COMMENT_KIND: LineCommentKind = 'changeRequest';
 export const LINE_COMMENT_KINDS: readonly LineCommentKind[] = ['changeRequest', 'question', 'comment'];
 
 /**
- * The comment a line of a review's file takes, or none where `cm` takes none: only the revision the diff comments on
- * (the newer side's, or a deleted file's last one: the side its rows above the code go on, `topSideOf`), so neither the
- * older side of a changed file nor a removed line of a unified diff. Written in one changeset's diff, it's that
- * changeset's (`--changeset`).
+ * The comment lines of a review's file take (one, or a range selected), or none where `cm` takes none: only the
+ * revision the diff comments on (the newer side's, or a deleted file's last one: the side its rows above the code go
+ * on, `topSideOf`), so neither the older side of a changed file nor a removed line of a unified diff. Written in one
+ * changeset's diff, it's that changeset's (`--changeset`).
  */
-export function lineCommentAt(view: ReviewDiffView, file: ShownFile, line: ChangedLine): Omit<NewLineComment, 'kind'> | null {
+export function lineCommentAt(view: ReviewDiffView, file: ShownFile, lines: ChangedLines): Omit<NewLineComment, 'kind'> | null {
   const side = topSideOf(file);
   const revisionId = side === 'additions' ? file.modifiedRevision : file.originalRevision;
-  if (line.side !== side || line.lineNumber < 1 || revisionId < 0) return null;
-  return { revisionId, firstLine: line.lineNumber, lastLine: line.lineNumber, ...(view.kind === 'changeset' && { changesetId: view.changesetId }) };
+  if (lines.side !== side || lines.firstLineNumber < 1 || lines.lineNumber < lines.firstLineNumber || revisionId < 0) return null;
+  return { revisionId, firstLine: lines.firstLineNumber, lastLine: lines.lineNumber, ...(view.kind === 'changeset' && { changesetId: view.changesetId }) };
 }
 
-/** Names a comment being written: one per line of a file, in one mode. */
+/** Names a comment being written: one per line, or range of lines, of a file, in one mode. */
 export function newLineCommentKey(reviewId: number, path: string, comment: Omit<NewLineComment, 'kind' | 'revisionId'>): string {
-  return [reviewId, comment.changesetId ?? 'whole', path, comment.firstLine].join(':');
+  const lines = comment.lastLine > comment.firstLine ? `${comment.firstLine}-${comment.lastLine}` : String(comment.firstLine);
+  return [reviewId, comment.changesetId ?? 'whole', path, lines].join(':');
 }
 
 /** A new comment on a line of a file of a review, in a mode, the line's own kind of comment (`lineCommentAt`). */
@@ -68,12 +69,13 @@ export function newLineCommentsIn(spots: readonly NewLineCommentSpot[], reviewId
 }
 
 /**
- * Pierre's rows with those of the comments being written: one under each line that shows no row yet, after the rest,
- * as rows that come later go (`annotationRowsOf`). A line already showing its threads takes the new comment in its row.
+ * Pierre's rows with those of the comments being written: one under each comment's last line that shows no row yet,
+ * after the rest, as rows that come later go (`annotationRowsOf`). A line already showing its threads takes the new
+ * comment in its row.
  */
 export function withNewLineCommentRows(rows: DiffLineAnnotation<string>[], spots: readonly NewLineCommentSpot[]): DiffLineAnnotation<string>[] {
   const added = spots
-    .map((spot): DiffLineAnnotation<string> => ({ side: spot.side, lineNumber: spot.comment.firstLine, metadata: lineKey(spot.side, spot.comment.firstLine) }))
+    .map((spot): DiffLineAnnotation<string> => ({ side: spot.side, lineNumber: spot.comment.lastLine, metadata: spotRowKey(spot) }))
     .filter((row) => !rows.some((shown) => shown.metadata === row.metadata));
   return added.length === 0 ? rows : [...rows, ...added];
 }
@@ -86,7 +88,7 @@ export function withNewLineCommentRows(rows: DiffLineAnnotation<string>[], spots
 export function lineRowContent<Line extends { key: string }>(rowKey: string, shownLines: readonly Line[], spots: readonly NewLineCommentSpot[]): { line?: Line; spot?: NewLineCommentSpot } {
   return {
     line: shownLines.find((line) => line.key === rowKey),
-    spot: spots.find((spot) => lineKey(spot.side, spot.comment.firstLine) === rowKey),
+    spot: spots.find((spot) => spotRowKey(spot) === rowKey),
   };
 }
 
@@ -101,22 +103,41 @@ const LINE_COMMENT_WORDS: Record<LineCommentKind, { placeholder: string; submit:
   comment: { placeholder: 'Leave a comment', submit: 'Comment' },
 };
 
-/** The "+" in the gutter and the code menu's entry: what they do to the line. */
-export function lineCommentLabel(line: ChangedLine): string {
-  return `Comment on line ${line.lineNumber}`;
+/** The row a comment being written shows in: its last line's, which that line's threads share. */
+function spotRowKey(spot: NewLineCommentSpot): string {
+  return lineKey(spot.side, spot.comment.lastLine);
+}
+
+/** The "+" in the gutter and the code menu's entry: what they do to the lines ("Comment on lines 40–42"). */
+export function lineCommentLabel(lines: ChangedLines): string {
+  return `Comment on ${rangeWordsInline({ firstLine: lines.firstLineNumber, lastLine: lines.lineNumber })}`;
 }
 
 /**
  * The lines' outlines with those being commented on: in the accent, as the card being written is, a line with threads
- * too, so the line a comment goes on is plain while it's written.
+ * too, so the lines a comment goes on are plain while it's written. A range is outlined from its first line, and so is
+ * a line's outline its threads start further down.
  */
 export function withNewLineCommentBands(bands: readonly LineBand[], spots: readonly NewLineCommentSpot[]): LineBand[] {
-  const commented = new Set(spots.map((spot) => lineKey(spot.side, spot.comment.firstLine)));
-  const marked = bands.map((band) => (commented.has(band.key) ? { ...band, selected: true } : band));
-  const added = spots
-    .map((spot): LineBand => ({ key: lineKey(spot.side, spot.comment.firstLine), side: spot.side, lineNumber: spot.comment.firstLine, selected: true }))
-    .filter((band) => !bands.some((shown) => shown.key === band.key));
+  const firstLines = new Map<string, number>();
+  for (const spot of spots) firstLines.set(spotRowKey(spot), Math.min(spot.comment.firstLine, firstLines.get(spotRowKey(spot)) ?? spot.comment.firstLine));
+  const marked = bands.map((band) => {
+    const firstLine = firstLines.get(band.key);
+    return firstLine === undefined ? band : withFirstLine({ ...band, selected: true }, Math.min(firstLine, band.firstLineNumber ?? band.lineNumber));
+  });
+  const added = [...firstLines]
+    .filter(([key]) => !bands.some((shown) => shown.key === key))
+    .map(([key, firstLine]): LineBand => {
+      const spot = spots.find((candidate) => spotRowKey(candidate) === key)!;
+      return withFirstLine({ key, side: spot.side, lineNumber: spot.comment.lastLine, selected: true }, firstLine);
+    });
   return [...marked, ...added];
+}
+
+/** A band from `firstLine` to its own line: one line has no `firstLineNumber`. */
+function withFirstLine(band: LineBand, firstLine: number): LineBand {
+  const { firstLineNumber: _, ...line } = band;
+  return firstLine < band.lineNumber ? { ...line, firstLineNumber: firstLine } : line;
 }
 
 /**

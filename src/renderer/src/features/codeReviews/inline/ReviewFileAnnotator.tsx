@@ -3,8 +3,7 @@ import { History } from 'lucide-react';
 import { useContext, useMemo, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
-import type { ChangedLine } from '../../diff/viewer/changeBlocks';
-import { DiffAnnotationsContext, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
+import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
@@ -92,17 +91,17 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const lineAction = useMemo<LineAction | undefined>(() => {
     if (reviewId === undefined || !view || !threads) return undefined;
     return {
-      offers: (line: ChangedLine) => lineCommentAt(view, file, line) !== null,
+      offers: (lines: ChangedLines) => lineCommentAt(view, file, lines) !== null,
       label: lineCommentLabel,
-      run: (line: ChangedLine) => {
-        const at = lineCommentAt(view, file, line);
-        if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at));
+      run: (lines: ChangedLines) => {
+        const at = lineCommentAt(view, file, lines);
+        if (at) openSpot(newLineCommentSpot(reviewId, file.path, lines.side, at));
       },
       variant: {
         label: suggestLineLabel,
-        run: (line: ChangedLine) => {
-          const at = lineCommentAt(view, file, line);
-          if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at), { suggests: true });
+        run: (lines: ChangedLines) => {
+          const at = lineCommentAt(view, file, lines);
+          if (at) openSpot(newLineCommentSpot(reviewId, file.path, lines.side, at), { suggests: true });
         },
       },
     };

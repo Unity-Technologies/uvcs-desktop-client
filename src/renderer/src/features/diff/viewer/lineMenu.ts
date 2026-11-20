@@ -3,7 +3,7 @@ import { menuAction } from '../../../components/menuWords';
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import type { ChangedLine } from './changeBlocks';
-import type { LineAction } from './diffAnnotations';
+import type { ChangedLines, LineAction } from './diffAnnotations';
 import { linesWords } from './lineActions';
 
 interface LineMenuContext {
@@ -14,7 +14,7 @@ interface LineMenuContext {
   copyLines: () => void;
   /** Opens the file annotated at them, where the code is a diff's whose newer side can be annotated. */
   annotate?: () => void;
-  /** The place's own action on a line (a review's comment), on the last of the lines (`lineActionTarget`). */
+  /** The place's own action on lines (a review's comment), on the lines selected (`lineActionTarget`). */
   lineAction?: LineAction;
 }
 
@@ -35,10 +35,19 @@ export function lineMenuEntries({ lines, copyLink, copyLines, annotate, lineActi
   ];
 }
 
+/** The lines a place's action takes from lines selected: all of them, on their side. */
+export function lineActionTarget(lines: FocusedLines): ChangedLines {
+  return { side: lines.side === 'old' ? 'deletions' : 'additions', firstLineNumber: lines.first, lineNumber: lines.last };
+}
+
 /**
- * The line a place's action takes from lines selected: the last, where a comment on a range is anchored (`cm` names one
- * line), the line number the selection shows nearest the code below it.
+ * The lines the gutter's button acts on, by the line under the pointer: the lines selected when it's one of them, on
+ * its side, as GitHub comments on a selection; that line alone otherwise.
  */
-export function lineActionTarget(lines: FocusedLines): ChangedLine {
-  return { side: lines.side === 'old' ? 'deletions' : 'additions', lineNumber: lines.last };
+export function lineActionTargetAt(line: ChangedLine, selected: FocusedLines | null | undefined): ChangedLines {
+  if (selected) {
+    const range = lineActionTarget(selected);
+    if (range.side === line.side && line.lineNumber >= range.firstLineNumber && line.lineNumber <= range.lineNumber) return range;
+  }
+  return { ...line, firstLineNumber: line.lineNumber };
 }
