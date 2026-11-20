@@ -1,5 +1,6 @@
 import { useMemo, type MouseEvent } from 'react';
 import { changeRequestChip } from '../../features/codeReviews/changeRequests/changeRequests';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { useCachedChangeRequest } from './useCachedChangeRequest';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
@@ -18,9 +19,10 @@ const Icon = CHIP_ICONS.changeRequest;
 /**
  * A change request a check-in applies (`[apply-change:c0d1ce00]`), as `changeRequestChip` says it shows: its first line
  * once the window read its review's conversation (`useCachedChangeRequest`, which reads nothing), else its number; a
- * click opens the review at its thread.
+ * click opens the review at its thread, found first when the window hasn't read it (`openChangeRequest`).
  */
 export function ChangeRequestChip({ guid, source, compact, interactive }: ChangeRequestChipProps) {
+  const place = usePlace();
   const request = useCachedChangeRequest(guid);
   const chip = useMemo(() => changeRequestChip(request, guid, cardDate), [request, guid]);
   const shown = { className: styles.chip, 'data-icon': 'changeRequest', 'data-source': source, 'data-tip': '' };
@@ -31,8 +33,7 @@ export function ChangeRequestChip({ guid, source, compact, interactive }: Change
       <span className={styles.request}>{chip.label}</span>
     </>
   );
-  const opens = chip.opens;
-  if (!interactive || !opens) {
+  if (!interactive) {
     return (
       <ChipHoverCard card={chip.card}>
         <span {...shown} aria-label={chip.name}>
@@ -46,7 +47,7 @@ export function ChangeRequestChip({ guid, source, compact, interactive }: Change
     event.stopPropagation();
     event.preventDefault();
     // Loaded on the first click: opening a page reaches the navigation.
-    void import('./openChangeRequest').then(({ openChangeRequest }) => openChangeRequest(opens));
+    void import('./openChangeRequest').then(({ openChangeRequest }) => openChangeRequest(place, chip.opens));
   };
   return (
     <ChipHoverCard card={chip.card}>
