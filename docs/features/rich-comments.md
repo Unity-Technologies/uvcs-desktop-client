@@ -76,7 +76,9 @@ before.
 - A **person** is their avatar and name, their card the name `cm` knows them by; an **emoji** is itself, its name in
   the tooltip.
 - Inside something clicked as a whole (a button, a picker's option: Incoming's list, the branch search, My shelves,
-  the changeset picker) a chip reads the same but is no link (`interactive={false}`), so the click stays the row's.
+  the changeset picker), a folded thread's line, the editor and a chip's own card, a chip reads the same but is no link
+  (`interactive={false}`), so the click stays the row's. Anywhere else it opens what it names, the Branch Explorer's
+  card over a changeset's comment included (`chipsAreLinks.test.ts` keeps the list).
 
 ## What a chip reads
 

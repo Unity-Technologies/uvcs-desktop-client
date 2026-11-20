@@ -278,6 +278,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `renderer/src/effectsReturnCleanUps.test.ts`              | no effect returns what a DOM call gives (`scrollIntoView`'s promise), which React takes for its clean-up |
 | `renderer/src/elementsKeptWhileHidden.test.ts`            | an element held in state comes from `useKeptElement`, kept while a view's `Activity` hides it |
 | `renderer/src/noDocumentWideIds.test.ts`                  | no component writes out an element id: views kept mounted would share it (`useId`) |
+| `renderer/src/chipsAreLinks.test.ts`                      | a comment's chips are links, except where a click belongs to what holds them (`CHIPS_NOT_LINKS` says why for each) |
 | `renderer/src/detailsPanelsHide.test.ts`                  | every details panel has the header button that hides it (`DetailsToggleButton`) |
 | `renderer/src/detailsPanelsShowAttributesInSection.test.ts` | every details panel shows attributes in its Attributes section (`AttributesDetailsSection`), never as chips in its header |
 | `renderer/src/splittersRemembered.test.ts`               | every splitter remembers where it was dragged, under a key of its own (`RememberedSplitPane`) |
