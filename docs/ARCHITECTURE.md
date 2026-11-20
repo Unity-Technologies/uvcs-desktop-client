@@ -1713,6 +1713,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     quieter than the name, pale yellows as much as dark blues. Focus shows with `--focus-ring-visible`, or
     `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
+  - Overlays lie over the whole window, whatever the page around them. One drawn in the page (a comment's larger
+    editor, `CommentFocusGroup`) draws its backdrop beside its panel, never portaled apart: one parent keeps them in
+    one stacking context (`focusModeSurfaces.test.ts`). The boxes every view sits in (`PlaceLayout`, `SignInCover`,
+    `PageFrame`, `SplitPane`, `Stowable`, `PageWindowScreen`) make no stacking context and no frame for fixed boxes: no
+    `isolation`, `z-index`, `opacity`, `transform`, `filter`, `contain` or `will-change` on them
+    (`viewWrappersMakeNoStackingContext.test.ts`, which names the one allowed: `SignInCover`'s while it covers). One there
+    put every larger editor outside a dialog under its own backdrop; `npm run e2e` checks the panel is what a press at
+    its middle reaches.
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
     A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.

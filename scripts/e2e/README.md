@@ -6,12 +6,12 @@ build, as `npm run dev` serves it), then over the production build, which it lea
 is what catches a bug only `npm run dev` shows: StrictMode mounts every component, unmounts it and mounts it again,
 so an effect whose cleanup leaves something its second run can't use (a WebGL canvas whose context was lost) fails
 there, while the production build, which ships, runs each effect once. Each run builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
-`--user-data-dir`, switches the home screen between two Unity accounts (each lists only its organizations), opens a workspace, answers the question about profile pictures, visits every sidebar view, a diff, a file's last change read from the disk (the fake's revision is another file's), against its parent revision too, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette (a prefix narrowing it to people, and a link pasted in it), the repository explored without a workspace
+`--user-data-dir`, switches the home screen between two Unity accounts (each lists only its organizations), opens a workspace, answers the question about profile pictures, visits every sidebar view, the larger comment editor opened over a merge request's conversation (the panel, not its backdrop, under a press at its middle), a diff, a file's last change read from the disk (the fake's revision is another file's), against its parent revision too, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette (a prefix narrowing it to people, and a link pasted in it), the repository explored without a workspace
 (from the home screen: its views, a file found by name and a changeset's diff) and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
 `Loading` (what shows only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton
 until it shows again), any `cm` command the fake couldn't answer, and an answer to the profile pictures question that wasn't
-saved. Beyond that answer, it asserts only that things appear, never pixels or copy.
+saved. Beyond that answer and the larger editor being on top, it asserts only that things appear, never pixels or copy.
 About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
 runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
 in `UVCS_E2E_SHOTS` when set. A run empties its own folder as it starts, never the one around it. A failed step also

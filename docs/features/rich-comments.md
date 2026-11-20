@@ -293,7 +293,11 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   (`focusModeSurfaces.test.ts`): a branch's once filled its panel edge to edge, its hints inside the text.
   A field in a popover (a status's comment) offers none (`isOwnFocusGroup`, `inPopover`): the popover is moved into
   place with a transform, which the fixed panel would follow, shrunk into it.
-  From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
+  The backdrop is the panel's sibling, wherever the panel is (`CommentFocusGroup`): one parent puts them in one
+  stacking context, so the panel stays above it whatever its ancestors do (a backdrop in the page's body was drawn
+  over it under a stacking context around the views); the smoke test checks the panel is what a press at its middle
+  reaches (`npm run e2e`).
+  From a dialog it lies above the dialog: the backdrop is in the dialog with the panel, so a click on it closes
   the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
   the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was
   dropped: the dialog grew too tall, or its field barely grew, by how much room its other fields left.

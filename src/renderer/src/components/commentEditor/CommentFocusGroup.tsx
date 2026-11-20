@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { CommentFieldHandle, FieldSelection } from './commentFieldProps';
 import { blurOutcome, caretAfterMove, type GroupField } from './focusGroup';
 import { focusModeLayout, type FocusModeLayout } from './focusMode';
-import { backdropParent, panelParent } from './backdropParent';
+import { panelParent } from './panelParent';
 import { FocusModeFooter } from './FocusModeFooter';
 import styles from './CommentFocusGroup.module.css';
 
@@ -100,20 +100,26 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
       if (container.current && blurOutcome(now) === 'close') group.close();
     });
   };
+  // The backdrop is drawn beside the panel, never apart from it (in the page's body): one parent puts them in one
+  // stacking context, so the panel stays above it whatever its ancestors do (an `isolation`, a `z-index`, an `opacity`
+  // around the views once kept the panel under a backdrop over the whole window, out of reach).
   const panel = (
-    <div ref={container} className={styles.group} data-open={layout ?? undefined} onBlur={onBlur}>
-      {children}
-      {open && <FocusModeFooter />}
-    </div>
-  );
-  return (
-    <FocusGroupContext.Provider value={group}>
-      {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={(event) => {
+    <>
+      <div ref={container} className={styles.group} data-open={layout ?? undefined} onBlur={onBlur}>
+        {children}
+        {open && <FocusModeFooter />}
+      </div>
+      {layout === 'overlay' && (
+        <div
+          className={styles.backdrop}
+          onMouseDown={(event) => {
             // A press around it goes back to the field, the caret where it was: the focus stays in it.
             event.preventDefault();
             group.close();
-          }} />, backdropParent(container.current))}
-      {movedTo ? createPortal(panel, movedTo) : panel}
-    </FocusGroupContext.Provider>
+          }}
+        />
+      )}
+    </>
   );
+  return <FocusGroupContext.Provider value={group}>{movedTo ? createPortal(panel, movedTo) : panel}</FocusGroupContext.Provider>;
 }

@@ -183,7 +183,8 @@ place's views or pages is (`placesCoveredBySignIn.test.ts`), as the failures of 
 in them. The work shows through it blurred
 (`--scrim-sign-in` and a blur; opaque with reduced transparency), so the user sees it's all still there, and the message
 sits on a card. What the view draws in layers of its own (a model viewer's labels and toolbars, floating cards) stays
-under it: the covered part is a stacking context of its own (`isolation`). It is the window's state, not a dialog:
+under it: while covered (`.covered[inert]`), and only then, the covered part is a stacking context of its own
+(`isolation`), as a view's own overlays must otherwise lie over the window (ARCHITECTURE.md, Styling, Overlays). It is the window's state, not a dialog:
 it appears in place, moves no focus between windows, and is one however many reads failed. What it covers stays
 mounted and `inert` (nothing takes focus or clicks), so what was typed or selected (a check-in comment, a review
 draft) is there again afterwards. Nothing works on the place while it's covered: the keys of what it covers are off
