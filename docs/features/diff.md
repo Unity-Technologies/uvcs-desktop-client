@@ -838,7 +838,7 @@ What shows (`useMovedCode`, `MovedCode`):
   same at least; a line only added on the way pairs with none), and the pair is word-diffed as Pierre diffs one
   (`movedWordMarks`, `lineWordMarks`, `WORD_MARKS`). Pierre's own marks on moved lines compare them with whatever line
   stands beside them, so they're dropped (`movedCodeCss`) and these drawn with the browser's highlights
-  (`useMovedWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
+  (`useWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
   (`refreshWordMarks`) was rejected: each of its renders (its worker's colors, a keystroke) draws its own marks back.
 - Each place has a label, "Moved to line 143" or "Moved from line 4" with an arrow toward the other place, that scrolls
   there and lights it up (`scrollToChange`, `useChangeFlash`). It goes in the hatched gap across from the place when
@@ -1078,7 +1078,7 @@ release that installs.
   the text selected in the page (`pageTextSelection`, through Chromium's `ShadowRoot.getSelection`).
   The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
   its own (`display: contents`), and its code column stands for it (`paneRect`).
-- `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
+- `movedCodeCss`, `MovedCode`, `useWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
   `--diffs-addition-base`, its labels in the gaps across from it (`data-content-buffer`), and its words marked over a
   row's text nodes, which hold its line in order (`rowTextRange`). Checked on screen too.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).

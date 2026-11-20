@@ -12,6 +12,12 @@ export interface MarkRange {
 }
 
 /** The marks of a pair of lines, the line removed and the line that replaces it. */
+/** The characters to mark in lines of a diff, by line number on each side, drawn over Pierre's rows (`useWordMarks`). */
+export interface WordMarksByLine {
+  deletions: Map<number, MarkRange[]>;
+  additions: Map<number, MarkRange[]>;
+}
+
 export interface LineWordMarks {
   deletion: MarkRange[];
   addition: MarkRange[];
