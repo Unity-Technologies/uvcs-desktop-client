@@ -90,7 +90,7 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onHide, onS
       onSeeInContext={onSeeInContext}
       inCode={{
         earlier: earlierTagOf(thread, true),
-        snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
+        snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.firstLine} />,
         showInConversation: () => comments.showInConversation(thread.root.id),
         seeInContext: onSeeInContext && (() => onSeeInContext(thread)),
         hide: onHide && { label: hideLabel(1), onHide: () => onHide(thread) },

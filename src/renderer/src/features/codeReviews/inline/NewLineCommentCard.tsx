@@ -11,7 +11,6 @@ import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
 import { refusalShown, suggestButtonOf, suggestRequestOutcome, withSuggestionInserted, type SuggestRefusal } from '../suggestions/suggestButton';
-import { commentedLines } from '../suggestions/suggestedChange';
 import { useReplacedLines } from '../suggestions/useReplacedLines';
 import { CommentComposer } from '../conversation/CommentComposer';
 import { addLineComment } from '../conversation/reviewCommentOperations';
@@ -71,7 +70,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   const draftKey = commentDraftKey(placeId(place), 'reviewLineComment', spot.key);
   const text = composerText(useCommentDraftStore((state) => state.drafts[draftKey]), '');
   // The lines the comment is on, which Suggest change fills the fence with: one today, a range once comments take them.
-  const lineText = useReplacedLines({ path: spot.path, revisionId: spot.comment.revisionId, ...commentedLines(spot.comment) });
+  const lineText = useReplacedLines({ path: spot.path, revisionId: spot.comment.revisionId, firstLine: spot.comment.firstLine, lastLine: spot.comment.lastLine });
   const suggest = suggestButtonOf(lineText, text);
   // The caret to put back once the text with the suggestion shows: the field takes a new text on its next render.
   const [caretAfterInsert, setCaretAfterInsert] = useState<number | null>(null);
@@ -129,7 +128,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
             fieldClassName={styles.field}
             draftKey={draftKey}
             placeholder={words.placeholder}
-            label={lineCommentLabel({ side: spot.side, lineNumber: spot.comment.line })}
+            label={lineCommentLabel({ side: spot.side, lineNumber: spot.comment.firstLine })}
             submitLabel={words.submit}
             autoFocus={mountedFor.current !== null}
             asksBeforeDiscarding

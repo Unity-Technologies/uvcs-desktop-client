@@ -37,12 +37,12 @@ export function lineCommentAt(view: ReviewDiffView, file: ShownFile, line: Chang
   const side = topSideOf(file);
   const revisionId = side === 'additions' ? file.modifiedRevision : file.originalRevision;
   if (line.side !== side || line.lineNumber < 1 || revisionId < 0) return null;
-  return { revisionId, line: line.lineNumber, ...(view.kind === 'changeset' && { changesetId: view.changesetId }) };
+  return { revisionId, firstLine: line.lineNumber, lastLine: line.lineNumber, ...(view.kind === 'changeset' && { changesetId: view.changesetId }) };
 }
 
 /** Names a comment being written: one per line of a file, in one mode. */
 export function newLineCommentKey(reviewId: number, path: string, comment: Omit<NewLineComment, 'kind' | 'revisionId'>): string {
-  return [reviewId, comment.changesetId ?? 'whole', path, comment.line].join(':');
+  return [reviewId, comment.changesetId ?? 'whole', path, comment.firstLine].join(':');
 }
 
 /** A new comment on a line of a file of a review, in a mode, the line's own kind of comment (`lineCommentAt`). */
@@ -73,7 +73,7 @@ export function newLineCommentsIn(spots: readonly NewLineCommentSpot[], reviewId
  */
 export function withNewLineCommentRows(rows: DiffLineAnnotation<string>[], spots: readonly NewLineCommentSpot[]): DiffLineAnnotation<string>[] {
   const added = spots
-    .map((spot): DiffLineAnnotation<string> => ({ side: spot.side, lineNumber: spot.comment.line, metadata: lineKey(spot.side, spot.comment.line) }))
+    .map((spot): DiffLineAnnotation<string> => ({ side: spot.side, lineNumber: spot.comment.firstLine, metadata: lineKey(spot.side, spot.comment.firstLine) }))
     .filter((row) => !rows.some((shown) => shown.metadata === row.metadata));
   return added.length === 0 ? rows : [...rows, ...added];
 }
@@ -86,7 +86,7 @@ export function withNewLineCommentRows(rows: DiffLineAnnotation<string>[], spots
 export function lineRowContent<Line extends { key: string }>(rowKey: string, shownLines: readonly Line[], spots: readonly NewLineCommentSpot[]): { line?: Line; spot?: NewLineCommentSpot } {
   return {
     line: shownLines.find((line) => line.key === rowKey),
-    spot: spots.find((spot) => lineKey(spot.side, spot.comment.line) === rowKey),
+    spot: spots.find((spot) => lineKey(spot.side, spot.comment.firstLine) === rowKey),
   };
 }
 
@@ -111,10 +111,10 @@ export function lineCommentLabel(line: ChangedLine): string {
  * too, so the line a comment goes on is plain while it's written.
  */
 export function withNewLineCommentBands(bands: readonly LineBand[], spots: readonly NewLineCommentSpot[]): LineBand[] {
-  const commented = new Set(spots.map((spot) => lineKey(spot.side, spot.comment.line)));
+  const commented = new Set(spots.map((spot) => lineKey(spot.side, spot.comment.firstLine)));
   const marked = bands.map((band) => (commented.has(band.key) ? { ...band, selected: true } : band));
   const added = spots
-    .map((spot): LineBand => ({ key: lineKey(spot.side, spot.comment.line), side: spot.side, lineNumber: spot.comment.line, selected: true }))
+    .map((spot): LineBand => ({ key: lineKey(spot.side, spot.comment.firstLine), side: spot.side, lineNumber: spot.comment.firstLine, selected: true }))
     .filter((band) => !bands.some((shown) => shown.key === band.key));
   return [...marked, ...added];
 }

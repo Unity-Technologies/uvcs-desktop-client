@@ -13,7 +13,7 @@ function thread(id: number): LineThread {
     date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`,
     text: 'Text',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', line: 1 },
+    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', firstLine: 1, lastLine: 1 },
   };
   return threadsOf([root])[0] as LineThread;
 }

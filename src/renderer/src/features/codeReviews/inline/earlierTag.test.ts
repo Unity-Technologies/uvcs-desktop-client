@@ -5,7 +5,7 @@ import { earlierTagOf } from './earlierTag';
 import type { LineThread } from './fileThreads';
 
 function thread(fields: Partial<ReviewComment> = {}): LineThread {
-  const anchor = { kind: 'line', revisionId: 20, itemId: 7, path: '/a.cs', line: 3 } as const;
+  const anchor = { kind: 'line', revisionId: 20, itemId: 7, path: '/a.cs', firstLine: 3, lastLine: 3 } as const;
   return threadsOf([{ id: 1, guid: 'g', author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor, ...fields }])[0] as LineThread;
 }
 

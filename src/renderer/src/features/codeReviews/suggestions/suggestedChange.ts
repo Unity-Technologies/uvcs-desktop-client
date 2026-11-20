@@ -1,25 +1,10 @@
-import type { ReviewComment } from '@shared/domain/reviewConversation';
+import type { LineRange, ReviewComment } from '@shared/domain/reviewConversation';
 import { suggestionOf } from '../../../lib/reviewSuggestion';
 import { anchorPath } from '../inline/fileThreads';
 
-/** Lines of a file, 1-based as an editor counts them, both included: one line is `firstLine === lastLine`. */
-export interface LineRange {
-  firstLine: number;
-  lastLine: number;
-}
-
-/**
- * The lines a comment is on, which its suggestion replaces: the one place a comment's anchor becomes a range. `cm`
- * names one line today (`{line}`, 1-based). Once comments take ranges (`cm codereview comment add --line=A-B`, stored
- * as a `lines:A-B` location, 0-based and inclusive), only this reads them; everything after it takes a range.
- */
-export function commentedLines(anchor: { line: number }): LineRange {
-  return { firstLine: anchor.line, lastLine: anchor.line };
-}
-
 /**
  * What a change request suggests (docs/features/code-reviews.md "Suggested changes"): the lines of a revision of a file
- * it replaces (`LineRange`, from `commentedLines`), and the lines it puts there.
+ * it replaces (the comment's, `LineRange`), and the lines it puts there.
  */
 export interface SuggestedChange extends LineRange {
   /** A repository path without its leading slash, as the diff names files (`anchorPath`). */
@@ -38,7 +23,7 @@ export function suggestedChangeOf(comment: Pick<ReviewComment, 'kind' | 'anchor'
   const suggestion = suggestionOf(comment.text);
   if (!suggestion) return null;
   const { anchor } = comment;
-  return { path: anchorPath(anchor), revisionId: anchor.revisionId, ...commentedLines(anchor), lines: suggestion.lines };
+  return { path: anchorPath(anchor), revisionId: anchor.revisionId, firstLine: anchor.firstLine, lastLine: anchor.lastLine, lines: suggestion.lines };
 }
 
 /**

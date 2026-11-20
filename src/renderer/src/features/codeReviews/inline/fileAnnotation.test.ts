@@ -8,7 +8,7 @@ import type { LineThread } from './fileThreads';
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
 
 function thread(id: number, extra: Partial<ReviewComment> = {}): LineThread {
-  const root: ReviewComment = { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', line: 3 }, ...extra };
+  const root: ReviewComment = { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', firstLine: 3, lastLine: 3 }, ...extra };
   return threadsOf([root])[0] as LineThread;
 }
 
@@ -76,14 +76,14 @@ describe('fileThreadCount', () => {
     date: '2026-11-06T10:00:00Z',
     text: '',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line: 3 },
+    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: 3, lastLine: 3 },
     ...extra,
   });
   const threads = threadsOf([
     onPlayer(1, 30),
     onPlayer(2, 20),
     onPlayer(3, 10, { changesetId: 8 }),
-    { ...onPlayer(4, 30), anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', line: 1 } },
+    { ...onPlayer(4, 30), anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', firstLine: 1, lastLine: 1 } },
     { ...onPlayer(5, 30), anchor: { kind: 'review' } },
   ]);
 

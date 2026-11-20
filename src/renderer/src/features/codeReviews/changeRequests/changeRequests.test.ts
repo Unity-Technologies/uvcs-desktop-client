@@ -3,7 +3,7 @@ import type { ReviewComment, ReviewConversation } from '@shared/domain/reviewCon
 import { codeReviewSummary } from '../../../testing/codeReviewSummary';
 import { branchChangeRequestsOf, changeRequestChip, changeRequestNamed, changeRequestsBranch, changeRequestsOf, notYetNamed, reviewsToRead, stillOpen } from './changeRequests';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `c0d1ce${String(id).padStart(2, '0')}-b457-4424-99ff-a3f1c0fa2582`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00+01:00`, text: `Request ${id}`, kind: 'changeRequest', anchor: ON_LINE, ...fields };

@@ -18,7 +18,7 @@ function threadOn(revisionId: number, fields: Partial<ReviewComment> = {}, repli
     date: '2026-11-06T10:00:00Z',
     text: 'Rename it',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line: 12 },
+    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 12 },
     ...fields,
   };
   const answers = replies.map((reply, index): ReviewComment => ({ ...root, id: 2 + index, guid: `r${index}`, kind: 'comment', parentId: 1, ...reply }));
@@ -181,7 +181,7 @@ describe('contextViewLabels and contextDescription', () => {
 describe('contextTitle', () => {
   it("names the file and the line, the folder left out", () => {
     expect(contextTitle(threadOn(20))).toBe('Player.cs, line 12');
-    expect(contextTitle(threadOn(20, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/README.md', line: 3 } }))).toBe('README.md, line 3');
+    expect(contextTitle(threadOn(20, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/README.md', firstLine: 3, lastLine: 3 } }))).toBe('README.md, line 3');
   });
 });
 

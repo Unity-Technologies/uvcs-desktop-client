@@ -21,7 +21,7 @@ export function addLineCommentArgs(reviewId: number, comment: NewLineComment, te
     String(reviewId),
     `-commentsfile=${textFile}`,
     `--revision=revid:${comment.revisionId}`,
-    `--line=${comment.line}`,
+    `--line=${comment.firstLine}`,
     `--type=${CM_COMMENT_TYPES[comment.kind]}`,
     ...(comment.changesetId === undefined ? [] : [`--changeset=cs:${comment.changesetId}`]),
     ...at.repositoryOption,

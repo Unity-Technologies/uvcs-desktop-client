@@ -17,7 +17,7 @@ const onLine = (id: number, revisionId: number, line: number, fields: Partial<Re
   date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`,
   text: `Comment ${id}`,
   kind: 'changeRequest',
-  anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line },
+  anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: line, lastLine: line },
   ...fields,
 });
 
@@ -177,7 +177,7 @@ describe('openedOutdated', () => {
 });
 
 describe('holdsThread', () => {
-  const threads = threadsOf([onLine(1, 30, 2), onLine(3, 20, 3), onLine(5, 20, 3, { anchor: { kind: 'line', revisionId: 40, itemId: 8, path: '/src/Enemy.cs', line: 1 } })]);
+  const threads = threadsOf([onLine(1, 30, 2), onLine(3, 20, 3), onLine(5, 20, 3, { anchor: { kind: 'line', revisionId: 40, itemId: 8, path: '/src/Enemy.cs', firstLine: 1, lastLine: 1 } })]);
 
   it('holds a thread at its line, outdated, or on an earlier version not read yet, so the diff opens at it rather than at its first change', () => {
     const read = fileCommentsOf({ threads, review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => TEXTS.get(revision) });

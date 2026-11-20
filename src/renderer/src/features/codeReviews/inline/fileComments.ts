@@ -40,7 +40,7 @@ export function fileCommentsOf({ threads, review, view, file, textOf }: FileComm
   const lineInNewer = typeof newer === 'string' ? newerLineFinder(newer) : null;
   const lineInOlder = typeof older === 'string' ? newerLineFinder(older) : null;
   const lineOf = (text: string, thread: LineThread): { side: ThreadSide; line: number } | null => {
-    const { line } = thread.root.anchor;
+    const { firstLine: line } = thread.root.anchor;
     const before = settledIn(thread, view) && lineInOlder ? lineInOlder(text, line) : null;
     if (before !== null) return { side: 'deletions', line: before };
     const now = lineInNewer ? lineInNewer(text, line) : null;

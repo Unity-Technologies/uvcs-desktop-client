@@ -36,7 +36,7 @@ describe('conversationOf', () => {
   it('places a comment on a line of a revision, with the item and its path', () => {
     const { comments } = conversationIn(printed({ id: 46, guid: 'c1', comment: 'Shelve first.', type: 'change', revisionid: 29, itemid: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 }));
 
-    expect(comments[0]).toMatchObject({ kind: 'changeRequest', anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } });
+    expect(comments[0]).toMatchObject({ kind: 'changeRequest', anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } });
   });
 
   it('reads each kind cm prints', () => {

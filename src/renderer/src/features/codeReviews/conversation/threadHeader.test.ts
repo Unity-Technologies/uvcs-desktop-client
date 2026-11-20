@@ -3,7 +3,7 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf, type ReviewThread } from './reviewThreads';
 import { foldsByHand, hasThreadHeader, threadHeaderOf, type ThreadHeaderInput } from './threadHeader';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: '', text: '', kind: 'general', anchor: { kind: 'review' }, ...fields };

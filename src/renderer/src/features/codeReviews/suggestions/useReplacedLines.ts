@@ -1,9 +1,10 @@
+import type { LineRange } from '@shared/domain/reviewConversation';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import { contentQuery } from '../../diff/viewer/contentQueries';
-import { FAILED, READING, readValue, replacedLinesIn, type LineRange, type Read, type ReplacedLines, type SuggestedChange } from './suggestedChange';
+import { FAILED, READING, readValue, replacedLinesIn, type Read, type ReplacedLines, type SuggestedChange } from './suggestedChange';
 
 const NOTHING: ContentSource = { kind: 'empty' };
 

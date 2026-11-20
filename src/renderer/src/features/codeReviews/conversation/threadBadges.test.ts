@@ -3,7 +3,7 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { answerOf, appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenLineText } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: '', text: '', kind: 'general', anchor: { kind: 'review' }, ...fields };
@@ -124,6 +124,6 @@ describe('repliesText', () => {
 
 describe('writtenLineText', () => {
   it('names the line a comment was written on', () => {
-    expect(writtenLineText({ line: 1962 })).toBe('line 1962');
+    expect(writtenLineText({ firstLine: 1962 })).toBe('line 1962');
   });
 });

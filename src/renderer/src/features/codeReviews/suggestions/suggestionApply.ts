@@ -1,3 +1,4 @@
+import type { LineRange } from '@shared/domain/reviewConversation';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { FileContent } from '@shared/domain/content';
 import { fileNameOf } from '../../../lib/text';
@@ -6,7 +7,7 @@ import { displayName } from '../../../lib/userName';
 import type { BehindBranch } from '../../pendingChanges/checkinBehind';
 import { newerRangeInContextOf, newerRangeOf } from '../inline/newerLine';
 import { withLinesReplaced } from './replaceLines';
-import { FAILED, READING, rangeWords, readValue, replacedLinesIn, unchangedSuggestionNote, type LineRange, type Read, type SuggestedChange } from './suggestedChange';
+import { FAILED, READING, rangeWords, readValue, replacedLinesIn, unchangedSuggestionNote, type Read, type SuggestedChange } from './suggestedChange';
 
 /**
  * What the decision to apply a suggestion knows (docs/features/code-reviews.md "Applying a suggestion"), all of it

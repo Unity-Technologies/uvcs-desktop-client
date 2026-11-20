@@ -48,7 +48,7 @@ export function changeRequestsOf(reviewId: number, conversation: ReviewConversat
         author: root.author,
         date: root.date,
         text: root.text,
-        ...(root.anchor.kind === 'line' && { location: { path: root.anchor.path, line: root.anchor.line } }),
+        ...(root.anchor.kind === 'line' && { location: { path: root.anchor.path, line: root.anchor.firstLine } }),
         state,
       },
     ];

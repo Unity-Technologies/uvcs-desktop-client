@@ -78,7 +78,7 @@ export function threadsOfFile(threads: readonly ReviewThread[], review: CodeRevi
     if (!isLineThread(thread) || !isOfFile(thread.root.anchor, file)) continue;
     const written = writtenIn(review, thread);
     if (view.kind === 'changeset' && !belongsToChangeset(thread, written, view.changesetId)) continue;
-    const { revisionId, line } = thread.root.anchor;
+    const { revisionId, firstLine: line } = thread.root.anchor;
     if (revisionId === file.modifiedRevision) placed.push({ thread, side: 'additions', line });
     else if (revisionId === file.originalRevision) placed.push({ thread, side: 'deletions', line });
     else earlier.push({ thread, revisionId });

@@ -102,7 +102,7 @@ export function entryOfThread(entries: readonly ShownEntry[], thread: LineThread
  * stays on that side, against the diff's newer side, or nothing for a file the diff deletes.
  */
 export function commentedComparison(thread: LineThread, written: ShownEntry): ContextComparison {
-  const { revisionId, line } = thread.root.anchor;
+  const { revisionId, firstLine: line } = thread.root.anchor;
   const fileName = written.path;
   if (written.baseRevisionId === revisionId) return { original: olderSideOf(written), modified: newerSideOf(written), side: 'deletions', line, fileName };
   const commented = revisionSource(revisionId, written.repository, written.path);
@@ -114,7 +114,7 @@ export function commentedComparison(thread: LineThread, written: ShownEntry): Co
  * (`newest`; nothing when the review deletes the file), the thread on its line on the older side.
  */
 export function sinceComparison(thread: LineThread, repository: string, newest: ShownEntry | null): ContextComparison {
-  const { revisionId, line } = thread.root.anchor;
+  const { revisionId, firstLine: line } = thread.root.anchor;
   const fileName = newest?.path ?? anchorPath(thread.root.anchor);
   const original = revisionSource(revisionId, repository, fileName);
   return { original, modified: newest ? newerSideOf(newest) : EMPTY, side: 'deletions', line, fileName };
@@ -134,7 +134,7 @@ export function sinceComparison(thread: LineThread, repository: string, newest: 
  */
 export function appliedComparison(thread: LineThread, applied: ShownEntry | null, history: ShownEntry | null = null): ContextComparison | null {
   if (!applied) return null;
-  const { revisionId, line } = thread.root.anchor;
+  const { revisionId, firstLine: line } = thread.root.anchor;
   const fileName = applied.path;
   if (applied.replaced && history?.oldPath !== undefined && history.baseRevisionId !== -1) {
     const move: DiffEntry = { status: 'moved', path: fileName, oldPath: history.oldPath, itemType: 'file', baseRevisionId: history.baseRevisionId, revisionId: applied.revisionId, repository: applied.repository };
@@ -163,7 +163,7 @@ export function contextMissingText(thread: LineThread, view: ContextView): strin
 
 /** The dialog's title: the file's name and the line the thread is on. */
 export function contextTitle(thread: LineThread): string {
-  return `${locationText(thread.root.anchor).file}, line ${thread.root.anchor.line}`;
+  return `${locationText(thread.root.anchor).file}, line ${thread.root.anchor.firstLine}`;
 }
 
 /** What each view is called: the second says how a change request was applied, or a question answered, when it was. */
@@ -178,7 +178,7 @@ export function contextViewLabels(thread: LineThread): Record<ContextView, strin
  * One that changeset applied by making the file a move of another (`movedFrom`) says so.
  */
 export function contextDescription(thread: LineThread, view: ContextView, { fileInChangeset = true, movedFrom }: { fileInChangeset?: boolean; movedFrom?: string } = {}): string {
-  const { line } = thread.root.anchor;
+  const { firstLine: line } = thread.root.anchor;
   if (view === 'commented') return `Line ${line} in the diff it was written on`;
   const appliedIn = settlingChangeset(thread);
   if (appliedIn === undefined) return `Line ${line} as it was, against the newest version`;

@@ -136,7 +136,7 @@ describe('writing on a review', () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = reviewComments({ 'codereview comment add': answer });
 
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 42, kind: 'changeRequest' }, 'Rename this.');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 42, lastLine: 42, kind: 'changeRequest' }, 'Rename this.');
 
     expect(commands).toMatchObject([
       { via: 'query', args: ['codereview', 'comment', 'add', '41', `-commentsfile=${seen.file}`, '--revision=revid:812', '--line=42', '--type=Change'] },
@@ -148,8 +148,8 @@ describe('writing on a review', () => {
   it("writes a question or a comment as cm types them, in the diff of the changeset it's written in", async () => {
     const { service, commands } = reviewComments({ 'codereview comment add': '' });
 
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'question', changesetId: 9 }, 'Why?');
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'comment' }, 'Nice.');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 1, lastLine: 1, kind: 'question', changesetId: 9 }, 'Why?');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 1, lastLine: 1, kind: 'comment' }, 'Nice.');
 
     expect(commands.map(({ args }) => args.slice(5))).toEqual([
       ['--revision=revid:812', '--line=1', '--type=Question', '--changeset=cs:9'],
@@ -242,7 +242,7 @@ describe('writing on a review', () => {
     const { service, commands } = reviewComments({ codereview: '' });
 
     await service.add(ON_REPOSITORY, 41, 'a');
-    await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, line: 3, kind: 'comment' }, 'a');
+    await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, firstLine: 3, lastLine: 3, kind: 'comment' }, 'a');
     await service.reply(ON_REPOSITORY, 'c1', 'b');
     await service.edit(ON_REPOSITORY, 'c1', 'c');
     await service.remove(ON_REPOSITORY, 'c1');

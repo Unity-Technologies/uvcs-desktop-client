@@ -88,7 +88,7 @@ function commentOf(record: RawReviewComment): ReviewComment {
     ...(record.parentId >= 0 && { parentId: record.parentId }),
     anchor:
       record.revisionId >= 0 && record.line > 0
-        ? { kind: 'line', revisionId: record.revisionId, itemId: record.itemId, path: record.path, line: record.line }
+        ? { kind: 'line', revisionId: record.revisionId, itemId: record.itemId, path: record.path, firstLine: record.line, lastLine: record.line }
         : { kind: 'review' },
     ...(record.changesetId >= 0 && { changesetId: record.changesetId }),
     ...(record.appliedInChangeset >= 0 && { appliedInChangeset: record.appliedInChangeset }),

@@ -35,7 +35,7 @@ function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: '', kind: 'changeRequest', anchor: { kind: 'review' }, ...fields };
 }
 
-const onLine = (id: number, path: string, line: number, fields: Partial<ReviewComment> = {}) => comment(id, { anchor: { kind: 'line', revisionId: 1, itemId: 1, path, line }, ...fields });
+const onLine = (id: number, path: string, line: number, fields: Partial<ReviewComment> = {}) => comment(id, { anchor: { kind: 'line', revisionId: 1, itemId: 1, path, firstLine: line, lastLine: line }, ...fields });
 
 const THREADS = threadsOf([
   comment(1, { kind: 'general' }),

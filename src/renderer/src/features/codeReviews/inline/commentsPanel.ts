@@ -136,7 +136,7 @@ export function commentsPanelThreads(
   newIds: NewThreads = undefined,
 ): LineThread[] {
   const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && isListedUnder(thread, filter, newIds) && matchesCommentsSearch(thread, search));
-  if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.line - b.root.anchor.line || a.root.id - b.root.id);
+  if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.firstLine - b.root.anchor.firstLine || a.root.id - b.root.id);
   const latest = new Map(listed.map((thread) => [thread.root.id, latestActivity(thread)]));
   const direction = order === 'newest' ? -1 : 1;
   return listed.sort((a, b) => direction * (latest.get(a.root.id)! - latest.get(b.root.id)!) || a.root.id - b.root.id);

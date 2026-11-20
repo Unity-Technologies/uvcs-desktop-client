@@ -12,7 +12,7 @@ function thread(id: number, fields: Partial<ReviewComment> = {}, replies: Review
     date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`,
     text: 'Text',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', line: 1 },
+    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', firstLine: 1, lastLine: 1 },
     ...fields,
   };
   return threadsOf([root, ...replies])[0] as LineThread;

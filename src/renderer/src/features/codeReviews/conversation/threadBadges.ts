@@ -72,8 +72,8 @@ export function locationText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: '
 }
 
 /** The line a comment was written on, as the conversation says it apart from its file's link: "line 42". */
-export function writtenLineText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'line'>): string {
-  return `line ${anchor.line}`;
+export function writtenLineText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'firstLine'>): string {
+  return `line ${anchor.firstLine}`;
 }
 
 /**

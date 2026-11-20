@@ -19,7 +19,7 @@ function threadOn(revisionId: number, fields: Partial<ReviewComment> = {}): Line
     date: '2026-11-06T10:00:00Z',
     text: 'Rename it',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line: 12 },
+    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 12 },
     ...fields,
   };
   return threadsOf([root])[0] as LineThread;
