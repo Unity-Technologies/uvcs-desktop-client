@@ -28,8 +28,10 @@ export function changeRequestGuidCondition(guid: string): string | undefined {
 }
 
 /**
- * The change request among the comments found (`type` `change`; the eight digits may start another comment's guid too)
- * as its review and its thread: its own id, a change request being the first comment of its thread.
+ * The change request among the comments found as its review and its thread: its own id, a change request being the
+ * first comment of its thread. The query keeps only `type = 'change'`; checked again here, as the server owns the query.
+ * When two requests share the eight digits, the first the server prints is taken: `cm checkin` meets the same
+ * ambiguity, and a whole guid names one.
  */
 export function changeRequestThreadOf(records: readonly { id: number; reviewId: number; type: string }[]): ChangeRequestThread | null {
   const request = records.find((record) => record.type === 'change');

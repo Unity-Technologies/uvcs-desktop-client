@@ -48,7 +48,7 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
       if (!condition) return null;
       const at = cmPlace(place);
       const records = await cm.queryRecords(
-        findArgs(FOUND_CHANGE_REQUEST_THREADS, {}, null, [condition], at.repository),
+        findArgs(FOUND_CHANGE_REQUEST_THREADS, {}, null, [condition, "type = 'change'"], at.repository),
         layoutReader(FOUND_CHANGE_REQUEST_THREADS),
         at.options,
       );
