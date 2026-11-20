@@ -22,6 +22,11 @@
   font-size: var(--text-sm);
 }
 
+/* In a narrow card only the title gives way, cut short: the icon and the controls keep their size. */
+.header > :not(.title) {
+  flex-shrink: 0;
+}
+
 .title {
   flex: 1 1 auto;
   min-width: 0;
