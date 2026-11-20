@@ -834,7 +834,14 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   their viewers' own way in. Two ways in, both the diff's `lineAction` (`ChangedLines`): a "+" by the line under the
   pointer, lines with threads included (a new change request isn't always a reply), on the lines selected when it's
   one of them ("Comment on lines 40–52", `lineActionTargetAt`), and "Comment on line 42" first in the code's menu, on
-  the lines selected (`lineActionTarget`), "Suggest change on line 42" after it (see "Suggested changes"). A selection
+  the lines selected (`lineActionTarget`), "Suggest change on line 42" after it (see "Suggested changes"). The "+"
+  also drags, as GitHub's does (its tooltip says "Drag for a range", `lineActionTip`): pressed and moved over other
+  lines of its side, they're outlined in the accent with a "+" on the first and the last (`useLineActionDrag`,
+  `LineActionDragMarks`, `lineActionDrag.ts`), and released, the comment opens on all of them; released on its own
+  line, it's a click. No gutter selection while dragging, and no text selected: its fill across both panes was noise
+  for a comment. A line joining the two "+" was tried and dropped: it ran over the code's first letters. Once a
+  comment opens on lines selected, the selection lets go (`releasingSelection`): the comment's outline marks them,
+  and the selection's fill under its card was noise. A selection
   across both sides of a unified diff is one line (`linkedLinesOf`), as its link is. No key: a review's diff has no
   caret, so no line is "current". The comment opens under its last line (`NewLineCommentCard`), after the line's
   threads, its lines outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
