@@ -463,8 +463,11 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
   lines the suggestion adds or removes (`stackedWordMarks`, drawn over the rows by `useWordMarks` in Pierre's own word
   colors; Pierre's own marks are off there, as it pairs the n-th line removed with the n-th added, which marks the
   wrong lines once the suggestion has another number of lines); and **as a diff**: the line diff of the two, the lines kept shown
-  once and untinted, only the lines changed removed and added, their words marked (`suggestionLineDiff`, one hunk
-  holding every line, so nothing folds). Stacked reads a heavy rewrite best, where a diff interleaves pieces of both;
+  once and untinted, only the lines changed removed and added, their words marked (`suggestionLineDiff`). Three
+  lines kept stay around each change (`SUGGESTION_CONTEXT_LINES`), and a run of more than ten kept lines folds behind
+  a bar that unfolds it (`SNIPPET_FOLDS_OVER`, Pierre's `collapsedContextThreshold`): a method whose first and last
+  lines change reads as its two changes, while a shorter run shows whole, as a bar to click there saves nothing.
+  Stacked never folds: it is the old block, then the new one. Stacked reads a heavy rewrite best, where a diff interleaves pieces of both;
   the diff reads a few words changed in a longer range best, where stacked shows the lines kept twice. Both are
   numbered as the file's lines from the first one commented, in a diff kept whole, as Pierre loads the full files of a
   partial one. **Compare in a larger view** (a page with + and −, the diff it opens; an expand icon read as "make the box bigger"), beside it, opens the line diff in the code comparison dialog
@@ -484,7 +487,9 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
   and only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from
   the disk. While it's read, and while Pierre loads with the first box shown, a place as tall as its rows holds it;
   lines that can't be read leave the suggested lines alone, added. One-line previews (the Comments panel, Open, a
-  folded card) show the comment's first words, or the code's first line, as for any code block. Copying keeps the
+  folded card, the "Applies:" chip) show the comment's first words; one that opens with its suggestion reads
+  "Suggested change on lines 24–152" (`changeRequestLineText`, `suggestionNameOf`), as its first line of code (`{`, a
+  method's signature) names nothing. Copying keeps the
   fence as written. ## Applying a suggestion An open change request's Suggested change has a split button in its
   header (`SuggestionApplyButton`):
 - **Check in suggestion** asks for the check-in's comment (`CommentDialog`): "Apply suggestion from Ana", the request to
