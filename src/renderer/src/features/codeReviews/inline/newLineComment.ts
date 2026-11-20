@@ -114,6 +114,30 @@ export function openedSpotRow(spots: readonly NewLineCommentSpot[], request: { k
   return spot ? { seq: request.seq, side: spot.side, lineNumber: spot.comment.lastLine } : null;
 }
 
+/** The row of the comment opened last in this file, to scroll to, and the thread gone to then (`focusSeq`). */
+export interface SpotScroll {
+  seq: number;
+  focusSeq: number | undefined;
+  line: { side: ThreadSide; lineNumber: number };
+}
+
+/**
+ * The comment opened last (`openedSpotRow`), kept past its focus request, which its card takes as it mounts, so its
+ * scroll isn't stopped half-way: the same object while it's the same comment, a new one for a comment opened since.
+ */
+export function nextSpotScroll(kept: SpotScroll | null, opened: ReturnType<typeof openedSpotRow>, focusSeq: number | undefined): SpotScroll | null {
+  if (!opened || kept?.seq === opened.seq) return kept;
+  return { seq: opened.seq, focusSeq, line: { side: opened.side, lineNumber: opened.lineNumber } };
+}
+
+/**
+ * What the diff scrolls to: the comment opened last, until a thread is gone to after it (another `focusSeq`), then the
+ * thread, as the latest of the two is what the user asked to see.
+ */
+export function diffScrollTarget<Line>(spotScroll: SpotScroll | null, focusSeq: number | undefined, threadScrollTo: Line | null): SpotScroll['line'] | Line | null {
+  return spotScroll && spotScroll.focusSeq === focusSeq ? spotScroll.line : threadScrollTo;
+}
+
 /** What the composer of a new comment says for each kind: its placeholder, and its button's verb. */
 export function lineCommentWords(kind: LineCommentKind): { placeholder: string; submit: string } {
   return LINE_COMMENT_WORDS[kind];

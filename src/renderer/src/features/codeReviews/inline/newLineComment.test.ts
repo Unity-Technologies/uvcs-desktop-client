@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShownFile } from './fileThreads';
-import { DEFAULT_LINE_COMMENT_KIND, crossesCommentBeingWritten, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, openedSpotRow, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { DEFAULT_LINE_COMMENT_KIND, crossesCommentBeingWritten, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, nextSpotScroll, diffScrollTarget, openedSpotRow, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 
 const WHOLE = { kind: 'whole' } as const;
 const CHANGESET_8 = { kind: 'changeset', changesetId: 8 } as const;
@@ -222,5 +222,25 @@ describe('openedSpotRow', () => {
   it("is none when no comment was just opened, or the one opened is another file's", () => {
     expect(openedSpotRow([range], null)).toBeNull();
     expect(openedSpotRow([range], { key: other.key, seq: 3 })).toBeNull();
+  });
+});
+
+describe('nextSpotScroll and diffScrollTarget', () => {
+  const thread = { side: 'additions', lineNumber: 40 } as const;
+  const opened = { seq: 3, side: 'additions', lineNumber: 152 } as const;
+
+  it('keeps the comment opened last, the same object, past its focus request', () => {
+    const kept = nextSpotScroll(null, opened, 7)!;
+    expect(kept).toEqual({ seq: 3, focusSeq: 7, line: { side: 'additions', lineNumber: 152 } });
+    expect(nextSpotScroll(kept, null, 7)).toBe(kept);
+    expect(nextSpotScroll(kept, opened, 7)).toBe(kept);
+    expect(nextSpotScroll(kept, { ...opened, seq: 4 }, 7)?.seq).toBe(4);
+  });
+
+  it('scrolls to the comment opened last until a thread is gone to after it, then to the thread', () => {
+    const kept = nextSpotScroll(null, opened, 7);
+    expect(diffScrollTarget(kept, 7, thread)).toEqual({ side: 'additions', lineNumber: 152 });
+    expect(diffScrollTarget(kept, 8, thread)).toBe(thread);
+    expect(diffScrollTarget(null, 7, thread)).toBe(thread);
   });
 });
