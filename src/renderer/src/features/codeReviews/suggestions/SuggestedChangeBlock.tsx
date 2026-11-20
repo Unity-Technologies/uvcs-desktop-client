@@ -1,4 +1,4 @@
-import { FileDiff, MessageSquareDiff } from 'lucide-react';
+import { Diff, FileDiff, MessageSquareDiff, SquareSplitVertical } from 'lucide-react';
 import { Suspense, useRef, type ReactNode } from 'react';
 import { keepElementInPlace } from '../../../lib/keepInPlace';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -38,7 +38,7 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
         <span className={styles.title}>{suggestionTitle(change)}</span>
         {body.kind === 'diff' && (
           <>
-            <SegmentedControl<SuggestionView> small label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />
+            <SegmentedControl<SuggestionView> dense label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />
             <IconButton
               size="small"
               icon={<FileDiff size={14} />}
@@ -63,6 +63,6 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
 
 /** The box's two views, named as what they show (`SuggestionView`). */
 const SUGGESTION_VIEWS = [
-  { value: 'stacked' as const, label: 'Stacked', title: 'Every line commented, then every line suggested' },
-  { value: 'diff' as const, label: 'Diff', title: 'Only what changed, line by line' },
+  { value: 'stacked' as const, label: <><SquareSplitVertical size={12} aria-hidden /> Stacked</>, title: 'Every line commented, then every line suggested' },
+  { value: 'diff' as const, label: <><Diff size={12} aria-hidden /> Diff</>, title: 'Only what changed, line by line' },
 ];
