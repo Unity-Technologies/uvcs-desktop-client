@@ -51,7 +51,7 @@ describe('the comment editor’s focus mode', () => {
     // A backdrop portaled to the page's body once dimmed the panel too, out of reach, under a wrapper's stacking context.
     const group = readFileSync(join(RENDERER, 'components', 'commentEditor', 'CommentFocusGroup.tsx'), 'utf8');
     const portals = [...group.matchAll(/createPortal\(\s*(\w+)/g)].map(([, portaled]) => portaled);
-    const panel = group.slice(group.indexOf('const panel = ('), group.indexOf('return '));
+    const panel = group.slice(group.indexOf('const panel = ('), group.indexOf('return ', group.indexOf('const panel = (')));
     expect(portals).toEqual(['panel']);
     expect(panel).toContain('className={styles.backdrop}');
   });

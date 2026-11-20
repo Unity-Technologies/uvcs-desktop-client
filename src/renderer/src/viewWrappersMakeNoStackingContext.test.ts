@@ -28,7 +28,7 @@ const VIEW_WRAPPERS: { file: string; classes: string[] }[] = [
 const TRAPS: RegExp[] = [
   /^isolation:\s*isolate/,
   /^z-index:\s*(?!\s|auto\b)/,
-  /^opacity:\s*0?\.\d/,
+  /^opacity:\s*(?!\s|1(\.0*)?\s*$|100(\.0*)?%)/,
   /^(transform|filter|backdrop-filter|perspective|clip-path|mask(-image)?):\s*(?!\s|none\b)/,
   /^mix-blend-mode:\s*(?!\s|normal\b)/,
   /^contain:\s*.*\b(layout|paint|strict|content)\b/,
@@ -56,11 +56,17 @@ function stylesClass(selector: string, className: string): boolean {
   return selector.split(',').some((part) => new RegExp(`\\.${className}(?![\\w-])[^\\s>+~]*$`).test(part.trim()) && !part.includes('::'));
 }
 
-function trapsIn({ file, classes }: { file: string; classes: string[] }): string[] {
-  return cssRules(readFileSync(join(RENDERER, file), 'utf8'))
+/** What in a CSS file's rules for the wrapper classes makes a stacking context, as `selector { declaration }`. */
+function trapsInCss(css: string, classes: string[], allowedSelectors: string[] = []): string[] {
+  return cssRules(css)
     .filter((rule) => classes.some((className) => stylesClass(rule.selector, className)))
-    .filter((rule) => !ALLOWED.some((allowed) => allowed.file === file && allowed.selector === rule.selector))
-    .flatMap((rule) => rule.declarations.filter((declaration) => TRAPS.some((trap) => trap.test(declaration))).map((declaration) => `${file} ${rule.selector} { ${declaration} }`));
+    .filter((rule) => !allowedSelectors.includes(rule.selector))
+    .flatMap((rule) => rule.declarations.filter((declaration) => TRAPS.some((trap) => trap.test(declaration))).map((declaration) => `${rule.selector} { ${declaration} }`));
+}
+
+function trapsIn({ file, classes }: { file: string; classes: string[] }): string[] {
+  const allowed = ALLOWED.filter((rule) => rule.file === file).map((rule) => rule.selector);
+  return trapsInCss(readFileSync(join(RENDERER, file), 'utf8'), classes, allowed).map((trap) => `${file} ${trap}`);
 }
 
 describe('the boxes the views sit in', () => {
@@ -79,16 +85,14 @@ describe('the boxes the views sit in', () => {
   });
 
   it('reads what makes a stacking context as CSS writes it', () => {
-    const wrapper = { file: 'app/shell/PlaceLayout.module.css', classes: ['content'] };
-    const found = (css: string) =>
-      cssRules(css)
-        .filter((rule) => wrapper.classes.some((className) => stylesClass(rule.selector, className)))
-        .flatMap((rule) => rule.declarations.filter((declaration) => TRAPS.some((trap) => trap.test(declaration))));
-    expect(found('.content { isolation: isolate; }')).toEqual(['isolation: isolate']);
-    expect(found('@media (x) { .content[data-a] { z-index: 2 } }')).toEqual(['z-index: 2']);
-    expect(found('.content { opacity: 0.5; transform: translateX(-50%); }')).toEqual(['opacity: 0.5', 'transform: translateX(-50%)']);
+    const found = (css: string) => trapsInCss(css, ['content']);
+    expect(found('.content { isolation: isolate; }')).toEqual(['.content { isolation: isolate }']);
+    expect(found('@media (x) { .content[data-a] { z-index: 2 } }')).toEqual(['.content[data-a] { z-index: 2 }']);
+    expect(found('.content { opacity: 0.5; transform: translateX(-50%); }')).toEqual(['.content { opacity: 0.5 }', '.content { transform: translateX(-50%) }']);
     // Not the wrapper itself: a child, a pseudo-element, or nothing that traps.
     expect(found('.content > .row { z-index: 1 } .content::after { z-index: 1 } .contentArea { z-index: 1 }')).toEqual([]);
-    expect(found('.content { z-index: auto; opacity: 1; transform: none; position: relative }')).toEqual([]);
+    expect(found('.content { opacity: 0 } .content[a] { opacity: 50% }')).toEqual(['.content { opacity: 0 }', '.content[a] { opacity: 50% }']);
+    expect(found('.content { z-index: auto; opacity: 1; transform: none; position: relative } .content[b] { opacity: 100% }')).toEqual([]);
+    expect(trapsInCss('.content[inert] { isolation: isolate }', ['content'], ['.content[inert]'])).toEqual([]);
   });
 });
