@@ -1,24 +1,24 @@
-/** Where a frame's work is asked for: the window's animation frames, or a test's. */
-export type RequestFrame = (run: () => void) => unknown;
+/** Watches what may resize, calling back after each layout and before it's painted; returns a function that stops. */
+export type ResizeWatch = (onResize: () => void) => () => void;
 
-/** Frames the place is held for: what changed may lay out over a few (Pierre draws a diff anew in a frame of its own). */
-export const HELD_FRAMES = 12;
+/** How long the place is held after the change: what changed lays out over a few renders (Pierre draws a diff anew). */
+export const HOLD_MS = 800;
 
 /**
- * Keeps something on screen where it is while `change` resizes what's around it (a suggestion's box shown another
- * way): its top is read before (`topOf`), and for the next few frames whatever it moved is scrolled back (`scrollBy`),
- * so the eye stays on it rather than on a jump.
+ * Keeps something on screen where it is while `change` resizes what's around it (every suggestion shown another way,
+ * above it too): its top is read before (`topOf`), and each time anything resizes (`watch`), whatever it moved is
+ * scrolled back (`scrollBy`). Corrected after the layout and before the paint (a `ResizeObserver`), so the jump is
+ * never seen: correcting on the next frame showed it, then the scroll back, as a flicker.
  */
-export function keepInPlace(topOf: () => number, scrollBy: (delta: number) => void, change: () => void, requestFrame: RequestFrame, frames = HELD_FRAMES): void {
+export function keepInPlace(topOf: () => number, scrollBy: (delta: number) => void, change: () => void, watch: ResizeWatch, release: (stop: () => void) => void): void {
   const before = topOf();
-  change();
-  let left = frames;
-  const hold = (): void => {
+  const putBack = (): void => {
     const moved = topOf() - before;
     if (moved !== 0) scrollBy(moved);
-    if (--left > 0) requestFrame(hold);
   };
-  requestFrame(hold);
+  const stop = watch(putBack);
+  change();
+  release(stop);
 }
 
 /**
@@ -41,9 +41,15 @@ function parentAcrossShadows(element: Element): Element | null {
   return root instanceof ShadowRoot ? root.host : null;
 }
 
-/** `keepInPlace` for an element on screen, its scrolling ancestor scrolled. */
+/** `keepInPlace` for an element on screen: its scrolling ancestor scrolled, it and the scrolled content watched. */
 export function keepElementInPlace(element: Element, change: () => void): void {
   const scroller = scrollingAncestorOf(element);
   if (!scroller) return change();
-  keepInPlace(() => element.getBoundingClientRect().top, (delta) => scroller.scrollBy({ top: delta }), change, requestAnimationFrame);
+  const watch: ResizeWatch = (onResize) => {
+    const observer = new ResizeObserver(onResize);
+    observer.observe(element);
+    for (const content of scroller.children) observer.observe(content);
+    return () => observer.disconnect();
+  };
+  keepInPlace(() => element.getBoundingClientRect().top, (delta) => (scroller.scrollTop += delta), change, watch, (stop) => setTimeout(stop, HOLD_MS));
 }
