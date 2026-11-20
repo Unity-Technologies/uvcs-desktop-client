@@ -10,11 +10,8 @@ import { describe, expect, it } from 'vitest';
 describe('the Branch Explorer graph focused by the pointer', () => {
   const canvas = readFileSync(join(__dirname, 'GraphCanvas.tsx'), 'utf8');
 
-  it('never focuses its container with a plain focus()', () => {
-    expect(canvas).not.toMatch(/containerRef\.current\?\.focus\(\)/);
-  });
-
-  it("focuses it as the pointer does, ringless", () => {
-    expect(canvas.match(/focusAs\(containerRef\.current, 'pointer'\)/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+  it('never focuses anything with a plain focus(), only as the pointer does', () => {
+    expect(canvas).not.toMatch(/\.focus\(/);
+    expect(canvas).toMatch(/focusAs\([^)]*'pointer'\)/);
   });
 });

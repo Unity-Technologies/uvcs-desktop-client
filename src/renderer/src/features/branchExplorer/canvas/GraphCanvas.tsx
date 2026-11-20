@@ -286,10 +286,15 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   /** Floating controls over the canvas handle their own pointer events. */
   const onCanvas = (event: React.SyntheticEvent): boolean => event.target === canvasRef.current;
 
+  /** A click focuses the graph ringless: a plain `focus()` from code shows the keyboard ring once a key was pressed. */
+  const focusByPointer = (): void => {
+    if (containerRef.current) focusAs(containerRef.current, 'pointer');
+  };
+
   const onPointerDown = (event: React.PointerEvent): void => {
     if (!onCanvas(event)) return;
     clippedTip.hide();
-    if (containerRef.current) focusAs(containerRef.current, 'pointer');
+    focusByPointer();
     if (event.button === 2) {
       // The menu covers the hover card's place: it would linger under the menu.
       clearHover();
@@ -362,7 +367,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           selectedBranch={highlights.selectedBranch}
           homeChangeset={highlights.homeChangeset}
           pendingChangeCount={highlights.pendingChangeCount}
-          focusGraph={() => containerRef.current && focusAs(containerRef.current, 'pointer')}
+          focusGraph={focusByPointer}
         />
       )}
       <ActionContextMenu entries={() => contextMenu(contextTargetRef.current)}>
