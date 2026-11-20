@@ -2,6 +2,7 @@ import type { FocusedLines } from '../../../app/navigation/pages';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import { linkedLinesOf } from './linkedLines';
 import type { LineRange } from './lineSelection';
+import { rangeWordsInline } from '../../../lib/rangeWords';
 
 /** How the code is laid out: a diff side by side or unified, or one file (an annotation). */
 export type CodeLayout = 'split' | 'unified' | 'file';
@@ -92,7 +93,7 @@ export function copiedLinesWord({ first, last }: FocusedLines): string {
 
 /** "line 42", "lines 40–52": how a menu names the lines selected. */
 export function linesWords({ first, last }: FocusedLines): string {
-  return first === last ? `line ${first}` : `lines ${first}–${last}`;
+  return rangeWordsInline({ firstLine: first, lastLine: last });
 }
 
 function sideOf(lines: FocusedLines): DiffSide {

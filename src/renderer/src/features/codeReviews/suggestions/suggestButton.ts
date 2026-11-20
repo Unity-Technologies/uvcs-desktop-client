@@ -1,6 +1,6 @@
 import type { LineRange } from '@shared/domain/reviewConversation';
 import { holdsSuggestion, withSuggestionAt } from '../../../lib/reviewSuggestion';
-import { rangeWordsInline } from '../rangeWords';
+import { rangeWordsInline } from '../../../lib/rangeWords';
 import type { ReplacedLines } from './suggestedChange';
 
 /** What a new line comment's Suggest change offers: whether it can insert the fence now, and its tooltip saying so. */

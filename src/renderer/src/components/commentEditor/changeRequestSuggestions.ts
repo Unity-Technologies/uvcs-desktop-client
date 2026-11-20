@@ -3,6 +3,7 @@ import { indexCandidates, rankCandidates, type CandidateIndex } from '../../lib/
 import { applyChangeText, shortGuid } from '../../lib/comments/commentReferences';
 import { lastSegment } from '../../lib/paths';
 import { SUGGESTION_LIMIT, suggestionDetail, type Suggestion } from './suggestionItems';
+import { rangeSpan } from '../../lib/rangeWords';
 
 /** How many characters of a request's first line its row shows: it leads the row, where an object's number would. */
 const LABEL_ROOM = 48;
@@ -26,13 +27,8 @@ export function changeRequestSuggestions(index: CandidateIndex<ReviewChangeReque
     key: `apply:${request.guid}`,
     kind: 'changeRequest',
     label: suggestionDetail(request.text, typed, LABEL_ROOM),
-    detail: [...(request.location ? [`${lastSegment(request.location.path)}:${linesSuffix(request.location)}`] : []), `cr:${request.reviewId}`].join(' · '),
+    detail: [...(request.location ? [`${lastSegment(request.location.path)}:${rangeSpan(request.location)}`] : []), `cr:${request.reviewId}`].join(' · '),
     owner: request.author,
     insert: applyChangeText(request.guid),
   }));
-}
-
-/** Where in its file a request is, after the file's name, as editors write it: `42`, or `12-18` for a range. */
-function linesSuffix({ firstLine, lastLine }: { firstLine: number; lastLine: number }): string {
-  return lastLine > firstLine ? `${firstLine}-${lastLine}` : `${firstLine}`;
 }

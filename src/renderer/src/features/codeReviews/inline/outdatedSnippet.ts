@@ -1,6 +1,6 @@
 import type { LineRange } from '@shared/domain/reviewConversation';
 import { lineBreakOf, splitLines } from '../../../lib/lineBreaks';
-import { rangeWords } from '../rangeWords';
+import { rangeWords } from '../../../lib/rangeWords';
 
 /** A line of an earlier version, shown with an outdated thread. */
 export interface SnippetLine {

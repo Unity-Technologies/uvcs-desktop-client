@@ -7,7 +7,7 @@ import { displayName } from '../../../lib/userName';
 import type { BehindBranch } from '../../pendingChanges/checkinBehind';
 import { newerRangeInContextOf, newerRangeOf } from '../inline/newerLine';
 import { withLinesReplaced } from './replaceLines';
-import { rangeWords, rangeWordsInline } from '../rangeWords';
+import { rangeWords, rangeWordsInline } from '../../../lib/rangeWords';
 import { FAILED, READING, readValue, replacedLinesIn, unchangedSuggestionNote, type Read, type SuggestedChange } from './suggestedChange';
 
 /**

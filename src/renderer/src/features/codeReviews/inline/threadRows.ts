@@ -1,7 +1,7 @@
 import type { ReviewComment, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import { listNames } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
-import { rangeWordsInline } from '../rangeWords';
+import { rangeWordsInline } from '../../../lib/rangeWords';
 import type { PlacedThread, ThreadSide } from './fileThreads';
 
 /**

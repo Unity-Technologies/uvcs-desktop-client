@@ -1,7 +1,7 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import type { LineCommentKind, NewLineComment } from '@shared/domain/reviewConversation';
 import type { ChangedLines, LineBand } from '../../diff/viewer/diffAnnotations';
-import { rangeWordsInline } from '../rangeWords';
+import { rangeSpan, rangeWordsInline } from '../../../lib/rangeWords';
 import { topSideOf } from './fileComments';
 import type { ReviewDiffView, ShownFile, ThreadSide } from './fileThreads';
 import { lineKey } from './threadRows';
@@ -42,8 +42,7 @@ export function lineCommentAt(view: ReviewDiffView, file: ShownFile, lines: Chan
 
 /** Names a comment being written: one per line, or range of lines, of a file, in one mode. */
 export function newLineCommentKey(reviewId: number, path: string, comment: Omit<NewLineComment, 'kind' | 'revisionId'>): string {
-  const lines = comment.lastLine > comment.firstLine ? `${comment.firstLine}-${comment.lastLine}` : String(comment.firstLine);
-  return [reviewId, comment.changesetId ?? 'whole', path, lines].join(':');
+  return [reviewId, comment.changesetId ?? 'whole', path, rangeSpan(comment)].join(':');
 }
 
 /** A new comment on a line of a file of a review, in a mode, the line's own kind of comment (`lineCommentAt`). */

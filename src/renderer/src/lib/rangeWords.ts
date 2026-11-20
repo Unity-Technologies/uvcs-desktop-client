@@ -9,3 +9,8 @@ export function rangeWords({ firstLine, lastLine }: LineRange): string {
 export function rangeWordsInline(range: LineRange): string {
   return rangeWords(range).toLowerCase();
 }
+
+/** "42", "12-18": the lines after a file's name, as editors write them (`Player.cs:12-18`), and as keys name them. */
+export function rangeSpan({ firstLine, lastLine }: LineRange): string {
+  return lastLine > firstLine ? `${firstLine}-${lastLine}` : String(firstLine);
+}

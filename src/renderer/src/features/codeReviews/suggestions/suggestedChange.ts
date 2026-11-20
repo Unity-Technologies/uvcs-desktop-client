@@ -1,7 +1,7 @@
 import type { LineRange, ReviewComment } from '@shared/domain/reviewConversation';
 import { suggestionOf } from '../../../lib/reviewSuggestion';
 import { anchorPath } from '../inline/fileThreads';
-import { rangeWordsInline } from '../rangeWords';
+import { rangeWordsInline } from '../../../lib/rangeWords';
 
 /**
  * What a change request suggests (docs/features/code-reviews.md "Suggested changes"): the lines of a revision of a file

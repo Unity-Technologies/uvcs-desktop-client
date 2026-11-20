@@ -7,7 +7,7 @@ import { locationText } from '../conversation/threadBadges';
 import type { StatusMark } from '../../../components/ItemStatusMark';
 import { fileNameOf } from '../../../lib/text';
 import { diffEntryStatus } from '../../diff/diffEntrySources';
-import { rangeWords, rangeWordsInline } from '../rangeWords';
+import { rangeWords, rangeWordsInline } from '../../../lib/rangeWords';
 import { reviewDiffTarget } from '../reviewTarget';
 import type { StepGroup } from '../rounds/reviewRounds';
 import { anchorPath, isLineThread, writtenIn, type LineThread, type ReviewDiffView, type ThreadSide } from './fileThreads';

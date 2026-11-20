@@ -2,7 +2,7 @@ import type { LineRange, ReviewComment, ReviewCommentAnchor, ReviewCommentKind }
 import type { PageOf } from '../../../app/navigation/pages';
 import { displayName } from '../../../lib/userName';
 import { anchorPath } from '../inline/fileThreads';
-import { rangeWordsInline } from '../rangeWords';
+import { rangeWordsInline } from '../../../lib/rangeWords';
 import type { ReviewThread } from './reviewThreads';
 
 /** What a thread's header says of it: its kind (none for a plain or general comment) and where it stands. */
