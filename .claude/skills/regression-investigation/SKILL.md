@@ -85,7 +85,8 @@ For a regression, also: did the breaking change's pull request add or change tes
 
 - The new test fails without the fix and passes with it: run it against the old code (commit the test first, or
   `git stash` the fix) and say which you did.
-- `npm run typecheck`, `npm test`; `npm run e2e` when it touches startup, navigation or many views.
+- `npm run typecheck`, `npm test`; the smoke test when it touches startup, navigation or many views (which build:
+  CLAUDE.md "Done means").
 - See it fixed in the app, on the reported flow, both themes, a development build too when it's a component.
 - Read the final diff for anything unrelated or test-only.
 - Report any check you couldn't run, and why. Never claim a pass you didn't see.
