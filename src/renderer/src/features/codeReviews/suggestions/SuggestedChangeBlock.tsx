@@ -1,9 +1,12 @@
-import { MessageSquareDiff } from 'lucide-react';
+import { Diff, GitCompareArrows, MessageSquareDiff } from 'lucide-react';
 import { Suspense, type ReactNode } from 'react';
 import { lazyComponent } from '../../../lib/lazyComponent';
+import { IconButton } from '../../../ui/IconButton';
 import { suggestionBody, suggestionTitle, type SuggestedChange } from './suggestedChange';
 import { SuggestionPlaceholder } from './SuggestionPlaceholder';
 import { useReplacedLines } from './useReplacedLines';
+import { suggestionViewToggle } from './suggestionViewToggle';
+import { useSuggestionViewStore } from './suggestionViewStore';
 import styles from './SuggestedChangeBlock.module.css';
 
 // Pierre, its highlighter and the file's language load with the first suggestion shown, never at start-up.
@@ -23,11 +26,25 @@ interface SuggestedChangeBlockProps {
  */
 export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockProps) {
   const body = suggestionBody(change, useReplacedLines(change));
+  const { view, setView } = useSuggestionViewStore();
+  const toggle = suggestionViewToggle(view);
   return (
     <figure className={styles.block} aria-label={suggestionTitle(change)}>
       <figcaption className={styles.header}>
         <MessageSquareDiff size={14} aria-hidden />
         <span className={styles.title}>{suggestionTitle(change)}</span>
+        {body.kind === 'diff' && (
+          <>
+            <IconButton size="small" icon={<Diff size={14} />} label={toggle.label} variant={toggle.pressed ? 'secondary' : 'ghost'} aria-pressed={toggle.pressed} onClick={() => setView(toggle.next)} />
+            <IconButton
+              size="small"
+              icon={<GitCompareArrows size={14} />}
+              label="Compare suggestion"
+              // Loaded on the click, with the dialog and Pierre's diff: never with the comment.
+              onClick={() => void import('./openSuggestionComparison').then((module) => module.openSuggestionComparison(change, body))}
+            />
+          </>
+        )}
         {actions && <span className={styles.actions}>{actions}</span>}
       </figcaption>
       {body.kind === 'reading' && <SuggestionPlaceholder rowCount={body.rowCount} />}

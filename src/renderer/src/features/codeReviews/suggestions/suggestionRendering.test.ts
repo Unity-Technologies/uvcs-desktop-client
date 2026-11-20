@@ -3,8 +3,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { warmUpPierre } from '../../diff/viewer/pierreSessionFixture';
 import { wordMarksIn, type RenderedNode, type WordMarks } from '../../diff/viewer/renderedWordMarks';
 import { suggestionFileDiff } from './suggestionFileDiff';
+import type { SuggestionView } from './suggestionViewStore';
 
-// The box's diff is one hunk of the commented lines numbered from the first (`suggestionLineDiff`), which Pierre
+// The box's diff is one hunk of the commented lines numbered from the first (`suggestionLineDiff`, `replacedThenSuggested`), which Pierre
 // never builds itself: its own hunks index their lines from where they start in a whole file. These render it as the
 // box does, so a Pierre that read the lines or numbered the rows another way fails here, not on screen.
 beforeAll(warmUpPierre);
@@ -15,9 +16,9 @@ interface Rendered {
   marks: WordMarks;
 }
 
-async function rendered(replacedText: string, suggestedText: string, firstLine: number): Promise<Rendered> {
+async function rendered(replacedText: string, suggestedText: string, firstLine: number, view: SuggestionView = 'diff'): Promise<Rendered> {
   const renderer = new DiffHunksRenderer({ theme: 'pierre-light', diffStyle: 'unified', lineDiffType: 'word', expandUnchanged: true });
-  const result = await renderer.asyncRender(suggestionFileDiff('a.cs', { replacedText, suggestedText, firstLine }));
+  const result = await renderer.asyncRender(suggestionFileDiff('a.cs', { replacedText, suggestedText, firstLine }, view));
   const rowNodes = (renderer.renderCodeAST('unified', result) ?? []).flatMap(rowNodesIn);
   const marksOf = (lineType: string) => wordMarksIn(rowNodes.filter((row) => row.type === 'element' && row.properties?.['data-line-type'] === lineType));
   return { rows: rowNodes.map(rowText), marks: { deletions: marksOf('change-deletion'), additions: marksOf('change-addition') } };
@@ -41,7 +42,7 @@ function textOf(node: RenderedNode): string {
   return node.type === 'element' ? node.children.map(textOf).join('') : '';
 }
 
-describe('a suggested change as Pierre draws it', () => {
+describe('a suggested change as Pierre draws it, as a diff', () => {
   it('draws a line wrapped in a new condition as the code diff does, numbered from it, and nothing else', async () => {
     const { rows } = await rendered('    run();\n', '    if (ok)\n        run();\n', 273);
     expect(rows).toEqual(['273 +     if (ok)', '273 -     run();', '274 +         run();']);
@@ -71,4 +72,23 @@ describe('a suggested change as Pierre draws it', () => {
     expect(marks).toEqual({ deletions: ['1', '2'], additions: ['2', '3'] });
   });
 
+});
+
+describe('a suggested change as Pierre draws it, stacked', () => {
+  it('draws a line wrapped in a new condition as the line replaced, then the lines suggested', async () => {
+    const { rows, marks } = await rendered('    run();\n', '    if (ok)\n        run();\n', 273, 'stacked');
+    expect(rows).toEqual(['273 -     run();', '273 +     if (ok)', '274 +         run();']);
+    expect(marks).toEqual({ deletions: [], additions: [] });
+  });
+
+  it('marks the changed words of a range edited line by line', async () => {
+    const { rows, marks } = await rendered('a = 1;\nkeep();\nb = 2;\n', 'a = 2;\nkeep();\nb = 3;\n', 10, 'stacked');
+    expect(rows).toEqual(['10 - a = 1;', '11 - keep();', '12 - b = 2;', '10 + a = 2;', '11 + keep();', '12 + b = 3;']);
+    expect(marks).toEqual({ deletions: ['1', '2'], additions: ['2', '3'] });
+  });
+
+  it("marks no words in a range whose lines don't take the replaced ones' places one for one", async () => {
+    const { marks } = await rendered('x = 1;\ny = 2;\n', 'if (ok)\n    x = 1;\ny = 3;\n', 10, 'stacked');
+    expect(marks).toEqual({ deletions: [], additions: [] });
+  });
 });

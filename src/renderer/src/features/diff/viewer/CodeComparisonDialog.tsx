@@ -1,3 +1,5 @@
+import { Columns2, Rows2 } from 'lucide-react';
+import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { File, FileDiff } from '@pierre/diffs/react';
 import { useMemo, useRef } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
@@ -6,7 +8,7 @@ import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
 import { comparisonSubtitle, type CodeComparison } from './codeComparison';
-import { useDiffPreferences } from './diffPreferencesStore';
+import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import type { LineDiff } from './lineDiff';
 import { PaneScrollbars } from './PaneScrollbars';
 import { pierreDiffOptions, pierreFileOptions } from './pierreOptions';
@@ -37,6 +39,7 @@ function CodeComparisonDialog({ title, description, comparison, fileName, onClos
       title={title}
       description={comparisonSubtitle(description, comparison)}
       width={1100}
+      headerAction={comparison.kind === 'diff' && <LayoutSwitch />}
       onClose={onClose}
       footer={
         <Button variant="primary" onClick={onClose}>
@@ -49,6 +52,21 @@ function CodeComparisonDialog({ title, description, comparison, fileName, onClos
         <PaneScrollbars containerRef={scroller} />
       </div>
     </Dialog>
+  );
+}
+
+/** Split or unified, as the diff viewer's own switch: one preference for every text diff (`useDiffPreferences`). */
+function LayoutSwitch() {
+  const { layout, setLayout } = useDiffPreferences();
+  return (
+    <SegmentedControl<DiffLayout>
+      value={layout}
+      onChange={setLayout}
+      segments={[
+        { value: 'split', label: <><Columns2 size={13} /> Split</>, title: 'Side-by-side view' },
+        { value: 'unified', label: <><Rows2 size={13} /> Unified</>, title: 'Unified view' },
+      ]}
+    />
   );
 }
 

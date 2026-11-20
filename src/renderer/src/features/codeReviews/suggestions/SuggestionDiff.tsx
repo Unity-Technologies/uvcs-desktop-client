@@ -9,6 +9,7 @@ import { useSyntaxHighlighter } from '../../diff/viewer/useSyntaxHighlighter';
 import type { SuggestionBody } from './suggestedChange';
 import { suggestionFileDiff } from './suggestionFileDiff';
 import { SuggestionPlaceholder } from './SuggestionPlaceholder';
+import { useSuggestionViewStore } from './suggestionViewStore';
 import styles from './SuggestedChangeBlock.module.css';
 
 interface SuggestionDiffProps {
@@ -28,7 +29,8 @@ export function SuggestionDiff({ path, body }: SuggestionDiffProps) {
   const theme = useResolvedTheme();
   const highlighterReady = useSyntaxHighlighter(pierreThemeName(theme), path);
   const { replacedText, suggestedText, firstLine } = body;
-  const fileDiff = useMemo(() => suggestionFileDiff(path, { replacedText, suggestedText, firstLine }), [path, replacedText, suggestedText, firstLine]);
+  const view = useSuggestionViewStore((state) => state.view);
+  const fileDiff = useMemo(() => suggestionFileDiff(path, { replacedText, suggestedText, firstLine }, view), [path, replacedText, suggestedText, firstLine, view]);
   const options = useMemo(() => pierreSnippetDiffOptions(theme), [theme]);
   const container = useRef<HTMLDivElement | null>(null);
   const holdContainer = useCallback((element: HTMLDivElement | null) => {

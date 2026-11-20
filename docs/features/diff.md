@@ -848,7 +848,8 @@ What shows (`useMovedCode`, `MovedCode`):
 - The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog` of
   `movedCopies`, in the dialog "Compare with clipboard" opens too, `openCodeComparisonDialog`): a read-only diff of what
   moved with what it became, in the diff's look, layout and comparison method, so only what changed on the way shows as
-  changed. Code moved as it was, or with only what the method ignores changed, shows alone, its note saying so ("Moved
+  changed. Its header has the diff's own Split | Unified switch, the same preference (`useDiffPreferences`), as every
+  comparison this dialog opens has (Compare with clipboard, a review's Compare suggestion). Code moved as it was, or with only what the method ignores changed, shows alone, its note saying so ("Moved
   without changes", "Only whitespace differs"): a diff with no line changes has no lines for Pierre to show
   (`movedComparison`). Its lines are numbered from the start of the moved code (Pierre numbers a diff from 1); the title
   says where both places are. Putting the two places side by side in the diff itself, each side scrolling on its own,
