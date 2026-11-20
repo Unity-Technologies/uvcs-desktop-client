@@ -5,7 +5,8 @@ import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 
 /**
  * The only places a comment's chips are no links (`interactive={false}`), each for its reason
- * (docs/features/rich-comments.md "How references show"). Anywhere else a chip opens what it names.
+ * (docs/features/rich-comments.md "How references show"). Anywhere else a chip opens what it names. Only the written
+ * `interactive={false}` is looked for: `CommentLine` and `ReferenceChip` alone pass the prop on as a variable.
  */
 const CHIPS_NOT_LINKS: Record<string, string> = {
   'features/shelves/MyShelveRow.tsx': 'the row is clicked as a whole',
