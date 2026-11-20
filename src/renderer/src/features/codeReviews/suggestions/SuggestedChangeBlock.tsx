@@ -1,6 +1,6 @@
 import { Diff, FileDiff, MessageSquareDiff, SquareSplitVertical } from 'lucide-react';
 import { Suspense, useRef, type ReactNode } from 'react';
-import { keepElementInPlace } from '../../../lib/keepInPlace';
+import { keepElementInPlace } from './keepInPlace';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { IconButton } from '../../../ui/IconButton';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
