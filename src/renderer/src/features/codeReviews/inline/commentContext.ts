@@ -1,11 +1,13 @@
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import type { LineRange } from '@shared/domain/reviewConversation';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
 import type { StatusMark } from '../../../components/ItemStatusMark';
 import { fileNameOf } from '../../../lib/text';
 import { diffEntryStatus } from '../../diff/diffEntrySources';
+import { rangeWords, rangeWordsInline } from '../rangeWords';
 import { reviewDiffTarget } from '../reviewTarget';
 import type { StepGroup } from '../rounds/reviewRounds';
 import { anchorPath, isLineThread, writtenIn, type LineThread, type ReviewDiffView, type ThreadSide } from './fileThreads';
@@ -16,12 +18,11 @@ import { anchorPath, isLineThread, writtenIn, type LineThread, type ReviewDiffVi
  */
 export type ContextView = 'commented' | 'since';
 
-/** What a view compares, and where the thread sits in it. */
-export interface ContextComparison {
+/** What a view compares, and where the thread sits in it: on lines of one side, its row under the last. */
+export interface ContextComparison extends LineRange {
   original: ContentSource;
   modified: ContentSource;
   side: ThreadSide;
-  line: number;
   /** What the code is highlighted by. */
   fileName: string;
   /**
@@ -102,11 +103,11 @@ export function entryOfThread(entries: readonly ShownEntry[], thread: LineThread
  * stays on that side, against the diff's newer side, or nothing for a file the diff deletes.
  */
 export function commentedComparison(thread: LineThread, written: ShownEntry): ContextComparison {
-  const { revisionId, firstLine: line } = thread.root.anchor;
+  const { revisionId, firstLine, lastLine } = thread.root.anchor;
   const fileName = written.path;
-  if (written.baseRevisionId === revisionId) return { original: olderSideOf(written), modified: newerSideOf(written), side: 'deletions', line, fileName };
+  if (written.baseRevisionId === revisionId) return { original: olderSideOf(written), modified: newerSideOf(written), side: 'deletions', firstLine, lastLine, fileName };
   const commented = revisionSource(revisionId, written.repository, written.path);
-  return { original: olderSideOf(written), modified: commented, side: 'additions', line, fileName };
+  return { original: olderSideOf(written), modified: commented, side: 'additions', firstLine, lastLine, fileName };
 }
 
 /**
@@ -114,10 +115,10 @@ export function commentedComparison(thread: LineThread, written: ShownEntry): Co
  * (`newest`; nothing when the review deletes the file), the thread on its line on the older side.
  */
 export function sinceComparison(thread: LineThread, repository: string, newest: ShownEntry | null): ContextComparison {
-  const { revisionId, firstLine: line } = thread.root.anchor;
+  const { revisionId, firstLine, lastLine } = thread.root.anchor;
   const fileName = newest?.path ?? anchorPath(thread.root.anchor);
   const original = revisionSource(revisionId, repository, fileName);
-  return { original, modified: newest ? newerSideOf(newest) : EMPTY, side: 'deletions', line, fileName };
+  return { original, modified: newest ? newerSideOf(newest) : EMPTY, side: 'deletions', firstLine, lastLine, fileName };
 }
 
 /**
@@ -134,16 +135,16 @@ export function sinceComparison(thread: LineThread, repository: string, newest: 
  */
 export function appliedComparison(thread: LineThread, applied: ShownEntry | null, history: ShownEntry | null = null): ContextComparison | null {
   if (!applied) return null;
-  const { revisionId, firstLine: line } = thread.root.anchor;
+  const { revisionId, firstLine, lastLine } = thread.root.anchor;
   const fileName = applied.path;
   if (applied.replaced && history?.oldPath !== undefined && history.baseRevisionId !== -1) {
     const move: DiffEntry = { status: 'moved', path: fileName, oldPath: history.oldPath, itemType: 'file', baseRevisionId: history.baseRevisionId, revisionId: applied.revisionId, repository: applied.repository };
-    return { original: olderSideOf(history), modified: newerSideOf(applied), side: 'additions', line, fileName, moved: { from: history.oldPath, status: diffEntryStatus(move) } };
+    return { original: olderSideOf(history), modified: newerSideOf(applied), side: 'additions', firstLine, lastLine, fileName, moved: { from: history.oldPath, status: diffEntryStatus(move) } };
   }
   const identicalText = applied.replaced ? `Changeset ${settlingChangeset(thread)} replaced it with another file with the same contents` : undefined;
   const why = identicalText === undefined ? {} : { identicalText };
-  if (applied.revisionId === revisionId) return { original: olderSideOf(applied), modified: newerSideOf(applied), side: 'additions', line, fileName, ...why };
-  return { original: revisionSource(revisionId, applied.repository, fileName), modified: newerSideOf(applied), side: 'deletions', line, fileName, ...why };
+  if (applied.revisionId === revisionId) return { original: olderSideOf(applied), modified: newerSideOf(applied), side: 'additions', firstLine, lastLine, fileName, ...why };
+  return { original: revisionSource(revisionId, applied.repository, fileName), modified: newerSideOf(applied), side: 'deletions', firstLine, lastLine, fileName, ...why };
 }
 
 /**
@@ -161,9 +162,9 @@ export function contextMissingText(thread: LineThread, view: ContextView): strin
   return view === 'since' && appliedIn !== undefined ? `Changeset ${appliedIn} didn't change this file` : "Couldn't find the diff it was written on";
 }
 
-/** The dialog's title: the file's name and the line the thread is on. */
+/** The dialog's title: the file's name and the lines the thread is on. */
 export function contextTitle(thread: LineThread): string {
-  return `${locationText(thread.root.anchor).file}, line ${thread.root.anchor.firstLine}`;
+  return `${locationText(thread.root.anchor).file}, ${rangeWordsInline(thread.root.anchor)}`;
 }
 
 /** What each view is called: the second says how a change request was applied, or a question answered, when it was. */
@@ -173,18 +174,19 @@ export function contextViewLabels(thread: LineThread): Record<ContextView, strin
 }
 
 /**
- * What a view shows, under the dialog's title: the line and what it's compared with. A request marked applied in a
+ * What a view shows, under the dialog's title: the lines and what they're compared with. A request marked applied in a
  * changeset that didn't change its file (`fileInChangeset` false) is said to be marked so: nothing there applied it.
  * One that changeset applied by making the file a move of another (`movedFrom`) says so.
  */
 export function contextDescription(thread: LineThread, view: ContextView, { fileInChangeset = true, movedFrom }: { fileInChangeset?: boolean; movedFrom?: string } = {}): string {
-  const { firstLine: line } = thread.root.anchor;
-  if (view === 'commented') return `Line ${line} in the diff it was written on`;
+  const lines = rangeWords(thread.root.anchor);
+  const asItWas = thread.root.anchor.lastLine > thread.root.anchor.firstLine ? 'as they were' : 'as it was';
+  if (view === 'commented') return `${lines} in the diff it was written on`;
   const appliedIn = settlingChangeset(thread);
-  if (appliedIn === undefined) return `Line ${line} as it was, against the newest version`;
-  if (movedFrom !== undefined) return `Line ${line}, after changeset ${appliedIn} made it a move of ${fileNameOf(movedFrom)}`;
-  if (thread.state.kind === 'answered') return `Line ${line} as it was, against changeset ${appliedIn}, which answered it`;
-  return fileInChangeset ? `Line ${line} as it was, against changeset ${appliedIn}, which applied it` : `Line ${line}, marked applied in changeset ${appliedIn}`;
+  if (appliedIn === undefined) return `${lines} ${asItWas}, against the newest version`;
+  if (movedFrom !== undefined) return `${lines}, after changeset ${appliedIn} made it a move of ${fileNameOf(movedFrom)}`;
+  if (thread.state.kind === 'answered') return `${lines} ${asItWas}, against changeset ${appliedIn}, which answered it`;
+  return fileInChangeset ? `${lines} ${asItWas}, against changeset ${appliedIn}, which applied it` : `${lines}, marked applied in changeset ${appliedIn}`;
 }
 
 /**

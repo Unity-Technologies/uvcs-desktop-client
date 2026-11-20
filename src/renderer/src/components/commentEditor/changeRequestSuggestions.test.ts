@@ -11,7 +11,7 @@ function request(commentId: number, text: string, fields: Partial<ReviewChangeRe
     author: 'ana',
     date: '2026-11-06T10:00:00+01:00',
     text,
-    location: { path: '/Assets/Scripts/SwitchFlow.cs', line: 11 },
+    location: { path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 },
     state: { kind: 'open' },
     ...fields,
   };
@@ -25,6 +25,11 @@ describe('changeRequestSuggestions', () => {
       { key: 'apply:c0d1ce01-b457-4424-99ff-a3f1c0fa2582', kind: 'changeRequest', label: 'Undo before shelving fails: shelve first.', detail: 'SwitchFlow.cs:11 · cr:43', owner: 'ana', insert: '[apply-change:c0d1ce01]' },
       { key: 'apply:c0d1ce02-b457-4424-99ff-a3f1c0fa2582', kind: 'changeRequest', label: 'Log the shelve number here.', detail: 'cr:44', owner: 'bob', insert: '[apply-change:c0d1ce02]' },
     ]);
+  });
+
+  it('names a request on a range of lines by its first and last line', () => {
+    const range = request(3, 'Extract these.', { location: { path: '/src/Player.cs', firstLine: 12, lastLine: 18 } });
+    expect(changeRequestSuggestions(changeRequestIndex([range]), '')[0]?.detail).toBe('Player.cs:12-18 · cr:43');
   });
 
   it("filters by the request's words, its file, who asked or its number", () => {

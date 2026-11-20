@@ -40,6 +40,14 @@ describe('fileCommentsOf', () => {
     expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([3]);
   });
 
+  it('places a range on an earlier version where all its lines are unchanged since, else keeps it apart, outdated', () => {
+    const onRange = (id: number, firstLine: number, lastLine: number) => onLine(id, 20, firstLine, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', firstLine, lastLine } });
+    // Lines 1–2 of revision 20 (a, b) are lines 2–3 now; line 3 (c) was edited, so 2–3 changed.
+    const comments = fileCommentsOf({ threads: threadsOf([onRange(1, 1, 2), onRange(2, 2, 3)]), review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => TEXTS.get(revision) });
+    expect(comments.lines.map((line) => [line.key, line.firstLine, line.threads.map((entry) => entry.thread.root.id)])).toEqual([['additions:3', 2, [1]]]);
+    expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([2]);
+  });
+
   it('shows an outdated thread in the view it was written in only', () => {
     const inChangeset = fileCommentsOf({ threads, review: BRANCH, view: { kind: 'changeset', changesetId: 8 }, file: PLAYER, textOf: (revision) => TEXTS.get(revision) });
     expect(inChangeset.outdated.map((entry) => entry.thread.root.id)).toEqual([4]);
@@ -112,7 +120,7 @@ describe('fileCommentsOf, in the changeset that settled a thread', () => {
 
 describe('annotationRowsOf', () => {
   const [thread] = threadsOf([onLine(1, 30, 2)]);
-  const rows = lineThreadsOf([{ thread: thread as never, side: 'additions', line: 2 }]);
+  const rows = lineThreadsOf([{ thread: thread as never, side: 'additions', firstLine: 2, line: 2 }]);
 
   it('names each line by its key', () => {
     expect(annotationRowsOf({ rows }, [], 'additions')).toEqual([{ side: 'additions', lineNumber: 2, metadata: 'additions:2' }]);
@@ -121,8 +129,8 @@ describe('annotationRowsOf', () => {
   it("lists the lines placed once an earlier version is read after the others, and the outdated ones last: Pierre keys rows by their place", () => {
     const [onShown, onEarlier] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3)]);
     const lines = lineThreadsOf([
-      { thread: onEarlier as never, side: 'additions', line: 4, earlier: { thread: onEarlier as never, revisionId: 20 } },
-      { thread: onShown as never, side: 'additions', line: 9 },
+      { thread: onEarlier as never, side: 'additions', firstLine: 4, line: 4, earlier: { thread: onEarlier as never, revisionId: 20 } },
+      { thread: onShown as never, side: 'additions', firstLine: 9, line: 9 },
     ]);
     const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
     expect(annotationRowsOf({ rows: lines }, outdated, 'additions').map((row) => row.metadata)).toEqual(['additions:9', 'additions:4', OUTDATED_ROW]);
@@ -130,7 +138,7 @@ describe('annotationRowsOf', () => {
 
   it('lists, while comments are hidden, only what was opened, outdated threads too, in the order they were opened', () => {
     const [onShown, onEarlier] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3)]);
-    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', line: 9 }]);
+    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', firstLine: 9, line: 9 }]);
     const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
     const metadataOf = (opened: string[]) => annotationRowsOf({ rows: lines }, outdated, 'additions', opened).map((row) => row.metadata);
     expect(metadataOf(['additions:9'])).toEqual(['additions:9']);
@@ -141,7 +149,7 @@ describe('annotationRowsOf', () => {
 
   it('holds every outdated thread opened in one row above the code, where the first was opened', () => {
     const [onShown, first, second] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3), onLine(3, 20, 5)]);
-    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', line: 9 }]);
+    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', firstLine: 9, line: 9 }]);
     const outdated = [
       { thread: first as never, revisionId: 20 },
       { thread: second as never, revisionId: 20 },

@@ -123,7 +123,8 @@ describe('repliesText', () => {
 });
 
 describe('writtenLineText', () => {
-  it('names the line a comment was written on', () => {
-    expect(writtenLineText({ firstLine: 1962 })).toBe('line 1962');
+  it('names the lines a comment was written on', () => {
+    expect(writtenLineText({ firstLine: 1962, lastLine: 1962 })).toBe('line 1962');
+    expect(writtenLineText({ firstLine: 12, lastLine: 18 })).toBe('lines 12–18');
   });
 });

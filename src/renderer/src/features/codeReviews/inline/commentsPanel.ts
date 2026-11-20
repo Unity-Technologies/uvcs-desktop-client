@@ -1,3 +1,4 @@
+import type { LineRange } from '@shared/domain/reviewConversation';
 import { comparePaths } from '@shared/pathOrder';
 import { commentText } from '../../../lib/comments/commentText';
 import { lowerCasedText } from '../../../lib/lowerCasedText';
@@ -136,7 +137,7 @@ export function commentsPanelThreads(
   newIds: NewThreads = undefined,
 ): LineThread[] {
   const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && isListedUnder(thread, filter, newIds) && matchesCommentsSearch(thread, search));
-  if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.firstLine - b.root.anchor.firstLine || a.root.id - b.root.id);
+  if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || compareLines(a.root.anchor, b.root.anchor) || a.root.id - b.root.id);
   const latest = new Map(listed.map((thread) => [thread.root.id, latestActivity(thread)]));
   const direction = order === 'newest' ? -1 : 1;
   return listed.sort((a, b) => direction * (latest.get(a.root.id)! - latest.get(b.root.id)!) || a.root.id - b.root.id);
@@ -336,4 +337,12 @@ export function commentsPanelStartsHidden({ codeThreads, diffWidth, layout }: { 
 /** The width a review's diff has beside its list of files and the Comments panel. */
 export function diffWidthBesidePanel({ tabWidth, filesWidth, panelWidth }: { tabWidth: number; filesWidth: number; panelWidth: number }): number {
   return tabWidth - filesWidth - panelWidth;
+}
+
+/**
+ * Threads in the order the code shows them: by the line their card is under (a range's last), then the longer range
+ * first, as its outline starts above.
+ */
+function compareLines(a: LineRange, b: LineRange): number {
+  return a.lastLine - b.lastLine || a.firstLine - b.firstLine;
 }

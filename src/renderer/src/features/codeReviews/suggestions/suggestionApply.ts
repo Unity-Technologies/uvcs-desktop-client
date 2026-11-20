@@ -7,7 +7,8 @@ import { displayName } from '../../../lib/userName';
 import type { BehindBranch } from '../../pendingChanges/checkinBehind';
 import { newerRangeInContextOf, newerRangeOf } from '../inline/newerLine';
 import { withLinesReplaced } from './replaceLines';
-import { FAILED, READING, rangeWords, readValue, replacedLinesIn, unchangedSuggestionNote, type Read, type SuggestedChange } from './suggestedChange';
+import { rangeWords, rangeWordsInline } from '../rangeWords';
+import { FAILED, READING, readValue, replacedLinesIn, unchangedSuggestionNote, type Read, type SuggestedChange } from './suggestedChange';
 
 /**
  * What the decision to apply a suggestion knows (docs/features/code-reviews.md "Applying a suggestion"), all of it
@@ -134,7 +135,7 @@ export function codeChangedReason(change: LineRange): string {
 
 /** Why a suggestion can't be applied once the lines around it changed, its own being as they were. */
 export function codeAroundChangedReason(change: LineRange): string {
-  return `The code around ${rangeWords(change).toLowerCase()} changed since the suggestion was written`;
+  return `The code around ${rangeWordsInline(change)} changed since the suggestion was written`;
 }
 
 /** Why a suggestion can't be checked in alone: a check-in of its file would take the file's other changes too. */

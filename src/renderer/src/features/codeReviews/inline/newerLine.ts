@@ -33,7 +33,11 @@ export function newerRangeInContextOf(earlier: string, newer: string, range: { f
   return found && { firstLine: found.firstLine + before, lastLine: found.lastLine - after };
 }
 
-function rangeIn(earlier: string, find: (earlier: string, line: number) => number | null, range: { firstLine: number; lastLine: number }): { firstLine: number; lastLine: number } | null {
+/**
+ * `newerRangeOf` with a finder of lines (`newerLineFinder`), to follow many blocks of a few earlier versions with one
+ * diff each.
+ */
+export function rangeIn(earlier: string, find: (earlier: string, line: number) => number | null, range: { firstLine: number; lastLine: number }): { firstLine: number; lastLine: number } | null {
   if (range.lastLine < range.firstLine) return null;
   const first = find(earlier, range.firstLine);
   if (first === null) return null;

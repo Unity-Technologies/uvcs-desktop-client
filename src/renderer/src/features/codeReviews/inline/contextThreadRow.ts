@@ -1,5 +1,6 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import type { LineBand } from '../../diff/viewer/diffAnnotations';
+import type { LineRange } from '@shared/domain/reviewConversation';
 import type { ThreadSide } from './fileThreads';
 import { lineKey } from './threadRows';
 
@@ -17,13 +18,13 @@ export interface ContextThreadParts {
 }
 
 /**
- * The thread under its line, or, hidden from the code (the header's comments button, to read the code alone), a marker
- * on its line, as the review's diff hides its comments; its line outlined either way.
+ * The thread under its last line, or, hidden from the code (the header's comments button, to read the code alone), a
+ * marker on that line, as the review's diff hides its comments; its lines outlined either way.
  */
-export function contextThreadParts(side: ThreadSide, line: number, shown: boolean): ContextThreadParts {
+export function contextThreadParts(side: ThreadSide, { firstLine, lastLine }: LineRange, shown: boolean): ContextThreadParts {
   return {
-    rows: shown ? [{ side, lineNumber: line, metadata: THREAD_ROW }] : [],
+    rows: shown ? [{ side, lineNumber: lastLine, metadata: THREAD_ROW }] : [],
     marked: !shown,
-    bands: [{ key: lineKey(side, line), side, lineNumber: line, selected: true }],
+    bands: [{ key: lineKey(side, lastLine), side, lineNumber: lastLine, ...(firstLine < lastLine && { firstLineNumber: firstLine }), selected: true }],
   };
 }

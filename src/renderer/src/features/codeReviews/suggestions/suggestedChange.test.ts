@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { FAILED, READING, readValue, rangeWords, replacedLinesIn, suggestedChangeOf, suggestionBody, suggestionTitle } from './suggestedChange';
+import { FAILED, READING, readValue, replacedLinesIn, suggestedChangeOf, suggestionBody, suggestionTitle } from './suggestedChange';
 
 const ON_LINE: ReviewComment['anchor'] = { kind: 'line', revisionId: 42, itemId: 7, path: '/src/Player.cs', firstLine: 3, lastLine: 3 };
 const SUGGESTING = 'Use the constant\n```suggestion\n  speed = MAX_SPEED;\n```';
@@ -95,12 +95,5 @@ describe('suggestionTitle', () => {
     expect(suggestionTitle({ firstLine: 3, lastLine: 3, lines: [] })).toBe('Suggested change: delete the line');
     expect(suggestionTitle({ firstLine: 3, lastLine: 5, lines: [] })).toBe('Suggested change: delete the lines');
     expect(suggestionTitle({ firstLine: 3, lastLine: 5, lines: ['x'] })).toBe('Suggested change');
-  });
-});
-
-describe('rangeWords', () => {
-  it('names one line or a range', () => {
-    expect(rangeWords({ firstLine: 7, lastLine: 7 })).toBe('Line 7');
-    expect(rangeWords({ firstLine: 7, lastLine: 9 })).toBe('Lines 7–9');
   });
 });

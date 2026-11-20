@@ -1,6 +1,7 @@
 import type { LineRange, ReviewComment } from '@shared/domain/reviewConversation';
 import { suggestionOf } from '../../../lib/reviewSuggestion';
 import { anchorPath } from '../inline/fileThreads';
+import { rangeWordsInline } from '../rangeWords';
 
 /**
  * What a change request suggests (docs/features/code-reviews.md "Suggested changes"): the lines of a revision of a file
@@ -91,7 +92,7 @@ export function unchangedSuggestionNote(change: LineRange & Pick<SuggestedChange
   if (replaced.kind !== 'read') return null;
   const same = replaced.value.length === change.lines.length && replaced.value.every((line, index) => line === change.lines[index]);
   if (!same) return null;
-  return change.lastLine > change.firstLine ? `The suggestion is ${rangeWords(change).toLowerCase()} as they are` : `The suggestion is ${rangeWords(change).toLowerCase()} as it is`;
+  return change.lastLine > change.firstLine ? `The suggestion is ${rangeWordsInline(change)} as they are` : `The suggestion is ${rangeWordsInline(change)} as it is`;
 }
 
 function asFile(lines: readonly string[]): string {
@@ -102,9 +103,4 @@ function asFile(lines: readonly string[]): string {
 export function suggestionTitle(change: LineRange & Pick<SuggestedChange, 'lines'>): string {
   if (change.lines.length > 0) return 'Suggested change';
   return change.lastLine > change.firstLine ? 'Suggested change: delete the lines' : 'Suggested change: delete the line';
-}
-
-/** "Line 13", "Lines 13–15": the lines a suggestion replaces, as its reasons name them. */
-export function rangeWords({ firstLine, lastLine }: LineRange): string {
-  return lastLine > firstLine ? `Lines ${firstLine}–${lastLine}` : `Line ${firstLine}`;
 }

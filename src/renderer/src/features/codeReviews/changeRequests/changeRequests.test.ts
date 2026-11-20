@@ -30,7 +30,7 @@ describe('changeRequestsOf', () => {
       [2, { kind: 'applied', changesetId: 7 }],
       [3, { kind: 'discarded' }],
     ]);
-    expect(requests[0]).toMatchObject({ reviewId: 43, guid: comment(1).guid, author: 'ana', text: 'Request 1', location: { path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } });
+    expect(requests[0]).toMatchObject({ reviewId: 43, guid: comment(1).guid, author: 'ana', text: 'Request 1', location: { path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } });
   });
 
   it('gives a request on the whole review no location, and reads a conversation once', () => {

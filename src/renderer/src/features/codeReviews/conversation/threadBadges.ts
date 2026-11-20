@@ -1,7 +1,8 @@
-import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
+import type { LineRange, ReviewComment, ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import type { PageOf } from '../../../app/navigation/pages';
 import { displayName } from '../../../lib/userName';
 import { anchorPath } from '../inline/fileThreads';
+import { rangeWordsInline } from '../rangeWords';
 import type { ReviewThread } from './reviewThreads';
 
 /** What a thread's header says of it: its kind (none for a plain or general comment) and where it stands. */
@@ -71,9 +72,9 @@ export function locationText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: '
   return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1) };
 }
 
-/** The line a comment was written on, as the conversation says it apart from its file's link: "line 42". */
-export function writtenLineText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'firstLine'>): string {
-  return `line ${anchor.firstLine}`;
+/** The lines a comment was written on, as the conversation says them apart from its file's link: "line 42", "lines 42–48". */
+export function writtenLineText(anchor: LineRange): string {
+  return rangeWordsInline(anchor);
 }
 
 /**

@@ -14,7 +14,7 @@ const reply = (id: number, parentId: number, fields: Partial<ReviewComment> = {}
 
 /** The thread a root and its replies make, at line 20. */
 function placed(root: ReviewComment, ...replies: ReviewComment[]): PlacedThread {
-  return { thread: threadsOf([root, ...replies])[0] as LineThread, side: 'additions', line: 20 };
+  return { thread: threadsOf([root, ...replies])[0] as LineThread, side: 'additions', firstLine: 20, line: 20 };
 }
 
 const tipOf = (...threads: PlacedThread[]) => markerTip({ threads });

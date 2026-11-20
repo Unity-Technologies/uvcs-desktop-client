@@ -19,7 +19,7 @@ const threadOf = (root: ReviewComment, ...replies: ReviewComment[]): LineThread 
 /** A file's comments: threads at lines (side, line, thread), and outdated ones. */
 function fileComments(placed: [ThreadSide, number, LineThread][], outdated: LineThread[] = []): Pick<FileComments, 'lines' | 'outdated'> {
   return {
-    lines: lineThreadsOf(placed.map(([side, line, thread]) => ({ side, line, thread }))),
+    lines: lineThreadsOf(placed.map(([side, line, thread]) => ({ side, firstLine: line, line, thread }))),
     outdated: outdated.map((thread): EarlierThread => ({ thread, revisionId: 12 })),
   };
 }

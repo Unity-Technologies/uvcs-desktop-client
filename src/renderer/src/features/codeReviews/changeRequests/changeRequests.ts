@@ -1,5 +1,5 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import type { ReviewConversation } from '@shared/domain/reviewConversation';
+import type { LineRange, ReviewConversation } from '@shared/domain/reviewConversation';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { changeRequestsNamedIn } from '@shared/applyChange';
 import type { CheckinMode } from '../../pendingChanges/checkinButton';
@@ -24,8 +24,8 @@ export interface ReviewChangeRequest {
   author: string;
   date: string;
   text: string;
-  /** The file and line it was written on; none for one on the whole review. */
-  location?: { path: string; line: number };
+  /** The file and lines it was written on; none for one on the whole review. */
+  location?: { path: string } & LineRange;
   state: ChangeRequestState;
 }
 
@@ -48,7 +48,7 @@ export function changeRequestsOf(reviewId: number, conversation: ReviewConversat
         author: root.author,
         date: root.date,
         text: root.text,
-        ...(root.anchor.kind === 'line' && { location: { path: root.anchor.path, line: root.anchor.firstLine } }),
+        ...(root.anchor.kind === 'line' && { location: { path: root.anchor.path, firstLine: root.anchor.firstLine, lastLine: root.anchor.lastLine } }),
         state,
       },
     ];

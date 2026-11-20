@@ -51,6 +51,12 @@ describe('commentsPanelThreads', () => {
     expect(commentsPanelThreads(THREADS, 'all').map((thread) => thread.root.id)).toEqual([4, 3, 5, 2]);
   });
 
+  it('lists a range where the code shows it: under its last line, before a line below it', () => {
+    const onRange = (id: number, firstLine: number, lastLine: number) => comment(id, { anchor: { kind: 'line', revisionId: 1, itemId: 1, path: '/a.cs', firstLine, lastLine } });
+    const threads = threadsOf([onRange(1, 2, 9), onRange(2, 5, 5), onRange(3, 7, 9), onRange(4, 10, 10)]);
+    expect(commentsPanelThreads(threads, 'all').map((thread) => thread.root.id)).toEqual([2, 1, 3, 4]);
+  });
+
   it('lists only what is still open', () => {
     expect(commentsPanelThreads(THREADS, 'open').map((thread) => thread.root.id)).toEqual([2]);
   });

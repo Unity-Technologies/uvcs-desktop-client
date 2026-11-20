@@ -64,7 +64,8 @@ describe('entryOfThread', () => {
 
 describe('commentedComparison', () => {
   it('compares the older side of the diff it was written in with the version commented on, the thread on the newer side', () => {
-    expect(commentedComparison(threadOn(20), SHOWN)).toEqual({ original: revision(10), modified: revision(20), side: 'additions', line: 12, fileName: 'src/Player.cs' });
+    expect(commentedComparison(threadOn(20, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 18 } }), SHOWN)).toMatchObject({ side: 'additions', firstLine: 12, lastLine: 18 });
+    expect(commentedComparison(threadOn(20), SHOWN)).toEqual({ original: revision(10), modified: revision(20), side: 'additions', firstLine: 12, lastLine: 12, fileName: 'src/Player.cs' });
   });
 
   it('starts from nothing for a file the diff added', () => {
@@ -72,7 +73,7 @@ describe('commentedComparison', () => {
   });
 
   it('keeps a comment on a removed line on the older side, against the newer side of the diff it was written in', () => {
-    expect(commentedComparison(threadOn(10), { ...SHOWN, baseRevisionId: 10, revisionId: 20 })).toEqual({ original: revision(10), modified: revision(20), side: 'deletions', line: 12, fileName: 'src/Player.cs' });
+    expect(commentedComparison(threadOn(10), { ...SHOWN, baseRevisionId: 10, revisionId: 20 })).toEqual({ original: revision(10), modified: revision(20), side: 'deletions', firstLine: 12, lastLine: 12, fileName: 'src/Player.cs' });
   });
 
   it('names each side as the diff names it, the older one by the path the file moved from', () => {
@@ -81,7 +82,7 @@ describe('commentedComparison', () => {
   });
 
   it("keeps on the older side a comment on a file the diff deletes, which is on its last revision", () => {
-    expect(commentedComparison(threadOn(25), { ...SHOWN, baseRevisionId: 25, revisionId: -1 })).toEqual({ original: revision(25), modified: { kind: 'empty' }, side: 'deletions', line: 12, fileName: 'src/Player.cs' });
+    expect(commentedComparison(threadOn(25), { ...SHOWN, baseRevisionId: 25, revisionId: -1 })).toEqual({ original: revision(25), modified: { kind: 'empty' }, side: 'deletions', firstLine: 12, lastLine: 12, fileName: 'src/Player.cs' });
   });
 });
 
@@ -89,11 +90,11 @@ describe('appliedComparison', () => {
   const applied = threadOn(20, { appliedInChangeset: 15 });
 
   it('compares the version commented on with what the changeset that applied it left, the thread on the older side', () => {
-    expect(appliedComparison(applied, { ...SHOWN, baseRevisionId: 22, revisionId: 25 })).toEqual({ original: revision(20), modified: revision(25), side: 'deletions', line: 12, fileName: 'src/Player.cs' });
+    expect(appliedComparison(applied, { ...SHOWN, baseRevisionId: 22, revisionId: 25 })).toEqual({ original: revision(20), modified: revision(25), side: 'deletions', firstLine: 12, lastLine: 12, fileName: 'src/Player.cs' });
   });
 
   it("shows that changeset's own diff when the comment is on the version it made, the thread on the newer side", () => {
-    expect(appliedComparison(applied, { ...SHOWN, baseRevisionId: 18, revisionId: 20 })).toEqual({ original: revision(18), modified: revision(20), side: 'additions', line: 12, fileName: 'src/Player.cs' });
+    expect(appliedComparison(applied, { ...SHOWN, baseRevisionId: 18, revisionId: 20 })).toEqual({ original: revision(18), modified: revision(20), side: 'additions', firstLine: 12, lastLine: 12, fileName: 'src/Player.cs' });
   });
 
   // Changeset 15 deleted the file commented on (revision 20) and put another item at its path (25), with the same
@@ -106,7 +107,8 @@ describe('appliedComparison', () => {
       original: { kind: 'revision', revision: { revisionId: 5, repository: REPOSITORY }, fileName: 'src/Score.cs' },
       modified: revision(25),
       side: 'additions',
-      line: 12,
+      firstLine: 12,
+      lastLine: 12,
       fileName: 'src/Player.cs',
       moved: { from: 'src/Score.cs', status: { tone: 'moved', label: 'Moved', changedLabel: 'Changed' } },
     });
@@ -114,7 +116,7 @@ describe('appliedComparison', () => {
   });
 
   it('compares a replaced file as any other when the review shows no move into it, saying why the two read the same', () => {
-    const plain = { original: revision(20), modified: revision(25), side: 'deletions', line: 12, fileName: 'src/Player.cs', identicalText: 'Changeset 15 replaced it with another file with the same contents' };
+    const plain = { original: revision(20), modified: revision(25), side: 'deletions', firstLine: 12, lastLine: 12, fileName: 'src/Player.cs', identicalText: 'Changeset 15 replaced it with another file with the same contents' };
     expect(appliedComparison(applied, replaced, SHOWN)).toEqual(plain);
     expect(appliedComparison(applied, replaced, null)).toEqual(plain);
     expect(appliedComparison(applied, replaced, { ...movedInReview, baseRevisionId: -1 })).toEqual(plain);
@@ -176,12 +178,22 @@ describe('contextViewLabels and contextDescription', () => {
     expect(contextDescription(discarded, 'since')).toBe('Line 12 as it was, against the newest version');
     expect(contextDescription(discarded, 'commented')).toBe('Line 12 in the diff it was written on');
   });
+
+  it('name the lines of a range, as they were', () => {
+    const range = threadOn(20, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 18 }, appliedInChangeset: 15 });
+    expect(contextDescription(range, 'since')).toBe('Lines 12–18 as they were, against changeset 15, which applied it');
+    expect(contextDescription(range, 'commented')).toBe('Lines 12–18 in the diff it was written on');
+  });
 });
 
 describe('contextTitle', () => {
   it("names the file and the line, the folder left out", () => {
     expect(contextTitle(threadOn(20))).toBe('Player.cs, line 12');
     expect(contextTitle(threadOn(20, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/README.md', firstLine: 3, lastLine: 3 } }))).toBe('README.md, line 3');
+  });
+
+  it('names a range by its first and last line', () => {
+    expect(contextTitle(threadOn(20, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/README.md', firstLine: 3, lastLine: 9 } }))).toBe('README.md, lines 3–9');
   });
 });
 

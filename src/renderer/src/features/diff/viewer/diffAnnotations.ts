@@ -51,9 +51,11 @@ export interface LineAction {
   variant?: { label: (line: ChangedLine) => string; run: (line: ChangedLine) => void };
 }
 
-/** A line a row or a marker is about. */
+/** A line a row or a marker is about, or lines: from `firstLineNumber` to `lineNumber`, the row's. */
 export interface LineBand extends ChangedLine {
   key: string;
+  /** The first of the lines, for a range; none for one line. */
+  firstLineNumber?: number;
   /** What it's about is the one gone to: outlined in the accent, as its card is. */
   selected: boolean;
 }
@@ -95,6 +97,15 @@ export function linesToReveal(hunks: readonly HunkSides[], rows: readonly Pick<D
   return [...lines].sort((a, b) => a - b);
 }
 
+/** The lines of each range a band outlines above its own (`firstLineNumber` on), as rows to unfold (`linesToReveal`). */
+export function rangeLinesOf(bands: readonly LineBand[]): Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[] {
+  return bands.flatMap((band) => {
+    if (band.firstLineNumber === undefined) return [];
+    const count = Math.max(0, band.lineNumber - band.firstLineNumber);
+    return Array.from({ length: count }, (_, index) => ({ side: band.side, lineNumber: band.firstLineNumber! + index, metadata: band.key }));
+  });
+}
+
 /** What names a set of rows, to tell a new one from the same rows built anew. */
 export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[]): string {
   return rows.map((row) => `${row.side}:${row.lineNumber}:${row.metadata}`).join('|');
@@ -103,6 +114,27 @@ export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' |
 /** Where a line's outline is drawn (`LineBands`): its row, across its pane's code, from the gutter to the pane's end. */
 export function bandRect(box: LineBox): { top: number; left: number; width: number; height: number } {
   return { top: box.top, left: box.contentLeft, width: box.paneRight - box.contentLeft, height: box.bottom - box.top };
+}
+
+/**
+ * The box a band's lines take, from its first line's (`first`, for a range) to its last's: what of them is rendered, as
+ * a big file renders only the lines in view. None when neither is.
+ */
+export function rangeBox(first: LineBox | undefined, last: LineBox | undefined): LineBox | undefined {
+  if (!first || !last) return last ?? first;
+  return { top: first.top, bottom: last.bottom, contentLeft: last.contentLeft, paneRight: last.paneRight };
+}
+
+/** The lines a band measures (`useLineBoxes`): its own, and its first one's, for a range, under `firstLineKey`. */
+export function bandLines(bands: readonly LineBand[]): (ChangedLine & { key: string })[] {
+  return bands.flatMap((band) => [
+    { key: band.key, side: band.side, lineNumber: band.lineNumber },
+    ...(band.firstLineNumber === undefined ? [] : [{ key: firstLineKey(band.key), side: band.side, lineNumber: band.firstLineNumber }]),
+  ]);
+}
+
+export function firstLineKey(bandKey: string): string {
+  return `${bandKey}:first`;
 }
 
 /** The room between a line's marker and the right edge of its pane. */
