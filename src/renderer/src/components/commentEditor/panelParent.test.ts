@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { panelParent } from './backdropParent';
+import { panelParent } from './panelParent';
 
 describe('panelParent', () => {
   const BODY = { tagName: 'BODY' } as unknown as Element;

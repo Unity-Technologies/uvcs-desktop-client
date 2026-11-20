@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { CommentFieldHandle, FieldSelection } from './commentFieldProps';
 import { blurOutcome, caretAfterMove, type GroupField } from './focusGroup';
 import { focusModeLayout, type FocusModeLayout } from './focusMode';
-import { panelParent } from './backdropParent';
+import { panelParent } from './panelParent';
 import { FocusModeFooter } from './FocusModeFooter';
 import styles from './CommentFocusGroup.module.css';
 
