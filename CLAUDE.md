@@ -119,7 +119,7 @@ npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts and scripts/build/**/*.test.ts
 npm run e2e          # the smoke test, every view of the real app against a fake cm, and the first run's setup screen, over a development build then a production one (~40 s)
-                     # (e2e:development, e2e:production: one build each)
+npm run e2e:development   # the smoke test over the development build only (~30 s): the one to run while working
 npm run dist         # the installer for this OS, into dist/
 npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
@@ -132,7 +132,9 @@ npm run cm:setup-check      # set the pinned cm up on this machine with the app'
 and `npm test` pass (and CI, on every OS), the new code is tested (see "Tests are the quality gate"), the change is
 seen working in the app (anything visible), a clean-context review has passed, and the docs say what's now true (see
 "Docs"). There is no linter or formatter: match the surrounding code. Anything that touches startup, navigation or
-many views passes `npm run e2e` too.
+many views passes `npm run e2e:development` too: the development build, whose StrictMode finds what the production one
+hides, while CI runs both builds before a merge. A change to how the app is built (`electron.vite.config.ts`, workers,
+dynamic imports, packaging) runs the full `npm run e2e`, since only the production build shows those.
 
 ## Seeing the app (Playwright)
 
@@ -379,8 +381,8 @@ them on the server, and reading shell command lines cost more to keep right than
    can only be taken before the change.
 2. **Build it** in small commits (see "Commits"), adjusting every place the change reaches: callers, other views that
    share a component, menus, shortcuts, the e2e fake, the docs.
-3. **Verify it yourself**: `npm run typecheck` and `npm test`; `npm run e2e` when it touches startup, navigation or
-   many views; anything visible seen in the app with Playwright (see "Seeing the app": both themes, a narrow window, a
+3. **Verify it yourself**: `npm run typecheck` and `npm test`; the smoke test when it touches startup, navigation or
+   many views (which build: "Done means"); anything visible seen in the app with Playwright (see "Seeing the app": both themes, a narrow window, a
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
