@@ -78,8 +78,8 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
         <div className={styles.subject} style={{ font: palette.fonts.caption, lineHeight: SUBJECT_LINE_HEIGHT, color: anchor.color }}>
           {/* An empty inline block sits on the baseline, where the caption's first glyph starts. */}
           <span ref={textOriginRef} className={styles.textOrigin} />
-          {/* Its references as chips, as the body draws them and a row's first line does. */}
-          <CommentLine comment={changeset.comment} interactive={false} />
+          {/* Its references as chips that open what they name, as the body's do: a click in the card never reaches the graph. */}
+          <CommentLine comment={changeset.comment} />
         </div>
         {/* Wrapped in a card narrowed by the edge, the line breaks between its parts, never inside one. */}
         <HoverCardMeta>
