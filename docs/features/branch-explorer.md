@@ -179,6 +179,14 @@ What a frame draws is placed by `timelineDrawing`; `drawTimeline` only paints it
 searches, `sortedSearch`), share and width: never per frame or pointer move. Guards count the searches and parses
 (`countCalls`).
 
+## Search
+
+The search field finds changesets by number, comment or author, and branches and labels by name (`searchGraph`), left
+to right; everything else fades. Next and previous match (Enter, Shift+Enter) step through the hits, the first landing on
+the changeset a number names (`steppedHitIndex`). Once a typed query stays put for `FIRST_HIT_PAUSE_MS` and finds
+something, the graph goes to its first hit as next match would (`goesToFirstHit`, `useFirstHitArrival`): once per
+query, so panning or stepping never pulls the view back, and clearing the field never moves it.
+
 ## Selection
 
 A click selects what it lands on, alone; Ctrl+click (⌘ on macOS, `isModPressed`) adds it to the selection or takes it
