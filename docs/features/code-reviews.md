@@ -662,8 +662,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   review, or on a whole file). `{line}` names a range's first line only, so it isn't read. Anything else is a location
   another client writes with `--location` (a point of an image, `image:120,80`): the app reads it, and a comment on a
   whole file, as a comment on the review for now. A thread on a range sits under its last line, as GitHub's do, and its
-  outline runs from its first (`PlacedThread.firstLine`, `LineBand.firstLineNumber`, `rangeBox`); a folded region
-  inside it unfolds (`rangeLinesOf`). It names its lines as "lines 12–18" (`rangeWords`): its header, its marker, See in
+  outline runs from its first (`PlacedThread.firstLine`, `LineBand.firstLineNumber`, `rangeBox`), on out of view when
+  an end is past the rows a big file renders (`LineBox.outside`, `renderedEdgeOf`); a folded region inside it unfolds
+  (`rangeLinesOf`). It names its lines as "lines 12–18" (`rangeWords`): its header, its marker, See in
   context's title and views, an outdated thread's snippet (every line of it marked, the first ten of a longer one,
   `snippetOf`), and a change request to apply (`Player.cs:12-18`). The Comments panel orders it by the line it sits
   under. The needed `cm` is the one the app pins (docs/features/cm-runtime.md), so nothing checks its version.
@@ -851,14 +852,15 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   also drags, as GitHub's does (its tooltip says "Drag for a range", `lineActionTip`): pressed and moved over other
   lines of its side, they're outlined in the accent with a "+" on the first and the last (`useLineActionDrag`,
   `LineActionDragMarks`, `lineActionDrag.ts`), and released, the comment opens on all of them; released on its own
-  line, it's a click. No gutter selection while dragging, and no text selected: its fill across both panes was noise
+  line, it's a click, and Esc drops it. No gutter selection while dragging, and no text selected: its fill across both panes was noise
   for a comment. A line joining the two "+" was tried and dropped: it ran over the code's first letters. Once a
   comment opens on lines selected, the selection lets go (`releasingSelection`): the comment's outline marks them,
   and the selection's fill under its card was noise. Lines a comment is being written on take no other comment while it is
   (`crossesCommentBeingWritten`): no "+" there, no menu entry, no drag or selection across them, as two comments being
   written over the same code read as one. The same lines go back to the comment being written. A selection
   across both sides of a unified diff is one line (`linkedLinesOf`), as its link is. No key: a review's diff has no
-  caret, so no line is "current". The comment opens under its last line (`NewLineCommentCard`), after the line's
+  caret, so no line is "current". The comment opens under its last line (`NewLineCommentCard`), scrolled into view
+  and focused if it isn't in view (`openedSpotRow`: unfolding the lines a range crossed can push it far down), after the line's
   threads, its lines outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
   as the official client's: it's written where it's read. Its kind comes first, as it can't change once posted: Change
   request (the default, `DEFAULT_LINE_COMMENT_KIND`), Question or Comment, the placeholder and the button following it
