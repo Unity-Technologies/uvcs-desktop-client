@@ -113,6 +113,8 @@ export interface DrawContext {
   detail: DetailLevel;
   pixelRatio: number;
   drawn: DrawnTargets;
+  /** The view's zoom, for what fades with it rather than switching at a detail level (the merge links' glow). */
+  zoom: number;
 }
 
 /** Comments are fully shown from this zoom, and fade out as a whole just below it: never one by one. */
