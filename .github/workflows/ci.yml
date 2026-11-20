@@ -50,7 +50,7 @@ jobs:
 
   # The smoke test (scripts/e2e/README.md): the built app over a fake cm and a temp workspace, every view. Its own jobs,
   # one per build, run beside the tests rather than after them: in the build job, the tests then the two smoke runs
-  # took about 6 minutes on macOS, where these take about 2 each, for one more install from the node_modules cache.
+  # took about 6 minutes on macOS, where these take 1 to 2.5 each, for one more install from the node_modules cache.
   # Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth the upkeep for a
   # smoke test; Windows arm64 too, as Windows x64 covers the same code.
   smoke:

@@ -284,7 +284,7 @@ its own CI passes, the queue builds a merge commit of main, the pull requests qu
 required checks (`ci.yml`'s CI result, and the Release note check, which skips itself there: it read the pull
 request's note already) on it, and merges it only if they pass; if they fail, the pull request leaves
 the queue and main is untouched. So no one updates a branch by hand, and main always passes. Each pull request runs CI
-twice, on its own and in the queue: at about 3 minutes a run, splitting a lighter pull-request CI from a full queue
+twice, on its own and in the queue: at about 4 minutes a run, splitting a lighter pull-request CI from a full queue
 CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger of both workflows,
 without which nothing merges.
 
