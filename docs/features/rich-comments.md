@@ -122,9 +122,10 @@ before.
 - **A change request** reads nothing to show itself: the chip looks through the review conversations the window read
   (`useCachedChangeRequest`: a review's page, the check-in's change requests to apply), and wakes as one is read. A
   click on one the window hasn't read (a changeset's comment, from its details) asks once,
-  `ReviewCommentsApi.changeRequestThread`: one `cm find changereviewcomment "where guid like 'c0d1ce00%'"` (the server
-  takes `like` on a guid; a whole guid is matched with `=`), printing `{id}`, `{reviewid}` and `{type}`, the request
-  being the `change` among them (`changeRequestThreadOf`). Text that names no request (`changeRequestGuidCondition`)
+  `ReviewCommentsApi.changeRequestThread`: one `cm find changereviewcomment "where guid like 'c0d1ce00%' and type =
+  'change'"` (the server takes `like` on a guid; a whole guid is matched with `=`), printing `{id}`, `{reviewid}` and
+  `{type}` (`changeRequestThreadOf`), about a second on a large repository; a second click meanwhile asks nothing. It
+  asks the place's repository, as the chips the window read do. Text that names no request (`changeRequestGuidCondition`)
   asks nothing. Then the review opens at the thread, as a merge request when it is one; a request not found says so
   ("Change request c0d1ce00 not found").
 - A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review (its target's name read
