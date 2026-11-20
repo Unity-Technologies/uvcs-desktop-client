@@ -1,12 +1,13 @@
-import { Diff, GitCompareArrows, MessageSquareDiff } from 'lucide-react';
-import { Suspense, type ReactNode } from 'react';
+import { Maximize2, MessageSquareDiff } from 'lucide-react';
+import { Suspense, useRef, type ReactNode } from 'react';
+import { keepElementInPlace } from '../../../lib/keepInPlace';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { IconButton } from '../../../ui/IconButton';
+import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { suggestionBody, suggestionTitle, type SuggestedChange } from './suggestedChange';
 import { SuggestionPlaceholder } from './SuggestionPlaceholder';
 import { useReplacedLines } from './useReplacedLines';
-import { suggestionViewToggle } from './suggestionViewToggle';
-import { useSuggestionViewStore } from './suggestionViewStore';
+import { useSuggestionViewStore, type SuggestionView } from './suggestionViewStore';
 import styles from './SuggestedChangeBlock.module.css';
 
 // Pierre, its highlighter and the file's language load with the first suggestion shown, never at start-up.
@@ -27,19 +28,21 @@ interface SuggestedChangeBlockProps {
 export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockProps) {
   const body = suggestionBody(change, useReplacedLines(change));
   const { view, setView } = useSuggestionViewStore();
-  const toggle = suggestionViewToggle(view);
+  const block = useRef<HTMLElement | null>(null);
+  // Every suggestion shown resizes: this one, the one the user is reading, stays where it is on screen.
+  const showAs = (next: SuggestionView): void => (block.current ? keepElementInPlace(block.current, () => setView(next)) : setView(next));
   return (
-    <figure className={styles.block} aria-label={suggestionTitle(change)}>
+    <figure ref={block} className={styles.block} aria-label={suggestionTitle(change)}>
       <figcaption className={styles.header}>
         <MessageSquareDiff size={14} aria-hidden />
         <span className={styles.title}>{suggestionTitle(change)}</span>
         {body.kind === 'diff' && (
           <>
-            <IconButton size="small" icon={<Diff size={14} />} label={toggle.label} variant={toggle.pressed ? 'secondary' : 'ghost'} aria-pressed={toggle.pressed} onClick={() => setView(toggle.next)} />
+            <SegmentedControl<SuggestionView> small label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />
             <IconButton
               size="small"
-              icon={<GitCompareArrows size={14} />}
-              label="Compare suggestion"
+              icon={<Maximize2 size={14} />}
+              label="Compare in a larger view"
               // Loaded on the click, with the dialog and Pierre's diff: never with the comment.
               onClick={() => void import('./openSuggestionComparison').then((module) => module.openSuggestionComparison(change, body))}
             />
@@ -57,3 +60,9 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
     </figure>
   );
 }
+
+/** The box's two views, named as what they show (`SuggestionView`). */
+const SUGGESTION_VIEWS = [
+  { value: 'stacked' as const, label: 'Stacked', title: 'Every line commented, then every line suggested' },
+  { value: 'diff' as const, label: 'Diff', title: 'Only what changed, line by line' },
+];
