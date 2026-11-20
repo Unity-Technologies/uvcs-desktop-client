@@ -36,19 +36,21 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
       <figcaption className={styles.header}>
         <MessageSquareDiff size={14} aria-hidden />
         <span className={styles.title}>{suggestionTitle(change)}</span>
-        {body.kind === 'diff' && (
-          <>
-            {viewsDiffer(body) && <SegmentedControl<SuggestionView> dense label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />}
-            <IconButton
-              size="small"
-              icon={<FileDiff size={14} />}
-              label="Compare in a larger view"
-              // Loaded on the click, with the dialog and Pierre's diff: never with the comment.
-              onClick={() => void import('./openSuggestionComparison').then((module) => module.openSuggestionComparison(change, body))}
-            />
-          </>
-        )}
-        {actions && <span className={styles.actions}>{actions}</span>}
+        <span className={styles.controls}>
+          {body.kind === 'diff' && (
+            <>
+              {viewsDiffer(body) && <SegmentedControl<SuggestionView> dense label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />}
+              <IconButton
+                size="small"
+                icon={<FileDiff size={14} />}
+                label="Compare in a larger view"
+                // Loaded on the click, with the dialog and Pierre's diff: never with the comment.
+                onClick={() => void import('./openSuggestionComparison').then((module) => module.openSuggestionComparison(change, body))}
+              />
+            </>
+          )}
+          {actions}
+        </span>
       </figcaption>
       {body.kind === 'reading' && <SuggestionPlaceholder rowCount={body.rowCount} />}
       {body.kind === 'unchanged' && <p className={styles.note}>{body.note}</p>}
