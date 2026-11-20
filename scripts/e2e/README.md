@@ -77,4 +77,4 @@ docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn
 
 `.github/workflows/ci.yml` runs it on macOS and Windows x64, in jobs of their own beside the tests: one per build
 (`npm run e2e:development`, `npm run e2e:production`). Linux has no display there: run it under `xvfb-run -a npm run
-e2e`. A failed run keeps its screenshots as the job's artifact `smoke-screenshots-<job>`.
+e2e`. A failed run keeps its screenshots as the job's artifact `smoke-screenshots-<platform>-<build>`.

@@ -26,12 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # `smoke`: also run the smoke test (scripts/e2e/README.md), the built app over a fake cm and a temp workspace,
-          # every view. Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth
-          # the upkeep for a smoke test; Windows arm64 too, as Windows x64 covers the same code. It runs in this job,
-          # not one of its own, so it reuses the job's install instead of paying for a runner, a checkout and an install.
-          - { name: macOS arm64, os: macos-latest, smoke: true }
-          - { name: Windows x64, os: windows-latest, smoke: true }
+          - { name: macOS arm64, os: macos-latest }
+          - { name: Windows x64, os: windows-latest }
           - { name: Windows arm64, os: windows-11-arm }
           - { name: Linux x64, os: ubuntu-latest }
     steps:
@@ -48,22 +44,44 @@ jobs:
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
       - run: npm test
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
-      - if: ${{ !matrix.smoke }}
-        run: npm run build
+      - run: npm run build
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
-      # The smoke test over a development build (React's StrictMode), then over the production build.
-      - if: ${{ matrix.smoke }}
-        run: npm run e2e
+
+  # The smoke test (scripts/e2e/README.md): the built app over a fake cm and a temp workspace, every view. Its own jobs,
+  # one per build, run beside the tests rather than after them: in the build job, the tests then the two smoke runs
+  # took about 6 minutes on macOS, where these take about 2 each, for one more install from the node_modules cache.
+  # Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth the upkeep for a
+  # smoke test; Windows arm64 too, as Windows x64 covers the same code.
+  smoke:
+    name: Smoke test, ${{ matrix.platform.name }}, ${{ matrix.build }} build
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { name: macOS arm64, os: macos-latest }
+          - { name: Windows x64, os: windows-latest }
+        # `development`: React's development build, whose StrictMode mounts every component twice (a bug only
+        # `npm run dev` shows); `production`: what ships.
+        build: [development, production]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/fast-disks
+      - uses: ./.github/actions/install
+        with:
+          working-directory: ${{ env.BUILD_DIR || github.workspace }}
+          reuse-node-modules: 'true'
+      - run: npm run e2e:${{ matrix.build }}
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
         env:
           # In the temp folder the steps above chose: on macOS the disk in memory, whose writes never stall.
           UVCS_E2E_SHOTS: ${{ env.TMPDIR || env.TEMP || runner.temp }}/uvcs-e2e-shots
       # A failed smoke test keeps its screenshots, the failed step's included: a run that fails now and then can be read
       # only from what it left.
-      - if: ${{ matrix.smoke && failure() }}
+      - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: smoke-screenshots-${{ matrix.name }}
+          name: smoke-screenshots-${{ matrix.platform.name }}-${{ matrix.build }}
           path: ${{ env.TMPDIR || env.TEMP || runner.temp }}/uvcs-e2e-shots
           if-no-files-found: ignore
           # A re-run of the job replaces the screenshots it kept, rather than failing on the name.
