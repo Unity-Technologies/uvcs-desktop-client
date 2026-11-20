@@ -95,6 +95,17 @@ export function unchangedSuggestionNote(change: LineRange & Pick<SuggestedChange
   return change.lastLine > change.firstLine ? `The suggestion is ${rangeWordsInline(change)} as they are` : `The suggestion is ${rangeWordsInline(change)} as it is`;
 }
 
+/**
+ * Whether the box's two views (`SuggestionView`) show it differently, so its switch is worth showing: only when the
+ * suggestion keeps a line it replaces, which the diff shows once and stacked twice. Keeping none (a line edited, as most
+ * one-line suggestions are), both are every line removed, then every line added. A line diff keeps a line exactly when
+ * both sides hold it (the longest common subsequence is empty otherwise), so no diff is needed to tell.
+ */
+export function viewsDiffer({ replacedText, suggestedText }: Pick<Extract<SuggestionBody, { kind: 'diff' }>, 'replacedText' | 'suggestedText'>): boolean {
+  const replaced = new Set(replacedText.split('\n').filter((line, index, lines) => index < lines.length - 1 || line !== ''));
+  return suggestedText.split('\n').some((line, index, lines) => (index < lines.length - 1 || line !== '') && replaced.has(line));
+}
+
 function asFile(lines: readonly string[]): string {
   return lines.map((line) => `${line}\n`).join('');
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { FAILED, READING, readValue, replacedLinesIn, suggestedChangeOf, suggestionBody, suggestionTitle } from './suggestedChange';
+import { FAILED, READING, readValue, viewsDiffer, replacedLinesIn, suggestedChangeOf, suggestionBody, suggestionTitle } from './suggestedChange';
 
 const ON_LINE: ReviewComment['anchor'] = { kind: 'line', revisionId: 42, itemId: 7, path: '/src/Player.cs', firstLine: 3, lastLine: 3 };
 const SUGGESTING = 'Use the constant\n```suggestion\n  speed = MAX_SPEED;\n```';
@@ -95,5 +95,21 @@ describe('suggestionTitle', () => {
     expect(suggestionTitle({ firstLine: 3, lastLine: 3, lines: [] })).toBe('Suggested change: delete the line');
     expect(suggestionTitle({ firstLine: 3, lastLine: 5, lines: [] })).toBe('Suggested change: delete the lines');
     expect(suggestionTitle({ firstLine: 3, lastLine: 5, lines: ['x'] })).toBe('Suggested change');
+  });
+});
+
+describe('viewsDiffer', () => {
+  it('is false for a suggestion that keeps none of its lines: both views show every line removed, then added', () => {
+    expect(viewsDiffer({ replacedText: 'public class SwitchFlow\n', suggestedText: 'public class SwitchFlow2\n' })).toBe(false);
+    expect(viewsDiffer({ replacedText: 'a();\nb();\n', suggestedText: 'c();\n' })).toBe(false);
+  });
+
+  it('is true once it keeps a line, which the diff shows once and stacked twice', () => {
+    expect(viewsDiffer({ replacedText: '{\n    var s = A();\n}\n', suggestedText: '{\n    Shelve s = A();\n}\n' })).toBe(true);
+  });
+
+  it('counts no line in a text with none: a deletion, or lines that could not be read', () => {
+    expect(viewsDiffer({ replacedText: 'old();\n', suggestedText: '' })).toBe(false);
+    expect(viewsDiffer({ replacedText: '', suggestedText: 'new();\n' })).toBe(false);
   });
 });

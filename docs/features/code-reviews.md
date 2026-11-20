@@ -456,7 +456,8 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
   word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). Two views, the user's
   choice for every suggestion (`useSuggestionViewStore`, switched by the header's small **Stacked | Diff** control, words rather than an icon,
   which read only once used; the box clicked stays where it is on screen while every suggestion resizes,
-  `keepElementInPlace`):
+  `keepElementInPlace`; shown only when the two differ, `viewsDiffer`: a suggestion keeping none of the lines it
+  replaces, as most one-line ones, reads the same both ways):
   **stacked**, the default, as GitHub and GitLab show one: every line replaced, then every line suggested
   (`replacedThenSuggested`), each line edited marked against the line it became as the line diff pairs them, whatever
   lines the suggestion adds or removes (`stackedWordMarks`, drawn over the rows by `useWordMarks` in Pierre's own word

@@ -4,7 +4,7 @@ import { keepElementInPlace } from '../../../lib/keepInPlace';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { IconButton } from '../../../ui/IconButton';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
-import { suggestionBody, suggestionTitle, type SuggestedChange } from './suggestedChange';
+import { suggestionBody, suggestionTitle, viewsDiffer, type SuggestedChange } from './suggestedChange';
 import { SuggestionPlaceholder } from './SuggestionPlaceholder';
 import { useReplacedLines } from './useReplacedLines';
 import { useSuggestionViewStore, type SuggestionView } from './suggestionViewStore';
@@ -38,7 +38,7 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
         <span className={styles.title}>{suggestionTitle(change)}</span>
         {body.kind === 'diff' && (
           <>
-            <SegmentedControl<SuggestionView> dense label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />
+            {viewsDiffer(body) && <SegmentedControl<SuggestionView> dense label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />}
             <IconButton
               size="small"
               icon={<FileDiff size={14} />}
