@@ -841,7 +841,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   line, it's a click. No gutter selection while dragging, and no text selected: its fill across both panes was noise
   for a comment. A line joining the two "+" was tried and dropped: it ran over the code's first letters. Once a
   comment opens on lines selected, the selection lets go (`releasingSelection`): the comment's outline marks them,
-  and the selection's fill under its card was noise. A selection
+  and the selection's fill under its card was noise. Lines a comment is being written on take no other comment while it is
+  (`crossesCommentBeingWritten`): no "+" there, no menu entry, no drag or selection across them, as two comments being
+  written over the same code read as one. The same lines go back to the comment being written. A selection
   across both sides of a unified diff is one line (`linkedLinesOf`), as its link is. No key: a review's diff has no
   caret, so no line is "current". The comment opens under its last line (`NewLineCommentCard`), after the line's
   threads, its lines outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel

@@ -1,6 +1,6 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import { History } from 'lucide-react';
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo, useRef, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
@@ -15,7 +15,7 @@ import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
 import { NewLineCommentCard } from './NewLineCommentCard';
-import { lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { crossesCommentBeingWritten, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
@@ -88,10 +88,16 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const openSpot = useNewLineCommentsStore((state) => state.open);
   const spots = useMemo(() => (comments && view && threads ? newLineCommentsIn(allSpots, comments.review.id, view, file) : NO_SPOTS), [allSpots, comments, threads, fileKey]);
   const reviewId = comments?.review.id;
+  // Read when offered, not a dependency: new comments being written would make a new action, and Pierre lay out anew.
+  const spotsNow = useRef(spots);
+  spotsNow.current = spots;
   const lineAction = useMemo<LineAction | undefined>(() => {
     if (reviewId === undefined || !view || !threads) return undefined;
     return {
-      offers: (lines: ChangedLines) => lineCommentAt(view, file, lines) !== null,
+      offers: (lines: ChangedLines) => {
+        const at = lineCommentAt(view, file, lines);
+        return at !== null && !crossesCommentBeingWritten(spotsNow.current, at);
+      },
       label: lineCommentLabel,
       run: (lines: ChangedLines) => {
         const at = lineCommentAt(view, file, lines);

@@ -40,6 +40,18 @@ export function lineCommentAt(view: ReviewDiffView, file: ShownFile, lines: Chan
   return { revisionId, firstLine: lines.firstLineNumber, lastLine: lines.lineNumber, ...(view.kind === 'changeset' && { changesetId: view.changesetId }) };
 }
 
+/**
+ * Whether lines cross a comment being written in the file shown (`spots`, `newLineCommentsIn`) on other lines: inside
+ * it, or overlapping it. Those take no new comment, as two being written over the same code read as one (the "+", the
+ * menu and a drag aren't offered there). The same lines are fine: they go back to the comment being written.
+ */
+export function crossesCommentBeingWritten(spots: readonly NewLineCommentSpot[], lines: Pick<NewLineComment, 'firstLine' | 'lastLine'>): boolean {
+  return spots.some(({ comment }) => {
+    const same = comment.firstLine === lines.firstLine && comment.lastLine === lines.lastLine;
+    return !same && lines.firstLine <= comment.lastLine && lines.lastLine >= comment.firstLine;
+  });
+}
+
 /** Names a comment being written: one per line, or range of lines, of a file, in one mode. */
 export function newLineCommentKey(reviewId: number, path: string, comment: Omit<NewLineComment, 'kind' | 'revisionId'>): string {
   return [reviewId, comment.changesetId ?? 'whole', path, rangeSpan(comment)].join(':');
