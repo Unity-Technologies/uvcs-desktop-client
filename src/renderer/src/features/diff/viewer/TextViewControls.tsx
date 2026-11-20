@@ -1,9 +1,9 @@
-import { Columns2, FoldVertical, Rows2, WrapText } from 'lucide-react';
+import { FoldVertical, WrapText } from 'lucide-react';
 import { IconButton } from '../../../ui/IconButton';
 import { PaneToolbarGroup } from '../../../ui/PaneToolbar';
-import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { ComparisonMethodMenu } from './ComparisonMethodMenu';
-import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
+import { DiffLayoutSwitch } from './DiffLayoutSwitch';
+import { useDiffPreferences } from './diffPreferencesStore';
 import { hasLineChanges, type LineDiff } from './lineDiff';
 import { LineStats } from './LineStats';
 import { PlainTextIndicator } from './PlainTextIndicator';
@@ -23,7 +23,7 @@ interface TextViewControlsProps {
 
 /** The header's ways of viewing a text's lines: its size note and +N −M, the comparison method, collapse, wrap, Split | Unified. */
 export function TextViewControls({ diff, plainText, plainTextThreshold, followsLayout, wrapsLongLines }: TextViewControlsProps) {
-  const { layout, collapseUnchanged, wrapLines, comparisonMethod, setLayout, setCollapseUnchanged, setWrapLines, setComparisonMethod } = useDiffPreferences();
+  const { collapseUnchanged, wrapLines, comparisonMethod, setCollapseUnchanged, setWrapLines, setComparisonMethod } = useDiffPreferences();
   return (
     <>
       {/* Said in the header, not over the diff: a note there would stack on "No content changes". */}
@@ -49,14 +49,7 @@ export function TextViewControls({ diff, plainText, plainTextThreshold, followsL
         />
       </PaneToolbarGroup>
       {followsLayout && (
-        <SegmentedControl<DiffLayout>
-          value={layout}
-          onChange={setLayout}
-          segments={[
-            { value: 'split', label: <><Columns2 size={13} /> <span data-toolbar-label>Split</span></>, title: 'Side-by-side view' },
-            { value: 'unified', label: <><Rows2 size={13} /> <span data-toolbar-label>Unified</span></>, title: 'Unified view' },
-          ]}
-        />
+        <DiffLayoutSwitch />
       )}
     </>
   );
