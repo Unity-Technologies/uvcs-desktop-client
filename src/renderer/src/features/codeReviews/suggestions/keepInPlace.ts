@@ -1,7 +1,10 @@
 /** Watches what may resize, calling back after each layout and before it's painted; returns a function that stops. */
 export type ResizeWatch = (onResize: () => void) => () => void;
 
-/** How long the place is held after the change: what changed lays out over a few renders (Pierre draws a diff anew). */
+/**
+ * How long the place is held after the change, unless the user moves the view first: what changed lays out over a few
+ * renders (Pierre draws a diff anew).
+ */
 export const HOLD_MS = 800;
 
 /**
@@ -51,5 +54,19 @@ export function keepElementInPlace(element: Element, change: () => void): void {
     for (const content of scroller.children) observer.observe(content);
     return () => observer.disconnect();
   };
-  keepInPlace(() => element.getBoundingClientRect().top, (delta) => (scroller.scrollTop += delta), change, watch, (stop) => setTimeout(stop, HOLD_MS));
+  keepInPlace(() => element.getBoundingClientRect().top, (delta) => (scroller.scrollTop += delta), change, watch, (stop) => releaseOnUserMove(scroller, stop));
+}
+
+/** Input that moves the view: the user's own scroll in the hold is theirs, never put back. */
+const USER_MOVES = ['wheel', 'keydown', 'pointerdown', 'touchstart'] as const;
+
+/** Stops holding after `HOLD_MS`, or as soon as the user moves the view themselves, whichever comes first. */
+function releaseOnUserMove(scroller: Element, stop: () => void): void {
+  const timer = setTimeout(release, HOLD_MS);
+  for (const kind of USER_MOVES) scroller.addEventListener(kind, release, { capture: true, passive: true });
+  function release(): void {
+    clearTimeout(timer);
+    for (const kind of USER_MOVES) scroller.removeEventListener(kind, release, { capture: true });
+    stop();
+  }
 }
