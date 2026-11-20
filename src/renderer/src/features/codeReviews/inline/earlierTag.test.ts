@@ -15,6 +15,12 @@ describe('earlierTagOf', () => {
     expect(earlierTagOf(thread(), true)).toEqual({ label: 'Outdated', tip: 'Written on an earlier version of this file: its line changed since' });
   });
 
+  it('speaks of the lines of a thread on a range', () => {
+    const range = thread({ anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/a.cs', firstLine: 3, lastLine: 5 } });
+    expect(earlierTagOf(range, false).tip).toBe("Written on an earlier version of this file: these lines haven't changed since");
+    expect(earlierTagOf(range, true).tip).toBe('Written on an earlier version of this file: its lines changed since');
+  });
+
   it('names the changeset a thread was written in, in its own diff', () => {
     expect(earlierTagOf(thread({ changesetId: 8 }), true).tip).toBe('Written on the file as changeset 8 left it: its line changed since');
   });

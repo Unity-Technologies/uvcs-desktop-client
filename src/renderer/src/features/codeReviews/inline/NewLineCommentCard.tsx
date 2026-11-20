@@ -69,9 +69,9 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
 
   const draftKey = commentDraftKey(placeId(place), 'reviewLineComment', spot.key);
   const text = composerText(useCommentDraftStore((state) => state.drafts[draftKey]), '');
-  // The lines the comment is on, which Suggest change fills the fence with: one today, a range once comments take them.
+  // The lines the comment is on, which Suggest change fills the fence with.
   const lineText = useReplacedLines({ path: spot.path, revisionId: spot.comment.revisionId, firstLine: spot.comment.firstLine, lastLine: spot.comment.lastLine });
-  const suggest = suggestButtonOf(lineText, text);
+  const suggest = suggestButtonOf(lineText, text, spot.comment);
   // The caret to put back once the text with the suggestion shows: the field takes a new text on its next render.
   const [caretAfterInsert, setCaretAfterInsert] = useState<number | null>(null);
   const insertSuggestion = (lines: readonly string[]): void => {
@@ -82,7 +82,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
     setCaretAfterInsert(inserted.caret);
   };
   const suggestAtCaret = (): void => {
-    const outcome = suggestRequestOutcome(lineText, text);
+    const outcome = suggestRequestOutcome(lineText, text, spot.comment);
     if (outcome.kind === 'insert') insertSuggestion(outcome.lines);
   };
   useEffect(() => {
@@ -98,7 +98,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   const refusedSuggestion = refusalShown(refusal, text);
   useEffect(() => {
     if (suggestSeq === null || suggestedFor.current === suggestSeq) return;
-    const outcome = suggestRequestOutcome(lineText, text);
+    const outcome = suggestRequestOutcome(lineText, text, spot.comment);
     if (outcome.kind === 'wait') return;
     suggestedFor.current = suggestSeq;
     suggestTaken(suggestSeq);

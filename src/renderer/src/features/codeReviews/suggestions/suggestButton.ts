@@ -1,3 +1,4 @@
+import type { LineRange } from '@shared/domain/reviewConversation';
 import { holdsSuggestion, withSuggestionAt } from '../../../lib/reviewSuggestion';
 import { rangeWordsInline } from '../rangeWords';
 import type { ReplacedLines } from './suggestedChange';
@@ -8,18 +9,21 @@ export interface SuggestButton {
   tip: string;
 }
 
-/** The tooltip defining it, when it can insert. */
+/** The tooltip defining it, when it can insert, on one line (`SUGGEST_TIP`) or on several. */
 export const SUGGEST_TIP = "Add a suggestion: the line's new text, which the author can check in from the review";
+export const SUGGEST_LINES_TIP = "Add a suggestion: the lines' new text, which the author can check in from the review";
 
 /**
- * Whether Suggest change can fill a fence with the commented line's text (`lines`, the diff's own read): once it's
- * read, and once per comment, as only a comment's first suggestion is one (`suggestionOf`).
+ * Whether Suggest change can fill a fence with the commented lines' text (`lines`, the diff's own read; `commented`,
+ * which lines, to say "line" or "lines"): once it's read, and once per comment, as only a comment's first suggestion
+ * is one (`suggestionOf`).
  */
-export function suggestButtonOf(lines: ReplacedLines, text: string): SuggestButton {
-  if (lines.kind === 'reading') return { enabled: false, tip: 'Reading the line…' };
-  if (lines.kind === 'failed') return { enabled: false, tip: "The line's text can't be read" };
+export function suggestButtonOf(lines: ReplacedLines, text: string, commented: LineRange): SuggestButton {
+  const several = commented.lastLine > commented.firstLine;
+  if (lines.kind === 'reading') return { enabled: false, tip: several ? 'Reading the lines…' : 'Reading the line…' };
+  if (lines.kind === 'failed') return { enabled: false, tip: several ? "The lines' text can't be read" : "The line's text can't be read" };
   if (holdsSuggestion(text)) return { enabled: false, tip: 'This comment already suggests a change' };
-  return { enabled: true, tip: SUGGEST_TIP };
+  return { enabled: true, tip: several ? SUGGEST_LINES_TIP : SUGGEST_TIP };
 }
 
 /**
@@ -29,9 +33,9 @@ export function suggestButtonOf(lines: ReplacedLines, text: string): SuggestButt
  */
 export type SuggestRequestOutcome = { kind: 'wait' } | { kind: 'insert'; lines: string[] } | { kind: 'refused'; reason: string };
 
-export function suggestRequestOutcome(lines: ReplacedLines, text: string): SuggestRequestOutcome {
+export function suggestRequestOutcome(lines: ReplacedLines, text: string, commented: LineRange): SuggestRequestOutcome {
   if (lines.kind === 'reading') return { kind: 'wait' };
-  const button = suggestButtonOf(lines, text);
+  const button = suggestButtonOf(lines, text, commented);
   return button.enabled && lines.kind === 'read' ? { kind: 'insert', lines: lines.value } : { kind: 'refused', reason: button.tip };
 }
 
