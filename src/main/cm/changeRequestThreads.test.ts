@@ -24,15 +24,15 @@ describe('changeRequestThreadOf', () => {
     recordsIn(recordsOutput(FOUND_CHANGE_REQUEST_THREADS, ...records), FOUND_CHANGE_REQUEST_THREADS);
 
   it("reads the request's review and its thread, as cm prints them", () => {
-    expect(changeRequestThreadOf(read({ id: 31420112, reviewid: 31415956, type: 'Change' }))).toEqual({ reviewId: 31415956, threadId: 31420112 });
+    expect(changeRequestThreadOf(read({ id: 31420112, reviewid: 31415956, type: 'change' }))).toEqual({ reviewId: 31415956, threadId: 31420112 });
   });
 
   it('keeps the change request among other comments whose guid starts the same', () => {
-    expect(changeRequestThreadOf(read({ id: 7, reviewid: 3, type: 'Question' }, { id: 9, reviewid: 4, type: 'Change' }))).toEqual({ reviewId: 4, threadId: 9 });
+    expect(changeRequestThreadOf(read({ id: 7, reviewid: 3, type: 'question' }, { id: 9, reviewid: 4, type: 'change' }))).toEqual({ reviewId: 4, threadId: 9 });
   });
 
   it('finds none when no change request has that guid', () => {
     expect(changeRequestThreadOf(read())).toBeNull();
-    expect(changeRequestThreadOf(read({ id: 7, reviewid: 3, type: 'Conversation' }))).toBeNull();
+    expect(changeRequestThreadOf(read({ id: 7, reviewid: 3, type: 'conversation' }))).toBeNull();
   });
 });
