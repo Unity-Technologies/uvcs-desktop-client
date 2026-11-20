@@ -1,10 +1,15 @@
 import type { CodeReviewStatus } from '../domain/codeReview';
 import type { Place } from '../domain/place';
-import type { NewLineComment, ReviewConversation } from '../domain/reviewConversation';
+import type { ChangeRequestThread, NewLineComment, ReviewConversation } from '../domain/reviewConversation';
 
 /** What is said on a code review: its description, its comments and their replies (docs/features/code-reviews.md). */
 export interface ReviewCommentsApi {
   conversation(place: Place, reviewId: number): Promise<ReviewConversation>;
+  /**
+   * The review and thread of the change request a check-in's comment names (`[apply-change:c0d1ce00]`, or its whole
+   * guid), for its chip to open; null when none has that guid, or none the user can see.
+   */
+  changeRequestThread(place: Place, guid: string): Promise<ChangeRequestThread | null>;
   /** A comment on the whole review. */
   add(place: Place, reviewId: number, text: string): Promise<void>;
   /** A comment on a line of a file, from the review's diff. */

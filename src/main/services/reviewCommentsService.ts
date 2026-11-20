@@ -1,6 +1,7 @@
 import type { ReviewCommentsApi } from '@shared/api/reviewComments';
 import type { Place } from '@shared/domain/place';
 import type { BranchRef, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
+import { changeRequestGuidCondition, changeRequestThreadOf, FOUND_CHANGE_REQUEST_THREADS } from '../cm/changeRequestThreads';
 import { cmPlace } from '../cm/cmPlace';
 import { findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
@@ -40,6 +41,18 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
         at.options,
       );
       return withBranchesNamed(place, conversationOf(records));
+    },
+
+    async changeRequestThread(place, guid) {
+      const condition = changeRequestGuidCondition(guid);
+      if (!condition) return null;
+      const at = cmPlace(place);
+      const records = await cm.queryRecords(
+        findArgs(FOUND_CHANGE_REQUEST_THREADS, {}, null, [condition], at.repository),
+        layoutReader(FOUND_CHANGE_REQUEST_THREADS),
+        at.options,
+      );
+      return changeRequestThreadOf(records);
     },
 
     async add(place, reviewId, text) {
