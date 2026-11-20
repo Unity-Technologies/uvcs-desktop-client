@@ -238,7 +238,7 @@ export function BranchExplorerView() {
     const hit = search.step(direction, fullLayout, searchHits);
     if (hit) goToHit(hit);
   };
-  useFirstHitArrival(search, searchHits.length, () => stepSearch(1));
+  useFirstHitArrival(search, fullLayout, searchHits, goToHit);
 
   const menuFor = (target: GraphTarget | null) =>
     graphMenu(target, {
