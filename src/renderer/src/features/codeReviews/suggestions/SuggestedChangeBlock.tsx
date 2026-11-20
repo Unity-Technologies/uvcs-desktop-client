@@ -1,4 +1,4 @@
-import { Maximize2, MessageSquareDiff } from 'lucide-react';
+import { FileDiff, MessageSquareDiff } from 'lucide-react';
 import { Suspense, useRef, type ReactNode } from 'react';
 import { keepElementInPlace } from '../../../lib/keepInPlace';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -41,7 +41,7 @@ export function SuggestedChangeBlock({ change, actions }: SuggestedChangeBlockPr
             <SegmentedControl<SuggestionView> small label="Show the suggestion" value={view} onChange={showAs} segments={SUGGESTION_VIEWS} />
             <IconButton
               size="small"
-              icon={<Maximize2 size={14} />}
+              icon={<FileDiff size={14} />}
               label="Compare in a larger view"
               // Loaded on the click, with the dialog and Pierre's diff: never with the comment.
               onClick={() => void import('./openSuggestionComparison').then((module) => module.openSuggestionComparison(change, body))}

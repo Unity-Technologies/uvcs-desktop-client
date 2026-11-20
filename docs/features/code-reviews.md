@@ -463,7 +463,7 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
   holding every line, so nothing folds). Stacked reads a heavy rewrite best, where a diff interleaves pieces of both;
   the diff reads a few words changed in a longer range best, where stacked shows the lines kept twice. Both are
   numbered as the file's lines from the first one commented, in a diff kept whole, as Pierre loads the full files of a
-  partial one. **Compare in a larger view** (the expand icon), beside it, opens the line diff in the code comparison dialog
+  partial one. **Compare in a larger view** (a page with + and −, the diff it opens; an expand icon read as "make the box bigger"), beside it, opens the line diff in the code comparison dialog
   (`openSuggestionComparison`, the moved code's, `openCodeComparisonDialog`), wide enough for the two side by side,
   with the diff's own Split | Unified switch: a comment, as narrow as its thread, has no room for them. One
   column, highlighted in the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it:
