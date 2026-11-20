@@ -32,9 +32,28 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
     // Drawn in the same frame (`flushSync`): the observer calls back after the layout and before the paint, and a
     // render left for later showed the outline a frame behind its lines, over the card below them.
     const resize = new ResizeObserver(() => void measure(true));
+    // Rows moved with nothing resized: the virtualizer's spacer above them traded height with rows taller or shorter
+    // (a suggestion above shown another way), which no size observed tells. Measured before the paint (a microtask).
+    let rowsWatched: ShadowRoot | null = null;
+    let measureQueued = false;
+    const rows = new MutationObserver(() => {
+      if (measureQueued) return;
+      measureQueued = true;
+      queueMicrotask(() => {
+        measureQueued = false;
+        measure(true);
+      });
+    });
+    function watchRows(root: ShadowRoot | null): void {
+      if (!root || root === rowsWatched) return;
+      rowsWatched = root;
+      rows.disconnect();
+      rows.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    }
     /** Measures every line rendered; false while none of them is. `now` commits the boxes before the next paint. */
     const measure = (now = false): boolean => {
       const root = pierreShadowRoot(container);
+      watchRows(root);
       // The code panes too: Pierre's host is at least as tall as the view, so in a short file a row added above the
       // code (outdated comments) moves the lines without resizing the host. Observing a pane again does nothing.
       for (const pane of root?.querySelectorAll('[data-code]') ?? []) resize.observe(pane);
@@ -92,6 +111,7 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       cancelAnimationFrame(scrollFrame);
       resize.disconnect();
       hosts.disconnect();
+      rows.disconnect();
       container.removeEventListener('scroll', measureAgain);
     };
   }, [containerRef, linesKey, layout]);
