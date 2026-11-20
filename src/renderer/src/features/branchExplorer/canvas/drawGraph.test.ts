@@ -86,7 +86,7 @@ const palette: GraphPalette = {
   labelText: INK,
   labelMark: INK,
   badgeShadow: INK,
-  mergeLinks: { interval: INK, cherryPick: INK, intervalCherryPick: INK, subtractive: INK, intervalSubtractive: INK },
+  mergeLinks: { merge: INK, interval: INK, cherryPick: INK, intervalCherryPick: INK, subtractive: INK, intervalSubtractive: INK },
   reviewStatus: { 'Under review': INK, Reviewed: INK, 'Rework required': INK },
   mergeRequestState: { Draft: INK, Open: INK, Merged: INK, Closed: INK },
   avatars: Object.fromEntries(AVATAR_COLORS.map((token) => [token, INK])) as GraphPalette['avatars'],

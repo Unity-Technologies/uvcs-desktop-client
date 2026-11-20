@@ -3,7 +3,7 @@ import { arrowLength, drawArrowHead, lineUnderHead } from './drawArrowHead';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { arrivalAt, curveUntil, linkCurve, type Curve } from './curves';
 import { NODE_RADIUS, nodePoint, pendingPoint } from './geometry';
-import { branchColor, mergeLinkDash, PENDING_LINK_DASH } from './graphPalette';
+import { mergeLinkDash, PENDING_LINK_DASH } from './graphPalette';
 import { boundsOf, crossesView } from './linkVisibility';
 import { mergeLinksAcross } from './spansInView';
 
@@ -52,11 +52,9 @@ export function drawPendingMergeLinks(draw: DrawContext): void {
   }
 }
 
-/** Plain merges take the color of the branch they come from; cherry picks and subtractives keep a warning color. */
-function linkColor({ scene }: DrawContext, link: { type: MergeLinkType; sourceChangeset: number }): string {
-  if (link.type !== 'merge') return scene.palette.mergeLinks[link.type];
-  const source = scene.layout.nodes.get(link.sourceChangeset);
-  return branchColor(scene.palette, source?.changeset.branch ?? '');
+/** Every kind of link has its own color, whatever branches it joins: a merge never reads as a branch's line. */
+function linkColor({ scene }: DrawContext, link: { type: MergeLinkType }): string {
+  return scene.palette.mergeLinks[link.type];
 }
 
 interface LinkStyle {
