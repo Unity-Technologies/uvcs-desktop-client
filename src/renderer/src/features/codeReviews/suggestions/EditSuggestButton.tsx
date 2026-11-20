@@ -8,7 +8,6 @@ import { composerText } from '../conversation/composerText';
 import { anchorPath, type LineAnchor } from '../inline/fileThreads';
 import { suggestButtonOf, withSuggestionInserted } from './suggestButton';
 import { useReplacedLines } from './useReplacedLines';
-import styles from './EditSuggestButton.module.css';
 
 interface EditSuggestButtonProps {
   anchor: LineAnchor;
@@ -19,7 +18,8 @@ interface EditSuggestButtonProps {
 }
 
 /**
- * Suggest change in a change request's editor (`editOffersSuggestion`): the fence inserted at the caret, filled with the
+ * Suggest change in a change request's header while it's edited (`editOffersSuggestion`), beside its menu, as no
+ * row of its own above the editor: the fence inserted at the caret, filled with the
  * commented lines (`useReplacedLines`, the diff's own read), as a new comment's Suggest change does. Disabled, saying
  * why, while the lines are read, when they can't be, and once the text suggests already (`suggestButtonOf`).
  */
@@ -40,12 +40,10 @@ export function EditSuggestButton({ anchor, postedText, draftKey, field }: EditS
     setCaretAfterInsert(inserted.caret);
   };
   return (
-    <div className={styles.row}>
-      <Tooltip content={suggest.tip}>
-        <Button size="small" variant="ghost" icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={insert}>
-          Suggest change
-        </Button>
-      </Tooltip>
-    </div>
+    <Tooltip content={suggest.tip}>
+      <Button size="small" variant="ghost" icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={insert}>
+        Suggest change
+      </Button>
+    </Tooltip>
   );
 }

@@ -91,11 +91,12 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
               </span>
             )}
           </span>
-          <CommentMenuButton entries={menu} />
+          <span className={styles.commentHeaderActions}>
+            {editing && comment.anchor.kind === 'line' && editOffersSuggestion(comment) && <EditSuggestButton anchor={comment.anchor} postedText={comment.text} draftKey={editDraftKey} field={editor} />}
+            <CommentMenuButton entries={menu} />
+          </span>
         </header>
         {editing ? (
-          <>
-          {comment.anchor.kind === 'line' && editOffersSuggestion(comment) && <EditSuggestButton anchor={comment.anchor} postedText={comment.text} draftKey={editDraftKey} field={editor} />}
           <CommentComposer
             fieldRef={editor}
             draftKey={editDraftKey}
@@ -111,7 +112,6 @@ export function ReviewCommentView({ review, comment, thread, user, action, byRev
             }}
             onCancel={() => setEditing(false)}
           />
-          </>
         ) : (
           <div className={`${styles.markdown} selectable`}>
             <Markdown text={comment.text} comment suggestion={suggestion ? <CommentSuggestion review={review} comment={comment} thread={thread} change={suggestion} /> : undefined} />

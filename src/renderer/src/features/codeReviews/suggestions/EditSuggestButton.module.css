@@ -1,5 +1,0 @@
-/* Above the editor, at its end, where a new comment's Suggest change sits. */
-.row {
-  display: flex;
-  justify-content: flex-end;
-}

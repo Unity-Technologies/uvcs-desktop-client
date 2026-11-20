@@ -445,7 +445,7 @@ workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing th
   (`LineAction.variant`), opening the comment with the fence in it (`useNewLineCommentsStore`'s `suggestRequest`); when
   it can't fill one (the line can't be read, a suggestion is there already), the card says why rather than opening
   without one (`suggestRequestOutcome`), until the comment changes (`refusalShown`). A fence a line of code would close
-  takes more backticks (`suggestionFence`). Editing a change request on lines offers it too, above its editor
+  takes more backticks (`suggestionFence`). Editing a change request on lines offers it too, in its header beside its menu
   (`editOffersSuggestion`, `EditSuggestButton`), so a request posted without one can take one; disabled, saying so,
   once the text suggests already. Not in a reply, which has no line of its own and is never a change request, nor in
   the editor of a question or a plain comment, whose kind stays once posted: the fence can be typed there, a code
