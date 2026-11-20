@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
+import { focusAs } from '../../../lib/focusRing';
 import { MAIN_FOCUS } from '../../../lib/mainFocus';
 import { isModPressed } from '../../../lib/shortcuts';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
@@ -288,7 +289,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const onPointerDown = (event: React.PointerEvent): void => {
     if (!onCanvas(event)) return;
     clippedTip.hide();
-    containerRef.current?.focus();
+    if (containerRef.current) focusAs(containerRef.current, 'pointer');
     if (event.button === 2) {
       // The menu covers the hover card's place: it would linger under the menu.
       clearHover();
@@ -361,7 +362,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           selectedBranch={highlights.selectedBranch}
           homeChangeset={highlights.homeChangeset}
           pendingChangeCount={highlights.pendingChangeCount}
-          focusGraph={() => containerRef.current?.focus()}
+          focusGraph={() => containerRef.current && focusAs(containerRef.current, 'pointer')}
         />
       )}
       <ActionContextMenu entries={() => contextMenu(contextTargetRef.current)}>
