@@ -242,6 +242,22 @@ try {
     await main.getByRole('region', { name: 'Merge request', exact: true }).getByText('Changes under review').waitFor();
     await settled();
   });
+  await step('The larger comment editor over the page', async () => {
+    // Its button, from the new comment's field: the panel must be what a press at its middle reaches, never the dimmed
+    // backdrop over it (a stacking context around the views once kept the panel under it).
+    const field = main.locator('[data-comment-field]').filter({ has: window.getByRole('textbox', { name: 'New comment' }) });
+    await field.getByRole('textbox').click();
+    await field.getByRole('button', { name: 'Write in a larger editor' }).click();
+    const panel = window.locator('[data-open="overlay"]');
+    await panel.waitFor();
+    const onTop = await panel.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+    });
+    if (!onTop) throw new Error('The larger editor is under its backdrop: a press on it reaches something else');
+    await window.keyboard.press('Escape');
+    await panel.waitFor({ state: 'detached' });
+  });
   await step("A merge the server's merge rules refuse", async () => {
     // The fake's server merges only reviewed branches: the merge page says so and opens the request back.
     await main.getByRole('button', { name: 'Merge into main…' }).click();
