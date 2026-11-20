@@ -9,15 +9,17 @@ import type { SelectGesture } from '../graphSelection';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { SearchHit } from '../model/searchGraph';
 import { GraphTimeline, type GraphTimelineHandle } from '../timeline/GraphTimeline';
+import { actionsButtonCenter, actionsMenuPoint, type ActionsSubject } from './actionsButton';
 import { captionMetrics, captionOnScreen } from './captionCard';
 import { detailLevel, type DrawnTargets, type GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph, visibleArea } from './drawGraph';
+import { openContextMenuAt } from './contextMenuAt';
 import { branchesNearView } from './headersInView';
 import type { RuleColors } from '../model/ruleColors';
 import { withBranchColors, withRuleColors } from './graphPalette';
 import { createGraphCanvasHandle, type GraphCanvasHandle } from './graphCanvasHandle';
-import { hitTest, hoverCardFor, hoverCardKey, pointerCardStays, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
+import { clickOutcome, doubleClickOutcome, hitTest, hoverCardFor, hoverCardKey, pointerCardStays, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, CAPTION_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
 import { wheelGoesTo } from './wheelTarget';
 import { graphExtent } from './laneShape';
@@ -41,6 +43,7 @@ export type GraphHighlights = Pick<
   GraphScene,
   | 'selectedChangeset'
   | 'selectedBranch'
+  | 'leadLabel'
   | 'selectedPending'
   | 'selectedChangesets'
   | 'selectedBranches'
@@ -123,7 +126,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const [awayFromEnd, setAwayFromEnd] = useState(false);
 
   const hover = hoverHighlight(hovered);
-  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending } = hover;
+  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredActions } = hover;
   /** What the next frame draws, read by callbacks that outlive this render. */
   const sceneRef = useRef({ layout, highlights, palette, hover });
   sceneRef.current = { layout, highlights, palette, hover };
@@ -134,6 +137,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     cutBranchNames: new DrawnBoxes(),
     cutBranchComments: new DrawnBoxes(),
     captions: new DrawnBoxes(),
+    actionButtons: new DrawnBoxes(),
   });
 
   const { close: closeHoverCard } = hoverCard;
@@ -190,7 +194,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     setAwayFromEnd(awayFromNewest(sceneRef.current.layout, view.viewportRef.current, sizeRef.current));
   }
 
-  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, scheduleDraw]);
+  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredActions, scheduleDraw]);
   // A filter can reshape, shrink or grow the graph: keep the user's place in it (unless a glide is taking them
   // somewhere) and keep it on screen.
   const laidOutRef = useRef(layout);
@@ -262,12 +266,30 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     return { x: clientX - bounds.left, y: clientY - bounds.top };
   };
 
-  /** Code review chips only react to clicks; for anything else they are part of their branch's card. */
-  const targetAt = (clientX: number, clientY: number, withChips = true): GraphTarget | null => {
+  /**
+   * Code review chips and "More actions" buttons only react to clicks; for anything else they are part of what they
+   * sit on: a chip of its branch's card, a button of its branch or changeset.
+   */
+  const targetAt = (clientX: number, clientY: number, withButtons = true): GraphTarget | null => {
     const point = localPoint(clientX, clientY);
     const viewport = view.viewportRef.current;
     const { labels, mergeLinks, bands } = detailLevel(viewport.zoom, sceneRef.current.highlights.options);
-    return hitTest(layout, toWorld(viewport, point.x, point.y), drawnRef.current, { chips: withChips, zoom: viewport.zoom, labels, mergeLinks, bands });
+    const options = { chips: withButtons, buttons: withButtons, zoom: viewport.zoom, labels, mergeLinks, bands };
+    return hitTest(layout, toWorld(viewport, point.x, point.y), drawnRef.current, options);
+  };
+
+  /**
+   * A "More actions" button opens the menu the right-click opens on what it belongs to (selecting it the same way),
+   * under the button: the menu is the container's context menu, so it is asked for as the right-click asks.
+   */
+  const openActionsMenu = (subject: ActionsSubject): void => {
+    const canvas = canvasRef.current;
+    const center = actionsButtonCenter(subject, layout, drawnRef.current);
+    if (!canvas || !center) return;
+    clearHover();
+    contextTargetRef.current = subject;
+    onSelect(subject, { toggle: false, context: true });
+    openContextMenuAt(canvas, view.viewportRef.current, actionsMenuPoint(center));
   };
 
   /** A changeset's card opens over its caption, in its font and color; any other card by the pointer. */
@@ -313,7 +335,11 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         containerRef.current?.removeAttribute('data-panning');
         view.inertia.release();
       },
-      onClick: (up) => onSelect(targetAt(up.clientX, up.clientY), { toggle: isModPressed(up), context: false }),
+      onClick: (up) => {
+        const outcome = clickOutcome(targetAt(up.clientX, up.clientY));
+        if (outcome.kind === 'menu') return openActionsMenu(outcome.subject);
+        onSelect(outcome.target, { toggle: isModPressed(up), context: false });
+      },
     });
   };
 
@@ -337,8 +363,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
   const onDoubleClick = (event: React.MouseEvent): void => {
     if (!onCanvas(event)) return;
-    const target = targetAt(event.clientX, event.clientY, false);
-    if (target) return onActivate(target);
+    const outcome = doubleClickOutcome(targetAt(event.clientX, event.clientY), targetAt(event.clientX, event.clientY, false));
+    if (outcome.kind === 'activate') return onActivate(outcome.target);
+    if (outcome.kind === 'none') return;
     const point = localPoint(event.clientX, event.clientY);
     view.zoomStep(point.x, point.y, DOUBLE_CLICK_ZOOM);
   };

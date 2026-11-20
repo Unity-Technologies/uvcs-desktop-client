@@ -17,6 +17,11 @@ export function toWorld(viewport: Viewport, screenX: number, screenY: number): {
   return { x: (screenX - viewport.panX) / viewport.zoom, y: (screenY - viewport.panY) / viewport.zoom };
 }
 
+/** Where a world point is drawn, in screen px from the canvas' corner: `toWorld`'s inverse. */
+export function toScreen(viewport: Viewport, worldX: number, worldY: number): { x: number; y: number } {
+  return { x: worldX * viewport.zoom + viewport.panX, y: worldY * viewport.zoom + viewport.panY };
+}
+
 /** Zooms by `factor` keeping the world point under the screen position still. */
 export function zoomAt(viewport: Viewport, factor: number, screenX: number, screenY: number): Viewport {
   const zoom = clamp(viewport.zoom * factor, MIN_ZOOM, MAX_ZOOM);
