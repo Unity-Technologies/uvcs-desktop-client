@@ -40,3 +40,39 @@ export function glowAtZoom(zoom: number): number {
 export function layerWidths(lineWidth: number, reach: number, layers: number): number[] {
   return Array.from({ length: layers }, (_, index) => lineWidth + (reach * 2 * (layers - index)) / layers);
 }
+
+/** A link as a frame draws it: what the glow, the gap and the drawing order need to know. */
+export interface StyledLink<Path> {
+  path: Path;
+  color: string;
+  /** Not receded by a search. */
+  lit: boolean;
+  /** Hovered or selected, or one of its changesets is. */
+  emphasized: boolean;
+}
+
+/**
+ * The order lines are drawn in: receded links first, then the lit ones, the emphasized last, so a hovered merge stays
+ * on top of the others sharing its run. Stable within each group.
+ */
+export function inDrawingOrder<Link extends StyledLink<unknown>>(links: readonly Link[]): Link[] {
+  const rank = (link: Link): number => (link.emphasized && link.lit ? 2 : link.lit ? 1 : 0);
+  return [...links].sort((a, b) => rank(a) - rank(b));
+}
+
+/** The lit links' paths by color: each color's glow is stroked once, as one shape, so links sharing a route glow once. */
+export function glowingPathsByColor<Path>(links: readonly StyledLink<Path>[]): Map<string, Path[]> {
+  const byColor = new Map<string, Path[]>();
+  for (const { path, color, lit } of links) {
+    if (!lit) continue;
+    const paths = byColor.get(color);
+    if (paths) paths.push(path);
+    else byColor.set(color, [path]);
+  }
+  return byColor;
+}
+
+/** The gap's strength at a zoom: it fades out with the glow, being there for it, and is never stroked when invisible. */
+export function gapLayerAlpha(zoom: number): number {
+  return GAP_LAYER_ALPHA * glowAtZoom(zoom);
+}

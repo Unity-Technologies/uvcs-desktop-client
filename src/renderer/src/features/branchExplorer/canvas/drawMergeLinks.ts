@@ -2,7 +2,18 @@ import type { MergeLink, MergeLinkType } from '@shared/domain/branchExplorer';
 import { arrowLength, drawArrowHead, lineUnderHead } from './drawArrowHead';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { arrivalAt, curveUntil } from './curves';
-import { GAP_LAYER_ALPHA, GAP_LAYERS, GAP_REACH, GLOW_LAYERS, GLOW_REACH, glowLayerAlpha, layerWidths } from './mergeLinkGlow';
+import {
+  GAP_LAYERS,
+  GAP_REACH,
+  gapLayerAlpha,
+  GLOW_LAYERS,
+  GLOW_REACH,
+  glowingPathsByColor,
+  glowLayerAlpha,
+  inDrawingOrder,
+  layerWidths,
+  type StyledLink,
+} from './mergeLinkGlow';
 import { mergeLinkPath, pathPoints, type LinkPath } from './mergeLinkPath';
 import { NODE_RADIUS, nodePoint, pendingPoint } from './geometry';
 import { mergeLinkDash, PENDING_LINK_DASH } from './graphPalette';
@@ -15,10 +26,9 @@ const MARGIN = NODE_RADIUS + ARROW_SIZE + GLOW_REACH;
 const LINE_WIDTH = 2;
 const EMPHASIZED_LINE_WIDTH = 2.5;
 
-interface ShownLink {
-  link: MergeLink;
-  path: LinkPath;
-  lit: boolean;
+interface ShownLink extends StyledLink<LinkPath> {
+  dash: number[];
+  cap: CanvasLineCap;
 }
 
 export function drawMergeLinks(draw: DrawContext): void {
@@ -28,20 +38,17 @@ export function drawMergeLinks(draw: DrawContext): void {
   for (const link of mergeLinksAcross(scene.layout, visible.left - MARGIN, visible.right + MARGIN)) {
     const path = mergeLinkPath(nodePoint(scene.layout, link.sourceChangeset)!, nodePoint(scene.layout, link.destinationChangeset)!);
     if (!crossesView(boundsOf(pathPoints(path)), visible, MARGIN)) continue;
-    // While searching, a link stays lit only between two hits; the rest recede with the changesets they join.
-    const lit = !search || (search.changesets.has(link.sourceChangeset) && search.changesets.has(link.destinationChangeset));
-    shown.push({ link, path, lit });
-  }
-  drawGlows(draw, shown);
-  for (const { link, path, lit } of shown) {
-    drawLink(draw, path, {
+    shown.push({
+      path,
       color: linkColor(draw, link),
       dash: mergeLinkDash(link.type),
       cap: 'butt',
+      // While searching, a link stays lit only between two hits; the rest recede with the changesets they join.
+      lit: !search || (search.changesets.has(link.sourceChangeset) && search.changesets.has(link.destinationChangeset)),
       emphasized: link === hoveredMergeLink || involves(link, selectedChangeset) || involves(link, hoveredChangeset),
-      lit,
     });
   }
+  drawLinks(draw, shown);
 }
 
 /**
@@ -52,44 +59,47 @@ export function drawPendingMergeLinks(draw: DrawContext): void {
   const { scene, visible } = draw;
   const to = pendingPoint(scene.layout);
   if (!to) return;
+  const shown: ShownLink[] = [];
   for (const link of scene.layout.pending!.mergeLinks) {
     const path = mergeLinkPath(nodePoint(scene.layout, link.sourceChangeset)!, to);
     if (!crossesView(boundsOf(pathPoints(path)), visible, MARGIN)) continue;
-    drawLink(draw, path, {
+    shown.push({
+      path,
       color: linkColor(draw, link),
       dash: PENDING_LINK_DASH,
       // Zero-length dashes with round caps: dots.
       cap: 'round',
+      lit: !scene.search,
       emphasized:
         link === scene.hoveredMergeLink || scene.hoveredPending || scene.hoveredChangeset === link.sourceChangeset || scene.selectedChangeset === link.sourceChangeset,
-      lit: !scene.search,
     });
   }
+  drawLinks(draw, shown);
 }
 
 /**
- * The faint glow under the lit links (`mergeLinkGlow`). The links of one color are stroked as one shape, layer by
- * layer, so merges sharing a route glow once instead of piling up into a solid bar.
+ * The glow, then the gap, each as one shape under every line, then the lines in their drawing order (`inDrawingOrder`):
+ * a link's gap never cuts through another link's line, and the emphasized links lie on top.
  */
+function drawLinks(draw: DrawContext, shown: readonly ShownLink[]): void {
+  if (shown.length === 0) return;
+  drawGlows(draw, shown);
+  drawGaps(draw, shown);
+  for (const link of inDrawingOrder(shown)) drawLink(draw, link);
+}
+
+/** The faint glow under the lit links (`mergeLinkGlow`): each color's links as one shape, stroked layer by layer. */
 function drawGlows(draw: DrawContext, shown: readonly ShownLink[]): void {
   const { ctx, scene } = draw;
   const layerAlpha = glowLayerAlpha(draw.zoom, scene.palette.isDark);
   if (layerAlpha === 0) return;
-  const pathsByColor = new Map<string, LinkPath[]>();
-  for (const { link, path, lit } of shown) {
-    if (!lit) continue;
-    const color = linkColor(draw, link);
-    const paths = pathsByColor.get(color);
-    if (paths) paths.push(path);
-    else pathsByColor.set(color, [path]);
-  }
   ctx.save();
   // On a dark graph the glow lightens what is under it, as light does on a dark surface.
   if (scene.palette.isDark) ctx.globalCompositeOperation = 'screen';
   ctx.globalAlpha = layerAlpha;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (const [color, paths] of pathsByColor) {
+  for (const [color, paths] of glowingPathsByColor(shown)) {
     ctx.strokeStyle = color;
     ctx.beginPath();
     for (const path of paths) tracePath(draw, path);
@@ -98,20 +108,27 @@ function drawGlows(draw: DrawContext, shown: readonly ShownLink[]): void {
   ctx.restore();
 }
 
+/** The background under every lit link, solid at the line and fading out: the links lie over what they cross. */
+function drawGaps(draw: DrawContext, shown: readonly ShownLink[]): void {
+  const { ctx, scene } = draw;
+  const layerAlpha = gapLayerAlpha(draw.zoom);
+  const lit = shown.filter((link) => link.lit);
+  if (layerAlpha === 0 || lit.length === 0) return;
+  ctx.save();
+  ctx.strokeStyle = scene.palette.background;
+  ctx.globalAlpha = layerAlpha;
+  ctx.beginPath();
+  for (const { path } of lit) tracePath(draw, path);
+  strokeLayers(ctx, layerWidths(LINE_WIDTH, GAP_REACH, GAP_LAYERS));
+  ctx.restore();
+}
+
 /** Every kind of link has its own color, whatever branches it joins: a merge never reads as a branch's line. */
 function linkColor({ scene }: DrawContext, link: { type: MergeLinkType }): string {
   return scene.palette.mergeLinks[link.type];
 }
 
-interface LinkStyle {
-  color: string;
-  dash: number[];
-  cap: CanvasLineCap;
-  emphasized: boolean;
-  lit: boolean;
-}
-
-function drawLink(draw: DrawContext, path: LinkPath, { color, dash, cap, emphasized, lit }: LinkStyle): void {
+function drawLink(draw: DrawContext, { path, color, dash, cap, emphasized, lit }: ShownLink): void {
   const { ctx, pen } = draw;
   const last = path[path.length - 1]!;
 
@@ -130,7 +147,6 @@ function drawLink(draw: DrawContext, path: LinkPath, { color, dash, cap, emphasi
   tracePath(draw, path.slice(0, -1));
   if (path.length === 1) pen.moveTo(start.x, start.y);
   pen.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y);
-  drawGap(draw, lineWidth);
   if (emphasized && lit) drawEmphasisGlow(draw, lineWidth);
   ctx.lineWidth = lineWidth;
   ctx.lineCap = cap;
@@ -148,16 +164,7 @@ function tracePath({ pen }: DrawContext, path: LinkPath): void {
   for (const [, c1, c2, end] of path) pen.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y);
 }
 
-/** The background under the path being drawn, solid at the line and fading out: the link lies over what it crosses. */
-function drawGap({ ctx, scene }: DrawContext, lineWidth: number): void {
-  ctx.save();
-  ctx.strokeStyle = scene.palette.background;
-  ctx.globalAlpha = GAP_LAYER_ALPHA;
-  strokeLayers(ctx, layerWidths(lineWidth, GAP_REACH, GAP_LAYERS));
-  ctx.restore();
-}
-
-/** The hovered or selected link glows a little more, over the shared glow. */
+/** The emphasized link glows a little more, over the shared glow, on the path being drawn. */
 function drawEmphasisGlow(draw: DrawContext, lineWidth: number): void {
   const { ctx, scene } = draw;
   const layerAlpha = glowLayerAlpha(draw.zoom, scene.palette.isDark);
