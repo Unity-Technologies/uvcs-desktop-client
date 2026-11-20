@@ -127,6 +127,10 @@ describe('withNewLineCommentBands', () => {
     expect(withNewLineCommentBands([threadsAt9], [spot({ firstLine: 9, lastLine: 9 })])).toEqual([{ ...threadsAt9, selected: true }]);
   });
 
+  it('outlines once, from the first of them, comments being written that end on the same line', () => {
+    expect(withNewLineCommentBands([], [spot({ firstLine: 9, lastLine: 9 }), spot({ firstLine: 5, lastLine: 9 })])).toEqual([{ key: 'additions:9', side: 'additions', lineNumber: 9, firstLineNumber: 5, selected: true }]);
+  });
+
   it('outlines a range being commented on from its first line, a line with threads too', () => {
     expect(withNewLineCommentBands([], [spot({ firstLine: 3, lastLine: 6 })])).toEqual([{ key: 'additions:6', side: 'additions', lineNumber: 6, firstLineNumber: 3, selected: true }]);
     expect(withNewLineCommentBands([threadsAt9], [spot({ firstLine: 5, lastLine: 9 })])).toEqual([{ ...threadsAt9, firstLineNumber: 5, selected: true }]);

@@ -202,8 +202,8 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
       />
     );
   }
-  const { line, spot } = lineRowContent(row.metadata, context.shownLines, context.spots);
-  const newComment = spot && <NewLineCommentCard key={spot.key} spot={spot} onSent={() => context.onSent(row.metadata)} />;
+  const { line, spots } = lineRowContent(row.metadata, context.shownLines, context.spots);
+  const newComment = spots.length > 0 && spots.map((spot) => <NewLineCommentCard key={spot.key} spot={spot} onSent={() => context.onSent(row.metadata)} />);
   if (!line) return newComment ? <ThreadsRow>{newComment}</ThreadsRow> : null;
   return (
     <InlineThreads comments={comments} line={line} focus={focus} onClose={context.onClose && (() => context.onClose!(line.key))} onSeeInContext={context.onSeeInContext}>

@@ -76,19 +76,20 @@ export function newLineCommentsIn(spots: readonly NewLineCommentSpot[], reviewId
 export function withNewLineCommentRows(rows: DiffLineAnnotation<string>[], spots: readonly NewLineCommentSpot[]): DiffLineAnnotation<string>[] {
   const added = spots
     .map((spot): DiffLineAnnotation<string> => ({ side: spot.side, lineNumber: spot.comment.lastLine, metadata: spotRowKey(spot) }))
-    .filter((row) => !rows.some((shown) => shown.metadata === row.metadata));
+    .filter((row, index, all) => !rows.some((shown) => shown.metadata === row.metadata) && all.findIndex((other) => other.metadata === row.metadata) === index);
   return added.length === 0 ? rows : [...rows, ...added];
 }
 
 /**
  * What a row under a line holds (`withNewLineCommentRows`'s and the threads'): the line's threads when they show (all
- * of them while comments show in the code; opened from their marker while hidden), then the comment being written
- * there, if any. While hidden, a comment written on a line whose threads aren't opened shows alone, under their marker.
+ * of them while comments show in the code; opened from their marker while hidden), then the comments being written
+ * that end there (on that line, and on a range up to it), in the order they were opened. While hidden, comments
+ * written on a line whose threads aren't opened show alone, under their marker.
  */
-export function lineRowContent<Line extends { key: string }>(rowKey: string, shownLines: readonly Line[], spots: readonly NewLineCommentSpot[]): { line?: Line; spot?: NewLineCommentSpot } {
+export function lineRowContent<Line extends { key: string }>(rowKey: string, shownLines: readonly Line[], spots: readonly NewLineCommentSpot[]): { line?: Line; spots: NewLineCommentSpot[] } {
   return {
     line: shownLines.find((line) => line.key === rowKey),
-    spot: spots.find((spot) => spotRowKey(spot) === rowKey),
+    spots: spots.filter((spot) => spotRowKey(spot) === rowKey),
   };
 }
 
