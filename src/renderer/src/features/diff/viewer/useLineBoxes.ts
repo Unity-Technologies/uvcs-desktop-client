@@ -1,4 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 import type { ChangedLine } from './changeBlocks';
 import { lineNumberCellSelector, paneContentSelector, topRowOf, type CodeLayout } from './lineActions';
 import { paneRect, pierreShadowRoot } from './pierreDom';
@@ -28,9 +29,11 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
     const container = containerRef.current;
     if (!container || lines.length === 0) return setBoxes(NO_BOXES);
     // The container's size, and its content's: rows growing above a line (a thread opened, a region unfolded) move it.
-    const resize = new ResizeObserver(() => void measure());
-    /** Measures every line rendered; false while none of them is. */
-    const measure = (): boolean => {
+    // Drawn in the same frame (`flushSync`): the observer calls back after the layout and before the paint, and a
+    // render left for later showed the outline a frame behind its lines, over the card below them.
+    const resize = new ResizeObserver(() => void measure(true));
+    /** Measures every line rendered; false while none of them is. `now` commits the boxes before the next paint. */
+    const measure = (now = false): boolean => {
       const root = pierreShadowRoot(container);
       // The code panes too: Pierre's host is at least as tall as the view, so in a short file a row added above the
       // code (outdated comments) moves the lines without resizing the host. Observing a pane again does nothing.
@@ -53,7 +56,9 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
           paneRight: paneRect(pane).right - view.left + container.scrollLeft,
         });
       }
-      setBoxes((last) => (sameBoxes(last, next) ? last : next));
+      const update = (): void => setBoxes((last) => (sameBoxes(last, next) ? last : next));
+      if (now) flushSync(update);
+      else update();
       return next.size > 0;
     };
     // The code may not be rendered yet (it highlights, or scrolls to a link's lines): look again for a moment.
