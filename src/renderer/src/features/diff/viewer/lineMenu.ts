@@ -52,3 +52,30 @@ export function lineActionTargetAt(line: ChangedLine, selected: FocusedLines | n
   }
   return { ...line, firstLineNumber: line.lineNumber };
 }
+
+/**
+ * The place's action, letting go of the lines selected once it runs on them: a comment opened on them is outlined in
+ * the accent, and the selection's fill under its card, across both panes, was noise.
+ */
+export function releasingSelection(action: LineAction, selected: () => FocusedLines | null, clear: () => void): LineAction {
+  const ranOn = (run: (lines: ChangedLines) => void) => (lines: ChangedLines): void => {
+    run(lines);
+    if (holdsSelected(lines, selected())) clear();
+  };
+  return { ...action, run: ranOn(action.run), ...(action.variant && { variant: { ...action.variant, run: ranOn(action.variant.run) } }) };
+}
+
+/** Whether lines an action ran on are among those selected: on their side, and inside them. */
+export function holdsSelected(lines: ChangedLines, selected: FocusedLines | null): boolean {
+  if (!selected) return false;
+  const range = lineActionTarget(selected);
+  return range.side === lines.side && lines.firstLineNumber >= range.firstLineNumber && lines.lineNumber <= range.lineNumber;
+}
+
+/**
+ * The gutter button's tooltip: what it does, and on one line that a drag takes more ("Comment on line 4 · Drag for a
+ * range"), as the line number's own hint says how to select (`lineNumberHint`).
+ */
+export function lineActionTip(label: string, lines: ChangedLines): string {
+  return lines.lineNumber > lines.firstLineNumber ? label : `${label} · Drag for a range`;
+}

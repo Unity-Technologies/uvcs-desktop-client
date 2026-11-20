@@ -4,7 +4,7 @@ import { SEPARATOR, type Action, type MenuEntry } from '../../../lib/actions';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { groupedMenu } from '../../../lib/menuGroups';
 import type { LineAction } from './diffAnnotations';
-import { lineActionTarget, lineActionTargetAt, lineMenuEntries } from './lineMenu';
+import { holdsSelected, lineActionTarget, lineActionTip, lineActionTargetAt, lineMenuEntries, releasingSelection } from './lineMenu';
 
 /** The lines' entries as a menu of their own reads them. */
 const linesMenu = (context: Parameters<typeof lineMenuEntries>[0]): MenuEntry[] => groupedMenu(lineMenuEntries(context));
@@ -84,5 +84,40 @@ describe('lineActionTargetAt', () => {
   it("acts on its own line where the place doesn't take the lines selected", () => {
     const onlyOneLine = (lines: { firstLineNumber: number; lineNumber: number }) => lines.firstLineNumber === lines.lineNumber;
     expect(lineActionTargetAt({ side: 'additions', lineNumber: 45 }, selected, onlyOneLine)).toEqual({ side: 'additions', firstLineNumber: 45, lineNumber: 45 });
+  });
+});
+
+describe('releasingSelection', () => {
+  const selected = { side: 'new', first: 40, last: 52 } as const;
+  const lines = (first: number, last: number) => ({ side: 'additions', firstLineNumber: first, lineNumber: last }) as const;
+
+  it('lets go of the lines selected once the action runs on them, or some of them', () => {
+    expect(holdsSelected(lines(40, 52), selected)).toBe(true);
+    expect(holdsSelected(lines(45, 45), selected)).toBe(true);
+  });
+
+  it('keeps a selection the action ran beside, or none', () => {
+    expect(holdsSelected(lines(53, 53), selected)).toBe(false);
+    expect(holdsSelected({ side: 'deletions', firstLineNumber: 45, lineNumber: 45 }, selected)).toBe(false);
+    expect(holdsSelected(lines(45, 45), null)).toBe(false);
+  });
+
+  it('clears after running the action and its other way', () => {
+    const clear = vi.fn();
+    const run = vi.fn();
+    const suggest = vi.fn();
+    const action = releasingSelection({ offers: () => true, label: () => '', run, variant: { label: () => '', run: suggest } }, () => selected, clear);
+    action.run(lines(40, 52));
+    action.variant!.run(lines(40, 52));
+    expect([run.mock.calls.length, suggest.mock.calls.length, clear.mock.calls.length]).toEqual([1, 1, 2]);
+    action.run(lines(60, 60));
+    expect(clear).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('lineActionTip', () => {
+  it('says a drag takes a range, on one line', () => {
+    expect(lineActionTip('Comment on line 4', { side: 'additions', firstLineNumber: 4, lineNumber: 4 })).toBe('Comment on line 4 · Drag for a range');
+    expect(lineActionTip('Comment on lines 4–9', { side: 'additions', firstLineNumber: 4, lineNumber: 9 })).toBe('Comment on lines 4–9');
   });
 });
