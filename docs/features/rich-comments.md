@@ -73,7 +73,7 @@ before.
   them out of `excludedRanges` and `markLink`); micromark, with no definition for it, doesn't. Until the window read its
   review's conversation it reads "Applies: change request c0d1ce00", and a click finds the request first
   (`openChangeRequest`, "What a chip reads").
-- A **person** is their avatar and name, their card the name `cm` knows them by; an **emoji** is itself, its name in
+- A **person** is their avatar and name in the text's color (never a link, so never in the links' accent), their card the name `cm` knows them by; an **emoji** is itself, its name in
   the tooltip.
 - Inside something clicked as a whole (a button, a picker's option: Incoming's list, the branch search, My shelves,
   the changeset picker), a folded thread's line, the editor and a chip's own card, a chip reads the same but is no link
