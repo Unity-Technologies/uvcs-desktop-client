@@ -1,5 +1,6 @@
 import type { LineCommentKind, NewLineComment } from '@shared/domain/reviewConversation';
 import type { CmPlace } from './cmPlace';
+import { lineOption } from './commentLocation';
 
 // Every text goes in a file: a comment holds lines, and a `cm shell` line can't carry quotes or line breaks.
 
@@ -9,9 +10,10 @@ export function addCommentArgs(reviewId: number, textFile: string, at: CmPlace):
 }
 
 /**
- * `cm codereview comment add` on a line: named by its revision rather than its path, which a file moved in the review
+ * `cm codereview comment add` on lines: named by its revision rather than its path, which a file moved in the review
  * doesn't pin to one revision. `cm` takes only a revision the diff comments on (the newer side's, a deleted file's
- * last one), its line from 1; `--changeset` puts it in that changeset's diff, one of a branch's changesets.
+ * last one), and one line or a range (`lineOption`); `--changeset` puts it in that changeset's diff, one of a branch's
+ * changesets.
  */
 export function addLineCommentArgs(reviewId: number, comment: NewLineComment, textFile: string, at: CmPlace): string[] {
   return [
@@ -21,7 +23,7 @@ export function addLineCommentArgs(reviewId: number, comment: NewLineComment, te
     String(reviewId),
     `-commentsfile=${textFile}`,
     `--revision=revid:${comment.revisionId}`,
-    `--line=${comment.firstLine}`,
+    lineOption(comment),
     `--type=${CM_COMMENT_TYPES[comment.kind]}`,
     ...(comment.changesetId === undefined ? [] : [`--changeset=cs:${comment.changesetId}`]),
     ...at.repositoryOption,
