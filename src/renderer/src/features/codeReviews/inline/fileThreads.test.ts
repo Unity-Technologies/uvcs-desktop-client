@@ -13,7 +13,7 @@ function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment
 }
 
 const onLine = (id: number, revisionId: number, line: number, fields: Partial<ReviewComment> = {}): ReviewComment =>
-  comment(id, { anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line }, ...fields });
+  comment(id, { anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: line, lastLine: line }, ...fields });
 
 const PLAYER: ShownFile = { path: 'src/Player.cs', originalRevision: 10, modifiedRevision: 30 };
 
@@ -64,6 +64,12 @@ describe('threadsOfFile', () => {
     expect(earlier).toEqual([]);
   });
 
+  it('places a thread on a range of lines under its last, from its first', () => {
+    const range = onLine(1, 30, 12, { anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 18 } });
+    const { placed } = threadsOfFile(threadsOf([range]), BRANCH, WHOLE, PLAYER);
+    expect(placed.map(({ side, firstLine, line }) => [side, firstLine, line])).toEqual([['additions', 12, 18]]);
+  });
+
   it('shows in a changeset\'s diff the change requests it applied, on the version they were written on', () => {
     // Written on the whole branch at revision 10, applied by changeset 12, whose diff shows 10 on its older side.
     const threads = threadsOf([onLine(1, 10, 3, { kind: 'changeRequest', appliedInChangeset: 12 }), onLine(2, 10, 4, { kind: 'changeRequest', appliedInChangeset: 13 })]);
@@ -92,7 +98,7 @@ describe('threadsOfFile', () => {
   it("leaves out other files' threads, the review's own comments and replies", () => {
     const threads = threadsOf([
       comment(1, { kind: 'general' }),
-      comment(2, { anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', line: 1 } }),
+      comment(2, { anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', firstLine: 1, lastLine: 1 } }),
       onLine(3, 30, 8),
       comment(4, { parentId: 3, kind: 'comment', anchor: { kind: 'review' } }),
     ]);
@@ -122,7 +128,7 @@ describe('placeEarlier', () => {
   const threads = threadsOf([onLine(1, 20, 5), onLine(2, 20, 9), onLine(3, 25, 1), onLine(4, 20, 9, { changesetId: 5 })]);
   const { earlier } = threadsOfFile(threads, BRANCH, WHOLE, PLAYER);
   // Line 5 of revision 20 is line 7 now; line 9 changed since.
-  const lineOf = (_text: string, thread: LineThread): { side: 'additions'; line: number } | null => (thread.root.anchor.line === 5 ? { side: 'additions', line: 7 } : null);
+  const lineOf = (_text: string, thread: LineThread): { side: 'additions'; firstLine: number; line: number } | null => (thread.root.anchor.firstLine === 5 ? { side: 'additions', firstLine: 7, line: 7 } : null);
   const writtenWhole = (thread: LineThread): boolean => thread.root.changesetId === undefined;
 
   it('places a thread whose line is unchanged since at its line now, saying where it was written', () => {

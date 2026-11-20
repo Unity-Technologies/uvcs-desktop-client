@@ -38,13 +38,14 @@ interface ThreadRow {
 export function useThreadRow({ review, thread, user, comparison, onClose }: ThreadRowOptions): ThreadRow {
   const [shown, setShown] = useState(true);
   const side = comparison?.side;
-  const line = comparison?.line;
+  const firstLine = comparison?.firstLine;
+  const line = comparison?.lastLine;
   // Its own object only when the line changes: a reply made here refreshes the thread, and scrolls nothing.
   const scrollTo = useMemo(() => (side && line !== undefined ? { side, lineNumber: line } : null), [side, line]);
   const annotations = useMemo<DiffAnnotations | null>(() => {
-    if (!side || line === undefined) return null;
-    const parts = contextThreadParts(side, line, shown);
-    const placed = { threads: [{ thread, side, line }], line };
+    if (!side || line === undefined || firstLine === undefined) return null;
+    const parts = contextThreadParts(side, { firstLine, lastLine: line }, shown);
+    const placed = { threads: [{ thread, side, firstLine, line }], firstLine, line };
     const markers: LineMarker[] = parts.marked
       ? [{ key: THREAD_ROW, side, lineNumber: line, label: markerLabel(placed), tip: markerTip(placed), content: <CommentMarkerContent line={placed} />, emphasized: markerIsOpen(placed), onOpen: () => setShown(true) }]
       : [];
@@ -74,6 +75,6 @@ export function useThreadRow({ review, thread, user, comparison, onClose }: Thre
       scrollTo,
       opensAtRow: true,
     };
-  }, [review, thread, user, side, line, shown, scrollTo, onClose]);
+  }, [review, thread, user, side, firstLine, line, shown, scrollTo, onClose]);
   return { annotations, controls: <CommentsInCodeButton shown={shown} onChange={setShown} /> };
 }

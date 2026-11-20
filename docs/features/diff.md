@@ -838,7 +838,7 @@ What shows (`useMovedCode`, `MovedCode`):
   same at least; a line only added on the way pairs with none), and the pair is word-diffed as Pierre diffs one
   (`movedWordMarks`, `lineWordMarks`, `WORD_MARKS`). Pierre's own marks on moved lines compare them with whatever line
   stands beside them, so they're dropped (`movedCodeCss`) and these drawn with the browser's highlights
-  (`useMovedWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
+  (`useWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
   (`refreshWordMarks`) was rejected: each of its renders (its worker's colors, a keystroke) draws its own marks back.
 - Each place has a label, "Moved to line 143" or "Moved from line 4" with an arrow toward the other place, that scrolls
   there and lights it up (`scrollToChange`, `useChangeFlash`). It goes in the hatched gap across from the place when
@@ -848,7 +848,8 @@ What shows (`useMovedCode`, `MovedCode`):
 - The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog` of
   `movedCopies`, in the dialog "Compare with clipboard" opens too, `openCodeComparisonDialog`): a read-only diff of what
   moved with what it became, in the diff's look, layout and comparison method, so only what changed on the way shows as
-  changed. Code moved as it was, or with only what the method ignores changed, shows alone, its note saying so ("Moved
+  changed. Its header has the diff's own Split | Unified switch, the same preference (`useDiffPreferences`), as every
+  comparison this dialog opens has (Compare with clipboard, a suggestion's Compare in a larger view). Code moved as it was, or with only what the method ignores changed, shows alone, its note saying so ("Moved
   without changes", "Only whitespace differs"): a diff with no line changes has no lines for Pierre to show
   (`movedComparison`). Its lines are numbered from the start of the moved code (Pierre numbers a diff from 1); the title
   says where both places are. Putting the two places side by side in the diff itself, each side scrolling on its own,
@@ -1026,7 +1027,8 @@ docs/features/code-reviews.md "Comments in the code"):
   empty buffer), so it reads as part of the line it's on. The bar is a background: Pierre's `::before` on a gutter
   buffer is what keeps the gutter's width. Side by side, when both sides of a file hold rows, the gutter can't tell
   whose row is empty, and a buffer under a changed line on the other side may take its tint too.
-  Its `lineAction` is what the place does with one line (a review's "Comment on line 42"), on the lines it `offers`:
+  Its `lineAction` is what the place does with lines (`ChangedLines`: a review's "Comment on lines 40–42"), on the
+  lines it `offers`:
   a "+" by the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained after the line numbers'
   hint), sitting just past the number and over the edge into the code, as a pull request's does (over the number alone
   it hid it; `lineActionSpot`). It's drawn over the diff in its scrolling container, above the outlines around
@@ -1036,8 +1038,12 @@ docs/features/code-reviews.md "Comments in the code"):
   while the pointer is on it (`hold`, `release`: React says the button was entered before Pierre says the line was
   left; a line entered lets go). Apart from its line, it's placed again when the code moves under a pointer at rest
   (`useFollowedLine`: the layout switched, a thread grown), and goes once its line isn't drawn. It has no pop-in: an
-  animation restarted on every line flickered. The action is also the first entry of the lines' menu, on the last of
-  the lines selected (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
+  animation restarted on every line flickered. Beside a selected line it acts on the whole selection
+  (`lineActionTargetAt`), and it drags over other lines of its side to act on all of them (`useLineActionDrag`,
+  `LineActionDragMarks`, `lineActionDrag.ts`; docs/features/code-reviews.md "Writing from the code"). The action is
+  also the first entry of the lines' menu, on the lines selected (`lineMenuEntries`, `lineActionTarget`), and the
+  selection lets go once it runs (`releasingSelection`). Not a key: a committed diff has no caret, so no line is
+  "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 
@@ -1077,7 +1083,7 @@ release that installs.
   the text selected in the page (`pageTextSelection`, through Chromium's `ShadowRoot.getSelection`).
   The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
   its own (`display: contents`), and its code column stands for it (`paneRect`).
-- `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
+- `movedCodeCss`, `MovedCode`, `useWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
   `--diffs-addition-base`, its labels in the gaps across from it (`data-content-buffer`), and its words marked over a
   row's text nodes, which hold its line in order (`rowTextRange`). Checked on screen too.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).

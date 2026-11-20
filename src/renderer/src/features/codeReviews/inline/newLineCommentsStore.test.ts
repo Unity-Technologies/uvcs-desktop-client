@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { newLineCommentSpot, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 
-const at = (line: number): NewLineCommentSpot => newLineCommentSpot(41, 'src/Player.cs', 'additions', { revisionId: 30, line });
+const at = (line: number): NewLineCommentSpot => newLineCommentSpot(41, 'src/Player.cs', 'additions', { revisionId: 30, firstLine: line, lastLine: line });
 
 describe('useNewLineCommentsStore', () => {
   beforeEach(() => useNewLineCommentsStore.setState({ spots: [], focusRequest: null, focusSeq: 0, suggestRequest: null }));
@@ -14,7 +14,7 @@ describe('useNewLineCommentsStore', () => {
     store.open(at(7));
     store.open(at(9));
 
-    expect(useNewLineCommentsStore.getState().spots.map((spot) => [spot.comment.line, spot.comment.kind])).toEqual([
+    expect(useNewLineCommentsStore.getState().spots.map((spot) => [spot.comment.lastLine, spot.comment.kind])).toEqual([
       [7, 'question'],
       [9, 'changeRequest'],
     ]);

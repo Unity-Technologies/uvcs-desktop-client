@@ -35,12 +35,16 @@ export function cardFocusOf(focus: ThreadFocus | null, threadId: number): CardFo
   return focus.inPlace ? { selected: true } : { highlight: focus.seq, selected: true };
 }
 
-/** Every line with threads, outlined in the diff (`LineBands`); the one holding the focused thread, selected. */
+/**
+ * Every line with threads, outlined in the diff (`LineBands`), from the first line its threads are on (a range); the one
+ * holding the focused thread, selected.
+ */
 export function lineBandsOf(lines: readonly LineThreads[], focus: ThreadFocus | null): LineBand[] {
   return lines.map((line) => ({
     key: line.key,
     side: line.side,
     lineNumber: line.line,
+    ...(line.firstLine < line.line && { firstLineNumber: line.firstLine }),
     selected: focus !== null && line.threads.some(({ thread }) => thread.root.id === focus.threadId),
   }));
 }

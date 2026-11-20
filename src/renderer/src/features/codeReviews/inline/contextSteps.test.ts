@@ -15,7 +15,7 @@ function lineThread(fields: Partial<ReviewComment> = {}): LineThread {
     date: '2026-11-09T15:00:00+01:00',
     text: 'Cap a single tick too',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Waves/WaveSpawner.cs', line: 5 },
+    anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Waves/WaveSpawner.cs', firstLine: 5, lastLine: 5 },
     ...fields,
   };
   return threadsOf([root])[0] as LineThread;

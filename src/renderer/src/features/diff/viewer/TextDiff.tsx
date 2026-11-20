@@ -18,7 +18,7 @@ import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
 import { linesLayoutOf } from './keptPlace';
 import { linesSelectable, shownSelection } from './lineLinkMode';
-import { selectedRangeOf } from './linkedLines';
+import { linkedLinesOf, selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { scrollToAnnotationRow } from './annotationRowScroll';
 import { LineBands } from './LineBands';
@@ -29,6 +29,7 @@ import { useDiffAnnotations } from './useDiffAnnotations';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
 import { useLineActionButton } from './LineActionButton';
+import { releasingSelection } from './lineMenu';
 import { useCodeMenu } from './useCodeMenu';
 import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
@@ -231,6 +232,12 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     markedLines,
   });
   // The lines selected offer a link to them (a chip by them) and their menu, where they are selected for links.
+  const selectedForAction = useMemo(() => linkedLinesOf(lineLinks.range), [lineLinks.range]);
+  const latestSelected = useRef(selectedForAction);
+  latestSelected.current = selectedForAction;
+  const placeAction = annotations?.lineAction;
+  const select = lineLinks.select;
+  const placeLineAction = useMemo(() => placeAction && releasingSelection(placeAction, () => latestSelected.current, () => select(null)), [placeAction, select]);
   const lineTools = useLineTools({
     containerRef: container,
     layout,
@@ -239,10 +246,10 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     selectable: lineLinks.selectedLines !== undefined,
     publishes: lineLinks.publishes,
     textOf: (side) => (side === 'old' ? original : diffedText),
-    lineAction: annotations?.lineAction,
+    lineAction: placeLineAction,
   });
   // What the place does with a line (a review's comment on it), a button by the line under the pointer.
-  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container, layout);
+  const lineAction = useLineActionButton(placeLineAction, lineLinks.options, container, layout, selectedForAction);
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,

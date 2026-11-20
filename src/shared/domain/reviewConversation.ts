@@ -9,8 +9,14 @@ import type { CodeReviewStatus, MergeRequestState } from './codeReview';
  */
 export type ReviewCommentKind = 'general' | 'comment' | 'changeRequest' | 'question' | 'discard';
 
-/** Where a comment is: the whole review, or a line of one revision of a file (1-based, as an editor counts). */
-export type ReviewCommentAnchor = { kind: 'review' } | { kind: 'line'; revisionId: number; itemId: number; path: string; line: number };
+/** Lines of a file, 1-based as an editor counts them, both included: one line is `firstLine === lastLine`. */
+export interface LineRange {
+  firstLine: number;
+  lastLine: number;
+}
+
+/** Where a comment is: the whole review, or lines of one revision of a file (one line, or a range of them). */
+export type ReviewCommentAnchor = { kind: 'review' } | ({ kind: 'line'; revisionId: number; itemId: number; path: string } & LineRange);
 
 export interface ReviewComment {
   id: number;
@@ -35,12 +41,11 @@ export interface ReviewComment {
 export type LineCommentKind = Extract<ReviewCommentKind, 'changeRequest' | 'question' | 'comment'>;
 
 /**
- * Where a new comment on a line goes, and as what: a line (1-based) of the revision the review's diff shows (the newer
- * side's, or a deleted file's last one), and the changeset whose diff it's written in, when one is.
+ * Where a new comment on lines goes, and as what: lines of the revision the review's diff shows (the newer side's, or a
+ * deleted file's last one), and the changeset whose diff it's written in, when one is.
  */
-export interface NewLineComment {
+export interface NewLineComment extends LineRange {
   revisionId: number;
-  line: number;
   kind: LineCommentKind;
   changesetId?: number;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 import type { ChangedLine } from './changeBlocks';
-import { lineNumberCellSelector, paneContentSelector, topRowOf, type CodeLayout } from './lineActions';
+import { lineNumberCellSelector, paneContentSelector, sideNumberCellsSelector, topRowOf, type CodeLayout } from './lineActions';
 import { paneRect, pierreShadowRoot } from './pierreDom';
 
 /** Where a line is, in the container's scrolled content: its row's top and bottom, where its pane's code starts (the gutter's end) and its pane's right edge. */
@@ -9,6 +10,21 @@ export interface LineBox {
   bottom: number;
   contentLeft: number;
   paneRight: number;
+  /**
+   * Not rendered (a big file renders only the lines in view), but above or below the rows that are: the box is the
+   * rendered rows' top or bottom edge, where a range's outline runs to (`rangeBox`). Measured only when asked for.
+   */
+  outside?: RenderedEdge;
+}
+
+export type RenderedEdge = 'above' | 'below';
+
+/** Where a line not rendered is, from the first and last line numbers rendered on its side; none within them. */
+export function renderedEdgeOf(lineNumber: number, rendered: { first: number; last: number } | null): RenderedEdge | null {
+  if (!rendered) return null;
+  if (lineNumber < rendered.first) return 'above';
+  if (lineNumber > rendered.last) return 'below';
+  return null;
 }
 
 /** Frames to wait for the lines' rows to render. */
@@ -19,7 +35,13 @@ const MAX_FRAMES = 60;
  * content: only the lines whose rows are rendered (a big file renders only the lines in view), measured again as the
  * view scrolls, or it or its content resizes. `linesKey` names the lines, so a new array of the same lines measures nothing anew.
  */
-export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines: readonly (ChangedLine & { key: string })[], linesKey: string, layout: CodeLayout): ReadonlyMap<string, LineBox> {
+export function useLineBoxes(
+  containerRef: RefObject<HTMLElement | null>,
+  lines: readonly (ChangedLine & { key: string })[],
+  linesKey: string,
+  layout: CodeLayout,
+  { measuresOutside = false }: { measuresOutside?: boolean } = {},
+): ReadonlyMap<string, LineBox> {
   const [boxes, setBoxes] = useState<ReadonlyMap<string, LineBox>>(NO_BOXES);
 
   // After the commit, not in a layout effect: what is placed is inside the container, whose ref is set after its
@@ -28,10 +50,31 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
     const container = containerRef.current;
     if (!container || lines.length === 0) return setBoxes(NO_BOXES);
     // The container's size, and its content's: rows growing above a line (a thread opened, a region unfolded) move it.
-    const resize = new ResizeObserver(() => void measure());
-    /** Measures every line rendered; false while none of them is. */
-    const measure = (): boolean => {
+    // Drawn in the same frame (`flushSync`): the observer calls back after the layout and before the paint, and a
+    // render left for later showed the outline a frame behind its lines, over the card below them.
+    const resize = new ResizeObserver(() => void measure(true));
+    // Rows moved with nothing resized: the virtualizer's spacer above them traded height with rows taller or shorter
+    // (a suggestion above shown another way), which no size observed tells. Measured before the paint (a microtask).
+    let rowsWatched: ShadowRoot | null = null;
+    let measureQueued = false;
+    const rows = new MutationObserver(() => {
+      if (measureQueued) return;
+      measureQueued = true;
+      queueMicrotask(() => {
+        measureQueued = false;
+        measure(true);
+      });
+    });
+    function watchRows(root: ShadowRoot | null): void {
+      if (!root || root === rowsWatched) return;
+      rowsWatched = root;
+      rows.disconnect();
+      rows.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    }
+    /** Measures every line rendered; false while none of them is. `now` commits the boxes before the next paint. */
+    const measure = (now = false): boolean => {
       const root = pierreShadowRoot(container);
+      watchRows(root);
       // The code panes too: Pierre's host is at least as tall as the view, so in a short file a row added above the
       // code (outdated comments) moves the lines without resizing the host. Observing a pane again does nothing.
       for (const pane of root?.querySelectorAll('[data-code]') ?? []) resize.observe(pane);
@@ -39,21 +82,29 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       const next = new Map<string, LineBox>();
       for (const line of lines) {
         // Above the code (`lineNumber: 0`): its first row, whichever it is.
-        const cell = line.lineNumber < 1 ? topRowIn(root, line, layout) : root?.querySelector(lineNumberCellSelector(line, layout));
+        const found = line.lineNumber < 1 ? topRowIn(root, line, layout) : root?.querySelector(lineNumberCellSelector(line, layout));
+        const outside = !found && measuresOutside && root ? renderedEdgeIn(root, line, layout) : null;
+        const cell = found ?? outside?.cell;
         const pane = cell?.closest('[data-code]');
         if (!cell || !pane) continue;
         const rect = cell.getBoundingClientRect();
         // Where the code starts: the gutter's right edge. Not the code column's left, which moves left as the pane
         // scrolls sideways under Pierre's sticky gutter.
         const gutter = pane.querySelector(':scope > [data-gutter]')?.getBoundingClientRect();
+        const top = rect.top - view.top + container.scrollTop;
+        const bottom = rect.bottom - view.top + container.scrollTop;
+        const edge = outside && (outside.edge === 'above' ? top : bottom);
         next.set(line.key, {
-          top: rect.top - view.top + container.scrollTop,
-          bottom: rect.bottom - view.top + container.scrollTop,
+          top: edge ?? top,
+          bottom: edge ?? bottom,
           contentLeft: (gutter?.right ?? rect.right) - view.left + container.scrollLeft,
           paneRight: paneRect(pane).right - view.left + container.scrollLeft,
+          ...(outside && { outside: outside.edge }),
         });
       }
-      setBoxes((last) => (sameBoxes(last, next) ? last : next));
+      const update = (): void => setBoxes((last) => (sameBoxes(last, next) ? last : next));
+      if (now) flushSync(update);
+      else update();
       return next.size > 0;
     };
     // The code may not be rendered yet (it highlights, or scrolls to a link's lines): look again for a moment.
@@ -87,6 +138,7 @@ export function useLineBoxes(containerRef: RefObject<HTMLElement | null>, lines:
       cancelAnimationFrame(scrollFrame);
       resize.disconnect();
       hosts.disconnect();
+      rows.disconnect();
       container.removeEventListener('scroll', measureAgain);
     };
   }, [containerRef, linesKey, layout]);
@@ -104,11 +156,21 @@ function topRowIn(root: ShadowRoot | null, { side }: ChangedLine, layout: CodeLa
   return topRowOf(content.children, (row) => row.hasAttribute('data-line-annotation'), virtualizedAbove);
 }
 
+/** For a line not rendered, the rendered row of its side it's beyond (the first or the last), and on which edge. */
+function renderedEdgeIn(root: ShadowRoot, line: ChangedLine, layout: CodeLayout): { cell: Element; edge: RenderedEdge } | null {
+  const cells = root.querySelectorAll(sideNumberCellsSelector(line.side, layout));
+  const first = cells[0];
+  const last = cells[cells.length - 1];
+  if (!first || !last) return null;
+  const edge = renderedEdgeOf(line.lineNumber, { first: Number(first.getAttribute('data-column-number')), last: Number(last.getAttribute('data-column-number')) });
+  return edge && { cell: edge === 'above' ? first : last, edge };
+}
+
 function sameBoxes(a: ReadonlyMap<string, LineBox>, b: ReadonlyMap<string, LineBox>): boolean {
   if (a.size !== b.size) return false;
   for (const [key, box] of a) {
     const other = b.get(key);
-    if (!other || other.top !== box.top || other.bottom !== box.bottom || other.contentLeft !== box.contentLeft || other.paneRight !== box.paneRight) return false;
+    if (!other || other.top !== box.top || other.bottom !== box.bottom || other.contentLeft !== box.contentLeft || other.paneRight !== box.paneRight || other.outside !== box.outside) return false;
   }
   return true;
 }

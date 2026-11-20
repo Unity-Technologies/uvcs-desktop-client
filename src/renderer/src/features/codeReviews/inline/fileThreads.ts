@@ -41,10 +41,15 @@ export type LineThread = ReviewThread & { root: ReviewThread['root'] & { anchor:
 /** A side of a diff, as Pierre names them. */
 export type ThreadSide = 'deletions' | 'additions';
 
-/** A thread at a line of the diff. `earlier` when it was written on an earlier version and that line is unchanged since. */
+/**
+ * A thread at lines of the diff: its row goes under the last (`line`), as GitHub's do, and the lines from `firstLine`
+ * are outlined; one line is `firstLine === line`. `earlier` when it was written on an earlier version and those lines
+ * are unchanged since.
+ */
 export interface PlacedThread {
   thread: LineThread;
   side: ThreadSide;
+  firstLine: number;
   line: number;
   earlier?: EarlierThread;
 }
@@ -78,9 +83,9 @@ export function threadsOfFile(threads: readonly ReviewThread[], review: CodeRevi
     if (!isLineThread(thread) || !isOfFile(thread.root.anchor, file)) continue;
     const written = writtenIn(review, thread);
     if (view.kind === 'changeset' && !belongsToChangeset(thread, written, view.changesetId)) continue;
-    const { revisionId, line } = thread.root.anchor;
-    if (revisionId === file.modifiedRevision) placed.push({ thread, side: 'additions', line });
-    else if (revisionId === file.originalRevision) placed.push({ thread, side: 'deletions', line });
+    const { revisionId, firstLine, lastLine } = thread.root.anchor;
+    if (revisionId === file.modifiedRevision) placed.push({ thread, side: 'additions', firstLine, line: lastLine });
+    else if (revisionId === file.originalRevision) placed.push({ thread, side: 'deletions', firstLine, line: lastLine });
     else earlier.push({ thread, revisionId });
   }
   return { placed, earlier };
@@ -122,8 +127,8 @@ function isOfFile(anchor: LineAnchor, file: ShownFile): boolean {
 export type VersionText = string | null | undefined;
 
 /**
- * Where the threads on earlier versions go, once those versions are read (`textOf`): at their line on a side where it
- * is unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
+ * Where the threads on earlier versions go, once those versions are read (`textOf`): at their lines on a side where
+ * they are unchanged since (`lineOf`), else outdated, shown apart with the line they were written on. While any
  * version is still read, every thread waits: rows are kept by their place (`annotationRowsOf`), so a thread placed
  * before another version arrives would be moved by it. One whose version's read failed is outdated, its line known
  * though not its text, and holds none of the others. A thread written in one changeset's diff, in the whole review's
@@ -132,7 +137,7 @@ export type VersionText = string | null | undefined;
 export function placeEarlier(
   earlier: readonly EarlierThread[],
   textOf: (revisionId: number) => VersionText,
-  lineOf: (earlierText: string, thread: LineThread) => { side: ThreadSide; line: number } | null,
+  lineOf: (earlierText: string, thread: LineThread) => Pick<PlacedThread, 'side' | 'firstLine' | 'line'> | null,
   showsWhenOutdated: (thread: LineThread) => boolean,
 ): { placed: PlacedThread[]; outdated: EarlierThread[]; reading: EarlierThread[] } {
   const placed: PlacedThread[] = [];

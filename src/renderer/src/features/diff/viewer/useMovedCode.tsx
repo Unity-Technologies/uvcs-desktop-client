@@ -12,7 +12,7 @@ import { linesOf, movedCodeCss } from './movedCodeCss';
 import { movedWordMarks } from './movedWordMarks';
 import { useChangeFlash } from './useChangeFlash';
 import { useDiffShadowRoot } from './useDiffShadowRoot';
-import { useMovedWordMarks } from './useMovedWordMarks';
+import { MOVED_WORD_COLORS, useWordMarks } from './useWordMarks';
 import { useShadowStyle } from './useShadowStyle';
 
 interface MovedCodeOptions {
@@ -37,7 +37,7 @@ interface MovedCodeOptions {
 
 /**
  * The code a text diff shows moved (`detectMovedBlocks`): in the moved color, the words edited on the way marked
- * (`useMovedWordMarks`), its two places labeled and, side by side, joined by a ribbon while it's hovered (`MovedCode`).
+ * (`useWordMarks`), its two places labeled and, side by side, joined by a ribbon while it's hovered (`MovedCode`).
  * A label takes the view to the other place and lights it for a moment, or compares both (`openMovedCodeDialog`).
  * Returns the overlay, to go in the scrolling element.
  */
@@ -50,7 +50,7 @@ export function useMovedCode({ diff, comparisonMethod, fileName, layout, contain
   const root = useDiffShadowRoot(containerRef);
   useShadowStyle(containerRef, `${movedCodeCss(moves, shownHovered)}\n${flash.css}`);
   useHoveredRows(root, moves, setHovered);
-  useMovedWordMarks(containerRef, root, useMemo(() => movedWordMarks(diff, moves), [diff, moves]));
+  useWordMarks(containerRef, root, useMemo(() => movedWordMarks(diff, moves), [diff, moves]), MOVED_WORD_COLORS);
   const stopScrolling = useRef<() => void>(undefined);
   useEffect(() => () => stopScrolling.current?.(), []);
 

@@ -9,7 +9,8 @@
 # scrollbar ticks as one) and near its end. The timeline gets a rename and a status change with a comment. Change
 # requests suggest changes (a ```suggestion fence, docs/features/code-reviews.md "Suggested changes"): a line replaced,
 # a line deleted, a line replaced by several, a line wrapped in a new condition, one in a file with Windows line ends,
-# and one outdated, its line changed since; a question holds the same fence, which reads as code. Two more reviews have
+# three lines replaced by one (a comment on a range, `--line=A-B`), and one outdated, its line changed since; a question
+# holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. Two more reviews have
 # no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
 # can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
@@ -143,6 +144,13 @@ suggest /Assets/Scripts/Commands.cs 3 'Nothing calls `Command1`:
 suggest /Assets/Scripts/Settings.cs 4 '```suggestion
     public const int TimeoutSeconds = 60;
 ```'
+# On a range of lines: the three properties it replaces stay as they are, so it stays open at lines 10–12.
+suggest /Assets/Scripts/Commands.cs 10-12 'One list reads better than three properties:
+```suggestion
+    public static readonly string[] Some = { "command 8", "command 9", "command 10" };
+```'
+# A range whose middle line the check-in below edits: outdated, its snippet marking all three lines.
+on_review --path=/Assets/Scripts/SwitchFlow.cs --line=12-14 --type=Question -c="Could these three calls be one?" >/dev/null
 suggest /Assets/Scripts/Retry.cs 3 'Would this read better?
 ```suggestion
     public static void Times(int count, Action action, Action onEach)

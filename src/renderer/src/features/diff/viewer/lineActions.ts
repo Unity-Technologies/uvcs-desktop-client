@@ -2,6 +2,7 @@ import type { FocusedLines } from '../../../app/navigation/pages';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import { linkedLinesOf } from './linkedLines';
 import type { LineRange } from './lineSelection';
+import { rangeWordsInline } from '../../../lib/rangeWords';
 
 /** How the code is laid out: a diff side by side or unified, or one file (an annotation). */
 export type CodeLayout = 'split' | 'unified' | 'file';
@@ -25,7 +26,11 @@ export function lineChipAnchor(range: LineRange | null, linkable: boolean): Chan
  * unchanged or added line has (an unchanged line's number there is the newer side's); in a file, the only one.
  */
 export function lineNumberCellSelector({ side, lineNumber }: ChangedLine, layout: CodeLayout): string {
-  const cell = `[data-column-number="${lineNumber}"]`;
+  return sideNumberCellsSelector(side, layout, `[data-column-number="${lineNumber}"]`);
+}
+
+/** Every number cell of a side, as `lineNumberCellSelector` finds one line's. */
+export function sideNumberCellsSelector(side: DiffSide, layout: CodeLayout, cell = '[data-column-number]'): string {
   if (layout === 'split') return `[data-${side}] ${cell}`;
   if (layout === 'unified') return side === 'deletions' ? `${cell}[data-line-type="change-deletion"]` : `${cell}:not([data-line-type="change-deletion"])`;
   return cell;
@@ -92,7 +97,7 @@ export function copiedLinesWord({ first, last }: FocusedLines): string {
 
 /** "line 42", "lines 40–52": how a menu names the lines selected. */
 export function linesWords({ first, last }: FocusedLines): string {
-  return first === last ? `line ${first}` : `lines ${first}–${last}`;
+  return rangeWordsInline({ firstLine: first, lastLine: last });
 }
 
 function sideOf(lines: FocusedLines): DiffSide {

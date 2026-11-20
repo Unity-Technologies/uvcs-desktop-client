@@ -74,13 +74,21 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
 const SNIPPET_ROWS_EDGE_TO_EDGE_CSS = ':host{--diffs-gap-block:0px;--diffs-gap-style:none}';
 
 /**
- * A few lines' diff shown whole inside a comment (a change request's Suggested change): the code's diff as the viewer
- * shows it (its colors, bars, word marks and line numbers, which the suggestion gives as the file's), one column, every
- * line shown and no tints for comment rows, as it holds none.
+ * The most unchanged lines a snippet shows rather than fold: a fold saves a reader only a long run, and one of a few
+ * lines reads better shown than behind a bar to click.
+ */
+export const SNIPPET_FOLDS_OVER = 10;
+
+/**
+ * A few lines' diff inside a comment (a change request's Suggested change): the code's diff as the viewer shows it (its
+ * colors, bars, word marks and line numbers, which the suggestion gives as the file's), one column, and no tints for
+ * comment rows, as it holds none. Its lines show whole but for a run of more than `SNIPPET_FOLDS_OVER` unchanged ones
+ * between its hunks, folded behind a bar that unfolds it.
  */
 export function pierreSnippetDiffOptions(theme: ResolvedTheme): FileDiffOptions<undefined, undefined> {
   return {
-    ...pierreDiffOptions({ theme, layout: 'unified', collapseUnchanged: false, wrapLines: false }),
+    ...pierreDiffOptions({ theme, layout: 'unified', collapseUnchanged: true, wrapLines: false }),
+    collapsedContextThreshold: SNIPPET_FOLDS_OVER,
     unsafeCSS: PIERRE_SURFACE_CSS + SNIPPET_ROWS_EDGE_TO_EDGE_CSS,
   };
 }

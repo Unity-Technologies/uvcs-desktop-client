@@ -7,7 +7,7 @@ import type { LineThread } from './fileThreads';
  */
 export function earlierTagOf(thread: LineThread, outdated: boolean): { label: string; tip: string } {
   const where = thread.root.changesetId === undefined ? 'an earlier version of this file' : `the file as changeset ${thread.root.changesetId} left it`;
-  return outdated
-    ? { label: 'Outdated', tip: `Written on ${where}: its line changed since` }
-    : { label: 'Earlier version', tip: `Written on ${where}: this line hasn't changed since` };
+  const several = thread.root.anchor.lastLine > thread.root.anchor.firstLine;
+  if (outdated) return { label: 'Outdated', tip: `Written on ${where}: ${several ? 'its lines' : 'its line'} changed since` };
+  return { label: 'Earlier version', tip: `Written on ${where}: ${several ? "these lines haven't" : "this line hasn't"} changed since` };
 }

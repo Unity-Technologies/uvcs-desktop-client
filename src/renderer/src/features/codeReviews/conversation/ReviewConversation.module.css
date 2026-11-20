@@ -105,6 +105,15 @@
   font-size: var(--text-sm);
 }
 
+/* At the header's end: the comment's menu, and while a change request is edited, its Suggest change before it. */
+.commentHeaderActions {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 /* Who and when: a narrow card (a side of a split diff) wraps between these parts, never inside a name or a date. */
 .commentWho {
   display: flex;

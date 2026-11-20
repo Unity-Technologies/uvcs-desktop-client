@@ -2,8 +2,8 @@ import type { DiffLineAnnotation } from '@pierre/diffs';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ChangedLine } from '../../diff/viewer/changeBlocks';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { earlierRevisions, placeEarlier, settledIn, threadsOfFile, writtenIn, type EarlierThread, type LineThread, type ReviewDiffView, type ShownFile, type ThreadSide, type VersionText } from './fileThreads';
-import { newerLineFinder } from './newerLine';
+import { earlierRevisions, placeEarlier, settledIn, threadsOfFile, writtenIn, type EarlierThread, type LineThread, type PlacedThread, type ReviewDiffView, type ShownFile, type ThreadSide, type VersionText } from './fileThreads';
+import { newerLineFinder, rangeIn } from './newerLine';
 import { lineOfThread, lineThreadsOf, type LineThreads, type ShownThreadRows } from './threadRows';
 
 /** A file's threads as its diff shows them: by line, and those outdated, apart above the code. */
@@ -39,12 +39,12 @@ export function fileCommentsOf({ threads, review, view, file, textOf }: FileComm
   const older = earlier.some((entry) => settledIn(entry.thread, view)) ? sideText(file.originalRevision, textOf) : null;
   const lineInNewer = typeof newer === 'string' ? newerLineFinder(newer) : null;
   const lineInOlder = typeof older === 'string' ? newerLineFinder(older) : null;
-  const lineOf = (text: string, thread: LineThread): { side: ThreadSide; line: number } | null => {
-    const { line } = thread.root.anchor;
-    const before = settledIn(thread, view) && lineInOlder ? lineInOlder(text, line) : null;
-    if (before !== null) return { side: 'deletions', line: before };
-    const now = lineInNewer ? lineInNewer(text, line) : null;
-    return now === null ? null : { side: 'additions', line: now };
+  const lineOf = (text: string, thread: LineThread): Pick<PlacedThread, 'side' | 'firstLine' | 'line'> | null => {
+    const { anchor } = thread.root;
+    const before = settledIn(thread, view) && lineInOlder ? rangeIn(text, lineInOlder, anchor) : null;
+    if (before !== null) return { side: 'deletions', firstLine: before.firstLine, line: before.lastLine };
+    const now = lineInNewer ? rangeIn(text, lineInNewer, anchor) : null;
+    return now === null ? null : { side: 'additions', firstLine: now.firstLine, line: now.lastLine };
   };
   const placedEarlier = placeEarlier(
     earlier,

@@ -12,13 +12,13 @@ function thread(id: number, fields: Partial<ReviewComment> = {}, replies: Review
     date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`,
     text: 'Text',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', line: 1 },
+    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', firstLine: 1, lastLine: 1 },
     ...fields,
   };
   return threadsOf([root, ...replies])[0] as LineThread;
 }
 
-const at = (side: ThreadSide, line: number, entry: LineThread): PlacedThread => ({ thread: entry, side, line });
+const at = (side: ThreadSide, line: number, entry: LineThread): PlacedThread => ({ thread: entry, side, firstLine: line, line });
 
 describe('lineThreadsOf', () => {
   it('gathers the threads of a line into one row, oldest first, the lines in the order the diff reads', () => {
@@ -28,6 +28,11 @@ describe('lineThreadsOf', () => {
       ['additions:2', [2]],
       ['additions:9', [1, 3]],
     ]);
+  });
+
+  it("starts a row's outline at the first line any of its threads is on", () => {
+    const [line] = lineThreadsOf([at('additions', 9, thread(1)), { ...at('additions', 9, thread(2)), firstLine: 4 }, { ...at('additions', 9, thread(3)), firstLine: 6 }]);
+    expect([line!.firstLine, line!.line]).toEqual([4, 9]);
   });
 
   it('has no rows for a file without threads', () => {
@@ -84,8 +89,9 @@ describe('markerCommentCount', () => {
 
 describe('markerLabel', () => {
   it("names one comment's kind, else how many there are, and who wrote them", () => {
-    expect(markerLabel({ line: 4, threads: [at('additions', 4, thread(1, { kind: 'question' }))] })).toBe('Question on line 4, by Ana');
-    expect(markerLabel({ line: 4, threads: [at('additions', 4, thread(1)), at('additions', 4, thread(2, { author: 'bob' }))] })).toBe('2 comments on line 4, by Ana and Bob');
+    expect(markerLabel({ firstLine: 4, line: 4, threads: [at('additions', 4, thread(1, { kind: 'question' }))] })).toBe('Question on line 4, by Ana');
+    expect(markerLabel({ firstLine: 2, line: 4, threads: [at('additions', 4, thread(1, { kind: 'question' }))] })).toBe('Question on lines 2–4, by Ana');
+    expect(markerLabel({ firstLine: 4, line: 4, threads: [at('additions', 4, thread(1)), at('additions', 4, thread(2, { author: 'bob' }))] })).toBe('2 comments on line 4, by Ana and Bob');
   });
 });
 

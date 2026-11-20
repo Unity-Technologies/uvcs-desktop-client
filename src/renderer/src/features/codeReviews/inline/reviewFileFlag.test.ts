@@ -9,7 +9,7 @@ import { reviewFileFlag } from './reviewFileFlag';
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/task' };
 
 function onLine(id: number, path: string, fields: Partial<ReviewComment> = {}): ReviewComment {
-  return { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 30, itemId: 7, path: `/${path}`, line: 3 }, ...fields };
+  return { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 30, itemId: 7, path: `/${path}`, firstLine: 3, lastLine: 3 }, ...fields };
 }
 
 function entry(path: string): DiffEntry {

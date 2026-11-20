@@ -3,7 +3,7 @@ import type { ReviewComment, ReviewConversation } from '@shared/domain/reviewCon
 import { codeReviewSummary } from '../../../testing/codeReviewSummary';
 import { branchChangeRequestsOf, changeRequestChip, changeRequestNamed, changeRequestsBranch, changeRequestsOf, notYetNamed, reviewsToRead, stillOpen } from './changeRequests';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `c0d1ce${String(id).padStart(2, '0')}-b457-4424-99ff-a3f1c0fa2582`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00+01:00`, text: `Request ${id}`, kind: 'changeRequest', anchor: ON_LINE, ...fields };
@@ -30,7 +30,7 @@ describe('changeRequestsOf', () => {
       [2, { kind: 'applied', changesetId: 7 }],
       [3, { kind: 'discarded' }],
     ]);
-    expect(requests[0]).toMatchObject({ reviewId: 43, guid: comment(1).guid, author: 'ana', text: 'Request 1', location: { path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } });
+    expect(requests[0]).toMatchObject({ reviewId: 43, guid: comment(1).guid, author: 'ana', text: 'Request 1', location: { path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } });
   });
 
   it('gives a request on the whole review no location, and reads a conversation once', () => {
@@ -99,6 +99,12 @@ describe('changeRequestChip', () => {
       card: { comment: 'Shelve **first**\n\nThe undo fails.', title: 'Change request c0d1ce01', meta: ['Change request c0d1ce01', 'Open', 'Code review 43', 'Ana', 'ago 10:01'] },
       opens: { reviewId: 43, threadId: 1 },
     });
+  });
+
+  it('reads as the lines it replaces when it opens with its suggestion, not its first line of code', () => {
+    const [request] = changeRequestsOf(43, conversationOf(comment(1, { text: '```suggestion\nclass Tabs\n```', anchor: { ...ON_LINE, firstLine: 1, lastLine: 8 } })));
+
+    expect(changeRequestChip(request, 'c0d1ce01', ago).label).toBe('Suggested change on lines 1–8');
   });
 
   it('says where an applied or a discarded one stands', () => {

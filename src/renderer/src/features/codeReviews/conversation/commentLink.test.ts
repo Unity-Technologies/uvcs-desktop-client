@@ -4,7 +4,7 @@ import { repositoryPlace } from '@shared/domain/place';
 import type { ReviewComment, ReviewConversation } from '@shared/domain/reviewConversation';
 import { commentLinkPage, reviewCommentCopyTexts } from './commentLink';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:00:0${id % 10}+01:00`, text: '', kind: 'general', anchor: { kind: 'review' }, ...fields };

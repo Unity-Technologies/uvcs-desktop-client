@@ -216,7 +216,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 
 - One `cm find changereviewcomment "where reviewid = N order by date asc"` reads everything said on a review
   (`FOUND_REVIEW_COMMENTS`, `conversationOf`): the comments, each with its kind (`ReviewCommentKind`), the comment it
-  replies to (`{parent}`), where it is (`{revisionid}`, `{itemid}`, `{path}`, `{line}`, `{changeset}`), when it was
+  replies to (`{parent}`), where it is (`{revisionid}`, `{itemid}`, `{path}`, `{location}`, `{changeset}`), when it was
   edited (`{modifieddate}`, the creation date when never edited) and the changeset that applied a change request
   (`{appliedinchangeset}`). The server writes its own notes among them (`timeline`), their meaning in a prefix of the
   text: the description is the newest `[description]` one; the others are events (`ReviewEvent`): review requests
@@ -421,13 +421,11 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
 A change request can suggest the code itself, as GitHub's suggested changes do: a fence whose language is `suggestion`,
 holding the lines that replace the commented ones. It is plain text in the comment (`suggestionOf`,
 `lib/reviewSuggestion.ts`), so the official client and the web show a code block, and no `cm` command or server field is
-involved. A suggestion replaces the lines its comment is on: one line today; a range once comments take ranges (`cm
-codereview comment add --line=A-B`, stored as a `lines:A-B` location, 0-based and inclusive). An empty fence deletes
-them, several lines replace them. Everything after the anchor takes a range (`LineRange`, `{ firstLine, lastLine }`, one
-line when they're equal): the block's removed rows, Suggest change's prefill, following the lines into the workspace's
-file (`suggestionTargetIn`, see "Applying a suggestion"), writing them (`withLinesReplaced`) and the reasons ("Lines
-13–15 changed…", `rangeWords`). The one place a comment's `{line}` becomes a range is `commentedLines`: supporting
-ranges changes only it.
+involved. A suggestion replaces the lines its comment is on, one or a range (see "Lines a comment is on"). An empty
+fence deletes them, several lines replace them. Everything takes the comment's `LineRange` (`{ firstLine, lastLine }`,
+one line when they're equal): the block's removed rows, Suggest change's prefill, following the lines into the
+workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing them (`withLinesReplaced`) and the reasons
+("Lines 13–15 changed…", `rangeWords`).
 
 - **What counts** (`suggestionOf`, `suggestedChangeOf`): only a change request on a line holds one, as only those are
   applied (`[apply-change:…]`); a fence in a question or a comment is a code block. Only the comment's first such fence
@@ -442,22 +440,41 @@ ranges changes only it.
   request. While it's written, the fence's code is colored in the commented file's language, as the box shows it once
   sent (`commentedFileLanguage`, given by `CommentedFileContext` in a line comment, its replies and edits), from the
   moment the editor learns the file, not only once the code is typed into (`colorsRedrawn`). It's offered once per
-  comment, as only the first fence counts. The code's menu has **Suggest change on line 42** after "Comment on line 42"
+  comment, as only the first fence counts. The code's menu has **Suggest change on line 42** (or **on lines 40–42**, the
+  lines selected) after "Comment on line 42"
   (`LineAction.variant`), opening the comment with the fence in it (`useNewLineCommentsStore`'s `suggestRequest`); when
   it can't fill one (the line can't be read, a suggestion is there already), the card says why rather than opening
   without one (`suggestRequestOutcome`), until the comment changes (`refusalShown`). A fence a line of code would close
-  takes more backticks (`suggestionFence`). Not in a reply, which has no line of its own and is never a change request,
-  nor in an edit, whose composer is every comment's: the fence can be typed there, as it can anywhere.
+  takes more backticks (`suggestionFence`). Editing a change request on lines offers it too, in its header beside its menu
+  (`editOffersSuggestion`, `EditSuggestButton`), so a request posted without one can take one; disabled, saying so,
+  once the text suggests already. Not in a reply, which has no line of its own and is never a change request, nor in
+  the editor of a question or a plain comment, whose kind stays once posted: the fence can be typed there, a code
+  block.
 - **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
   cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
-  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). It reads as GitHub's and
-  GitLab's suggestions do: every line replaced, then every line suggested, the lines it keeps among them, numbered as
-  the file's lines from the first one commented (`replacedThenSuggested`: one hunk starting there, in a diff kept
-  whole, as Pierre loads the full files of a partial one). The line diff alone would mix them: a line wrapped in a new
-  `if` became the `if` added above the line removed and added again, indented, which read as if the `if` were already
-  there. Words are marked only when the suggested lines take the replaced ones' places one for one (every change of
-  the line diff adds as many lines as it removes), as Pierre marks the n-th line removed against the n-th added. One
+  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). Two views, the user's
+  choice for every suggestion (`useSuggestionViewStore`, switched by the header's small **Stacked | Diff** control;
+  the box clicked stays where it is on screen while every suggestion resizes, `keepElementInPlace`; shown only when
+  the two differ, `viewsDiffer`: a suggestion keeping none of the lines it replaces, as most one-line ones, reads the
+  same both ways):
+  **stacked**, the default, as GitHub and GitLab show one: every line replaced, then every line suggested
+  (`replacedThenSuggested`), each line edited marked against the line it became as the line diff pairs them, whatever
+  lines the suggestion adds or removes (`stackedWordMarks`, drawn over the rows by `useWordMarks` in Pierre's own word
+  colors; Pierre's own marks are off there, as it pairs the n-th line removed with the n-th added, which marks the
+  wrong lines once the suggestion has another number of lines); and **as a diff**: the line diff of the two, the
+  lines kept shown once and untinted, only the lines changed removed and added, their words marked (`suggestionLineDiff`). Three
+  lines kept stay around each change (`SUGGESTION_CONTEXT_LINES`), and a run of more than ten kept lines folds behind
+  a bar that unfolds it (`SNIPPET_FOLDS_OVER`, Pierre's `collapsedContextThreshold`): a method whose first and last
+  lines change reads as its two changes, while a shorter run shows whole, as a bar to click there saves nothing.
+  Stacked never folds: it is the old block, then the new one. Stacked reads a heavy rewrite best, where a diff
+  interleaves pieces of both; the diff reads a few words changed in a longer range best, where stacked shows the lines kept twice. Both are
+  numbered as the file's lines from the first one commented, in a diff kept whole, as Pierre loads the full files of a
+  partial one. **Compare in a larger view**, beside it, opens the line diff in the code comparison dialog
+  (`openSuggestionComparison`, the moved code's, `openCodeComparisonDialog`), wide enough for the two side by side,
+  with the diff's own Split | Unified switch: a comment, as narrow as its thread, has no room for them. Its controls
+  are words and a diff icon (a page with + and −): icons alone read only once used, and an expand icon read as "make
+  the box bigger". One
   column, highlighted in the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it:
   `useSyntaxHighlighter`), every line shown. A few lines, so drawn whole on the main thread: no workers, and no
   virtualizer, even inside the code's diff, whose own it would otherwise join. Inside a thread in the code, the box is
@@ -472,7 +489,9 @@ ranges changes only it.
   and only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from
   the disk. While it's read, and while Pierre loads with the first box shown, a place as tall as its rows holds it;
   lines that can't be read leave the suggested lines alone, added. One-line previews (the Comments panel, Open, a
-  folded card) show the comment's first words, or the code's first line, as for any code block. Copying keeps the
+  folded card, the "Applies:" chip) show the comment's first words; one that opens with its suggestion reads
+  "Suggested change on lines 24–152" (`changeRequestLineText`, `suggestionNameOf`), as its first line of code (`{`, a
+  method's signature) names nothing. Copying keeps the
   fence as written. ## Applying a suggestion An open change request's Suggested change has a split button in its
   header (`SuggestionApplyButton`):
 - **Check in suggestion** asks for the check-in's comment (`CommentDialog`): "Apply suggestion from Ana", the request to
@@ -644,8 +663,20 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   panel's Open/All shows, so the icon and the chip agree, and from the threads alone, as the list reads no file
   (gathered by file once per diff: a list of thousands of files reads each thread a few times). See in
   context's list marks the commented file the same way, with no chip (`commentedFileFlag`).
-- **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on a line of one revision of a file
-  (`{revisionid}`, `{line}`), found in the diff by its path or the path the file moved from. On the revision the
+- **Lines a comment is on.** One line or a range of them, of one revision (`ReviewCommentAnchor`, `LineRange`). `cm`
+  stores where a comment is as text, counted from 0 (`{location}`; `commentedLinesOf`): `11` is line 12, `lines:11-17`
+  lines 12 to 18 (written by `cm codereview comment add --line=12-18`; `lineOption`), `-1` no line (a comment on the
+  review, or on a whole file). `{line}` names a range's first line only, so it isn't read. Anything else is a location
+  another client writes with `--location` (a point of an image, `image:120,80`): the app reads it, and a comment on a
+  whole file, as a comment on the review for now. A thread on a range sits under its last line, as GitHub's do, and its
+  outline runs from its first (`PlacedThread.firstLine`, `LineBand.firstLineNumber`, `rangeBox`), on out of view when
+  an end is past the rows a big file renders (`LineBox.outside`, `renderedEdgeOf`); a folded region inside it unfolds
+  (`rangeLinesOf`). It names its lines as "lines 12–18" (`rangeWords`): its header, its marker, See in
+  context's title and views, an outdated thread's snippet (every line of it marked, the first ten of a longer one,
+  `snippetOf`), and a change request to apply (`Player.cs:12-18`). The Comments panel orders it by the line it sits
+  under. The needed `cm` is the one the app pins (docs/features/cm-runtime.md), so nothing checks its version.
+- **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on lines of one revision of a file
+  (`{revisionid}`, `{location}`), found in the diff by its path or the path the file moved from. On the revision the
   diff's newer side shows, it sits under its line; on the one its older side shows (a file the review deletes, which
   `cm` comments on its last revision), under that line on the left. On an earlier version of the file (the reviewer
   commented at cs:8, the author checked in cs:9 and cs:10), that version and the newer side are read
@@ -653,7 +684,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   file's threads on earlier versions wait until every one is read or has failed, so a row placed never moves for
   another arriving, Pierre keeping rows by their place, `placeEarlier`; one whose read failed holds none of the
   others, and its threads are outdated, their line known though not their text; a purged one reads as empty), and
-  the line is followed into the newest version (`newerLineOf`, a line diff ignoring line ends): unchanged, the thread
+  the lines are followed into the newest version (`newerLineFinder` and `rangeIn`, a line diff ignoring line ends; a
+  range only while every line of it is there, unchanged and together): unchanged, the thread
   sits at its line there, tagged **Earlier version**; changed or gone, it is **outdated**, gathered above the code
   ("2 outdated comments", folded), each with the lines it was written on (`snippetOf`) (`earlierTagOf`). Why not the
   official client's banner (Revision with comments, Last in branch, Diff with head): most comments still sit on code
@@ -815,20 +847,32 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   chevron's click that folds it, which selects it too), and the panel brings its entry into view only when it's out of
   it (`listScrollTop`). Picking the thread already selected changes nothing, so the focus moving within a card moves no
   list. Under a filter that hides it, the panel marks nothing, and keeps its filter.
-- **Writing from the code.** A line of the revision the diff comments on takes a comment: the newer side's (context
+- **Writing from the code.** A line of the revision the diff comments on takes a comment, and so do the lines selected
+  in the gutter (a click on a number, Shift+click or a drag for a range, as for a link): the newer side's (context
   lines too), or a deleted file's, which `cm` comments on its last revision; never the older side of a changed file,
   nor a removed line in unified layout, which the reviewed revision doesn't hold (`lineCommentAt`). Files under an
   xlink and directories take none, as they hold no thread (`isCommentable`); images, binaries and 3D models wait for
-  their viewers' own way in. Two ways in, both the diff's `lineAction`: a "+" by the line under the
-  pointer, lines with threads included (a new change request isn't always a reply), and "Comment on line 42" first in
-  the code's menu (on the last of the lines selected: `cm` names one line), "Suggest change on line 42" after it (see
-  "Suggested changes"). No key: a review's diff has no caret, so no
-  line is "current". The comment opens under the line (`NewLineCommentCard`), after the line's threads, the line
-  outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
+  their viewers' own way in. Two ways in, both the diff's `lineAction` (`ChangedLines`): a "+" by the line under the
+  pointer, lines with threads included (a new change request isn't always a reply), on the lines selected when it's
+  one of them ("Comment on lines 40–52", `lineActionTargetAt`), and "Comment on line 42" first in the code's menu, on
+  the lines selected (`lineActionTarget`), "Suggest change on line 42" after it (see "Suggested changes"). The "+"
+  also drags, as GitHub's does (its tooltip says "Drag for a range", `lineActionTip`): pressed and moved over other
+  lines of its side, they're outlined in the accent with a "+" on the first and the last (`useLineActionDrag`,
+  `LineActionDragMarks`, `lineActionDrag.ts`), and released, the comment opens on all of them; released on its own
+  line, it's a click, and Esc drops it. No gutter selection while dragging, and no text selected: its fill across both panes was noise
+  for a comment. A line joining the two "+" was tried and dropped: it ran over the code's first letters. Once a
+  comment opens on lines selected, the selection lets go (`releasingSelection`): the comment's outline marks them,
+  and the selection's fill under its card was noise. Lines a comment is being written on take no other comment while it is
+  (`crossesCommentBeingWritten`): no "+" there, no menu entry, no drag or selection across them, as two comments being
+  written over the same code read as one. The same lines go back to the comment being written. A selection
+  across both sides of a unified diff is one line (`linkedLinesOf`), as its link is. No key: a review's diff has no
+  caret, so no line is "current". The comment opens under its last line (`NewLineCommentCard`), scrolled into view
+  and focused if it isn't in view (`openedSpotRow`: unfolding the lines a range crossed can push it far down), after the line's
+  threads, its lines outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
   as the official client's: it's written where it's read. Its kind comes first, as it can't change once posted: Change
   request (the default, `DEFAULT_LINE_COMMENT_KIND`), Question or Comment, the placeholder and the button following it
   ("Request change", "Ask question", "Comment": `lineCommentWords`). ⌘↵ sends it at once, as every comment is (`cm
-  codereview comment add <id> --revision=revid:N --line=L --type=Change|Question|Comment`, and `--changeset=cs:N`
+  codereview comment add <id> --revision=revid:N --line=L|A-B --type=Change|Question|Comment`, and `--changeset=cs:N`
   on one changeset picked in the list, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
   thread, opened even while comments are hidden (`openedOnSend`): the card stays, sending, until the conversation read
   again holds it (`conversationReadSince`, which waits for a read after the write, `conversationReadAt`, the one the
@@ -837,7 +881,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   text in `useCommentDraftStore`), so going to another file, mode or tab and back finds them under their lines:
   nothing asks to save one on the way, as the official client's Yes/No/Cancel did. One takes the focus only when
   opened (`focusRequest`, `focusOnRequest`): shown again as its file is, it leaves the focus where the user is (going
-  through the files). It's kept by its file and line number, not the revision: a branch's newest revision changes as
+  through the files). It's kept by its file and line numbers, not the revision: a branch's newest revision changes as
   its author checks in, and the comment stays at its line number, going on the revision and side shown then (a file
   deleted since, on its last revision: `newLineCommentsIn`). The code at that line may have changed meanwhile: the
   reviewer sees it before sending, and following the line through the change would need the versions read for every

@@ -44,7 +44,7 @@ describe('writing on a review', () => {
     }
 
     expect(await addReviewComment(inWs, 41, 'Nice')).toBe(true);
-    expect(await addLineComment(inWs, 41, { revisionId: 30, line: 7, kind: 'question' }, 'Why?')).toBe(true);
+    expect(await addLineComment(inWs, 41, { revisionId: 30, firstLine: 7, lastLine: 7, kind: 'question' }, 'Why?')).toBe(true);
     expect(await replyToComment(inWs, comment, 'Thanks')).toBe(true);
     expect(await discardChangeRequest(inWs, comment, 'cm calls it target')).toBe(true);
     expect(await editReviewComment(inWs, comment, 'Nicer')).toBe(true);
@@ -53,7 +53,7 @@ describe('writing on a review', () => {
 
     expect(fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1)])).toEqual([
       ['reviewComments.add', 41, 'Nice'],
-      ['reviewComments.addOnLine', 41, { revisionId: 30, line: 7, kind: 'question' }, 'Why?'],
+      ['reviewComments.addOnLine', 41, { revisionId: 30, firstLine: 7, lastLine: 7, kind: 'question' }, 'Why?'],
       ['reviewComments.reply', 'c1', 'Thanks'],
       ['reviewComments.reply', 'c1', 'cm calls it target', { discard: true }],
       ['reviewComments.edit', 'c1', 'Nicer'],
@@ -69,7 +69,7 @@ describe('writing on a review', () => {
     answerConfirms(true);
     const writes = [
       () => addReviewComment(inWs, 41, 'Nice'),
-      () => addLineComment(inWs, 41, { revisionId: 30, line: 7, kind: 'changeRequest' }, 'Rename it'),
+      () => addLineComment(inWs, 41, { revisionId: 30, firstLine: 7, lastLine: 7, kind: 'changeRequest' }, 'Rename it'),
       () => replyToComment(inWs, comment, 'Thanks'),
       () => discardChangeRequest(inWs, comment, 'Not needed'),
       () => editReviewComment(inWs, comment, 'Nicer'),
@@ -169,7 +169,7 @@ describe("what a write reads again of the user's email subscription", () => {
     for (const method of ['reviewComments.add', 'reviewComments.addOnLine', 'reviewComments.reply'] as const) fakeApi.answer(method, () => undefined);
 
     expect(await subscriptionReadAgainAfter(() => addReviewComment(inWs, 41, 'Nice'))).toBe(true);
-    expect(await subscriptionReadAgainAfter(() => addLineComment(inWs, 41, { revisionId: 30, line: 7, kind: 'question' }, 'Why?'))).toBe(true);
+    expect(await subscriptionReadAgainAfter(() => addLineComment(inWs, 41, { revisionId: 30, firstLine: 7, lastLine: 7, kind: 'question' }, 'Why?'))).toBe(true);
     expect(await subscriptionReadAgainAfter(() => replyToComment(inWs, comment, 'Thanks'))).toBe(true);
     expect(await subscriptionReadAgainAfter(() => discardChangeRequest(inWs, comment, 'Not needed'))).toBe(true);
   });

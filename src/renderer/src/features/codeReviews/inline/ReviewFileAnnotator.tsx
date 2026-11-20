@@ -1,10 +1,9 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import { History } from 'lucide-react';
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo, useRef, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
-import type { ChangedLine } from '../../diff/viewer/changeBlocks';
-import { DiffAnnotationsContext, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
+import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
@@ -16,7 +15,7 @@ import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
 import { NewLineCommentCard } from './NewLineCommentCard';
-import { lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { crossesCommentBeingWritten, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, nextSpotScroll, diffScrollTarget, openedSpotRow, withNewLineCommentBands, type SpotScroll, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
@@ -74,7 +73,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   }
   // A new place to scroll to only when a thread is gone to: a refetch, a line opened, comments hidden or a card picked
   // in the code (`inPlace`, on screen already) scroll nothing.
-  const scrollTo = useMemo(
+  const threadScrollTo = useMemo(
     () => (focusPlace && scrollsToFocus(focus) ? { side: focusPlace.side, lineNumber: focusPlace.lineNumber } : null),
     [focus?.seq, focus?.inPlace, focusPlace?.side, focusPlace?.lineNumber],
   );
@@ -88,21 +87,33 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const allSpots = useNewLineCommentsStore((state) => state.spots);
   const openSpot = useNewLineCommentsStore((state) => state.open);
   const spots = useMemo(() => (comments && view && threads ? newLineCommentsIn(allSpots, comments.review.id, view, file) : NO_SPOTS), [allSpots, comments, threads, fileKey]);
+  // A comment just opened is brought into view, if it isn't: unfolding what it was stretched over may push it far down.
+  const focusRequest = useNewLineCommentsStore((state) => state.focusRequest);
+  const [spotScroll, setSpotScroll] = useState<SpotScroll | null>(null);
+  const nextScroll = nextSpotScroll(spotScroll, openedSpotRow(spots, focusRequest), focus?.seq);
+  if (nextScroll !== spotScroll) setSpotScroll(nextScroll);
+  const scrollTo = diffScrollTarget(spotScroll, focus?.seq, threadScrollTo);
   const reviewId = comments?.review.id;
+  // Read when offered, not a dependency: new comments being written would make a new action, and Pierre lay out anew.
+  const spotsNow = useRef(spots);
+  spotsNow.current = spots;
   const lineAction = useMemo<LineAction | undefined>(() => {
     if (reviewId === undefined || !view || !threads) return undefined;
     return {
-      offers: (line: ChangedLine) => lineCommentAt(view, file, line) !== null,
+      offers: (lines: ChangedLines) => {
+        const at = lineCommentAt(view, file, lines);
+        return at !== null && !crossesCommentBeingWritten(spotsNow.current, at);
+      },
       label: lineCommentLabel,
-      run: (line: ChangedLine) => {
-        const at = lineCommentAt(view, file, line);
-        if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at));
+      run: (lines: ChangedLines) => {
+        const at = lineCommentAt(view, file, lines);
+        if (at) openSpot(newLineCommentSpot(reviewId, file.path, lines.side, at));
       },
       variant: {
         label: suggestLineLabel,
-        run: (line: ChangedLine) => {
-          const at = lineCommentAt(view, file, line);
-          if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at), { suggests: true });
+        run: (lines: ChangedLines) => {
+          const at = lineCommentAt(view, file, lines);
+          if (at) openSpot(newLineCommentSpot(reviewId, file.path, lines.side, at), { suggests: true });
         },
       },
     };
@@ -203,8 +214,8 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
       />
     );
   }
-  const { line, spot } = lineRowContent(row.metadata, context.shownLines, context.spots);
-  const newComment = spot && <NewLineCommentCard key={spot.key} spot={spot} onSent={() => context.onSent(row.metadata)} />;
+  const { line, spots } = lineRowContent(row.metadata, context.shownLines, context.spots);
+  const newComment = spots.length > 0 && spots.map((spot) => <NewLineCommentCard key={spot.key} spot={spot} onSent={() => context.onSent(row.metadata)} />);
   if (!line) return newComment ? <ThreadsRow>{newComment}</ThreadsRow> : null;
   return (
     <InlineThreads comments={comments} line={line} focus={focus} onClose={context.onClose && (() => context.onClose!(line.key))} onSeeInContext={context.onSeeInContext}>

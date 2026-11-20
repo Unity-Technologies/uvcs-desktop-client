@@ -11,7 +11,7 @@ const REQUEST: ReviewComment = {
   date: '2026-11-09T15:00:00+01:00',
   text: 'Log the shelve number here.',
   kind: 'changeRequest',
-  anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Waves/WaveSpawner.cs', line: 43 },
+  anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Waves/WaveSpawner.cs', firstLine: 43, lastLine: 43 },
   appliedInChangeset: 15,
 };
 const REWORK: ReviewEvent = { id: 2, author: 'vio', date: '2026-11-09T16:00:00+01:00', kind: 'statusChanged', status: 'Rework required', comment: '', guid: 's2' };

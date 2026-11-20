@@ -1,13 +1,18 @@
 import type { ReviewComment, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import { listNames } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
+import { rangeWordsInline } from '../../../lib/rangeWords';
 import type { PlacedThread, ThreadSide } from './fileThreads';
 
-/** The threads at one line of one side of a diff: one row under the line, or one marker on it. */
+/**
+ * The threads at one line of one side of a diff: one row under the line, or one marker on it. A thread on a range sits
+ * at its last line; `firstLine` is the first line any of them is on, where their outline starts.
+ */
 export interface LineThreads {
   /** Names the line among the file's: what stays open across renders. */
   key: string;
   side: ThreadSide;
+  firstLine: number;
   line: number;
   /** Oldest first, as they were started. */
   threads: PlacedThread[];
@@ -23,7 +28,8 @@ export function lineThreadsOf(placed: readonly PlacedThread[]): LineThreads[] {
   const byLine = new Map<string, LineThreads>();
   for (const entry of placed) {
     const key = lineKey(entry.side, entry.line);
-    const row = byLine.get(key) ?? { key, side: entry.side, line: entry.line, threads: [] };
+    const row = byLine.get(key) ?? { key, side: entry.side, firstLine: entry.firstLine, line: entry.line, threads: [] };
+    row.firstLine = Math.min(row.firstLine, entry.firstLine);
     row.threads.push(entry);
     byLine.set(key, row);
   }
@@ -76,11 +82,11 @@ export function markerPeople(line: MarkedThreads, max = MARKER_PEOPLE): { people
 /** A marker shows this many people before it counts the rest. */
 const MARKER_PEOPLE = 3;
 
-/** What a marker says of a line: one comment names its kind, several how many, and who wrote them. */
-export function markerLabel(line: Pick<LineThreads, 'threads' | 'line'>): string {
+/** What a marker says of a line, or the lines its threads are on: one comment names its kind, several how many, and who wrote them. */
+export function markerLabel(line: Pick<LineThreads, 'threads' | 'firstLine' | 'line'>): string {
   const count = markerCommentCount(line);
   const what = count === 1 ? KIND_WORDS[line.threads[0]!.thread.root.kind] : `${count} comments`;
-  return `${what} on line ${line.line}, by ${listNames(markerNames(line))}`;
+  return `${what} on ${rangeWordsInline({ firstLine: line.firstLine, lastLine: line.line })}, by ${listNames(markerNames(line))}`;
 }
 
 /** Everyone who wrote in a marker's threads, replies too, by name, each once, as they first wrote: who its avatars show. */

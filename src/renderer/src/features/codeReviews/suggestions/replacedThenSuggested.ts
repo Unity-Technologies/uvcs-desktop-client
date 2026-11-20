@@ -6,14 +6,14 @@ import type { ChangeContent, FileDiffMetadata, Hunk } from '@pierre/diffs';
  * first one commented. The line diff alone would mix them: wrapping a line in a new `if` is the `if` added, then the
  * line removed and added again, indented, which reads as if the `if` were there already.
  *
- * The changed words are marked (`30` → `60`) only when the suggestion's lines take the replaced ones' places one for
- * one (every change of the line diff `lineDiff` adds as many lines as it removes): Pierre marks the n-th line removed
- * against the n-th added, so otherwise it would mark lines that have nothing to do with each other.
+ * Pierre marks no words here: it pairs the n-th line removed with the n-th added, which would mark lines that have
+ * nothing to do with each other once the suggestion has another number of lines. The words are marked over the rows
+ * instead, each line edited against the line it became (`stackedWordMarks`).
  */
 export function replacedThenSuggested(lineDiff: FileDiffMetadata, firstLine: number): FileDiffMetadata {
   const deletions = lineDiff.deletionLines.length;
   const additions = lineDiff.additionLines.length;
-  const hunkContent = linesTakeTheSamePlaces(lineDiff) ? [change(deletions, additions)] : [change(deletions, 0), change(0, additions, deletions)];
+  const hunkContent = [change(deletions, 0), change(0, additions, deletions)];
   const changes = hunkContent.filter((part) => part.deletions + part.additions > 0);
   const splitLineCount = changes.reduce((rows, part) => rows + Math.max(part.deletions, part.additions), 0);
   const unifiedLineCount = deletions + additions;
@@ -40,10 +40,6 @@ export function replacedThenSuggested(lineDiff: FileDiffMetadata, firstLine: num
   // partial diff (`loadDiffFiles`), and fails without them. Its line numbers come from the hunk's starts alone, and
   // nothing shows before the hunk (`collapsedBefore: 0`) or after it (the texts end where it does).
   return { ...lineDiff, isPartial: false, hunks: [hunk], splitLineCount, unifiedLineCount };
-}
-
-function linesTakeTheSamePlaces(lineDiff: FileDiffMetadata): boolean {
-  return lineDiff.hunks.every((hunk) => hunk.hunkContent.every((part) => part.type === 'context' || part.deletions === part.additions));
 }
 
 function change(deletions: number, additions: number, deletionLineIndex = 0): ChangeContent {

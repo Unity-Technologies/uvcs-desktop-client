@@ -26,7 +26,7 @@ function reviewComments(answers: Record<string, CmAnswer>) {
 
 /** A note of the server's, as `cm find changereviewcomment` prints it. */
 function timelineNote(id: number, comment: string) {
-  return { id, guid: `t${id}`, owner: 'ana', date: '2026-11-16T10:00:00+01:00', modifieddate: '2026-11-16T10:00:00+01:00', comment, type: 'timeline', parent: -1, revisionid: -1, line: '', changeset: -1, appliedinchangeset: -1 };
+  return { id, guid: `t${id}`, owner: 'ana', date: '2026-11-16T10:00:00+01:00', modifieddate: '2026-11-16T10:00:00+01:00', comment, type: 'timeline', parent: -1, revisionid: -1, location: -1, changeset: -1, appliedinchangeset: -1 };
 }
 
 describe('reading a review conversation', () => {
@@ -34,8 +34,8 @@ describe('reading a review conversation', () => {
     const { service, commands } = reviewComments({
       'find changereviewcomment': recordsOutput(
         FOUND_REVIEW_COMMENTS,
-        { id: 43, guid: 'd1', owner: 'ana', date: '2026-11-06T10:00:00+01:00', modifieddate: '2026-11-06T10:00:00+01:00', comment: '[description]Why', type: 'timeline', parent: -1, revisionid: -1, line: '', changeset: -1, appliedinchangeset: -1 },
-        { id: 44, guid: 'c1', owner: 'bob', date: '2026-11-06T10:05:00+01:00', modifieddate: '2026-11-06T10:05:00+01:00', comment: 'Nice', type: 'conversation', parent: -1, revisionid: -1, line: '', changeset: -1, appliedinchangeset: -1 },
+        { id: 43, guid: 'd1', owner: 'ana', date: '2026-11-06T10:00:00+01:00', modifieddate: '2026-11-06T10:00:00+01:00', comment: '[description]Why', type: 'timeline', parent: -1, revisionid: -1, location: -1, changeset: -1, appliedinchangeset: -1 },
+        { id: 44, guid: 'c1', owner: 'bob', date: '2026-11-06T10:05:00+01:00', modifieddate: '2026-11-06T10:05:00+01:00', comment: 'Nice', type: 'conversation', parent: -1, revisionid: -1, location: -1, changeset: -1, appliedinchangeset: -1 },
       ),
     });
 
@@ -136,7 +136,7 @@ describe('writing on a review', () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = reviewComments({ 'codereview comment add': answer });
 
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 42, kind: 'changeRequest' }, 'Rename this.');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 42, lastLine: 42, kind: 'changeRequest' }, 'Rename this.');
 
     expect(commands).toMatchObject([
       { via: 'query', args: ['codereview', 'comment', 'add', '41', `-commentsfile=${seen.file}`, '--revision=revid:812', '--line=42', '--type=Change'] },
@@ -145,11 +145,19 @@ describe('writing on a review', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('adds a comment on a range of lines, by its first and last line', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment add': '' });
+
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 12, lastLine: 18, kind: 'comment' }, 'All of these.');
+
+    expect(commands).toMatchObject([{ via: 'query', args: expect.arrayContaining(['--revision=revid:812', '--line=12-18', '--type=Comment']) }]);
+  });
+
   it("writes a question or a comment as cm types them, in the diff of the changeset it's written in", async () => {
     const { service, commands } = reviewComments({ 'codereview comment add': '' });
 
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'question', changesetId: 9 }, 'Why?');
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'comment' }, 'Nice.');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 1, lastLine: 1, kind: 'question', changesetId: 9 }, 'Why?');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 1, lastLine: 1, kind: 'comment' }, 'Nice.');
 
     expect(commands.map(({ args }) => args.slice(5))).toEqual([
       ['--revision=revid:812', '--line=1', '--type=Question', '--changeset=cs:9'],
@@ -242,7 +250,7 @@ describe('writing on a review', () => {
     const { service, commands } = reviewComments({ codereview: '' });
 
     await service.add(ON_REPOSITORY, 41, 'a');
-    await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, line: 3, kind: 'comment' }, 'a');
+    await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, firstLine: 3, lastLine: 3, kind: 'comment' }, 'a');
     await service.reply(ON_REPOSITORY, 'c1', 'b');
     await service.edit(ON_REPOSITORY, 'c1', 'c');
     await service.remove(ON_REPOSITORY, 'c1');

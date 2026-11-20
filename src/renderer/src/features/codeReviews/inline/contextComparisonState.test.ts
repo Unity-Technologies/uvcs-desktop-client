@@ -19,7 +19,7 @@ function threadOn(revisionId: number, fields: Partial<ReviewComment> = {}): Line
     date: '2026-11-06T10:00:00Z',
     text: 'Rename it',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line: 12 },
+    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 12 },
     ...fields,
   };
   return threadsOf([root])[0] as LineThread;
@@ -32,7 +32,7 @@ describe('contextComparisonState', () => {
   it('compares from the diff on screen, reading nothing', () => {
     const state = contextComparisonState({ thread: open, view: 'commented', repository: REPOSITORY, onScreen: ON_SCREEN, source: { kind: 'onScreen' }, read: {} });
 
-    expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'additions', line: 12 } });
+    expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'additions', firstLine: 12, lastLine: 12 } });
   });
 
   it('waits for the diff it reads, and says why when that read fails', () => {
