@@ -1,5 +1,6 @@
 import { DiffHunksRenderer } from '@pierre/diffs';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { SNIPPET_FOLDS_OVER } from '../../diff/viewer/pierreOptions';
 import { warmUpPierre } from '../../diff/viewer/pierreSessionFixture';
 import { wordMarksIn, type RenderedNode, type WordMarks } from '../../diff/viewer/renderedWordMarks';
 import { suggestionFileDiff } from './suggestionFileDiff';
@@ -17,7 +18,8 @@ interface Rendered {
 }
 
 async function rendered(replacedText: string, suggestedText: string, firstLine: number, view: SuggestionView = 'diff'): Promise<Rendered> {
-  const renderer = new DiffHunksRenderer({ theme: 'pierre-light', diffStyle: 'unified', lineDiffType: 'word', expandUnchanged: true });
+  // Folding as the box does (`pierreSnippetDiffOptions`): only a run of more than `SNIPPET_FOLDS_OVER` unchanged lines.
+  const renderer = new DiffHunksRenderer({ theme: 'pierre-light', diffStyle: 'unified', lineDiffType: 'word', expandUnchanged: false, collapsedContextThreshold: SNIPPET_FOLDS_OVER });
   const result = await renderer.asyncRender(suggestionFileDiff('a.cs', { replacedText, suggestedText, firstLine }, view));
   const rowNodes = (renderer.renderCodeAST('unified', result) ?? []).flatMap(rowNodesIn);
   const marksOf = (lineType: string) => wordMarksIn(rowNodes.filter((row) => row.type === 'element' && row.properties?.['data-line-type'] === lineType));
@@ -72,6 +74,25 @@ describe('a suggested change as Pierre draws it, as a diff', () => {
     expect(marks).toEqual({ deletions: ['1', '2'], additions: ['2', '3'] });
   });
 
+  const method = (length: number, edited: (line: number) => boolean) =>
+    Array.from({ length }, (_, index) => (edited(index + 1) ? `edited${index + 1}();` : `line${index + 1}();`)).join('\n') + '\n';
+  const lineNumbers = (rows: string[]) => rows.map((row) => Number(row.split(' ')[0]));
+
+  it('folds a long run of lines kept between two changes, keeping three lines around each', async () => {
+    const { rows } = await rendered(method(50, () => false), method(50, (line) => line === 2 || line === 49), 101);
+    expect(lineNumbers(rows)).toEqual([101, 102, 102, 103, 104, 105, 146, 147, 148, 149, 149, 150]);
+  });
+
+  it('folds a long run of lines kept before or after the only change, numbered as the file', async () => {
+    expect(lineNumbers((await rendered(method(30, () => false), method(30, (line) => line === 30), 11)).rows)).toEqual([37, 38, 39, 40, 40]);
+    expect(lineNumbers((await rendered(method(30, () => false), method(30, (line) => line === 1), 11)).rows)).toEqual([11, 11, 12, 13, 14]);
+  });
+
+  it(`shows a run of up to ${SNIPPET_FOLDS_OVER} lines it would fold whole`, async () => {
+    const between = 2 * 3 + SNIPPET_FOLDS_OVER;
+    const { rows } = await rendered(method(between + 2, () => false), method(between + 2, (line) => line === 1 || line === between + 2), 1);
+    expect(rows).toHaveLength(between + 4);
+  });
 });
 
 describe('a suggested change as Pierre draws it, stacked', () => {

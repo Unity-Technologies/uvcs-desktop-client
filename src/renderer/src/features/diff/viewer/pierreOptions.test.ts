@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PIERRE_SURFACE_CSS, pierreDiffOptions, pierreSnippetDiffOptions, WORD_MARKS } from './pierreOptions';
+import { PIERRE_SURFACE_CSS, pierreDiffOptions, pierreSnippetDiffOptions, SNIPPET_FOLDS_OVER, WORD_MARKS } from './pierreOptions';
 
 const css = pierreDiffOptions({ theme: 'light', layout: 'split', collapseUnchanged: true, wrapLines: false }).unsafeCSS ?? '';
 
@@ -46,8 +46,8 @@ describe('pierreSnippetDiffOptions: a few lines of diff in a comment', () => {
     expect(options).toMatchObject({ theme: 'pierre-dark', themeType: 'dark', diffStyle: 'unified', diffIndicators: 'bars', ...WORD_MARKS });
   });
 
-  it('shows every line, numbered, with no header, scrolling long lines sideways', () => {
-    expect(options).toMatchObject({ expandUnchanged: true, disableFileHeader: true, overflow: 'scroll' });
+  it('shows every line but a long run of unchanged ones, numbered, with no header, scrolling long lines sideways', () => {
+    expect(options).toMatchObject({ expandUnchanged: false, collapsedContextThreshold: SNIPPET_FOLDS_OVER, disableFileHeader: true, overflow: 'scroll' });
     expect(options.disableLineNumbers).toBeFalsy();
   });
 
