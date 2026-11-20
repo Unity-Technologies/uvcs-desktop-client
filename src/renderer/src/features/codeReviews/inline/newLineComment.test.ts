@@ -107,6 +107,10 @@ describe('withNewLineCommentRows', () => {
     expect(withNewLineCommentRows([], [spot({ firstLine: 3, lastLine: 6 })])).toEqual([{ side: 'additions', lineNumber: 6, metadata: 'additions:6' }]);
   });
 
+  it('adds one row for comments being written that end on the same line', () => {
+    expect(withNewLineCommentRows([], [spot({ firstLine: 9, lastLine: 9 }), spot({ firstLine: 5, lastLine: 9 })])).toEqual([{ side: 'additions', lineNumber: 9, metadata: 'additions:9' }]);
+  });
+
   it('adds none for a line already showing its threads: the new comment goes in that row', () => {
     expect(withNewLineCommentRows([threadsAt9], [spot({ firstLine: 9, lastLine: 9 })])).toEqual([threadsAt9]);
   });
@@ -134,21 +138,27 @@ describe('lineRowContent', () => {
 
   it("holds the line's threads, then the comment written there", () => {
     const written = spot({ firstLine: 9, lastLine: 9 });
-    expect(lineRowContent('additions:9', [lineAt9], [written])).toEqual({ line: lineAt9, spot: written });
+    expect(lineRowContent('additions:9', [lineAt9], [written])).toEqual({ line: lineAt9, spots: [written] });
+  });
+
+  it('holds every comment being written that ends on its line, in the order they were opened', () => {
+    const onLine = spot({ firstLine: 9, lastLine: 9 });
+    const onRange = spot({ firstLine: 5, lastLine: 9 });
+    expect(lineRowContent('additions:9', [], [onLine, onRange])).toEqual({ line: undefined, spots: [onLine, onRange] });
   });
 
   it('holds only the comment written on a line whose threads are hidden', () => {
     const written = spot({ firstLine: 9, lastLine: 9 });
-    expect(lineRowContent('additions:9', [], [written])).toEqual({ line: undefined, spot: written });
+    expect(lineRowContent('additions:9', [], [written])).toEqual({ line: undefined, spots: [written] });
   });
 
   it('holds a range being commented on in its last line\'s row', () => {
     const written = spot({ firstLine: 5, lastLine: 9 });
-    expect(lineRowContent('additions:9', [lineAt9], [written])).toEqual({ line: lineAt9, spot: written });
+    expect(lineRowContent('additions:9', [lineAt9], [written])).toEqual({ line: lineAt9, spots: [written] });
   });
 
   it('holds nothing for a row of neither', () => {
-    expect(lineRowContent('additions:4', [lineAt9], [spot({ firstLine: 9, lastLine: 9 })])).toEqual({ line: undefined, spot: undefined });
+    expect(lineRowContent('additions:4', [lineAt9], [spot({ firstLine: 9, lastLine: 9 })])).toEqual({ line: undefined, spots: [] });
   });
 });
 
