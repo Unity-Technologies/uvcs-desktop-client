@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShownFile } from './fileThreads';
-import { DEFAULT_LINE_COMMENT_KIND, crossesCommentBeingWritten, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { DEFAULT_LINE_COMMENT_KIND, crossesCommentBeingWritten, focusOnRequest, LINE_COMMENT_KINDS, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentKey, newLineCommentsIn, newLineCommentSpot, openedSpotRow, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 
 const WHOLE = { kind: 'whole' } as const;
 const CHANGESET_8 = { kind: 'changeset', changesetId: 8 } as const;
@@ -208,5 +208,19 @@ describe('crossesCommentBeingWritten', () => {
     expect(crossesCommentBeingWritten(writing, at(9, 9))).toBe(false);
     expect(crossesCommentBeingWritten(writing, at(21, 30))).toBe(false);
     expect(crossesCommentBeingWritten([], at(12, 12))).toBe(false);
+  });
+});
+
+describe('openedSpotRow', () => {
+  const range = spot({ firstLine: 24, lastLine: 152 });
+  const other = spot({ path: 'src/Enemy.cs' });
+
+  it("is the row under the last line of the comment just opened here, once per request", () => {
+    expect(openedSpotRow([range], { key: range.key, seq: 3 })).toEqual({ seq: 3, side: 'additions', lineNumber: 152 });
+  });
+
+  it("is none when no comment was just opened, or the one opened is another file's", () => {
+    expect(openedSpotRow([range], null)).toBeNull();
+    expect(openedSpotRow([range], { key: other.key, seq: 3 })).toBeNull();
   });
 });

@@ -104,6 +104,16 @@ export function lineRowContent<Line extends { key: string }>(rowKey: string, sho
   };
 }
 
+/**
+ * The row a comment just opened in this file is written in, to bring into view (`DiffAnnotations.scrollTo`): one
+ * stretched over folded lines unfolds them, and its row, under its last line, may then stand far below the view. One
+ * per focus request (`seq`), so it's scrolled to once; none when the comment asked for is another file's.
+ */
+export function openedSpotRow(spots: readonly NewLineCommentSpot[], request: { key: string; seq: number } | null): { seq: number; side: ThreadSide; lineNumber: number } | null {
+  const spot = request && spots.find((shown) => shown.key === request.key);
+  return spot ? { seq: request.seq, side: spot.side, lineNumber: spot.comment.lastLine } : null;
+}
+
 /** What the composer of a new comment says for each kind: its placeholder, and its button's verb. */
 export function lineCommentWords(kind: LineCommentKind): { placeholder: string; submit: string } {
   return LINE_COMMENT_WORDS[kind];

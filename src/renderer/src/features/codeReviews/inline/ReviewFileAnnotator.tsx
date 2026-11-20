@@ -4,6 +4,7 @@ import { useContext, useMemo, useRef, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
 import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
+import type { ChangedLine } from '../../diff/viewer/changeBlocks';
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
@@ -15,7 +16,7 @@ import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
 import { NewLineCommentCard } from './NewLineCommentCard';
-import { crossesCommentBeingWritten, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { crossesCommentBeingWritten, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, openedSpotRow, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
@@ -73,7 +74,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   }
   // A new place to scroll to only when a thread is gone to: a refetch, a line opened, comments hidden or a card picked
   // in the code (`inPlace`, on screen already) scroll nothing.
-  const scrollTo = useMemo(
+  const threadScrollTo = useMemo(
     () => (focusPlace && scrollsToFocus(focus) ? { side: focusPlace.side, lineNumber: focusPlace.lineNumber } : null),
     [focus?.seq, focus?.inPlace, focusPlace?.side, focusPlace?.lineNumber],
   );
@@ -87,6 +88,14 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const allSpots = useNewLineCommentsStore((state) => state.spots);
   const openSpot = useNewLineCommentsStore((state) => state.open);
   const spots = useMemo(() => (comments && view && threads ? newLineCommentsIn(allSpots, comments.review.id, view, file) : NO_SPOTS), [allSpots, comments, threads, fileKey]);
+  // A comment just opened is brought into view, if it isn't: unfolding what it was stretched over may push it far
+  // down. Kept past its focus request, which its card takes as it mounts, so the scroll isn't stopped half-way; a
+  // thread gone to after it scrolls there instead.
+  const focusRequest = useNewLineCommentsStore((state) => state.focusRequest);
+  const openedRow = openedSpotRow(spots, focusRequest);
+  const [spotScroll, setSpotScroll] = useState<{ seq: number; focusSeq: number | undefined; line: ChangedLine } | null>(null);
+  if (openedRow && spotScroll?.seq !== openedRow.seq) setSpotScroll({ seq: openedRow.seq, focusSeq: focus?.seq, line: { side: openedRow.side, lineNumber: openedRow.lineNumber } });
+  const scrollTo = spotScroll && spotScroll.focusSeq === focus?.seq ? spotScroll.line : threadScrollTo;
   const reviewId = comments?.review.id;
   // Read when offered, not a dependency: new comments being written would make a new action, and Pierre lay out anew.
   const spotsNow = useRef(spots);
