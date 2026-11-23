@@ -986,8 +986,9 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
   With no `node` hint (another client's, or one past the length limit), an empty name, or a name an exporter gave
   ("Mesh", "mesh_0", "Object_12", "polySurface3", Maya's "pCylinder3", Blender's "Cube.001"; a bare "Plane" reads as
   written: `partNameSaysNothing`), it says only "point" or "part". The tooltip gives the part's whole path, empty names
-  left out: "A point on Car › Wheel", "All of Car › Wheel" (`writtenPlaceTip`). A comment on a part lights the part
-  up only on demand: its bubble pointed at or focused, its card open, or while it's written (`litCommentPart`).
+  left out: "A point on Car › Wheel", "The whole part Car › Wheel" (`writtenPlaceTip`). A comment on a part lights
+  the part up only on demand: its bubble pointed at or focused, its card open, or while it's written
+  (`litCommentPart`).
 - **On an earlier version** a pin shows on its part as the version shown has it (`local`), dashed and tagged "Earlier
   version"; when that part is gone, at its point, the tag saying so by the part's name, "Wheel isn't in this version"
   (`modelEarlierTagOf`). No earlier version is read.

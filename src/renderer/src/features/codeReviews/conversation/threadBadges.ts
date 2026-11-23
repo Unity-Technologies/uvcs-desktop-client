@@ -110,7 +110,7 @@ export function imageSpotWords(spot: ImageSpot): string {
 /** An image's spot in whole pixels, as an SVG's may have decimals: "A 40 × 30 pixel area of the image at x 1, y 2". */
 function imageSpotTip({ x, y, size }: ImageSpot): string {
   const at = `at x ${Math.round(x)}, y ${Math.round(y)}`;
-  return size ? `A ${Math.round(size.width)} × ${Math.round(size.height)} pixel area of the image ${at}` : `A point of the image ${at}`;
+  return size ? `A ${Math.round(size.width)} × ${Math.round(size.height)} pixel area of the image ${at}` : `A point on the image ${at}`;
 }
 
 /** "part" for a comment on a whole part of a 3D model, "point" for one on a point of its surface. */
@@ -152,7 +152,7 @@ export function writtenPlaceNamesPart(anchor: FileAnchor): boolean {
 function modelSpotTip(spot: ModelSpot): string {
   const named = spot.node?.path.filter((name) => name.trim() !== '') ?? [];
   const path = named.join(' › ');
-  if (spot.wholePart) return path ? `All of ${path}` : 'A part of the model';
+  if (spot.wholePart) return path ? `The whole part ${path}` : 'A part of the model';
   return path ? `A point on ${path}` : 'A point on the model';
 }
 
