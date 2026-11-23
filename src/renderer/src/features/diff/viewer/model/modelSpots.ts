@@ -5,7 +5,7 @@
 
 import { Matrix4, Vector3 } from 'three';
 import type { ModelPoint, ModelSpot } from '@shared/domain/reviewConversation';
-import { worldMatricesOf } from './modelSpaces';
+import { fileRestWorldOf } from './modelSpaces';
 import type { ModelNode, ParsedModel } from './parsedModel';
 import type { Vector } from './orbitCamera';
 
@@ -31,7 +31,7 @@ export function nodeOfSpot(model: Pick<ParsedModel, 'nodes'>, spot: ModelSpot): 
   if (candidates.length <= 1) return candidates[0] ?? null;
   const local = spot.node.local;
   if (!local) return candidates[0]!;
-  const rest = worldMatricesOf({ nodes: model.nodes, unitScale: 1, importScale: 1, axisConversion: new Matrix4().elements }, new Matrix4());
+  const rest = fileRestWorldOf(model);
   const written = vectorOf(spot.point);
   const distance = (index: number) => vectorOf(local).applyMatrix4(rest[index]!).distanceToSquared(written);
   return candidates.reduce((nearest, index) => (distance(index) < distance(nearest) ? index : nearest));
@@ -88,7 +88,7 @@ export function spotOfPick(model: ParsedModel, pick: ModelPick, nodeWorld: (inde
   const distance = toCamera.length();
   const view = distance > 0 ? { view: { direction: pointOf(toCamera.divideScalar(distance)), distance } } : {};
   if (pick.node === null) return { point: pointOf(drawnInFile), ...view };
-  const rest = worldMatricesOf({ nodes: model.nodes, unitScale: 1, importScale: 1, axisConversion: new Matrix4().elements }, new Matrix4())[pick.node]!;
+  const rest = fileRestWorldOf(model)[pick.node]!;
   const local = pick.restInFile ? new Vector3(...pick.restInFile).applyMatrix4(rest.clone().invert()) : hit.clone().applyMatrix4(nodeWorld(pick.node).clone().invert());
   return {
     point: pointOf(local.clone().applyMatrix4(rest)),

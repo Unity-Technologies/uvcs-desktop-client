@@ -11,7 +11,7 @@
 
 import { Matrix4, Triangle, Vector3, type SkinnedMesh } from 'three';
 import { isSkinned, placedPositionsOf } from './meshPlacement';
-import { worldMatricesOf } from './modelSpaces';
+import { fileRestWorldOf } from './modelSpaces';
 import type { ModelPoint } from '@shared/domain/reviewConversation';
 import type { ModelMesh, ParsedModel } from './parsedModel';
 
@@ -45,7 +45,7 @@ export function skinnedMeshesOn(model: Pick<ParsedModel, 'meshes'>, node: number
 export function skinAnchorOfSpot(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, local: ModelPoint | undefined): SkinAnchor | null {
   const meshes = skinnedMeshesOn(model, node);
   if (meshes.length === 0 || !local) return null;
-  const atRest = new Vector3(local.x, local.y, local.z).applyMatrix4(restWorldOf(model)[node]!);
+  const atRest = new Vector3(local.x, local.y, local.z).applyMatrix4(fileRestWorldOf(model)[node]!);
   return nearestSkinAnchor(restMeshesOf(model, meshes), atRest);
 }
 
@@ -59,16 +59,10 @@ export function restPointOfHit(model: Pick<ParsedModel, 'nodes' | 'meshes'>, nod
   return anchor && anchoredPoint(anchor, restMeshesOf(model, meshes));
 }
 
-/** Each node's matrix to the file's space with the model at rest, as a loader binds a skin. */
-function restWorldOf(model: Pick<ParsedModel, 'nodes'>): Matrix4[] {
-  const space = new Matrix4();
-  return worldMatricesOf({ nodes: model.nodes, unitScale: 1, importScale: 1, axisConversion: space.elements }, space);
-}
-
 /** The meshes' vertices as the file has them at rest, its bones where the file puts them, in the file's own space. */
 export function restMeshesOf(model: Pick<ParsedModel, 'nodes' | 'meshes'>, meshes: readonly number[]): PlacedMesh[] {
   const space = new Matrix4();
-  const world = restWorldOf(model);
+  const world = fileRestWorldOf(model);
   return meshes.map((mesh) => placedMesh(model.meshes[mesh]!, mesh, placedPositionsOf(model.meshes[mesh]!, { space, world }, new Float32Array(model.meshes[mesh]!.attributes.position.length))));
 }
 
