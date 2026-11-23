@@ -69,8 +69,13 @@ const STAGE_CONTROLS_ROOM = 52;
  * edge (`StageControls`).
  */
 export function pinCardPlacement(rect: ScreenRect, viewport: Size, about: ScreenRect | null = null): CardPlacement {
+  return cardPlacement(pinTargetOf(rect, about), { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, PIN_CARD_WIDTH);
+}
+
+/** What a pin's card keeps clear of: the pin's bubble and spot (`pinBounds`), and what else it's about. */
+export function pinTargetOf(rect: ScreenRect, about: ScreenRect | null = null): ScreenRect {
   const bounds = pinBounds(rect);
-  return cardPlacement(about ? unionOf(bounds, about) : bounds, { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, PIN_CARD_WIDTH);
+  return about ? unionOf(bounds, about) : bounds;
 }
 
 /** The least room, each way, the thing a comment is about takes beside its card: less, and it would be a sliver. */
@@ -104,6 +109,29 @@ export function stageCardPlacement(rect: ScreenRect, pane: ScreenRect, stage: Si
 /** Whether any of a spot (a point, or an area) shows in a pane of its size, its edges included. */
 function spotInPane(spot: ScreenRect, pane: Size): boolean {
   return spot.x <= pane.width && spot.y <= pane.height && spot.x + spot.width >= 0 && spot.y + spot.height >= 0;
+}
+
+/** How far a pin a take moves may stray from its card, each way, before the card follows it. */
+const CARD_LEASH = 96;
+
+/** A card where it was placed (`placement`), and the box it took on screen there (`box`). */
+export interface HeldCard {
+  placement: CardPlacement;
+  box: ScreenRect;
+}
+
+/**
+ * Where a card goes as what it's about moves on screen (`target`: its pin's bounds, and its part's): where it was held
+ * while only a take moves it under a still view, so that a part swaying doesn't make the card wobble with it, as long
+ * as the target stays clear of the card and within `CARD_LEASH` of it; else, or once the view moves (`viewMoved`: a
+ * turn, a zoom, a resize), placed afresh (`next`).
+ */
+export function keptCardPlacement(held: HeldCard | null, next: CardPlacement, target: ScreenRect, viewMoved: boolean): CardPlacement {
+  if (!held || viewMoved) return next;
+  const gapX = Math.max(held.box.x - (target.x + target.width), target.x - (held.box.x + held.box.width));
+  const gapY = Math.max(held.box.y - (target.y + target.height), target.y - (held.box.y + held.box.height));
+  const covers = gapX < 0 && gapY < 0;
+  return covers || gapX > CARD_LEASH || gapY > CARD_LEASH ? next : held.placement;
 }
 
 /** A card's place as the style of its element: its edges and sizes, in pixels. */

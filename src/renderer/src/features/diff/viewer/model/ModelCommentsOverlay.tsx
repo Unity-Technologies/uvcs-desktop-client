@@ -8,7 +8,7 @@ import { useLayoutEffect, useMemo, useRef, type PointerEvent as ReactPointerEven
 import type { ModelSpot } from '@shared/domain/reviewConversation';
 import { followDrag, isDragButton } from '../image/pointerDrag';
 import { PinBubble } from '../pins/PinBubble';
-import { boundsOf, cardStyleOf, pinCardPlacement } from '../pins/pinPlacement';
+import { boundsOf, cardStyleOf, keptCardPlacement, pinCardPlacement, pinTargetOf, type HeldCard } from '../pins/pinPlacement';
 import pinStyles from '../pins/CommentPins.module.css';
 import type { ModelAnnotations } from './modelAnnotations';
 import { depthOfHit, hiddenBehind, type Projector, type ScreenPoint } from './modelProjection';
@@ -57,6 +57,9 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
     let settle = 0;
     const onScreen = new Map<string, ScreenPoint>();
     let projectors: Record<Side, Projector | null> = { before: null, after: null };
+    // Where the card was placed, and the view it was placed in: a take moving the pin under a still view leaves it there.
+    let held: HeldCard | null = null;
+    let heldInView = '';
     const place = (): void => {
       onScreen.clear();
       projectors = { before: renderer.screenProjectorOf('before'), after: renderer.screenProjectorOf('after') };
@@ -75,20 +78,26 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
         const pane = panes[pin.side]!;
         bubble.style.translate = `${at.x - pane.x}px ${at.y - pane.y}px`;
       }
-      placeCard(onScreen);
+      placeCard(onScreen, `${renderer.cameraPosition().join()} ${JSON.stringify(panes)}`);
       window.clearTimeout(settle);
       settle = window.setTimeout(markHidden, SETTLE_MS);
     };
-    const placeCard = (screen: typeof onScreen): void => {
+    const placeCard = (screen: typeof onScreen, view: string): void => {
       const at = opened && screen.get(opened.pin.key);
       const box = overlay.current;
-      if (!card.current || !box) return;
-      card.current.toggleAttribute('data-off-screen', !at);
+      const element = card.current;
+      if (!element || !box) return;
+      element.toggleAttribute('data-off-screen', !at);
       if (!at) return;
       // A part comment's card leaves its part in view too, as it lights up while the card is open.
       const corners = opened.partCorners()?.flatMap((corner) => projectors[opened.pin.side]?.(corner) ?? []) ?? [];
-      const placement = pinCardPlacement({ x: at.x, y: at.y, width: 0, height: 0 }, { width: box.clientWidth, height: box.clientHeight }, boundsOf(corners));
-      Object.assign(card.current.style, cardStyleOf(placement));
+      const pin = { x: at.x, y: at.y, width: 0, height: 0 };
+      const about = boundsOf(corners);
+      const next = pinCardPlacement(pin, { width: box.clientWidth, height: box.clientHeight }, about);
+      const placement = keptCardPlacement(held, next, pinTargetOf(pin, about), view !== heldInView);
+      if (placement !== held?.placement) Object.assign(element.style, cardStyleOf(placement));
+      held = { placement, box: { x: element.offsetLeft, y: element.offsetTop, width: element.offsetWidth, height: element.offsetHeight } };
+      heldInView = view;
     };
     // What hides each point, picked under its bubble's tip on its own version once the view is still: something nearer.
     const markHidden = (): void => {
