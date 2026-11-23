@@ -5,7 +5,6 @@ import { answerShownOnReturn, type AnswerBox } from './threadAnswer';
 const folded: ThreadCardFold = { folded: true, editsRoot: false };
 const whole: ThreadCardFold = { folded: false, editsRoot: false };
 const noBox: AnswerBox = { answering: null, focuses: false };
-const draft = (description: string) => ({ summary: '', description });
 
 describe('initialThreadCardFold', () => {
   it('starts a settled thread folded and an open one whole, with no editor waiting', () => {
@@ -18,12 +17,12 @@ describe('initialThreadCardFold', () => {
   });
 
   it('starts a settled thread whole when a reply to it was left unsent, so its draft shows', () => {
-    const box = answerShownOnReturn({ reply: draft('One more thing'), discard: undefined }, false);
+    const box = answerShownOnReturn({ reply: 'words', discard: 'none' }, false);
     expect(initialThreadCardFold({ state: { kind: 'answered' } }, undefined, box)).toEqual(whole);
   });
 
   it('keeps a settled thread folded when only a discard was left unsent: it can no longer be discarded', () => {
-    const box = answerShownOnReturn({ reply: undefined, discard: draft('Not needed') }, false);
+    const box = answerShownOnReturn({ reply: 'none', discard: 'words' }, false);
     expect(initialThreadCardFold({ state: { kind: 'applied', changesetId: 4 } }, undefined, box)).toEqual(folded);
   });
 });

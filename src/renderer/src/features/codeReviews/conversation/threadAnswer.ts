@@ -52,3 +52,8 @@ export function nextAnswerBox(box: AnswerBox, previous: AnswerDrafts, drafts: An
   const forgotten = previous[box.answering] !== undefined && drafts[box.answering] === undefined;
   return forgotten && !focused ? { answering: null, focuses: false } : box;
 }
+
+export type AnswerDraftState = 'none' | 'empty' | 'words';
+export interface AnswerFollowing { box: AnswerBox; seen: unknown }
+export function answerDraftOf(_draft: CommentParts | undefined): AnswerDraftState { return 'none'; }
+export function followDrafts(following: AnswerFollowing, _drafts: unknown, _d: boolean, _f: boolean): { following: AnswerFollowing; unfolds: boolean } { return { following, unfolds: false }; }
