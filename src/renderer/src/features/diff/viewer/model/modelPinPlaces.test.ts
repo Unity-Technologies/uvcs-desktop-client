@@ -79,12 +79,22 @@ function antenna({ inCentimeters = false } = {}): ParsedModel {
     nodes: [
       { name: 'Base', kind: 'bone' },
       { name: 'Tip', parent: 'Base', kind: 'bone', position: [0, unit, 0] },
-      { name: 'Antenna', kind: 'skinnedMesh', mesh: { size: [0.2 * unit, 2 * unit, 0.2 * unit], center: [0, unit, 0], bones: ['Base', 'Tip'] } },
+      { name: 'Antenna', kind: 'skinnedMesh', mesh: { size: [0.2 * unit, 2 * unit, 0.2 * unit], center: [0, unit, 0], bones: ['Base', 'Tip'], blendShapes: ['Lean'] } },
     ],
   });
   const { position, skinIndex } = model.meshes[0]!.attributes;
   for (let vertex = 0; vertex < position.length / 3; vertex++) skinIndex![vertex * 4] = position[vertex * 3 + 1]! > unit ? 1 : 0;
   return model;
+}
+
+/** Gives the model's first mesh's blendshape `name` an offset for every vertex of its top half. */
+function liftTop(model: ParsedModel, name: string, offset: Vector): void {
+  const { attributes, blendShapes } = model.meshes[0]!;
+  const top = Math.max(...attributes.position.filter((_, i) => i % 3 === 1));
+  const deltas = blendShapes.find((shape) => shape.name === name)!.deltas;
+  for (let vertex = 0; vertex < attributes.position.length / 3; vertex++) {
+    if (attributes.position[vertex * 3 + 1]! > top / 2) deltas.set(offset, vertex * 3);
+  }
 }
 
 /** A point in the file's space as the viewer draws it. */
@@ -168,6 +178,26 @@ describe('pinPlacesOf, a skinned mesh', () => {
     expect(close(place!.point())).toEqual(inViewer(model, [0, 200, 0]));
     sway(after);
     expect(close(place!.point())).toEqual(inViewer(model, [-100, 100, 0]));
+  });
+
+  it('follows a blendshape a take sets on the skin', () => {
+    const model = antenna();
+    liftTop(model, 'Lean', [0.5, 0, 0]);
+    const after = drawn(model);
+    const [place] = pinPlacesOf([onAntennaTip], { before: null, after });
+    after.scene.meshes[0]!.solid.morphTargetInfluences![0] = 1;
+    expect(close(place!.point())).toEqual([0.5, 2, 0]);
+  });
+
+  it('follows a blendshape on a rigid mesh too, which its node alone would leave behind', () => {
+    const model = testModel({ nodes: [{ name: 'Lid', mesh: { blendShapes: ['Open'] }, position: [0, 1, 0] }] });
+    liftTop(model, 'Open', [0, 1, 0]);
+    const after = drawn(model);
+    const onLid = pin({ spot: { point: { x: 0, y: 1.5, z: 0 }, node: { path: ['Lid'], local: { x: 0, y: 0.5, z: 0 } } } });
+    const [place] = pinPlacesOf([onLid], { before: null, after });
+    expect(close(place!.point())).toEqual([0, 1.5, 0]);
+    after.scene.meshes[0]!.solid.morphTargetInfluences![0] = 1;
+    expect(close(place!.point())).toEqual([0, 2.5, 0]);
   });
 
   describe('a glTF, whose skinned mesh its node places nothing of', () => {
