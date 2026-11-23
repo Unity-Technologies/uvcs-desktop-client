@@ -10,15 +10,21 @@ export interface AnswerBox {
   focuses: boolean;
 }
 
+/**
+ * What a draft holds, as far as the box cares: nothing kept, a draft emptied (or only spaces), or words. Its text
+ * itself never matters here, so typing doesn't make every card showing the thread render again.
+ */
+export type AnswerDraft = 'none' | 'empty' | 'words';
+
 /** The thread's drafts left unsent (`useCommentDraftStore`, under `commentDraftKey`'s `reviewReply` and `reviewDiscard`). */
 export interface AnswerDrafts {
-  reply: CommentParts | undefined;
-  discard: CommentParts | undefined;
+  reply: AnswerDraft;
+  discard: AnswerDraft;
 }
 
-/** Whether a draft holds words: one emptied (or only spaces) is nothing to come back to. */
-function keepsAnswerDraft(draft: CommentParts | undefined): boolean {
-  return draft !== undefined && draft.description.trim() !== '';
+export function answerDraftOf(draft: CommentParts | undefined): AnswerDraft {
+  if (draft === undefined) return 'none';
+  return draft.description.trim() === '' ? 'empty' : 'words';
 }
 
 /**
@@ -27,8 +33,8 @@ function keepsAnswerDraft(draft: CommentParts | undefined): boolean {
  * left, as the box shows one at a time; a discard only while the user may still discard (`canDiscard`).
  */
 export function answerShownOnReturn(drafts: AnswerDrafts, discardable: boolean): AnswerBox {
-  if (keepsAnswerDraft(drafts.reply)) return { answering: 'reply', focuses: false };
-  if (discardable && keepsAnswerDraft(drafts.discard)) return { answering: 'discard', focuses: false };
+  if (drafts.reply === 'words') return { answering: 'reply', focuses: false };
+  if (discardable && drafts.discard === 'words') return { answering: 'discard', focuses: false };
   return { answering: null, focuses: false };
 }
 
@@ -41,19 +47,37 @@ export function answerOpenedByHand(answering: Answering): AnswerBox {
  * How the box follows the drafts as they change while its card is mounted: the same thread shows in both of a review's
  * tabs, kept mounted, and in an image's or model's popover. A draft that starts holding words elsewhere (or a discard
  * once the user is known and may discard) opens the closed box, without the focus. A draft forgotten elsewhere (sent or
- * cancelled) closes the box it was open in, unless the focus is in it. A box opened by hand and still empty has never
- * held a draft, so it stays open.
+ * cancelled) closes the box it was open in, unless the focus is in it, and the box then shows what coming back would
+ * (`answerShownOnReturn`): a discard still left, or the prompt. A box opened by hand and still empty has never held a
+ * draft, so it stays open.
  */
-export function nextAnswerBox(box: AnswerBox, previous: AnswerDrafts, drafts: AnswerDrafts, discardable: boolean, focused: boolean): AnswerBox {
+export function nextAnswerBox(box: AnswerBox, seen: AnswerDrafts, drafts: AnswerDrafts, discardable: boolean, focused: boolean): AnswerBox {
   if (box.answering === null) {
     const shown = answerShownOnReturn(drafts, discardable);
     return shown.answering === null ? box : shown;
   }
-  const forgotten = previous[box.answering] !== undefined && drafts[box.answering] === undefined;
-  return forgotten && !focused ? { answering: null, focuses: false } : box;
+  const forgotten = seen[box.answering] !== 'none' && drafts[box.answering] === 'none';
+  return forgotten && !focused ? answerShownOnReturn(drafts, discardable) : box;
 }
 
-export type AnswerDraftState = 'none' | 'empty' | 'words';
-export interface AnswerFollowing { box: AnswerBox; seen: unknown }
-export function answerDraftOf(_draft: CommentParts | undefined): AnswerDraftState { return 'none'; }
-export function followDrafts(following: AnswerFollowing, _drafts: unknown, _d: boolean, _f: boolean): { following: AnswerFollowing; unfolds: boolean } { return { following, unfolds: false }; }
+/** The box, and the drafts it last followed: what a draft "forgotten" is measured against. */
+export interface AnswerFollowing {
+  box: AnswerBox;
+  seen: AnswerDrafts;
+}
+
+/**
+ * One step of following the drafts (`nextAnswerBox`), remembering them for the next. `unfolds` when words written
+ * elsewhere open a closed box, so a folded card shows it (`ThreadCardFoldEvent`'s `unfold`). Nothing changed gives
+ * back the same object, so the card doesn't render again.
+ */
+export function followDrafts(following: AnswerFollowing, drafts: AnswerDrafts, discardable: boolean, focused: boolean): { following: AnswerFollowing; unfolds: boolean } {
+  const box = nextAnswerBox(following.box, following.seen, drafts, discardable, focused);
+  const unfolds = following.box.answering === null && box.answering !== null;
+  if (box === following.box && sameDrafts(following.seen, drafts)) return { following, unfolds };
+  return { following: { box, seen: drafts }, unfolds };
+}
+
+function sameDrafts(a: AnswerDrafts, b: AnswerDrafts): boolean {
+  return a.reply === b.reply && a.discard === b.discard;
+}

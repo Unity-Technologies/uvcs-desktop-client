@@ -1,8 +1,6 @@
 import { ChevronRight, X } from 'lucide-react';
-import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
-import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
@@ -79,7 +77,8 @@ export interface ThreadInCode {
  * (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
-  const answerBox = useAnswerBox(thread, user);
+  // Words written in the thread elsewhere open its box, and unfold the card to show it.
+  const answerBox = useAnswerBox(thread, user, () => foldEvent('unfold'));
   const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight, answerBox.box));
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
@@ -439,7 +438,7 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
       <div className={styles.answer} ref={answerBox.boxRef}>
         {answering === 'reply' && (
           <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewReply', root.guid)}
+            draftKey={answerBox.replyKey}
             placeholder="Reply"
             label="Reply"
             submitLabel="Reply"
@@ -454,7 +453,7 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
         )}
         {answering === 'discard' && (
           <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewDiscard', root.guid)}
+            draftKey={answerBox.discardKey}
             placeholder="Why isn't this change needed?"
             label="Why the change request is discarded"
             submitLabel="Discard change request"
@@ -484,4 +483,3 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
     </>
   );
 }
-

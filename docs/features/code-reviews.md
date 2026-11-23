@@ -318,9 +318,11 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   image, a model). A reply (or discard) left with words in it shows open with them when the thread shows again, a
   settled thread unfolded for it (`answerShownOnReturn`, `initialThreadCardFold`); a box emptied before leaving shows
   the "Reply…" prompt again. The same thread shows in both tabs, kept mounted: words written in one open the box in
-  the other, and a reply sent or cancelled in one closes it there, unless the focus is in it (`nextAnswerBox`). Only a
-  box opened by hand ("Reply…", "Discard…") takes the focus. A draft in a folded round of the conversation stays
-  hidden until the round opens.
+  the other, its card unfolded if folded, and a reply sent or cancelled in one closes it there, unless the focus is in
+  it, showing a discard still left if there is one (`nextAnswerBox`, `followDrafts`). The box follows each draft's
+  state (none, emptied, words: `answerDraftOf`), not its text, so typing renders no other card. Only a box opened by
+  hand ("Reply…", "Discard…") takes the focus. A draft in a folded round of the conversation stays hidden until the
+  round opens.
 - Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
   on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
