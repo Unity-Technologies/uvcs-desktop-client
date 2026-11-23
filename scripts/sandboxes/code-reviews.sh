@@ -12,15 +12,15 @@
 # three lines replaced by one (a comment on a range, `--line=A-B`), and one outdated, its line changed since; a question
 # holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. An
 # image holds comments on a point and on an area (`--location=image:…`): open, answered, and one on its earlier
-# version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment on a
-# line and one on an area. A car (code-reviews/reviewModels.ts: a GLB whose four wheels share a name, with a take that
-# opens its door) holds comments on 3D models (`--location=model:…`): an open point with the camera it was written from,
-# a whole wheel, an answered question, the door the take moves, a rear wheel in the reshaping changeset's own diff
-# (where both versions show), and two on its first version: a wheel the second moved
-# forward, and the spoiler it dropped. An OBJ signpost, code or model, holds a comment on a line and one on its board.
-# Two more reviews have
-# no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
-# can be applied.
+# version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment
+# on a line and one on an area. A car (code-reviews/reviewModels.ts: a GLB whose four wheels share a name, with a take
+# that opens its door and one, AntennaSway, that bends its skinned roof antenna) holds comments on 3D models
+# (`--location=model:…`): an open point with the camera it was written from, a whole wheel, an answered question, the
+# door the take moves, the antenna's tip, whose pin rides the skin as it bends, a rear wheel in the reshaping
+# changeset's own diff (where both versions show), and two on its first version: a wheel the second moved forward, and
+# the spoiler it dropped. An OBJ signpost, code or model, holds a comment on a line and one on its board. Two more
+# reviews have no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its
+# suggestions can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
@@ -226,6 +226,8 @@ on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.36,-0.95;node=Ca
 ROOF=$(on_review --path=/Assets/Models/Car.glb --location="model:-0.25,1.42,0;node=Car/Body;local=-0.25,0.8,0" --type=Question -c="Is the roof meant to be this high now?")
 cm cr comment reply "$ROOF" -c="Yes: the driver sits higher in this one." >/dev/null
 on_review --path=/Assets/Models/Car.glb --location="model:-0.1,0.62,0.9;node=Car/Door_L/Door_Panel;local=-0.55,0,0.04;part" --type=Change -c="The door should open wider: play DoorOpen." >/dev/null
+# The antenna's tip, 0.6 m above its node on the roof: its node stays put as AntennaSway bends the skin.
+on_review --path=/Assets/Models/Car.glb --location="model:-1,2.02,0.45;node=Car/Antenna;local=0,0.6,0" --type=Question -c="Should the antenna's tip swing this far? Play AntennaSway." >/dev/null
 on_review --path=/Assets/Models/Sign.obj --line=12 --type=Comment -c="Four decimals are plenty here." >/dev/null
 on_review --path=/Assets/Models/Sign.obj --location="model:0.3,1.4,0.105;node=Board;local=0.3,1.4,0.105" --type=Question -c="Does the sign read too low now?" >/dev/null
 # The banner repainted: comments on its newest version, a point and an area, and one answered.

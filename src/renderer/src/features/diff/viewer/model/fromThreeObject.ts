@@ -3,6 +3,7 @@
 // already in floats are kept as they are, so a big mesh crosses from the worker without a copy.
 
 import { AnimationClip, type BufferAttribute, type BufferGeometry, type InterleavedBufferAttribute, type Material, type Mesh, type Object3D, type SkinnedMesh } from 'three';
+import { leansPastSkeleton } from './meshPlacement';
 import type { BlendShape, MeshAttributes, MeshGroup, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from './parsedModel';
 
 /** What the loader told besides the objects (`parseModel` reads it from the file). */
@@ -20,6 +21,8 @@ export function fromThreeObject(root: Object3D, animations: AnimationClip[], fac
   visit(root, -1);
   // Bones are nodes of the hierarchy, found anywhere in it: their indices are known once every node is.
   for (const { mesh, parsed } of skinned) parsed.skin = skinOf(mesh, indexOf);
+  // Read as unreadable (`parseModel`), never drawn: drawing it would fail in three, every frame.
+  if (meshes.some(leansPastSkeleton)) throw new Error('A skinned mesh leans on a joint its skin has not.');
 
   return { ...facts, importScale: 1, nodes, meshes, clips: animations.map(clipOf) };
 

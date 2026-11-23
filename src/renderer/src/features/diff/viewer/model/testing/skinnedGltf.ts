@@ -17,9 +17,14 @@ const HIPS_INVERSE_BIND = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -HIPS_HEIGH
 /** Column-major: -90° on X, Z up onto Y, with the float noise Sketchfab writes where a cosine is 0. */
 const Z_UP_TO_Y_UP = [1, 0, 0, 0, 0, 2.220446049250313e-16, -1, 0, 0, 1, 2.220446049250313e-16, 0, 0, 0, 0, 1];
 
-export function skinnedGltf(): string {
+/**
+ * `jointPastSkeleton`: the top corner wholly on a second joint the skin doesn't have, as a broken exporter writes it;
+ * three would read a bone that isn't there when it draws the mesh.
+ */
+export function skinnedGltf({ jointPastSkeleton = false } = {}): string {
   const positions = new Float32Array(POSITIONS);
   const joints = new Uint16Array(JOINTS);
+  if (jointPastSkeleton) joints[SKINNED_TOP_CORNER * 4] = 1;
   const weights = new Float32Array(WEIGHTS);
   const inverseBind = new Float32Array(HIPS_INVERSE_BIND);
   const views = [positions, joints, weights, inverseBind];

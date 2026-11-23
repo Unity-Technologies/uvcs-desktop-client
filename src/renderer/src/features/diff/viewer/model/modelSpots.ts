@@ -5,7 +5,7 @@
 
 import { Matrix4, Vector3 } from 'three';
 import type { ModelPoint, ModelSpot } from '@shared/domain/reviewConversation';
-import { worldMatricesOf } from './modelSpaces';
+import { fileRestWorldOf } from './modelSpaces';
 import type { ModelNode, ParsedModel } from './parsedModel';
 import type { Vector } from './orbitCamera';
 
@@ -31,7 +31,7 @@ export function nodeOfSpot(model: Pick<ParsedModel, 'nodes'>, spot: ModelSpot): 
   if (candidates.length <= 1) return candidates[0] ?? null;
   const local = spot.node.local;
   if (!local) return candidates[0]!;
-  const rest = worldMatricesOf({ nodes: model.nodes, unitScale: 1, importScale: 1, axisConversion: new Matrix4().elements }, new Matrix4());
+  const rest = fileRestWorldOf(model);
   const written = vectorOf(spot.point);
   const distance = (index: number) => vectorOf(local).applyMatrix4(rest[index]!).distanceToSquared(written);
   return candidates.reduce((nearest, index) => (distance(index) < distance(nearest) ? index : nearest));
@@ -50,7 +50,9 @@ export interface PlacedSpot {
 /**
  * Where a spot shows in a version: on its part as the part is drawn now (`nodeWorld`: the node's matrix to the
  * viewer's space, a take's pose included) when the version has it and the spot says where on it; else at its point in
- * the file's space, carried into the viewer's (`viewerSpace`). A point on a skinned mesh follows its node, not the skin.
+ * the file's space, carried into the viewer's (`viewerSpace`). A point on a mesh a take bends or morphs (skinned,
+ * or with blendshapes) follows the surface instead (`skinAnchorOfSpot`): its node stays where it is as the take
+ * reshapes it.
  */
 export function placedSpot(spot: ModelSpot, node: number | null, nodeWorld: (index: number) => Matrix4, viewerSpace: Matrix4): PlacedSpot {
   const local = spot.node?.local;
@@ -67,11 +69,16 @@ export interface ModelPick {
   node: number | null;
   /** Where the camera is, in the viewer's space. */
   camera: Vector;
+  /**
+   * On a skinned mesh, where the point hit sits with the skin at rest, in the file's space (`restPointOfHit`): a take
+   * bends the skin and leaves its node where it is, so the node can't carry the point back to rest.
+   */
+  restInFile?: Vector;
 }
 
 /**
  * The spot a click writes (`ModelPick`): its point in the file's space, as the file has its part at rest (a take
- * playing moves the part, not where on it the comment is); its part's names and the point in the part's space; the
+ * playing moves or bends the part, not where on it the comment is); its part's names and the point in the part's space; the
  * camera, as a direction from the point and a distance, in the file's space. `wholePart`: about the whole part.
  */
 export function spotOfPick(model: ParsedModel, pick: ModelPick, nodeWorld: (index: number) => Matrix4, viewerSpace: Matrix4, wholePart = false): ModelSpot {
@@ -82,8 +89,8 @@ export function spotOfPick(model: ParsedModel, pick: ModelPick, nodeWorld: (inde
   const distance = toCamera.length();
   const view = distance > 0 ? { view: { direction: pointOf(toCamera.divideScalar(distance)), distance } } : {};
   if (pick.node === null) return { point: pointOf(drawnInFile), ...view };
-  const local = hit.clone().applyMatrix4(nodeWorld(pick.node).clone().invert());
-  const rest = worldMatricesOf({ nodes: model.nodes, unitScale: 1, importScale: 1, axisConversion: new Matrix4().elements }, new Matrix4())[pick.node]!;
+  const rest = fileRestWorldOf(model)[pick.node]!;
+  const local = pick.restInFile ? new Vector3(...pick.restInFile).applyMatrix4(rest.clone().invert()) : hit.clone().applyMatrix4(nodeWorld(pick.node).clone().invert());
   return {
     point: pointOf(local.clone().applyMatrix4(rest)),
     node: { path: nodeNamesOf(model.nodes, pick.node), local: pointOf(local) },

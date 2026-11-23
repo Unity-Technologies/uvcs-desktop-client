@@ -24,6 +24,15 @@ export function worldMatricesOf(model: Pick<ParsedModel, 'nodes' | 'unitScale' |
   return matrices;
 }
 
+/**
+ * Each node's matrix to the file's own space with the model at rest, in node order: its units and axes left as the
+ * file has them, as a loader binds a skin and as a comment's spot is written (`spotOfPick`).
+ */
+export function fileRestWorldOf(model: Pick<ParsedModel, 'nodes'>): Matrix4[] {
+  const space = new Matrix4();
+  return worldMatricesOf({ nodes: model.nodes, unitScale: 1, importScale: 1, axisConversion: space.elements }, space);
+}
+
 /** From the file's space to the viewer's: its units in metres and its axes onto Unity's, unmirrored. */
 export function viewerSpaceOf(model: Pick<ParsedModel, 'unitScale' | 'importScale' | 'axisConversion'>): Matrix4 {
   return new Matrix4().fromArray(model.axisConversion).multiply(unitsOf(model));
