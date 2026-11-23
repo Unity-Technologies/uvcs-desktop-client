@@ -943,7 +943,8 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window
   lives (`useNewImageCommentsStore`), by file, named by a serial so moving it changes nothing else, on the revision shown, as one on lines is. Once posted it stays
   where it was written: `cm codereview comment edit` changes a comment's text only.
-- **Hidden.** The header's comment button hides the pins, in every file as on lines, to look at the image alone, the one selected included; one
+- **Hidden.** The header's comment button hides the pins, the one selected included, and the comments of every other file with them (see "Hidden" under
+  lines), to look at the image alone; one
   gone to while they're hidden shows, as a line of code opens (`threadShownWhileHidden`).
 - **An SVG** shows as code or as the image it draws (docs/features/diff.md "Images written as text"): comments on its
   lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
@@ -986,5 +987,5 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
   else from every angle, so a whole part is what an image's area is here.
 - **Going to it** glides the camera to the view its author had, else facing the point with part of the model around it
   (`viewOfSpot`), and opens its card.
-- **Hidden.** The header's comment button hides the pins, in every file as on lines ("Hide comments in every file"), the
-  one selected included; one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.
+- **Hidden.** The header's comment button hides the pins, the one selected included, and the comments of every other
+  file with them (see "Hidden" under lines; "Hide comments in every file"); one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.
