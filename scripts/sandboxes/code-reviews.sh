@@ -10,7 +10,9 @@
 # requests suggest changes (a ```suggestion fence, docs/features/code-reviews.md "Suggested changes"): a line replaced,
 # a line deleted, a line replaced by several, a line wrapped in a new condition, one in a file with Windows line ends,
 # three lines replaced by one (a comment on a range, `--line=A-B`), and one outdated, its line changed since; a question
-# holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. Two more reviews have
+# holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. An
+# image holds comments on a point and on an area (`--location=image:…`): open, answered, and one on its earlier
+# version, which a later check-in repainted. Two more reviews have
 # no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
 # can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
@@ -39,6 +41,16 @@ text() { printf '%s\n' "$2" > "$TEXTS/$1"; echo "$TEXTS/$1"; }
 # cm detects edits by timestamp, so edits in the same second as the last checkin would be missed.
 w() { sleep 1; mkdir -p "$(dirname "$1")"; printf '%s\n' "$2" > "$1"; }
 checkin() { cm ci --all --private -commentsfile="$1" >/dev/null; }
+# A 320×200 PNG banner: a sky, a sun and hills, which each variant paints apart (its sun moved, its hills recolored).
+banner() { sleep 1; mkdir -p "$(dirname "$2")"; python3 -c "import sys,zlib,struct
+v=int(sys.argv[1]); w,h=320,200; sun=(90+60*v,60); hill=[(60,140,70),(200,120,40),(120,60,160)][v]
+def px(x,y):
+  if (x-sun[0])**2+(y-sun[1])**2<26**2: return (250,200,60)
+  if y>150-40*((x/w-0.5)**2*4): return hill
+  return (90+y//4,150+y//4,230)
+raw=b''.join(b'\\0'+b''.join(bytes(px(x,y)) for x in range(w)) for y in range(h))
+chunk=lambda t,d: struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d))
+sys.stdout.buffer.write(b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b''))" "$1" > "$2"; }
 changeset() { cm find "changeset where branch = '$1'" "order by changesetid desc" limit 1 --format={changesetid} --nototal; }
 on_review() { cm cr comment add "$REVIEW" --format={guid} "$@"; }
 
@@ -65,6 +77,7 @@ CS
 w Assets/Scripts/SwitchFlow.cs "$(switch_flow '        workspace.Update(target);')"
 w Assets/Scripts/LegacySwitch.cs "public class LegacySwitch { }"
 w README.md "# Code reviews"
+banner 0 Assets/Art/Banner.png
 checkin "$(text initial 'Initial project')"
 
 cm mkbr main/task-2210 -c="Switching keeps pending changes in \`SwitchFlow\`" >/dev/null
@@ -78,6 +91,7 @@ w Assets/Scripts/Retry.cs "public static class Retry
     public static void Times(int count, Action action) { for (var i = 0; i < count; i++) action(); }
 }"
 rm Assets/Scripts/LegacySwitch.cs
+banner 1 Assets/Art/Banner.png
 checkin "$(text shelve 'Shelve, undo, switch, bring')"
 FIRST=$(changeset /main/task-2210)
 
@@ -156,6 +170,12 @@ suggest /Assets/Scripts/Retry.cs 3 'Would this read better?
     public static void Times(int count, Action action, Action onEach)
 ```' Question
 
+# Comments on the banner as the first changeset left it: a point, an area, one answered. The check-in below repaints it,
+# so they're on its earlier version.
+on_review --path=/Assets/Art/Banner.png --location=image:150,60 --type=Question -c="Is the sun meant to move this far?" >/dev/null
+SUN=$(on_review --path=/Assets/Art/Banner.png --location=image:0,110,320,90 --type=Change -c="The hills read too orange against the sky.")
+cm cr comment reply "$SUN" -c="Agreed, I'll make them purple." >/dev/null
+
 cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null
 cm cr review "$REVIEW" --rework-required -c="Two changes before it goes in." >/dev/null
 
@@ -181,6 +201,13 @@ w Assets/Tests/RetryTests.cs "public class RetryTests
     public void RunsTheActionTheTimesAsked() { }
 }"
 checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
+# The banner repainted: comments on its newest version, a point and an area, and one answered.
+banner 2 Assets/Art/Banner.png
+checkin "$(text banner "Purple hills [apply-change:${SUN:0:8}]")"
+on_review --path=/Assets/Art/Banner.png --location=image:210,62 --type=Comment -c="The sun sits well here now." >/dev/null
+on_review --path=/Assets/Art/Banner.png --location=image:40,130,120,60 --type=Change -c="Soften this hill's edge." >/dev/null
+ASKED=$(on_review --path=/Assets/Art/Banner.png --location=image:290,20 --type=Question -c="Do we need this corner of sky?")
+cm cr comment reply "$ASKED" -c="Yes: the title goes there." >/dev/null
 # On the newest revision: a line replaced by one.
 suggest /Assets/Scripts/SwitchFlow.cs 15 'Say where it switched to:
 ```suggestion
