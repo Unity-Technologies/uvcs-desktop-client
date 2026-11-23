@@ -142,7 +142,7 @@
   --cursor-add-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></svg>") 2 22, crosshair;
   /* The same, drawn up and to the right of its hot spot: aiming at a point of a model, the ring on the surface shows
      there, clear of it. */
-  --cursor-aim-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(9 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g></svg>") 2 31, crosshair;
+  --cursor-aim-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(5 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g></svg>") 2 27, crosshair;
 }
 
 :root,
