@@ -37,7 +37,7 @@ import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
 import { commentKeyAction, stageClickOf, type StageClickModifiers } from '../pins/stageCommenting';
 import { hoveredPartOf, litWhileCommenting } from './commentHover';
-import { CommentHoverLabel } from './CommentHoverLabel';
+import { CommentHoverDot, CommentHoverLabel } from './CommentHoverLabel';
 import { useCommentHover } from './useCommentHover';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
@@ -205,16 +205,18 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const [pointedPin, setPointedPin] = useState<string | null>(null);
   const litPin = annotations ? litCommentPart(annotations.pins, annotations.opened, pointedPin, lookDifferences) : null;
   const litPart = useMemo(() => (litPin ? (pinPlacesOf([litPin], versions)[0] ?? null) : null), [litPin, versions]);
-  // Commenting, the part under the pointer lights up with its name beside the cursor (`hoveredPartOf`).
+  // Commenting, the pointer shows what a click marks (`hoveredPartOf`, `hoverLabelOf`): a dot on the point and the
+  // part's name beside it, or with Shift held, the whole part lit up.
   const hoverLabelRef = useRef<HTMLDivElement>(null);
+  const hoverDotRef = useRef<HTMLDivElement>(null);
   const commentsOn = annotations?.commentsOn ?? null;
   const partAt = useCallback(
     (x: number, y: number) => (commentsOn ? hoveredPartOf(renderer?.pick(x, y, commentsOn) ?? null, versions[commentsOn], lookDifferences) : null),
     [renderer, commentsOn, versions, lookDifferences],
   );
-  const { hovered, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, renderer, enabled: isCommenting, partAt });
-  useLayoutEffect(placeLabel, [hovered, placeLabel]);
-  const commentLit = litWhileCommenting(hovered, litPart?.nodeKey ? { side: litPart.pin.side, key: litPart.nodeKey } : null);
+  const { hovered, wholePart, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, dot: hoverDotRef, renderer, enabled: isCommenting, partAt });
+  useLayoutEffect(placeLabel, [hovered, wholePart, placeLabel]);
+  const commentLit = litWhileCommenting(hovered, wholePart, litPart?.nodeKey ? { side: litPart.pin.side, key: litPart.nodeKey } : null);
   const spotAt = useCallback(
     (x: number, y: number, side: Side, wholePart: boolean) => {
       const hit = renderer?.pick(x, y, side);
@@ -363,7 +365,8 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
         {annotations && renderer && bounds && !loading && (
           <ModelCommentsOverlay annotations={annotations} renderer={renderer} versions={versions} modelSize={diagonalOf(bounds)} spotAt={spotAt} onPointed={setPointedPin} />
         )}
-        {hovered && <CommentHoverLabel part={hovered} ref={hoverLabelRef} />}
+        {hovered && <CommentHoverLabel part={hovered} wholePart={wholePart} ref={hoverLabelRef} />}
+        {hovered && !wholePart && <CommentHoverDot ref={hoverDotRef} />}
         {loading && spin && <CenteredSpinner />}
         {!loading && (
           <>

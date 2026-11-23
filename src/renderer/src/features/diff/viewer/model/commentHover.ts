@@ -1,5 +1,5 @@
-// While commenting on a model, the part under the pointer lights up and its name shows beside the cursor, so a click
-// is aimed at what it will mark, and Shift-click at the whole part. The viewer (`useCommentHover`) only picks and
+// While commenting on a model, the pointer shows what a click will mark: a point on the part under it, named beside
+// the cursor, or with Shift held, the whole part, lit up. The viewer (`useCommentHover`) only picks and
 // draws what this decides.
 
 import type { ModelNode } from './parsedModel';
@@ -55,16 +55,18 @@ export function sameHoveredPart(a: HoveredPart | null, b: HoveredPart | null): b
 }
 
 /**
- * The part lit while commenting: the one under the pointer, which a click would mark, else a comment's own part
- * (`litCommentPart`: its card open, its bubble pointed at). One at a time, so the light always says what a click takes.
+ * The part lit while commenting: the one under the pointer while Shift aims a click at all of it (`wholePart`); none
+ * while a click would mark a point there, so the light never promises the whole part. With nothing under the pointer,
+ * a comment's own part (`litCommentPart`: its card open, its bubble pointed at).
  */
-export function litWhileCommenting(hovered: LitNode | null, comment: LitNode | null): LitNode | null {
-  return hovered ?? comment;
+export function litWhileCommenting(hovered: LitNode | null, wholePart: boolean, comment: LitNode | null): LitNode | null {
+  if (hovered) return wholePart ? hovered : null;
+  return comment;
 }
 
-/** The words beside the cursor: the part's name, and how to comment on all of it. */
-export function hoverLabelOf(part: HoveredPart): { name: string; hint: string } {
-  return { name: part.name, hint: 'Shift-click for the whole part' };
+/** The words beside the cursor: what a click marks there, a point on the part or all of it, and how to switch. */
+export function hoverLabelOf(part: HoveredPart, wholePart: boolean): { name: string; hint: string } {
+  return wholePart ? { name: `Whole ${part.name}`, hint: 'Click to comment on all of it' } : { name: `Point on ${part.name}`, hint: 'Shift for the whole part' };
 }
 
 /** The words of the stage's comment button: what a click and a Shift-click mark, or how to stop. */

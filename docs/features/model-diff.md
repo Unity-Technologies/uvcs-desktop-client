@@ -389,16 +389,18 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   shows there), a click on nothing marks nothing, and a drag still turns the model. A click marks a point; with Shift
   held, the whole part (`stageClickOf`; a Shift press that stays put is a click, a Shift-drag still pans:
   `pressIsClick`), as the comment button's tooltip, the shortcut's label and the hover's hint say. Shift, not Alt: many
-  Linux desktops take an Alt-click or Alt-drag to move the window. Meanwhile the part under the pointer on that version
-  lights up as a comment's part does, its name beside the cursor as the comment's card will give it, with the
-  Shift-click's hint (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`): nothing over empty space, a pin, a card or a
+  Linux desktops take an Alt-click or Alt-drag to move the window. Meanwhile the pointer shows what a click marks on that
+  version: a dot on the point and "Point on Wheel" beside the cursor (the part's name as the comment's card will give
+  it), or, with Shift held, the whole part lit up as a comment's part is and "Whole Wheel"; pressing or letting go of
+  Shift changes it at once, the pointer still (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`, `CommentHoverDot`).
+  A part is never lit while a click would mark a point, so the light never promises the whole part. Nothing over empty space, a pin, a card or a
   button, nor while a button is held (`hoverPicks`: a drag turns the model), nor while Diffs by look compares; it
   goes once commenting stops or the pointer leaves the stage. It lights as soon as commenting starts with the pointer
   over the model, and follows what moves under a still pointer (a turn's coast, a glide, flying, a take): each frame
   drawn asks again. Picking reads the GPU, so it runs at most once a frame, and only when the pointer moved a pixel or
   the model moved under it (`pickAgain`, `ModelRenderer.moves`: the camera, a pose, the layout, the size, the models;
-  a part lit up redraws without moving anything) (`useCommentHover`); what's lit is the part hovered, else a
-  comment's (`litWhileCommenting`). What it writes is
+  a part lit up redraws without moving anything) (`useCommentHover`); what's lit is the part hovered with Shift held,
+  nothing while a point is aimed at, else a comment's (`litWhileCommenting`). What it writes is
   `spotOfPick`/`spotOfHit`: the point where the part rests (a take playing moves the part, not where on it the comment
   is; on a skinned mesh or one with blendshapes it reshapes the surface, so the hit is carried to rest by the same place on
   the same triangle, `restPointOfHit`), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along

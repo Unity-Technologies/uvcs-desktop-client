@@ -13,6 +13,8 @@ interface CommentHoverOptions {
   element: RefObject<HTMLElement | null>;
   /** The label beside the cursor: placed here as the pointer moves, without React rendering for each move. */
   label: RefObject<HTMLElement | null>;
+  /** The dot on the point a click marks, at the cursor's hot spot: placed with the label. */
+  dot: RefObject<HTMLElement | null>;
   /** What draws the model: when it moved (`moves`) and each frame it drew (`onFrameDrawn`). */
   renderer: Pick<ModelRenderer, 'moves' | 'onFrameDrawn'> | null;
   /** Commenting, and the stage takes comments: hovering shows nothing otherwise. */
@@ -26,8 +28,11 @@ interface CommentHoverOptions {
  * enabled, off the stage, over a stage control (a pin, a card, a button), or while a button is held (a drag orbits).
  * Turned on with the pointer already over the model (C), it picks at once.
  */
-export function useCommentHover({ element, label, renderer, enabled, partAt }: CommentHoverOptions): { hovered: HoveredPart | null; placeLabel: () => void } {
+export function useCommentHover({ element, label, dot, renderer, enabled, partAt }: CommentHoverOptions): { hovered: HoveredPart | null; wholePart: boolean; placeLabel: () => void } {
   const [hovered, setHovered] = useState<HoveredPart | null>(null);
+  // Shift held: a click comments on the whole part. Followed from the keys too, so pressing or letting go of Shift
+  // changes the light and the label at once, the pointer still.
+  const [wholePart, setWholePart] = useState(false);
   const latestPartAt = useRef(partAt);
   latestPartAt.current = partAt;
   // Where the pointer is on the stage, while it may pick (`hoverPicks`): followed whether or not commenting, so C
@@ -37,10 +42,31 @@ export function useCommentHover({ element, label, renderer, enabled, partAt }: C
   const placeLabel = useCallback(() => {
     const stage = element.current;
     const shown = label.current;
-    if (!stage || !shown || !pointer.current) return;
+    if (!stage || !pointer.current) return;
+    if (dot.current) dot.current.style.transform = `translate(${pointer.current.x}px, ${pointer.current.y}px)`;
+    if (!shown) return;
     const { left, top } = hoverLabelPlacement(pointer.current, { width: shown.offsetWidth, height: shown.offsetHeight }, { width: stage.clientWidth, height: stage.clientHeight });
     shown.style.transform = `translate(${left}px, ${top}px)`;
-  }, [element, label]);
+  }, [element, label, dot]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const onKey = (event: KeyboardEvent): void => setWholePart(event.shiftKey);
+    const onPointer = (event: PointerEvent): void => setWholePart(event.shiftKey);
+    // Let go of elsewhere (the window left with Shift held): a point again.
+    const onBlur = (): void => setWholePart(false);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKey);
+    window.addEventListener('pointermove', onPointer);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKey);
+      window.removeEventListener('pointermove', onPointer);
+      window.removeEventListener('blur', onBlur);
+      setWholePart(false);
+    };
+  }, [enabled]);
 
   useEffect(() => {
     const target = element.current;
@@ -112,5 +138,5 @@ export function useCommentHover({ element, label, renderer, enabled, partAt }: C
     };
   }, [element, renderer, enabled, placeLabel]);
 
-  return { hovered: enabled ? hovered : null, placeLabel };
+  return { hovered: enabled ? hovered : null, wholePart: enabled && wholePart, placeLabel };
 }

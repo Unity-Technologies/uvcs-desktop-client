@@ -33,3 +33,19 @@
   color: var(--text-secondary);
   font-size: var(--text-xs);
 }
+
+/* The point a click marks: a dot on the surface at the cursor's hot spot, centered there by its negative margins. */
+.dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid var(--image-pin-rim);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  box-shadow: 0 1px 3px var(--image-pin-shadow);
+  pointer-events: none;
+}
