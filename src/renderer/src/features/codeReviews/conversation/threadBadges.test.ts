@@ -170,8 +170,8 @@ describe('a comment on a 3D model', () => {
 
   it("says in the tooltip which part, by its whole path, even when its own name says nothing", () => {
     expect(writtenPlaceTip(onPointOf('Car', 'Wheel'))).toBe('A point on Car › Wheel');
-    expect(writtenPlaceTip(onPartOf('Car', 'Wheel_FL'))).toBe('All of Car › Wheel_FL');
-    expect(writtenPlaceTip(onPartOf('Car', 'mesh_0'))).toBe('All of Car › mesh_0');
+    expect(writtenPlaceTip(onPartOf('Car', 'Wheel_FL'))).toBe('The whole part Car › Wheel_FL');
+    expect(writtenPlaceTip(onPartOf('Car', 'mesh_0'))).toBe('The whole part Car › mesh_0');
   });
 
   it('says in the tooltip only that it is on the model when no part is named', () => {
@@ -196,7 +196,7 @@ describe('writtenPlaceTip', () => {
 
   it('says the place is the point or the area of the image it was written on, never a line', () => {
     const onImage = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png' } as const;
-    expect(writtenPlaceTip({ ...onImage, spot: { x: 120, y: 80 } })).toBe('A point of the image at x 120, y 80');
+    expect(writtenPlaceTip({ ...onImage, spot: { x: 120, y: 80 } })).toBe('A point on the image at x 120, y 80');
     expect(writtenPlaceTip({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } })).toBe('A 30 × 10 pixel area of the image at x 1, y 2');
   });
 
