@@ -32,7 +32,7 @@ describe('zoomCommandOf', () => {
 
 describe('stageCommandOf', () => {
   it('comments with C, and zooms with the zoom keys', () => {
-    expect(['c', '+', '0', 'x'].map((key) => stageCommandOf(press(key), true))).toEqual(['comment', 'zoomIn', 'zoomToFit', null]);
+    expect(['c', 'Escape', '+', '0', 'x'].map((key) => stageCommandOf(press(key), true))).toEqual(['comment', 'leaveComment', 'zoomIn', 'zoomToFit', null]);
   });
 
   it('leaves ⌘C to copy', () => {

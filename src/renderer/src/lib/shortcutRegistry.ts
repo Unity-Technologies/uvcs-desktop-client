@@ -227,6 +227,7 @@ export const SHORTCUTS = {
   imageFit: { area: 'Image diff', label: 'Zoom to fit', keys: ['0'] },
   imageActualSize: { area: 'Image diff', label: 'Actual size', keys: ['1'] },
   imageComment: { area: 'Image diff', label: 'Comment on a point or an area', keys: ['c'] },
+  imageCommentLeave: { area: 'Image diff', label: 'Stop commenting, or close the comment open', keys: ['escape'] },
 
   modelFrame: { area: 'Model diff', label: 'Frame the part picked, or the whole model', keys: ['f'] },
   modelFrameAll: { area: 'Model diff', label: 'Frame the whole model', keys: ['0'] },

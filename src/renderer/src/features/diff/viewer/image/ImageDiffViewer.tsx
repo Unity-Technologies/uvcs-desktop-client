@@ -110,13 +110,14 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
   const onKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (keyTakenByText(event.nativeEvent)) return;
-      if (event.key === 'Escape' && (isCommenting || annotations?.opened)) {
+      const command = stageCommandOf(event.nativeEvent);
+      if (command === 'leaveComment') {
+        if (!isCommenting && !annotations?.opened) return;
         event.preventDefault();
         if (isCommenting) setCommenting(false);
         else annotations?.onOpen(null);
         return;
       }
-      const command = stageCommandOf(event.nativeEvent);
       if (!command || (command === 'comment' && !commentable)) return;
       event.preventDefault();
       if (command === 'comment') setCommenting(!isCommenting);

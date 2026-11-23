@@ -4,7 +4,7 @@ import { matchesShortcut, type PressedKey } from '../../../../lib/shortcuts';
 
 /** What a key pressed on the focused image stage does: to the view, or comment on the image. */
 export type ZoomCommand = 'zoomIn' | 'zoomOut' | 'zoomToFit' | 'zoomToActualSize';
-export type StageCommand = ZoomCommand | 'comment';
+export type StageCommand = ZoomCommand | 'comment' | 'leaveComment';
 
 const ZOOM_SHORTCUTS: [ShortcutId, ZoomCommand][] = [
   ['imageZoomIn', 'zoomIn'],
@@ -21,8 +21,12 @@ export function zoomCommandOf(event: PressedKey, mac = isMac): ZoomCommand | nul
   return ZOOM_SHORTCUTS.find(([id]) => hotkeys(id).some((key) => matchesShortcut(event, key, mac)))?.[1] ?? null;
 }
 
-/** The stage's keys with C, which starts or stops marking a comment's spot where the image takes comments. */
+/**
+ * The stage's keys with C, which starts or stops marking a comment's spot where the image takes comments, and Esc,
+ * which stops it or closes the comment open.
+ */
 export function stageCommandOf(event: PressedKey, mac = isMac): StageCommand | null {
   if (hotkeys('imageComment').some((key) => matchesShortcut(event, key, mac))) return 'comment';
+  if (hotkeys('imageCommentLeave').some((key) => matchesShortcut(event, key, mac))) return 'leaveComment';
   return zoomCommandOf(event, mac);
 }

@@ -932,7 +932,7 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
 - **Writing.** The stage's comment button, or **C** (`imageComment`), turns the pointer into a speech bubble with a
   plus (`--cursor-add-comment`); a click marks a point, a drag an area, outlined as it's drawn (`spotOfGesture`, a
   press off the image marks nothing), and the card opens beside it (`NewImageCommentCard`): its kind, then the editor,
-  as on lines, with no Suggest change. Esc or the button leaves the mode. Until it's sent, its bubble drags it
+  as on lines, with no Suggest change. Esc (`imageCommentLeave`) or the button leaves the mode. Until it's sent, its bubble drags it
   (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window
   lives (`useNewImageCommentsStore`), by file and spot, on the revision shown, as one on lines is. Once posted it stays
   where it was written: `cm codereview comment edit` changes a comment's text only.
