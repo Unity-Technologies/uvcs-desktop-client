@@ -12,16 +12,15 @@
 # three lines replaced by one (a comment on a range, `--line=A-B`), and one outdated, its line changed since; a question
 # holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. An
 # image holds comments on a point and on an area (`--location=image:…`): open, answered, and one on its earlier
-# version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment on a
-# line and one on an area. A car (code-reviews/reviewModels.ts: a GLB whose four wheels share a name, with a take that
-# opens its door and one, AntennaSway, that bends its skinned roof antenna) holds comments on 3D models
+# version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment
+# on a line and one on an area. A car (code-reviews/reviewModels.ts: a GLB whose four wheels share a name, with a take
+# that opens its door and one, AntennaSway, that bends its skinned roof antenna) holds comments on 3D models
 # (`--location=model:…`): an open point with the camera it was written from, a whole wheel, an answered question, the
-# door the take moves, the antenna's tip, whose pin rides the skin as it bends, a rear wheel in the reshaping changeset's own diff
-# (where both versions show), and two on its first version: a wheel the second moved
-# forward, and the spoiler it dropped. An OBJ signpost, code or model, holds a comment on a line and one on its board.
-# Two more reviews have
-# no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
-# can be applied.
+# door the take moves, the antenna's tip, whose pin rides the skin as it bends, a rear wheel in the reshaping
+# changeset's own diff (where both versions show), and two on its first version: a wheel the second moved forward, and
+# the spoiler it dropped. An OBJ signpost, code or model, holds a comment on a line and one on its board. Two more
+# reviews have no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its
+# suggestions can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the workspace
 # always a folder of /tmp.
