@@ -34,6 +34,14 @@ describe('a thread on an image', () => {
     expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', writtenPlace: 'area', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
     expect(headerOf(onArea, { place: 'fileGroup' }).writtenPlace).toBe('area');
   });
+
+  it("says in the tooltip that it was written on an area of the image, not a line, wherever it names the place", () => {
+    const tip = 'The area of the image it was written on';
+    expect(headerOf(onArea).location?.writtenPlaceTip).toBe(tip);
+    expect(headerOf(onArea, { place: 'panel' }).location?.writtenPlaceTip).toBe(tip);
+    expect(headerOf(onArea, { place: 'fileGroup' }).writtenPlaceTip).toBe(tip);
+    expect(headerOf(onArea, { place: 'code' }).writtenPlaceTip).toBe(tip);
+  });
 });
 
 describe('hasThreadHeader', () => {
