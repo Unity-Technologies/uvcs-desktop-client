@@ -44,13 +44,24 @@ describe('cardPlacement', () => {
     expect(cardPlacement({ x: 100, y: 50, width: 20, height: 10 }, VIEWPORT, 360)).toEqual({ left: 132, top: 50, maxHeight: 542 });
   });
 
-  it('goes left when the right has no room, and over the spot when neither has', () => {
-    expect(cardPlacement({ x: 800, y: 50, width: 0, height: 0 }, VIEWPORT, 360).left).toBe(428);
-    expect(cardPlacement({ x: 200, y: 50, width: 0, height: 0 }, { width: 400, height: 600 }, 360).left).toBe(32);
+  it('goes left when the right has no room', () => {
+    expect(cardPlacement({ x: 800, y: 50, width: 0, height: 0 }, VIEWPORT, 360)).toMatchObject({ left: 428, top: 50 });
   });
 
-  it('lifts a card whose spot is near the bottom, so more than its header shows', () => {
-    expect(cardPlacement({ x: 100, y: 590, width: 0, height: 0 }, VIEWPORT, 360)).toMatchObject({ top: 352, maxHeight: 240 });
+  it('lifts a card beside a spot near the bottom, so more than its header shows', () => {
+    expect(cardPlacement({ x: 100, y: 590, width: 0, height: 0 }, VIEWPORT, 360)).toMatchObject({ top: 392, maxHeight: 200 });
+  });
+
+  it('goes below the spot when neither side has room, not over what it is about', () => {
+    expect(cardPlacement({ x: 150, y: 40, width: 100, height: 60 }, { width: 400, height: 600 }, 360)).toEqual({ left: 32, top: 112, maxHeight: 480 });
+  });
+
+  it('goes above it when below has less room', () => {
+    expect(cardPlacement({ x: 20, y: 400, width: 300, height: 150 }, { width: 400, height: 600 }, 360)).toEqual({ left: 20, bottom: 212, maxHeight: 380 });
+  });
+
+  it('goes over it only when no side has room', () => {
+    expect(cardPlacement({ x: 20, y: 100, width: 300, height: 150 }, { width: 400, height: 300 }, 360)).toMatchObject({ left: 20, top: 92 });
   });
 });
 

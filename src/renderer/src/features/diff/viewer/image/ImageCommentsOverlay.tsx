@@ -16,6 +16,9 @@ import styles from './ImageCommentsOverlay.module.css';
 /** A card's width beside its pin: a thread reads as it does under a line of code, at a reading width. */
 const CARD_WIDTH = 360;
 
+/** The width the stage's floating controls take at the viewport's right edge, with their margin. */
+const STAGE_CONTROLS_ROOM = 52;
+
 interface ImageCommentsOverlayProps {
   annotations: ImageAnnotations;
   panZoom: PanZoom;
@@ -95,9 +98,10 @@ function PinMark({ pin, rect, selected, onClick }: { pin: ImagePin; rect: Screen
 
 /** The opened pin's card, beside it and within the viewport, scrolling inside when taller than the room. */
 function PinCard({ rect, viewport, children }: { rect: ScreenRect; viewport: Size; children: React.ReactNode }) {
-  const placement = cardPlacement(rect, viewport, CARD_WIDTH);
+  // The stage's controls float at the right edge (`StageControls`): a card never goes under them.
+  const placement = cardPlacement(rect, { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, CARD_WIDTH);
   return (
-    <div className={styles.card} data-no-pan="" style={{ left: placement.left, top: placement.top, width: CARD_WIDTH, maxHeight: placement.maxHeight }}>
+    <div className={styles.card} data-no-pan="" style={{ ...placement, width: CARD_WIDTH }}>
       {children}
     </div>
   );
