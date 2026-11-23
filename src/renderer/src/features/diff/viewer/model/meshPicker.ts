@@ -24,8 +24,7 @@ export interface MeshTwins {
 
 /**
  * Every object a mesh is drawn as, each made pickable as the mesh (`makePickable`): Diffs hides the solid and draws the
- * version after as its heat twin and the one before as its ghost, and a mesh picked only by its solid picked nothing
- * there, so commenting in Diffs showed no ring and a click marked nothing.
+ * version after as its heat twin and the one before as its ghost, and a pick finds what is drawn.
  */
 export function drawnTwinsOf(mesh: MeshTwins): Mesh[] {
   return [mesh.solid, mesh.wire, mesh.heat, mesh.ghost];
@@ -45,8 +44,8 @@ export class MeshPicker {
   private readonly normalPixel = new Float32Array(4);
 
   /**
-   * Makes these objects (a mesh and its wireframe twin: either may be what shows) pickable as the side's mesh of
-   * this place. Only what is visible is drawn, as for the eye.
+   * Makes these objects (a mesh's twins, `drawnTwinsOf`: solid, wireframe, Diffs' heat and ghost; whichever shows)
+   * pickable as the side's mesh of this place. Only what is visible is drawn, as for the eye.
    */
   static makePickable(objects: Mesh[], mesh: number): void {
     for (const object of objects) {
