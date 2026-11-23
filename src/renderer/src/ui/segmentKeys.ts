@@ -1,3 +1,14 @@
+/** How a segment was picked: clicked with a pointer, or with keys (← →, or Space or Enter on a focused segment). */
+export type SegmentPick = 'pointer' | 'keys';
+
+/**
+ * How a segment's click came: a mouse, pen or touch counts its clicks in `detail`, while Space or Enter on a focused
+ * button clicks it with a `detail` of 0.
+ */
+export function segmentPickOfClick(detail: number): SegmentPick {
+  return detail > 0 ? 'pointer' : 'keys';
+}
+
 /**
  * The segment an arrow key moves to, as in a native radio group, or null for other keys: ← and → step through the
  * segments, wrapping around. ↑ and ↓ are left to whatever the control sits in (a list below it).

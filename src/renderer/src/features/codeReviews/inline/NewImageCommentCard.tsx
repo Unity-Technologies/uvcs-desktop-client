@@ -1,6 +1,8 @@
+import { useRef } from 'react';
 import { placeId } from '@shared/domain/place';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { commentDraftKey } from '../../../components/DetailsHeading';
+import type { CommentFieldHandle } from '../../../components/commentEditor/commentFieldProps';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
 import { CommentComposer } from '../conversation/CommentComposer';
 import { addImageComment } from '../conversation/reviewCommentOperations';
@@ -28,14 +30,16 @@ export function NewImageCommentCard({ spot, onSent }: NewImageCommentCardProps) 
   const setKind = useNewImageCommentsStore((state) => state.setKind);
   const close = useNewImageCommentsStore((state) => state.close);
   const { kind } = spot.comment;
+  const field = useRef<CommentFieldHandle>(null);
   const words = lineCommentWords(kind);
   return (
     <CommentedFileContext.Provider value={spot.path}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} />
+          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} field={field} />
         </div>
         <CommentComposer
+          fieldRef={field}
           fieldClassName={styles.field}
           draftKey={commentDraftKey(placeId(place), 'reviewLineComment', spot.key)}
           placeholder={words.placeholder}
