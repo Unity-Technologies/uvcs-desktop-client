@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, cardPlacement, cardStyleOf, focusLeavesHiddenCard, pinBounds, pinCardPlacement, keptCardPlacement, PIN_CARD_WIDTH, stageCardPlacement } from './pinPlacement';
+import { boundsOf, cardPlacement, cardStyleOf, focusLeavesHiddenCard, pinBounds, pinCardPlacement, keptCardPlacement, PIN_CARD_WIDTH, stageCardPlacement, viewKeyOf } from './pinPlacement';
 
 describe('cardPlacement', () => {
   const VIEWPORT = { width: 1000, height: 600 };
@@ -120,6 +120,29 @@ describe('keptCardPlacement', () => {
 
   it('is placed afresh when there is none held yet', () => {
     expect(keptCardPlacement(null, fresh(PIN), pinBounds(PIN), false)).toEqual(fresh(PIN));
+  });
+});
+
+describe('viewKeyOf', () => {
+  const VIEW = { target: [0, 1, 0] as const, yaw: 0.5, pitch: 0.3, distance: 4 };
+  const PANES = [{ x: 0, y: 0, width: 400, height: 300 }, null];
+
+  it('is the same for the same view and panes: a take playing under it moves neither', () => {
+    expect(viewKeyOf({ ...VIEW, target: [0, 1, 0] }, [{ ...PANES[0]! }, null])).toBe(viewKeyOf(VIEW, PANES));
+  });
+
+  it('changes with any part of the view: a turn, a pan, a zoom, even one that leaves the camera where it was', () => {
+    const key = viewKeyOf(VIEW, PANES);
+    expect(viewKeyOf({ ...VIEW, yaw: 0.6 }, PANES)).not.toBe(key);
+    expect(viewKeyOf({ ...VIEW, pitch: 0.4 }, PANES)).not.toBe(key);
+    expect(viewKeyOf({ ...VIEW, target: [0, 1.1, 0] }, PANES)).not.toBe(key);
+    expect(viewKeyOf({ ...VIEW, distance: 5 }, PANES)).not.toBe(key);
+  });
+
+  it('changes with the panes: a resize, a mode, Split shown or not', () => {
+    const key = viewKeyOf(VIEW, PANES);
+    expect(viewKeyOf(VIEW, [{ x: 0, y: 0, width: 500, height: 300 }, null])).not.toBe(key);
+    expect(viewKeyOf(VIEW, [PANES[0]!, { x: 400, y: 0, width: 400, height: 300 }])).not.toBe(key);
   });
 });
 
