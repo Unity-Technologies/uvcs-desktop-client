@@ -54,7 +54,7 @@ export function pinPlacesOf(pins: readonly ModelPin[], versions: Record<Side, Dr
 
 /** The anchor of a spot on a skinned part, and the mesh as drawn that bends it; none for a rigid part. */
 function skinOf(version: DrawnVersion, node: number, spot: ModelSpot): { anchor: SkinAnchor; mesh: SkinnedMesh } | null {
-  const anchor = skinAnchorOfSpot(version.model, node, spot.node?.local);
+  const anchor = skinAnchorOfSpot(version.model, node, spot);
   if (!anchor) return null;
   return { anchor, mesh: drawnSkinnedMesh(version, anchor.mesh) };
 }

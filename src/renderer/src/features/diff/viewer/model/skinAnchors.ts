@@ -12,7 +12,7 @@
 import { Matrix4, Triangle, Vector3, type SkinnedMesh } from 'three';
 import { isSkinned, placedPositionsOf } from './meshPlacement';
 import { fileRestWorldOf } from './modelSpaces';
-import type { ModelPoint } from '@shared/domain/reviewConversation';
+import type { ModelPoint, ModelSpot } from '@shared/domain/reviewConversation';
 import type { ModelMesh, ParsedModel } from './parsedModel';
 
 /** A point on a skinned mesh: a triangle of it, and where in it. */
@@ -38,15 +38,31 @@ export function skinnedMeshesOn(model: Pick<ParsedModel, 'meshes'>, node: number
 }
 
 /**
+ * What is worked out once per model and kept while the model lives: each node's skinned meshes at rest, and each
+ * spot's anchor (a spot is a comment's object, the same while the comment isn't moved). The pins are placed again
+ * whenever any of them changes (a comment being written dragged over the model, `ModelCommentsOverlay`): without
+ * these, every pointer move skinned the parts at rest again and scanned their triangles for every pin.
+ */
+const restMeshesByModel = new WeakMap<object, Map<number, PlacedMesh[]>>();
+const anchorsByModel = new WeakMap<object, WeakMap<ModelSpot, SkinAnchor | null>>();
+
+/**
  * The anchor of a spot on a node's skinned meshes: the one nearest the spot's point at rest (`local`, in the node's
  * space, which a take bending the skin doesn't move). None for a rigid part, or a spot that doesn't say where on its
- * part it is: its node's matrix places it (`placedSpot`). Reads every triangle of the meshes: once per pin and version.
+ * part it is: its node's matrix places it (`placedSpot`). Reads every triangle of the meshes once per spot and model.
  */
-export function skinAnchorOfSpot(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, local: ModelPoint | undefined): SkinAnchor | null {
-  const meshes = skinnedMeshesOn(model, node);
+export function skinAnchorOfSpot(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, spot: ModelSpot): SkinAnchor | null {
+  let anchors = anchorsByModel.get(model);
+  if (!anchors) anchorsByModel.set(model, (anchors = new WeakMap()));
+  if (!anchors.has(spot)) anchors.set(spot, anchorOf(model, node, spot.node?.local));
+  return anchors.get(spot)!;
+}
+
+function anchorOf(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, local: ModelPoint | undefined): SkinAnchor | null {
+  const meshes = restMeshesOn(model, node);
   if (meshes.length === 0 || !local) return null;
   const atRest = new Vector3(local.x, local.y, local.z).applyMatrix4(fileRestWorldOf(model)[node]!);
-  return nearestSkinAnchor(restMeshesOf(model, meshes), atRest);
+  return nearestSkinAnchor(meshes, atRest);
 }
 
 /**
@@ -56,11 +72,23 @@ export function skinAnchorOfSpot(model: Pick<ParsedModel, 'nodes' | 'meshes'>, n
 export function restPointOfHit(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, hit: Vector3, drawn: (mesh: number) => SkinnedMesh): Vector3 | null {
   const meshes = skinnedMeshesOn(model, node);
   const anchor = meshes.length === 0 ? null : nearestSkinAnchor(drawnMeshesOf(model, meshes, drawn), hit);
-  return anchor && anchoredPoint(anchor, restMeshesOf(model, meshes));
+  return anchor && anchoredPoint(anchor, restMeshesOn(model, node));
 }
 
-/** The meshes' vertices as the file has them at rest, its bones where the file puts them, in the file's own space. */
-export function restMeshesOf(model: Pick<ParsedModel, 'nodes' | 'meshes'>, meshes: readonly number[]): PlacedMesh[] {
+/**
+ * The node's skinned meshes as the file has them at rest, its bones where the file puts them, in the file's own
+ * space: placed once per node and model.
+ */
+function restMeshesOn(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number): PlacedMesh[] {
+  let byNode = restMeshesByModel.get(model);
+  if (!byNode) restMeshesByModel.set(model, (byNode = new Map()));
+  let meshes = byNode.get(node);
+  if (!meshes) byNode.set(node, (meshes = placedAtRest(model, skinnedMeshesOn(model, node))));
+  return meshes;
+}
+
+function placedAtRest(model: Pick<ParsedModel, 'nodes' | 'meshes'>, meshes: readonly number[]): PlacedMesh[] {
+  if (meshes.length === 0) return [];
   const space = new Matrix4();
   const world = fileRestWorldOf(model);
   return meshes.map((mesh) => placedMesh(model.meshes[mesh]!, mesh, placedPositionsOf(model.meshes[mesh]!, { space, world }, new Float32Array(model.meshes[mesh]!.attributes.position.length))));
@@ -109,7 +137,7 @@ export function nearestSkinAnchor(meshes: readonly PlacedMesh[], point: Vector3)
   return nearest;
 }
 
-/** Where an anchor is among a mesh's placed vertices (`restMeshesOf`, `drawnMeshesOf`), in their space. */
+/** Where an anchor is among a mesh's placed vertices (`restMeshesOn`, `drawnMeshesOf`), in their space. */
 export function anchoredPoint(anchor: SkinAnchor, meshes: readonly PlacedMesh[]): Vector3 | null {
   const placed = meshes.find(({ mesh }) => mesh === anchor.mesh);
   if (!placed) return null;

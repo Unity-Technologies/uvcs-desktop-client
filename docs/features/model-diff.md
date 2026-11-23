@@ -364,8 +364,9 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   by its names as the file writes them, `nodeNamesOf`, which a glTF's loader renames apart, `ModelNode.fileName`;
   same-named siblings told apart by the point, `nodeOfSpot`), so it follows the part to where another
   version has it, and while a take plays. A point on a skinned mesh follows the skin, since a take bends it by its
-  bones and leaves its node where it is: the pin is anchored, once per pin and version, on the mesh's triangle nearest
-  its point at rest (`skinAnchorOfSpot`, from `local`, so comments written before follow too), by where in it the point
+  bones and leaves its node where it is: the pin is anchored on the mesh's triangle nearest
+  its point at rest (`skinAnchorOfSpot`, from `local`, so comments written before follow too), once per spot and model:
+  the part skinned at rest once for all its pins, a pin dragged anchored again alone, by where in it the point
   is, and each frame is that mix of the triangle's three corners as the skeleton bends them (`drawnAnchorPoint`, three's
   `getVertexPosition`): three vertices a pin, whatever the mesh's size. A triangle rather than the nearest vertex: on a
   low-poly part the nearest corner can be far from the point, and an offset kept from it turns wrong as the bones turn

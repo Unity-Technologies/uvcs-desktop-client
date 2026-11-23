@@ -55,7 +55,7 @@ describe('skinAnchorOfSpot', () => {
 
   it("anchors a spot on a skinned part where its point is at rest, in the part's space", () => {
     expect(skinnedMeshesOn(model, body)).toEqual([0]);
-    const anchor = skinAnchorOfSpot(model, body, { x: 0, y: 1, z: 0 })!;
+    const anchor = skinAnchorOfSpot(model, body, { point: { x: 0, y: 6, z: 0 }, node: { path: ['Body'], local: { x: 0, y: 1, z: 0 } } })!;
     // The top of the box, 1 up from its node, which stands 5 up.
     const top = anchor.corners.map((vertex) => model.meshes[0]!.attributes.position[vertex * 3 + 1]! + 5);
     expect(top).toEqual([6, 6, 6]);
@@ -63,7 +63,7 @@ describe('skinAnchorOfSpot', () => {
 
   it('anchors nothing on a rigid part, or a spot that says not where on its part it is', () => {
     expect(skinnedMeshesOn(model, crate)).toEqual([]);
-    expect(skinAnchorOfSpot(model, crate, { x: 0, y: 0, z: 0 })).toBeNull();
-    expect(skinAnchorOfSpot(model, body, undefined)).toBeNull();
+    expect(skinAnchorOfSpot(model, crate, { point: { x: 0, y: 0, z: 0 }, node: { path: ['Crate'], local: { x: 0, y: 0, z: 0 } } })).toBeNull();
+    expect(skinAnchorOfSpot(model, body, { point: { x: 0, y: 6, z: 0 }, node: { path: ['Body'] } })).toBeNull();
   });
 });
