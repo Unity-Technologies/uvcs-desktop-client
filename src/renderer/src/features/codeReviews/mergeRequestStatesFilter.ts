@@ -68,3 +68,8 @@ export function restoredStates(remembered: unknown): MergeRequestStates {
   const known = MERGE_REQUEST_STATES.filter((state) => remembered.includes(state));
   return known.length > 0 ? known : STILL_TO_MERGE;
 }
+
+/** Whether the chip has other states ticked than where it rests, which highlights it. */
+export function isFilteringStates(states: MergeRequestStates): boolean {
+  return states.length !== STILL_TO_MERGE.length || states.some((state, index) => state !== STILL_TO_MERGE[index]);
+}

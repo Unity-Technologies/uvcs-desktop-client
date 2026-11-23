@@ -2,8 +2,9 @@ import type { CodeReview, CodeReviewFilter, CodeReviewSummary } from '@shared/do
 import { isEveryone, isOnlyMine, pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import { sameUser, userFilterTexts } from '../../lib/userName';
-import type { MergeRequestStateFilter, ReviewKindFilter, StatusFilter } from './codeReviewsViewStore';
+import type { ReviewKindFilter, StatusFilter } from './codeReviewsViewStore';
 import { isActiveMergeRequest } from './mergeRequestState';
+import { EVERY_STATE, serverStateOf, type MergeRequestStates } from './mergeRequestStatesFilter';
 import { describeTarget } from './reviewTarget';
 import { waitingForMe } from './waitingForMe';
 
@@ -12,8 +13,8 @@ interface CodeReviewsQueryFilters {
   /** Who created them, once picking paused (`PICKING_PAUSE_MS`). */
   people: PeoplePick;
   status: StatusFilter;
-  /** Which merge requests: Merged and Closed are the server's; Active and All read with no state (`matchesState`). */
-  mergeRequestState: MergeRequestStateFilter;
+  /** The merge request states ticked: Merged or Closed alone is the server's; any other pick reads with no state (`serverStateOf`). */
+  mergeRequestStates: MergeRequestStates;
   /** Who is asked to review them: I'm a reviewer, people picked, both. */
   reviewers: PeoplePick;
 }
@@ -24,12 +25,12 @@ interface CodeReviewsQueryFilters {
  * with other reviewers picked, the query asks for every review, as no reviewer filter does (one query key and one `cm
  * find`), and keeps the rows locally (`matchesReviewers`): `cm find review` takes no reviewer but the user. Waiting for
  * me and Opened by me ask nothing of their own: they keep the reviews read, in the time range (`matchesWaiting`,
- * `matchesOpenedByMe`), so their counts are what pressing them shows, and pressing them runs no command. Merged and
- * Closed ask the server for that state; Active (the code reviews and the merge requests Open or Draft) asks for none and
- * narrows locally, as `cm find` takes one state, so it shares All's query key.
+ * `matchesOpenedByMe`), so their counts are what pressing them shows, and pressing them runs no command. Merged alone
+ * or Closed alone asks the server for that state; any other pick of states asks for none and narrows locally
+ * (`matchesStates`), as `cm find` takes one state, so they all share one query key.
  */
-export function codeReviewsQuery({ since, people, status, mergeRequestState, reviewers }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
-  return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: SERVER_STATES[mergeRequestState], sinceDate: sinceDateFor(since, today) };
+export function codeReviewsQuery({ since, people, status, mergeRequestStates, reviewers }: CodeReviewsQueryFilters, today = new Date()): CodeReviewFilter {
+  return { owners: pickedOwners(people), reviewerIsMe: isOnlyMine(reviewers), status: status === 'any' ? undefined : status, mergeRequestState: serverStateOf(mergeRequestStates), sinceDate: sinceDateFor(since, today) };
 }
 
 /**
@@ -37,19 +38,16 @@ export function codeReviewsQuery({ since, people, status, mergeRequestState, rev
  * (`stateUnderKind`). The view and the sidebar's count (`useCodeReviewsListFilter`) both read with it, so they share one
  * query key and one `cm find review`.
  */
-export function codeReviewsListQuery({ kind, mergeRequestState, ...filters }: CodeReviewsQueryFilters & { kind: ReviewKindFilter }, today = new Date()): CodeReviewFilter {
-  return codeReviewsQuery({ ...filters, mergeRequestState: stateUnderKind(kind, mergeRequestState) }, today);
+export function codeReviewsListQuery({ kind, mergeRequestStates, ...filters }: CodeReviewsQueryFilters & { kind: ReviewKindFilter }, today = new Date()): CodeReviewFilter {
+  return codeReviewsQuery({ ...filters, mergeRequestStates: statesUnderKind(kind, mergeRequestStates) }, today);
 }
 
-/** The states the server is asked for; the others read every review. */
-const SERVER_STATES: Record<MergeRequestStateFilter, CodeReviewFilter['mergeRequestState']> = { active: undefined, all: undefined, merged: 'Merged', closed: 'Closed' };
-
 /**
- * The state the list goes by under the Kind chip: the State chip's, except with Code reviews alone, which have no
- * state: then every review is asked for and kept (`all`), and the State chip hides (`showsStateChip`).
+ * The states the list goes by under the Kind chip: the State chip's, except with Code reviews alone, which have no
+ * state: then every review is asked for and kept (every state), and the State chip hides (`showsStateChip`).
  */
-export function stateUnderKind(kind: ReviewKindFilter, state: MergeRequestStateFilter): MergeRequestStateFilter {
-  return kind === 'codeReviews' ? 'all' : state;
+export function statesUnderKind(kind: ReviewKindFilter, states: MergeRequestStates): MergeRequestStates {
+  return kind === 'codeReviews' ? EVERY_STATE : states;
 }
 
 /** Whether the State chip shows: a merge request's state means nothing to code reviews alone. */
@@ -64,13 +62,6 @@ export function showsStateChip(kind: ReviewKindFilter): boolean {
 export function matchesKind(review: Pick<CodeReviewSummary, 'mergeRequest'>, kind: ReviewKindFilter): boolean {
   if (kind === 'any') return true;
   return (review.mergeRequest !== undefined) === (kind === 'mergeRequests');
-}
-
-/** Whether a review read shows under the State chip: Active keeps the code reviews and the merge requests Open or Draft. */
-export function matchesState(review: Pick<CodeReviewSummary, 'mergeRequest'>, state: MergeRequestStateFilter): boolean {
-  if (state === 'all') return true;
-  if (state === 'active') return !review.mergeRequest || isActiveMergeRequest(review);
-  return review.mergeRequest?.state === SERVER_STATES[state];
 }
 
 /** Whether any reviewer picked is asked on the review (the user under I'm a reviewer, `me`); every review with none picked. */
@@ -96,7 +87,7 @@ export function matchesOpenedByMe(review: Pick<CodeReviewSummary, 'owner' | 'sta
 
 /**
  * Whether the list shows fewer reviews than it read, so an empty one says none match (with Clear filters) rather than
- * none yet: a filter is on, or the State chip at rest (Active) hides what was read, every review merged or closed.
+ * none yet: a filter is on, or the State chip at rest (Draft or open) hides what was read, every review merged or closed.
  */
 export function isNarrowed(filtering: boolean, read: number, shown: number): boolean {
   return filtering || shown < read;

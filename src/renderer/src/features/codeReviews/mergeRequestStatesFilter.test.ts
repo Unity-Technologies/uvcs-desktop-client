@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
-import { EVERY_STATE, isOnlyState, matchesStates, restoredStates, serverStateOf, statesChipLabel, STILL_TO_MERGE, toggledState } from './mergeRequestStatesFilter';
+import { EVERY_STATE, isFilteringStates, isOnlyState, matchesStates, restoredStates, serverStateOf, statesChipLabel, STILL_TO_MERGE, toggledState } from './mergeRequestStatesFilter';
 
 describe('ticking the State chip', () => {
   it('adds and removes a state, keeping the order a merge request goes in', () => {
@@ -21,6 +21,12 @@ describe("the State chip's label", () => {
     expect(statesChipLabel(STILL_TO_MERGE)).toBe('Draft or open');
     expect(statesChipLabel(['Draft', 'Open', 'Closed'])).toBe('Draft, open or closed');
     expect(statesChipLabel(EVERY_STATE)).toBe('Any state');
+  });
+});
+
+describe('whether the State chip highlights', () => {
+  it('does with any states ticked but where it rests', () => {
+    expect([isFilteringStates(STILL_TO_MERGE), isFilteringStates(['Open']), isFilteringStates(EVERY_STATE), isFilteringStates(['Open', 'Merged'])]).toEqual([false, true, true, true]);
   });
 });
 

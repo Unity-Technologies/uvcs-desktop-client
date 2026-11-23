@@ -46,9 +46,10 @@ export function createViewFilters<Filters extends ViewFilters>(
         }) as Filters & ViewFilterActions<Filters>,
       {
         name,
-        // 2: Code reviews' "I'm a reviewer" chip became a menu (`reviewerIsMe` to `reviewer`). A new version has every
-        // view's remembered filters read once more by `restoredFilters`, which keeps today's as they are.
-        version: 2,
+        // 2: Code reviews' "I'm a reviewer" chip became a menu (`reviewerIsMe` to `reviewer`). 3: their State chip ticks
+        // states (`mergeRequestState` to `mergeRequestStates`). A new version has every view's remembered filters read
+        // once more by `restoredFilters`, which keeps today's as they are.
+        version: 3,
         partialize: (state) => rememberedFilters(state, forSession),
         migrate: (persisted) => restoredFilters(persisted, defaults, upgrade) as Filters & ViewFilterActions<Filters>,
       },

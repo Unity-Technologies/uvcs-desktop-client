@@ -2,14 +2,9 @@ import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import { EVERYONE, MINE, type PeoplePick } from '../../lib/peopleFilter';
 import type { SincePreset } from '../../lib/sincePresets';
 import { createViewFilters, type FilterUpgrade, type ViewFilters } from '../../lib/viewFilters';
+import { restoredStates, STILL_TO_MERGE, type MergeRequestStates } from './mergeRequestStatesFilter';
 
 export type StatusFilter = CodeReviewStatus | 'any';
-
-/**
- * The State chip: `active`, the code reviews and the merge requests still to merge (Open, Draft); one state of a merge
- * request; or `all` (`matchesState`).
- */
-export type MergeRequestStateFilter = 'active' | 'merged' | 'closed' | 'all';
 
 /** The Kind chip: merge requests and code reviews together (`any`), or one kind alone (`matchesKind`). */
 export type ReviewKindFilter = 'any' | 'mergeRequests' | 'codeReviews';
@@ -17,8 +12,8 @@ export type ReviewKindFilter = 'any' | 'mergeRequests' | 'codeReviews';
 interface CodeReviewsFilters extends ViewFilters {
   since: SincePreset;
   status: StatusFilter;
-  /** Which merge requests, by state; an older version's remembered filters have none and read as `active`. */
-  mergeRequestState: MergeRequestStateFilter;
+  /** The merge request states ticked (`matchesStates`); an older version's one choice reads as its states (`restoredStates`). */
+  mergeRequestStates: MergeRequestStates;
   /** Which kind of review; an older version's remembered filters have none and read as `any`. */
   kind: ReviewKindFilter;
   /** Who is asked to review them, picked as the people filter picks who created them. */
@@ -29,15 +24,21 @@ interface CodeReviewsFilters extends ViewFilters {
   openedByMe: boolean;
 }
 
-export const CLEARED_CODE_REVIEW_FILTERS: Partial<CodeReviewsFilters> = { status: 'any', mergeRequestState: 'active', kind: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false };
+export const CLEARED_CODE_REVIEW_FILTERS: Partial<CodeReviewsFilters> = { status: 'any', mergeRequestStates: STILL_TO_MERGE, kind: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false };
 
 /** "I'm a reviewer" was a chip of its own, remembered as `reviewerIsMe`, before the reviewers were picked as people. */
 export const restoredReviewersFilter: FilterUpgrade<CodeReviewsFilters> = (remembered) => (remembered.reviewerIsMe === true ? { reviewers: MINE } : {});
 
+/**
+ * The State chip picked one choice, remembered as `mergeRequestState`, before it ticked states; a list remembered is
+ * checked too, as any remembered value is (`restoredStates`).
+ */
+export const restoredStatesFilter: FilterUpgrade<CodeReviewsFilters> = (remembered) => ({ mergeRequestStates: restoredStates(remembered.mergeRequestStates ?? remembered.mergeRequestState) });
+
 export const useCodeReviewsViewStore = createViewFilters<CodeReviewsFilters>(
   'code-reviews-view',
-  { text: '', people: EVERYONE, since: 'last3Months', status: 'any', mergeRequestState: 'active', kind: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false },
+  { text: '', people: EVERYONE, since: 'last3Months', status: 'any', mergeRequestStates: STILL_TO_MERGE, kind: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false },
   CLEARED_CODE_REVIEW_FILTERS,
   [],
-  restoredReviewersFilter,
+  (remembered) => ({ ...restoredReviewersFilter(remembered), ...restoredStatesFilter(remembered) }),
 );
