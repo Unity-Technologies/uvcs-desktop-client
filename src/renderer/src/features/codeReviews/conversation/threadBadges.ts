@@ -74,16 +74,15 @@ export function locationText(anchor: Pick<FileAnchor, 'path'>): { folder: string
 
 /**
  * Where in its file a comment was written, as the conversation says it apart from the file's link: its lines, "line
- * 42", "lines 42–48", or its pin on an image, "pin 2", "area 3", numbered as the image shows it (`imagePinNumbers`).
+ * 42", "lines 42–48", or what of an image, "point", "area": its pin shows where, with who started it.
  */
-export function writtenPlaceText(anchor: FileAnchor, pinNumber?: number): string {
-  return anchor.kind === 'line' ? rangeWordsInline(anchor) : imageSpotWords(anchor.spot, pinNumber);
+export function writtenPlaceText(anchor: FileAnchor): string {
+  return anchor.kind === 'line' ? rangeWordsInline(anchor) : imageSpotWords(anchor.spot);
 }
 
-/** "pin 2" for a point of an image, "area 3" for an area; with no number, "pin", "area". */
-export function imageSpotWords(spot: ImageSpot, pinNumber?: number): string {
-  const noun = spot.size ? 'area' : 'pin';
-  return pinNumber === undefined ? noun : `${noun} ${pinNumber}`;
+/** "point" for a point of an image, "area" for an area. */
+export function imageSpotWords(spot: ImageSpot): string {
+  return spot.size ? 'area' : 'point';
 }
 
 /**

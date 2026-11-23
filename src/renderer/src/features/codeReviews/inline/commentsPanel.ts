@@ -341,8 +341,8 @@ export function diffWidthBesidePanel({ tabWidth, filesWidth, panelWidth }: { tab
 
 /**
  * Threads in the order the code shows them: by the line their card is under (a range's last), then the longer range
- * first, as its outline starts above. An image's are in the order they were written, as its pins are numbered
- * (`imagePinNumbers`): the caller's last tie-break, by id.
+ * first, as its outline starts above. An image's are in the order they were written: the caller's last tie-break, by
+ * id.
  */
 function compareAnchors(a: FileAnchor, b: FileAnchor): number {
   return a.kind === 'line' && b.kind === 'line' ? compareLines(a, b) : 0;

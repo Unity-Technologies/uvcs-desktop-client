@@ -31,8 +31,6 @@ export interface ThreadHeaderInput {
    * leads nowhere, as opening the changeset would go behind the dialog (its footer opens it, closing the dialog).
    */
   inContext: boolean;
-  /** On an image: the number its pin shows (`imagePinNumbers`), which the header names it by. */
-  pinNumber?: number;
 }
 
 /** The file and line a header names: a link to it in Changes, or, on a card that goes there itself, text. */
@@ -98,7 +96,7 @@ export function foldsByHand(thread: ReviewThread): boolean {
   return hasThreadHeader(thread);
 }
 
-export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides, seesHowApplied, showsAnswer, inContext, pinNumber }: ThreadHeaderInput): ThreadHeaderView {
+export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides, seesHowApplied, showsAnswer, inContext }: ThreadHeaderInput): ThreadHeaderView {
   const badges = threadBadges(thread);
   const inCode = place === 'code';
   const underFile = place === 'fileGroup';
@@ -106,19 +104,19 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     foldToggle: foldable ? { expanded: !folded, label: folded ? 'Show the thread' : 'Fold the thread' } : null,
     // In the code, the thread is at its line: its location would name where the user already is. Under its file's
     // name, the file is named already.
-    location: inCode || underFile ? null : locationOf(thread, place === 'panel', pinNumber),
+    location: inCode || underFile ? null : locationOf(thread, place === 'panel'),
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
-    line: (underFile || inCode) && thread.root.anchor.kind !== 'review' ? writtenPlaceText(thread.root.anchor, pinNumber) : null,
+    line: (underFile || inCode) && thread.root.anchor.kind !== 'review' ? writtenPlaceText(thread.root.anchor) : null,
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };
 }
 
-function locationOf({ root }: ReviewThread, cardOpens: boolean, pinNumber: number | undefined): HeaderLocation | null {
+function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation | null {
   if (root.anchor.kind === 'review') return null;
   const { folder, file } = locationText(root.anchor);
-  const line = writtenPlaceText(root.anchor, pinNumber);
+  const line = writtenPlaceText(root.anchor);
   // The panel's card goes to the thread: its file and line only name where, whole in the tooltip.
   return cardOpens ? { folder, file, line, linked: false, tip: `${folder}${file}, ${line}` } : { folder, file, line, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
 }

@@ -19,7 +19,6 @@ import { useReviewThreads } from './conversation/useReviewThreads';
 import { pluralize } from '../../lib/text';
 import { commentsByFile, commentsPanelCounts, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, NO_FOLDED_FILES, unfoldedFor, type FoldedFiles, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
 import { isFileThread, type FileThread } from './inline/fileThreads';
-import { imagePinNumbers, ImagePinNumbersContext } from './inline/imagePins';
 import { reviewFileFlag } from './inline/reviewFileFlag';
 import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
@@ -49,7 +48,6 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
   const threads = useReviewThreads(review);
-  const pinNumbers = useMemo(() => imagePinNumbers(threads ?? []), [threads]);
   const { reviewedUpTo, newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
   const seq = useRef(1);
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
@@ -133,7 +131,6 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
 
   return (
     <ReviewCommentsContext.Provider value={comments}>
-      <ImagePinNumbersContext.Provider value={pinNumbers}>
       <EntryAnnotatorContext.Provider value={ReviewFileAnnotator}>
         <EntryFlagContext.Provider value={fileFlag}>
           <DiffFocusRequestContext.Provider value={request}>
@@ -175,7 +172,6 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
           </DiffFocusRequestContext.Provider>
         </EntryFlagContext.Provider>
       </EntryAnnotatorContext.Provider>
-      </ImagePinNumbersContext.Provider>
     </ReviewCommentsContext.Provider>
   );
 }

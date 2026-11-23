@@ -19,17 +19,20 @@
   transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out);
 }
 
-/* A marker as a line's is (LineMarkers): a small round pill, the thread's number in it, centered on its point. */
+/* A speech bubble, its tip (the bottom-left corner, square) on the point: the avatar of who started the thread inside,
+   as a line's marker shows who wrote there (LineMarkers). Its border says where the thread stands. */
 .pin {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  margin: -11px 0 0 -11px;
-  padding: 0 6px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-full);
+  width: 30px;
+  height: 30px;
+  margin-top: -30px;
+  padding: 0;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-full) var(--radius-full) var(--radius-full) 0;
+  /* Avatars drawn in it are ringed apart in its own color. */
+  --avatar-ring: var(--bg-surface-raised);
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-sm);
   color: var(--text-secondary);
@@ -43,6 +46,7 @@
 .pin:hover {
   border-color: var(--accent);
   color: var(--accent-text);
+  z-index: 1;
 }
 
 .pin:focus-visible {
@@ -52,16 +56,20 @@
 
 /* Something there still waits for an answer: the color a review's Open pill has. */
 .pin[data-emphasized] {
-  border-color: color-mix(in srgb, var(--status-changed) 60%, transparent);
-  color: var(--status-changed);
+  border-color: var(--status-changed);
 }
 
 .pin[data-earlier] {
   border-style: dashed;
 }
 
-/* The thread selected, its card open, or a comment being written there: the accent, as its card and line are. */
-.pin[data-selected],
+/* The thread selected or its card open: the accent, as its card and line are. */
+.pin[data-selected] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-sm);
+}
+
+/* A comment being written: the accent bubble, a plus where the avatar will be. */
 .pin[data-writing] {
   border-color: var(--accent);
   background: var(--accent);

@@ -1,10 +1,9 @@
-import { useContext, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ImageSpot } from '@shared/domain/reviewConversation';
 import type { ImageAnnotations } from '../../diff/viewer/image/imageAnnotations';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { topSideOf } from './fileComments';
 import { imageThreadsOfFile, type ImageThreads, type ReviewDiffView, type ShownFile } from './fileThreads';
-import { ImagePinNumbersContext } from './imagePins';
 import { ImageThreadCard } from './ImageThreadCard';
 import { imageCommentAt, imageCommentSide, newImageCommentSpot, newImageCommentsIn } from './newImageComment';
 import { useNewImageCommentsStore } from './newImageCommentsStore';
@@ -29,7 +28,6 @@ interface ReviewImageInput {
  * (`useNewImageCommentsStore`). None for a file that takes no comments.
  */
 export function useReviewImageAnnotations({ comments, threads, view, file, inCode }: ReviewImageInput): ReviewImageAnnotations {
-  const pinNumbers = useContext(ImagePinNumbersContext);
   const allSpots = useNewImageCommentsStore((state) => state.spots);
   const openSpot = useNewImageCommentsStore((state) => state.open);
   const fileKey = JSON.stringify([view, file]);
@@ -53,7 +51,7 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
 
   if (!comments || !view || !imageThreads) return NO_IMAGE_ANNOTATIONS;
   const topSide = topSideOf(file);
-  const pins = reviewImagePinsOf({ threads: imageThreads, spots, pinNumbers, inCode, focusThreadId: focus?.threadId, topSide });
+  const pins = reviewImagePinsOf({ threads: imageThreads, spots, inCode, focusThreadId: focus?.threadId, topSide });
   const reviewId = comments.review.id;
   const side = imageCommentSide(file);
   const annotations: ImageAnnotations = {

@@ -128,11 +128,10 @@ describe('writtenPlaceText', () => {
     expect(writtenPlaceText({ ...ON_LINE, firstLine: 12, lastLine: 18 })).toBe('lines 12–18');
   });
 
-  it("names a comment on an image by its pin's number: a point's pin, an area", () => {
+  it('names a comment on an image as on a point or an area of it', () => {
     const onImage = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png' } as const;
-    expect(writtenPlaceText({ ...onImage, spot: { x: 120, y: 80 } }, 2)).toBe('pin 2');
-    expect(writtenPlaceText({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } }, 3)).toBe('area 3');
-    expect(writtenPlaceText({ ...onImage, spot: { x: 120, y: 80 } })).toBe('pin');
+    expect(writtenPlaceText({ ...onImage, spot: { x: 120, y: 80 } })).toBe('point');
+    expect(writtenPlaceText({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } })).toBe('area');
   });
 });
 

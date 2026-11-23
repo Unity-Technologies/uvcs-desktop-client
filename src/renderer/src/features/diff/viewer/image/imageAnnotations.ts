@@ -4,13 +4,16 @@ import type { ImageSpot } from '@shared/domain/reviewConversation';
 /** The revision of an image a pin is on: the diff's older side, or its newer one. */
 export type ImageSide = 'old' | 'new';
 
-/** A comment's pin on an image: a numbered marker at a point, or an outline around an area with its marker at a corner. */
+/**
+ * A comment's pin on an image: a speech bubble holding the avatar of who started it, its tip at a point, or at the top-left
+ * corner of an area it outlines.
+ */
 export interface ImagePin {
   key: string;
   side: ImageSide;
   spot: ImageSpot;
-  /** What the marker shows: the thread's number (`imagePinNumbers`); none for a comment being written. */
-  label: string | null;
+  /** Who started it, whose avatar the bubble holds; none for a comment being written, which shows a plus. */
+  author: string | null;
   /** The marker's tooltip, and what a screen reader hears. */
   tip: string;
   /** Something there is still open: the Open color, as a line's marker; a quiet gray once settled. */

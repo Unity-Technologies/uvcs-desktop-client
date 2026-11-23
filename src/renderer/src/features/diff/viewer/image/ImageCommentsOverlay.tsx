@@ -4,6 +4,7 @@
 
 import { MessageSquarePlus } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { Avatar } from '../../../../ui/Avatar';
 import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
 import type { ImageAnnotations, ImagePin, ImageSide } from './imageAnnotations';
 import { cardPlacement, spotOfGesture, spotOnScreen, type ScreenRect } from './imageSpotGeometry';
@@ -67,9 +68,12 @@ export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, imag
   );
 }
 
-/** A pin's marker at its point (an area's at its top-left corner), the area outlined. */
+/**
+ * A pin: a speech bubble holding the avatar of who started the thread, its tip at its point (an area's top-left corner),
+ * as a comment on a canvas reads in design tools; the area outlined.
+ */
 function PinMark({ pin, rect, selected, onClick }: { pin: ImagePin; rect: ScreenRect; selected: boolean; onClick: () => void }) {
-  const flags = { 'data-emphasized': pin.emphasized || undefined, 'data-earlier': pin.earlier || undefined, 'data-selected': selected || undefined, 'data-writing': pin.label === null || undefined };
+  const flags = { 'data-emphasized': pin.emphasized || undefined, 'data-earlier': pin.earlier || undefined, 'data-selected': selected || undefined, 'data-writing': pin.author === null || undefined };
   return (
     <>
       {pin.spot.size && <div className={styles.area} {...flags} style={{ transform: `translate(${rect.x}px, ${rect.y}px)`, width: rect.width, height: rect.height }} />}
@@ -83,7 +87,7 @@ function PinMark({ pin, rect, selected, onClick }: { pin: ImagePin; rect: Screen
         style={{ transform: `translate(${rect.x}px, ${rect.y}px)` }}
         onClick={onClick}
       >
-        {pin.label ?? <MessageSquarePlus size={12} aria-hidden />}
+        {pin.author === null ? <MessageSquarePlus size={14} aria-hidden /> : <Avatar user={pin.author} size={22} tip={null} />}
       </button>
     </>
   );

@@ -39,7 +39,7 @@ export function NewImageCommentCard({ spot, onSent }: NewImageCommentCardProps) 
           fieldClassName={styles.field}
           draftKey={commentDraftKey(placeId(place), 'reviewLineComment', spot.key)}
           placeholder={words.placeholder}
-          label={`Comment on the ${imageSpotWords(spot.comment.spot)}`}
+          label={`Comment on this ${imageSpotWords(spot.comment.spot)}`}
           submitLabel={words.submit}
           autoFocus
           asksBeforeDiscarding
