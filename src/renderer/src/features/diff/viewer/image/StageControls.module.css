@@ -29,19 +29,15 @@
   color: inherit;
 }
 
-/*
- * A pressed button's tint is translucent (`--bg-selected-strong`): laid over the raised surface, so it stays as solid
- * as its siblings and the picture or model under the column never shows through it. Pointed at, the tint lies over
- * the hover's surface instead.
- */
+/* Tints go over the solid surface: over the picture or model, nothing behind may show through. */
 .controls .button[data-active] {
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)), var(--bg-surface-raised);
+  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)) var(--bg-surface-raised);
   color: var(--accent-text);
 }
 
-.controls .button[data-active]:hover {
-  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)), var(--bg-subtle);
+.controls .button[data-active]:hover:not([aria-disabled='true']) {
+  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)) var(--bg-subtle);
 }
 
 .percent {
