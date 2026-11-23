@@ -930,8 +930,9 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   comments go on, dashed, its card tagged "Earlier version" (`imageEarlierTagOf`): an image has no lines to follow, and
   what's there may have changed. No "outdated" for images, nor See in context: a pixel comparison to tell whether the
   spot changed is a later step.
-- **Writing.** The stage's comment button, or **C** (`imageComment`), turns the pointer into a speech bubble with a
-  plus (`--cursor-add-comment`); a click marks a point, a drag an area, outlined as it's drawn (`spotOfGesture`, a
+- **Writing.** The stage's comment button, or **C** (`imageComment`), turns the pointer into the pin's bubble with a
+  plus (`--cursor-add-comment`), the shape the button (`CommentPinIcon`), a comment being written and a posted one
+  share; a click marks a point, a drag an area, outlined as it's drawn (`spotOfGesture`, a
   press off the image marks nothing), and the card opens beside it (`NewImageCommentCard`): its kind, then the editor,
   as on lines, with no Suggest change. Esc (`imageCommentLeave`) or the button leaves the mode. Until it's sent, its bubble drags it
   (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window

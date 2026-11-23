@@ -1,5 +1,6 @@
-import { Maximize, MessageSquarePlus, Scan, SquareArrowUpLeft, SquareDot, ZoomIn, ZoomOut } from 'lucide-react';
+import { Maximize, Scan, SquareArrowUpLeft, SquareDot, ZoomIn, ZoomOut } from 'lucide-react';
 import { hotkey } from '../../../../lib/shortcutRegistry';
+import { CommentPinIcon } from './CommentPinIcon';
 import type { AnchorMode } from './composedFrame';
 import { StageButton, StageControls, StageSeparator, StageTextButton } from './StageControls';
 import { zoomLabel } from './viewTransform';
@@ -21,7 +22,7 @@ export function ZoomControls({ panZoom, anchor, onAnchorChange, comment }: ZoomC
       {comment && (
         <>
           <StageButton
-            icon={<MessageSquarePlus size={15} />}
+            icon={<CommentPinIcon />}
             label={comment.active ? 'Stop commenting' : 'Comment: click a point or drag over an area'}
             shortcut={hotkey('imageComment')}
             active={comment.active}

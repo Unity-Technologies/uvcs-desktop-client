@@ -2,7 +2,7 @@
 // opened pin's card beside it, and, while commenting, the surface a click or a drag marks a new comment's spot on.
 // Positions are worked out in `imageSpotGeometry`; this maps them to the screen and follows the view's glide.
 
-import { MessageSquarePlus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Avatar } from '../../../../ui/Avatar';
 import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
@@ -134,7 +134,7 @@ function PinMark({ pin, rect, selected, opened, onClick, reshape }: { pin: Image
           dragged.current = false;
         }}
       >
-        {pin.author === null ? <MessageSquarePlus size={14} aria-hidden /> : <Avatar user={pin.author} size={22} tip={null} />}
+        {pin.author === null ? <Plus size={16} strokeWidth={2.5} aria-hidden /> : <Avatar user={pin.author} size={22} tip={null} />}
       </button>
     </>
   );
