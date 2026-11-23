@@ -110,6 +110,11 @@ export class ModelCameraControl {
     this.followsResizes = false;
   }
 
+  /** The aspect of the pane a version is drawn in, which framings fit. */
+  paneAspect(): number {
+    return this.options.paneAspect();
+  }
+
   /** What a gesture does: the hand has the camera from then on. */
   onGesture(view: OrbitView): void {
     this.followsResizes = false;

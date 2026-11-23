@@ -78,22 +78,6 @@ export function pinTargetOf(rect: ScreenRect, about: ScreenRect | null = null): 
   return about ? unionOf(bounds, about) : bounds;
 }
 
-/** The least room, each way, the thing a comment is about takes beside its card: less, and it would be a sliver. */
-const MIN_SUBJECT_ROOM = 240;
-
-/**
- * The part of a pane where what a comment is about goes, so that the card of a pin in its middle opens beside it and
- * covers none of it (`pinCardPlacement`): the pane's left, short of the card on its right and the controls, where that
- * leaves enough; else its top, short of a card below; else the whole pane, where a card fits neither way.
- */
-export function roomBesideCard(pane: Size): ScreenRect {
-  const besideWidth = pane.width - STAGE_CONTROLS_ROOM - CARD_MARGIN - PIN_CARD_WIDTH - CARD_GAP - PIN_SIZE;
-  if (besideWidth >= MIN_SUBJECT_ROOM) return { x: 0, y: 0, width: besideWidth, height: pane.height };
-  const aboveHeight = pane.height - CARD_MARGIN - MIN_CARD_ROOM - CARD_GAP;
-  if (aboveHeight >= MIN_SUBJECT_ROOM) return { x: 0, y: 0, width: pane.width - STAGE_CONTROLS_ROOM, height: aboveHeight };
-  return { x: 0, y: 0, ...pane };
-}
-
 /**
  * Where the card of a pin at `rect` in one of the stage's panes (`pane`, its box on the stage: Split's two halves, or
  * the whole stage) goes over the whole stage (`pinCardPlacement`): a narrow pane's card may reach over the other pane,

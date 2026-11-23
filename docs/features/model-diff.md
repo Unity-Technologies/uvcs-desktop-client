@@ -419,8 +419,7 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   compares, where a part lit would compare as a change.
 - **Going to a pin** glides the camera (`ModelCameraControl.frameView`) to the view its author had, carried onto the
   part as it is now, or, when the comment doesn't say, facing the point from the side its surface faces, as stepping to
-  a changed region does (`viewOfSpot`, `regionView`): the point in the middle of the room its card leaves
-  (`roomBesideCard`, the pane's size from `ModelRenderer.paneSize`), so its bubble shows and the card covers none of it.
+  a changed region does (`viewOfSpot`, `regionView`): the point in the middle, so its bubble shows.
 
 ## Beside the model: its `.bin` and its `.meta`
 

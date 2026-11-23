@@ -24,16 +24,13 @@ const HEART_SHARE = 0.05;
 /** A direction this close to straight up or down has no side round the model to face: the camera keeps its own. */
 const UPRIGHT_HORIZONTAL = 0.2;
 
-/**
- * The view stepping to `region` goes to, from `current`, for a pane of `aspect` (width over height); or for a part of it
- * `heightShare` of its height and of that aspect (`framedView`).
- */
-export function regionView(region: BoundsLike, model: BoundsLike, current: OrbitView, aspect: number, heightShare = 1): OrbitView {
+/** The view stepping to `region` goes to, from `current`, for a pane of `aspect` (width over height). */
+export function regionView(region: BoundsLike, model: BoundsLike, current: OrbitView, aspect: number): OrbitView {
   const modelSize = diagonalOf(model);
   const radius = diagonalOf(region) / 2;
   const pad = Math.max(radius * CONTEXT_SHARE, modelSize * MIN_CONTEXT_SHARE);
   const { yaw, pitch } = facingAngles(centreOf(region), centreOf(model), modelSize, current);
-  return framedView(grown(region, pad), aspect, yaw, pitch, heightShare);
+  return framedView(grown(region, pad), aspect, yaw, pitch);
 }
 
 /**

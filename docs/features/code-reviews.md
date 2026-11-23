@@ -984,8 +984,6 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
   (`useNewModelCommentsStore`), named by a serial. A drag still turns the model: a box drawn in 3D would mean something
   else from every angle, so a whole part is what an image's area is here.
 - **Going to it** glides the camera to the view its author had, else facing the point with part of the model around it
-  (`viewOfSpot`), and opens its card. The point shows in the middle of the room the card leaves (`roomBesideCard`): on
-  the left of a pane wide enough for the card beside it, else above the card, so the card never covers what it's
-  about. The camera then orbits a target that much beside the point.
+  (`viewOfSpot`), and opens its card.
 - **Hidden.** The header's comment button hides the pins ("Hide comments on the model", `commentsToggleLabel`), the
   one selected included; one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.

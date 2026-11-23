@@ -38,14 +38,11 @@ const ORBIT_SPEED = 0.006;
 const DOLLY_SPEED = 0.002;
 export const MIN_DISTANCE = 1e-4;
 
-/**
- * A view that frames the bounds whole in a viewport of `aspect` (width over height), from `yaw` and `pitch`; or in a
- * part of it `heightShare` of its height and of that aspect (the room a comment's card leaves: `viewOfSpot`).
- */
-export function framedView(bounds: BoundsLike, aspect: number, yaw = FIRST_YAW, pitch = FIRST_PITCH, heightShare = 1): OrbitView {
+/** A view that frames the bounds whole in a viewport of `aspect` (width over height), from `yaw` and `pitch`. */
+export function framedView(bounds: BoundsLike, aspect: number, yaw = FIRST_YAW, pitch = FIRST_PITCH): OrbitView {
   const target = centreOf(bounds);
   const radius = Math.max(radiusOf(bounds), MIN_DISTANCE);
-  const vertical = Math.atan(Math.tan((FIELD_OF_VIEW * Math.PI) / 360) * heightShare);
+  const vertical = (FIELD_OF_VIEW * Math.PI) / 360;
   const horizontal = Math.atan(Math.tan(vertical) * Math.max(aspect, 1e-3));
   const distance = (radius * FRAMING_MARGIN) / Math.sin(Math.min(vertical, horizontal));
   return { target, yaw, pitch, distance };

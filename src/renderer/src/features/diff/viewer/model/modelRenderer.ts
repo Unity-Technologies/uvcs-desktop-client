@@ -333,22 +333,10 @@ export class ModelRenderer {
 
   /** The aspect of the pane a version is drawn in: framing fits it. Measured now: a resize may not be told yet. */
   paneAspect(): number {
-    this.followCanvasSize();
-    const [pane] = this.layout().panes;
-    return pane ? pane.viewport.width / pane.viewport.height : this.width / this.height;
-  }
-
-  /** The size of the pane a version is drawn in, in CSS pixels: where a comment's card goes beside what it's about. */
-  paneSize(): { width: number; height: number } {
-    this.followCanvasSize();
-    const [pane] = this.layout().panes;
-    return pane ? { width: pane.viewport.width / this.pixelRatio, height: pane.viewport.height / this.pixelRatio } : { width: this.width, height: this.height };
-  }
-
-  /** Takes the canvas's size as laid out now: a resize may not be told yet. */
-  private followCanvasSize(): void {
     const { clientWidth, clientHeight } = this.canvas;
     if (clientWidth > 0 && clientHeight > 0 && (clientWidth !== this.width || clientHeight !== this.height)) this.setSize(clientWidth, clientHeight, this.pixelRatio);
+    const [pane] = this.layout().panes;
+    return pane ? pane.viewport.width / pane.viewport.height : this.width / this.height;
   }
 
   /**
