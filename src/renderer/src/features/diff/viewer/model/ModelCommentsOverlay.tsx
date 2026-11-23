@@ -7,6 +7,7 @@
 import { useLayoutEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import type { ModelSpot } from '@shared/domain/reviewConversation';
 import { followDrag, isDragButton } from '../image/pointerDrag';
+import { setCardHidden } from '../pins/hideCard';
 import { PinBubble } from '../pins/PinBubble';
 import { boundsOf, cardStyleOf, keptCardPlacement, pinCardPlacement, pinTargetOf, type HeldCard } from '../pins/pinPlacement';
 import pinStyles from '../pins/CommentPins.module.css';
@@ -87,7 +88,7 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       const box = overlay.current;
       const element = card.current;
       if (!element || !box) return;
-      element.toggleAttribute('data-off-screen', !at);
+      setCardHidden(element, !at);
       if (!at) return;
       // A part comment's card leaves its part in view too, as it lights up while the card is open.
       const corners = opened.partCorners()?.flatMap((corner) => projectors[opened.pin.side]?.(corner) ?? []) ?? [];

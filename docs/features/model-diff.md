@@ -386,7 +386,7 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   tip (`hiddenBehind`), eases to faded and smaller, still there to click, and back once it's in view. The opened pin's
   card sits beside it (`pinCardPlacement`), following it as the view moves, narrowed on a stage narrower than it; while
   only a take moves the pin it holds still, so it doesn't wobble, until the pin would go under it or stray past `CARD_LEASH`
-  (`keptCardPlacement`); the wheel over a card scrolls the card, never zooms (`isOnStageControl`).
+  (`keptCardPlacement`). Off its pane it hides with its pin, the focus it held going to the stage (`setCardHidden`); the wheel over a card scrolls the card, never zooms (`isOnStageControl`).
 - **Marking a spot**: where the place takes comments (`takesModelComments`: the version it comments on shows), the
   stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point
   under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion

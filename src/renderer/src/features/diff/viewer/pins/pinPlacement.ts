@@ -118,6 +118,14 @@ export function keptCardPlacement(held: HeldCard | null, next: CardPlacement, ta
   return covers || gapX > CARD_LEASH || gapY > CARD_LEASH ? next : held.placement;
 }
 
+/**
+ * Whether a card being hidden (its pin out of view) hands the focus to its stage: when it holds it, as a hidden card
+ * can't take keys, and they'd go nowhere. The stage keeps its own keys working (zoom, C), and the card's text stays.
+ */
+export function focusLeavesHiddenCard(hidden: boolean, focusInCard: boolean): boolean {
+  return hidden && focusInCard;
+}
+
 /** A card's place as the style of its element: its edges and sizes, in pixels. */
 export function cardStyleOf(placement: CardPlacement): { left: string; width: string; maxHeight: string; top: string; bottom: string } {
   return {

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { setCardHidden } from './hideCard';
 import { cardStyleOf, stageCardPlacement, type ScreenRect } from './pinPlacement';
 import styles from './CommentPins.module.css';
 
@@ -27,7 +28,7 @@ export function PinCard({ rect, pane, layer, children }: PinCardProps) {
     const onStage = { x: paneBox.left - layerBox.left, y: paneBox.top - layerBox.top, width: paneBox.width, height: paneBox.height };
     const placement = stageCardPlacement(rect, onStage, { width: layer.clientWidth, height: layer.clientHeight });
     // Hidden, never unmounted, while its pin is out of view: a reply being written in it stays.
-    card.current.toggleAttribute('data-off-screen', placement === null);
+    setCardHidden(card.current, placement === null);
     if (placement) Object.assign(card.current.style, cardStyleOf(placement));
   });
   if (!layer) return null;
