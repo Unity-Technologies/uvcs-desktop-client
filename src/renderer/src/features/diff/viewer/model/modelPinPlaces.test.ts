@@ -1,4 +1,4 @@
-import { Quaternion, Vector3, type SkinnedMesh } from 'three';
+import { Quaternion, Triangle, Vector3, type SkinnedMesh } from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import type { ModelPin } from './modelAnnotations';
@@ -91,6 +91,20 @@ function sway(version: ReturnType<typeof drawn>): void {
   version.scene.root.updateMatrixWorld(true);
 }
 
+/** Counts the reads of the model's first mesh's positions from here on: how often the mesh is placed at rest. */
+function countPositionReads(model: ParsedModel): () => number {
+  let reads = 0;
+  const attributes = model.meshes[0]!.attributes;
+  attributes.position = new Proxy(attributes.position, {
+    get(target, property) {
+      if (typeof property === 'string' && /^\d+$/.test(property)) reads++;
+      const value: unknown = Reflect.get(target, property);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  return () => reads;
+}
+
 const onAntennaTip = pin({ spot: { point: { x: 0, y: 2, z: 0 }, node: { path: ['Antenna'], local: { x: 0, y: 2, z: 0 } } } });
 const close = (vector: Vector) => vector.map((value) => Number(value.toFixed(5)) + 0);
 const closePoint = ({ x, y, z }: { x: number; y: number; z: number }) => close([x, y, z]);
@@ -115,6 +129,28 @@ describe('pinPlacesOf, a skinned mesh', () => {
     const after = drawn(antenna());
     const [place] = pinPlacesOf([onAntennaTip], { before: null, after });
     expect(countCalls(after.scene.meshes[0]!.solid as unknown as SkinnedMesh, 'getVertexPosition', () => place!.point()).calls).toBe(3);
+  });
+
+  it('skins the part at rest once, however many pins it holds', () => {
+    const tipPins = (count: number) => Array.from({ length: count }, (_, i) => pin({ key: `thread:${i}`, spot: { ...onAntennaTip.spot } }));
+    const restReadsFor = (pins: ModelPin[]) => {
+      const after = drawn(antenna());
+      const reads = countPositionReads(after.model);
+      pinPlacesOf(pins, { before: null, after });
+      return reads();
+    };
+    expect(restReadsFor(tipPins(10))).toBe(restReadsFor(tipPins(1)));
+  });
+
+  it('anchors again only the pin whose spot changed: dragging one leaves the others be', () => {
+    const after = drawn(antenna());
+    const still = pin({ key: 'thread:1', spot: { ...onAntennaTip.spot } });
+    const dragged = pin({ key: 'new:1', spot: { ...onAntennaTip.spot } });
+    pinPlacesOf([still, dragged], { before: null, after });
+    const moved = { ...dragged, spot: { point: { x: 0, y: 1.5, z: 0.1 }, node: { path: ['Antenna'], local: { x: 0, y: 1.5, z: 0.1 } } } };
+    const { calls } = countCalls(Triangle.prototype, 'closestPointToPoint', () => pinPlacesOf([still, moved], { before: null, after }));
+    // The box's 12 triangles, scanned once, for the one pin moved.
+    expect(calls).toBe(12);
   });
 
   describe('a glTF, whose skinned mesh its node places nothing of', () => {
