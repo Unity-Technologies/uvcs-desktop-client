@@ -41,8 +41,8 @@ import type { CachedHeatmap } from './useHeatmap';
 import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
 import { stageCommandOf } from './zoomKeys';
-import { commentKeyAction, type CommentKeyAction } from '../pins/stageCommenting';
-import { useLeaveCommentCommand } from '../pins/useLeaveCommentCommand';
+import { commentKeyAction } from '../pins/stageCommenting';
+import { useStageCommenting } from '../pins/useStageCommenting';
 import { ImageAnnotationsContext, takesComments, type ImageSide } from './imageAnnotations';
 import { ImageCommentsOverlay } from './ImageCommentsOverlay';
 import { revealedRect, spotInFrame } from './imageSpotGeometry';
@@ -95,8 +95,9 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
   const annotations = useContext(ImageAnnotationsContext);
   const shownImages = { old: oldImage, new: newImage };
   const commentable = takesComments(annotations, shownImages);
-  const [commenting, setCommenting] = useState(false);
-  const isCommenting = commenting && commentable;
+  // Esc closes the card open from anywhere in the diff too (the Comments panel a comment was gone to from).
+  const { state: stageCommenting, apply: applyCommentAction, setCommenting } = useStageCommenting('imageCommentLeave', annotations, commentable);
+  const isCommenting = stageCommenting.commenting;
 
   // A pin gone to (from the Comments panel, the conversation) comes into view, at the zoom shown.
   const revealSeq = annotations?.reveal?.seq;
@@ -107,14 +108,6 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
     const rect = spotInFrame(pin.spot, anchoredOffset(frame, image, anchor));
     panZoom.showRect(panZoom.viewport ? revealedRect(rect, panZoom.viewport, panZoom.transform.scale) : rect);
   }, [revealSeq, frame]);
-
-  const stageCommenting = { commenting: isCommenting, commentable, opened: annotations?.opened != null };
-  const applyCommentAction = (action: NonNullable<CommentKeyAction>): void => {
-    if (action === 'closeCard') annotations?.onOpen(null);
-    else setCommenting(action === 'startCommenting');
-  };
-  // Esc wherever else the keyboard is in the diff (the Comments panel a comment was gone to from).
-  useLeaveCommentCommand('imageCommentLeave', stageCommenting, applyCommentAction);
 
   // The stage's keys while it has the focus (`stageCommandOf`, `commentKeyAction`); none typed in a comment's card
   // over it.

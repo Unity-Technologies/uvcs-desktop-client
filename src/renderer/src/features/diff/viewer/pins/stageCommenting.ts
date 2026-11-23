@@ -42,7 +42,7 @@ export interface LeaveCommentCommand {
 export function leaveCommentCommandOf(state: StageCommenting, shown: boolean): LeaveCommentCommand | null {
   const action = shown ? commentKeyAction('leaveComment', state) : null;
   if (action === 'stopCommenting') return { action, label: 'Stop commenting' };
-  if (action === 'closeCard') return { action, label: 'Close the comment' };
+  if (action === 'closeCard') return { action, label: "Close the comment's card" };
   return null;
 }
 

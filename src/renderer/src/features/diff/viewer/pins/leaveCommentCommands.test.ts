@@ -1,3 +1,4 @@
+import '../../../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 import { registeredCommands } from '../../../../app/commands/commandStore';
 import { hotkey } from '../../../../lib/shortcutRegistry';
