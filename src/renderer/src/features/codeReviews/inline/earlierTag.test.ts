@@ -41,7 +41,7 @@ describe('modelEarlierTagOf', () => {
     expect(modelEarlierTagOf(onModel({ changesetId: 8 }), true).tip).toBe("Written on the model as changeset 8 left it: Wheel isn't in this version");
   });
 
-  it('says "its part" when the location names none, names it with nothing, or by an exporter's name', () => {
+  it("says \"its part\" when the location names none, names it with nothing, or by an exporter's name", () => {
     const unnamed = (path?: string[]): ModelThread => {
       const anchor = { kind: 'model' as const, revisionId: 20, itemId: 7, path: '/Car.fbx', spot: { point: { x: 0, y: 0, z: 0 }, ...(path ? { node: { path } } : {}) } };
       return threadsOf([{ id: 1, guid: 'g', author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor }])[0] as ModelThread;
