@@ -31,8 +31,8 @@ describe('a thread on an image', () => {
   });
 
   it('names its file and the area it is on, in the conversation and under its file', () => {
-    expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', line: 'area', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
-    expect(headerOf(onArea, { place: 'fileGroup' }).line).toBe('area');
+    expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', writtenPlace: 'area', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
+    expect(headerOf(onArea, { place: 'fileGroup' }).writtenPlace).toBe('area');
   });
 });
 
@@ -59,11 +59,11 @@ describe('foldsByHand', () => {
 describe('threadHeaderOf', () => {
   describe('where the card is', () => {
     it('names the file in the conversation as a link to it in Changes, the line apart', () => {
-      expect(headerOf(changeRequest).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', line: 'line 11', linked: true, tip: 'Show in Changes', tipSub: 'Assets/Scripts/SwitchFlow.cs' });
+      expect(headerOf(changeRequest).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', writtenPlace: 'line 11', linked: true, tip: 'Show in Changes', tipSub: 'Assets/Scripts/SwitchFlow.cs' });
     });
 
     it('names the file in the Comments panel as text, its card going to the thread, whole in its tooltip', () => {
-      expect(headerOf(changeRequest, { place: 'panel' }).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', line: 'line 11', linked: false, tip: 'Assets/Scripts/SwitchFlow.cs, line 11' });
+      expect(headerOf(changeRequest, { place: 'panel' }).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', writtenPlace: 'line 11', linked: false, tip: 'Assets/Scripts/SwitchFlow.cs, line 11' });
     });
 
     it('names no file under the file\'s name in the Comments panel', () => {
@@ -71,11 +71,11 @@ describe('threadHeaderOf', () => {
     });
 
     it('says the line apart where the file is named already, under its name or in its code, and nowhere else', () => {
-      expect(headerOf(changeRequest, { place: 'fileGroup' }).line).toBe('line 11');
+      expect(headerOf(changeRequest, { place: 'fileGroup' }).writtenPlace).toBe('line 11');
       // In the code, a thread can sit rows below its line, or away from it once outdated: the line says which.
-      expect(headerOf(changeRequest, { place: 'code' }).line).toBe('line 11');
-      expect(headerOf(changeRequest, { place: 'panel' }).line).toBeNull();
-      expect(headerOf(changeRequest).line).toBeNull();
+      expect(headerOf(changeRequest, { place: 'code' }).writtenPlace).toBe('line 11');
+      expect(headerOf(changeRequest, { place: 'panel' }).writtenPlace).toBeNull();
+      expect(headerOf(changeRequest).writtenPlace).toBeNull();
     });
 
     it('names no file in the code, where the thread is at its line', () => {

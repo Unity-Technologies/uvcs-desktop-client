@@ -185,9 +185,9 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
         <span className={styles.author}>
           <Highlight text={displayName(author)} />
         </span>
-        {header.line && (
-          <span className={styles.rowLine} data-tip="The line it was written on">
-            {header.line}
+        {header.writtenPlace && (
+          <span className={styles.rowPlace} data-tip="The line it was written on">
+            {header.writtenPlace}
           </span>
         )}
         {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
@@ -254,17 +254,17 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
             <button type="button" className={styles.location} data-tip={location.tip} data-tip-sub={location.tipSub} onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
               <LocationParts location={location} />
             </button>
-            <WrittenLine line={location.line} />
+            <WrittenPlace place={location.writtenPlace} />
           </>
         ) : (
           // The card goes to the thread: its file and line only name where, the line inside so that, cut short, the
           // folder gives way first, then the line, the file's name last. The whole path and line in its tooltip.
           <span className={styles.location} data-tip={location.tip} data-tip-overflow="">
             <LocationParts location={location} />
-            <WrittenLine line={location.line} />
+            <WrittenPlace place={location.writtenPlace} />
           </span>
         ))}
-        {header.line && <WrittenLine line={header.line} />}
+        {header.writtenPlace && <WrittenPlace place={header.writtenPlace} />}
         {earlierTag &&
           (earlierTag.opensContext ? (
             <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={earlierTag.tip} onClick={inCode?.seeInContext}>
@@ -360,11 +360,11 @@ function PillContent({ pill }: { pill: HeaderPill }) {
   );
 }
 
-/** Apart from the file, as text: the line it was written on, which an outdated comment's no longer is. */
-function WrittenLine({ line }: { line: string }) {
+/** Apart from the file, as text: where in it the thread was written, which an outdated comment's line no longer is. */
+function WrittenPlace({ place }: { place: string }) {
   return (
-    <span className={styles.writtenLine} data-tip="The line it was written on">
-      {line}
+    <span className={styles.writtenPlace} data-tip="The line it was written on">
+      {place}
     </span>
   );
 }

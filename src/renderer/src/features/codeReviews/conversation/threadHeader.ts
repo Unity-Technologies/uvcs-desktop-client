@@ -33,14 +33,14 @@ export interface ThreadHeaderInput {
   inContext: boolean;
 }
 
-/** The file and line a header names: a link to it in Changes, or, on a card that goes there itself, text. */
+/** The file a header names, and where in it the thread was written: a link to it in Changes, or, on a card that goes there itself, text. */
 export interface HeaderLocation {
   folder: string;
   file: string;
-  /** "line 42", apart from the file: the line it was written on, which an outdated comment's no longer is. */
-  line: string;
+  /** "line 42", "area", apart from the file: where in it the thread was written, which an outdated comment's line no longer is. */
+  writtenPlace: string;
   linked: boolean;
-  /** The text's tooltip, the whole path and line; a link's says where it goes, the path under it. */
+  /** The text's tooltip, the whole path and place; a link's says where it goes, the path under it. */
   tip: string;
   tipSub?: string;
 }
@@ -75,10 +75,10 @@ export interface ThreadHeaderView {
   /** How many replies a folded thread has. */
   replies: string | null;
   /**
-   * Where the file is named already (under its name, in its code): the line it was written on, "line 42". In the code
-   * a thread can sit rows below its line, or away from it once outdated.
+   * Where the file is named already (under its name, in its code): where in it the thread was written, "line 42" or "point". In
+   * the code a thread can sit rows below its line, or away from it once outdated.
    */
-  line: string | null;
+  writtenPlace: string | null;
   pill: HeaderPill | null;
   hides: boolean;
 }
@@ -107,7 +107,7 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     location: inCode || underFile ? null : locationOf(thread, place === 'panel'),
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
-    line: (underFile || inCode) && thread.root.anchor.kind !== 'review' ? writtenPlaceText(thread.root.anchor) : null,
+    writtenPlace: (underFile || inCode) && thread.root.anchor.kind !== 'review' ? writtenPlaceText(thread.root.anchor) : null,
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };
@@ -116,9 +116,9 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
 function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation | null {
   if (root.anchor.kind === 'review') return null;
   const { folder, file } = locationText(root.anchor);
-  const line = writtenPlaceText(root.anchor);
+  const writtenPlace = writtenPlaceText(root.anchor);
   // The panel's card goes to the thread: its file and line only name where, whole in the tooltip.
-  return cardOpens ? { folder, file, line, linked: false, tip: `${folder}${file}, ${line}` } : { folder, file, line, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
+  return cardOpens ? { folder, file, writtenPlace, linked: false, tip: `${folder}${file}, ${writtenPlace}` } : { folder, file, writtenPlace, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
 }
 
 /** How the pill looks: the thread's kind (its icon) and where it stands, or, for a plain comment, that it is one. */
