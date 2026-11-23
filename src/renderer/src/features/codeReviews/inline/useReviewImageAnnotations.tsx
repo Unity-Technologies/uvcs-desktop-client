@@ -82,16 +82,17 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
     },
     reveal,
   };
-  return { annotations, hasThreads: imageThreads.placed.length + imageThreads.earlier.length > 0 };
+  return { annotations, threadCount: imageThreads.placed.length + imageThreads.earlier.length, holds: (threadId) => holdsThread(imageThreads, threadId) };
 }
 
-/** The image's annotations, and whether it has threads: the header's button hiding them shows only then. */
+/** The image's annotations, how many threads it has (the header's button hiding them shows only then), and which. */
 interface ReviewImageAnnotations {
   annotations: ImageAnnotations | null;
-  hasThreads: boolean;
+  threadCount: number;
+  holds: (threadId: number) => boolean;
 }
 
-const NO_IMAGE_ANNOTATIONS: ReviewImageAnnotations = { annotations: null, hasThreads: false };
+const NO_IMAGE_ANNOTATIONS: ReviewImageAnnotations = { annotations: null, threadCount: 0, holds: () => false };
 
 function threadOf(threads: ImageThreads, threadId: number) {
   return [...threads.placed, ...threads.earlier].find((entry) => entry.thread.root.id === threadId)?.thread;

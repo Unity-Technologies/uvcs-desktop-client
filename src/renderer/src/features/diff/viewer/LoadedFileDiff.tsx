@@ -1,5 +1,5 @@
-import { AppWindow, ArchiveX, PencilOff, RefreshCw } from 'lucide-react';
-import { Suspense, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AppWindow, ArchiveX, MessageSquare, PencilOff, RefreshCw } from 'lucide-react';
+import { Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Place } from '@shared/domain/place';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
@@ -19,6 +19,7 @@ import { diffDiscards } from './diffDiscards';
 import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
+import { otherRepresentationNotice, RepresentationCommentsContext } from './representationComments';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { hasLineTooLongToDraw } from './longLines';
@@ -135,6 +136,20 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
   useShortcut(hotkey('editFile'), () => buffer.editor.current?.focus(), editable);
 
+  // A place's comments on a file shown either way (a review's on an SVG): one gone to shows the way it's on, and each
+  // way says how many the other holds (`otherRepresentationNotice`).
+  const representationComments = useContext(RepresentationCommentsContext);
+  const askedRepresentation = twoRepresentations ? representationComments?.asked : undefined;
+  useEffect(() => {
+    if (askedRepresentation) setRepresentation(extension, askedRepresentation.representation);
+  }, [askedRepresentation?.seq]);
+  const otherWay = twoRepresentations ? otherRepresentationNotice(representation === 'text' ? 'text' : 'image', representationComments) : null;
+  const otherWayNotice = otherWay && (
+    <DiffNotice tone="info" icon={<MessageSquare size={13} />} action={<Button size="small" onClick={() => setRepresentation(extension, otherWay.showing)}>{otherWay.action}</Button>}>
+      {otherWay.text}
+    </DiffNotice>
+  );
+
   const representationSwitch = twoRepresentations && (
     <RepresentationSwitch value={representation === 'text' ? 'text' : rendered} rendered={rendered} onChange={(value) => setRepresentation(extension, value)} />
   );
@@ -228,6 +243,7 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
               File changed on disk. Reload to take the new version and drop your edits, or save yours over it.
             </DiffNotice>
           )}
+          {otherWayNotice}
           {hidingNotice}
           {note && (
             <WholeFileNotice
@@ -246,6 +262,7 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
     case 'textDiff':
       body = (
         <>
+          {otherWayNotice}
           {tooLongNotice}
           {hidingNotice}
           {textDiff}
@@ -254,9 +271,12 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
       break;
     case 'image':
       body = (
-        <Suspense fallback={<CenteredSpinner />}>
-          <ImageDiffViewer original={left} modified={shownRendering} mode={imageMode} openFile={openEditable} />
-        </Suspense>
+        <>
+          {otherWayNotice}
+          <Suspense fallback={<CenteredSpinner />}>
+            <ImageDiffViewer original={left} modified={shownRendering} mode={imageMode} openFile={openEditable} />
+          </Suspense>
+        </>
       );
       break;
     case 'model':

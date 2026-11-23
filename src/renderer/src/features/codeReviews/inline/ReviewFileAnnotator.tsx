@@ -26,6 +26,8 @@ import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection
 import { useFileVersionTexts } from './useFileVersionTexts';
 import { useReviewImageAnnotations } from './useReviewImageAnnotations';
 import { ImageAnnotationsContext } from '../../diff/viewer/image/imageAnnotations';
+import { RepresentationCommentsContext } from '../../diff/viewer/representationComments';
+import { representationCommentsOf } from './fileRepresentation';
 import { suggestLineLabel } from '../suggestions/suggestButton';
 
 const NO_REVISIONS: number[] = [];
@@ -158,10 +160,20 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
   const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
 
-  const controls = (hasComments(fileComments) || onImage.hasThreads) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
+  // A file shown either as code or as an image (an SVG): its threads on lines in one, on spots in the other.
+  const onText = fileComments ? fileThreadsShown(fileComments) : 0;
+  const focusedOn = focus === null ? null : holdsThread(fileComments, focus.threadId) ? 'text' : onImage.holds(focus.threadId) ? 'image' : null;
+  const representationComments = useMemo(
+    () => representationCommentsOf({ onText, onImage: onImage.threadCount, focus, focusedOn }),
+    [onText, onImage.threadCount, focus, focusedOn],
+  );
+
+  const controls = (hasComments(fileComments) || onImage.threadCount > 0) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
   return (
     <DiffAnnotationsContext.Provider value={annotations}>
-      <ImageAnnotationsContext.Provider value={onImage.annotations}>{children({ controls })}</ImageAnnotationsContext.Provider>
+      <ImageAnnotationsContext.Provider value={onImage.annotations}>
+        <RepresentationCommentsContext.Provider value={representationComments}>{children({ controls })}</RepresentationCommentsContext.Provider>
+      </ImageAnnotationsContext.Provider>
     </DiffAnnotationsContext.Provider>
   );
 }
@@ -231,4 +243,9 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
       {newComment}
     </InlineThreads>
   );
+}
+
+/** How many threads a file's code shows: at their lines, and outdated above it. */
+function fileThreadsShown(comments: FileComments): number {
+  return comments.lines.reduce((count, line) => count + line.threads.length, 0) + comments.outdated.length;
 }
