@@ -180,7 +180,9 @@
   }
 
   .overlay[data-gliding] .pin,
-  .overlay[data-gliding] .area {
+  .overlay[data-gliding] .corner,
+  .overlay[data-gliding] .area,
+  .area {
     transition: none;
   }
 }

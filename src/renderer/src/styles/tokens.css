@@ -129,6 +129,11 @@
      blue tile (Atlassian's logo library). GitHub's mark is one color, the text's, so it takes no token. */
   --brand-jira-tile: #1868db;
   --brand-jira-mark: #ffffff;
+
+  /* The pointer marking a comment's spot on an image (`ImageCommentsOverlay`): a speech bubble with a plus, its tail's
+     tip the point marked. Drawn dark on white with a white halo, so it reads over any image in either theme; a
+     cursor's image can't read tokens, so its colors are written out here. */
+  --cursor-add-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' stroke='%23ffffff' stroke-width='4'/><path d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' fill='%23ffffff' stroke='%231f2328' stroke-width='1.75'/><path d='M12 8v6M9 11h6' stroke='%231f2328' stroke-width='1.75'/></svg>") 2 21, crosshair;
 }
 
 :root,
@@ -247,11 +252,6 @@
   --tree-guide: rgba(31, 35, 40, 0.08);
   /* A review comment in the code and the line it's on, outlined as a pair (`LineBands`, `.thread[data-in-code]`). */
   --border-comment: var(--border-default);
-
-  /* The pointer marking a comment's spot on an image (`ImageCommentsOverlay`): a speech bubble with a plus, its tail's
-     tip the point marked. Drawn dark on white with a white halo, so it reads over any image in either theme; a
-     cursor's image can't read tokens, so its colors are written out here. */
-  --cursor-add-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' stroke='%23ffffff' stroke-width='4'/><path d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' fill='%23ffffff' stroke='%231f2328' stroke-width='1.75'/><path d='M12 8v6M9 11h6' stroke='%231f2328' stroke-width='1.75'/></svg>") 2 21, crosshair;
   --text-primary: #1f2328;
   --text-secondary: #59636e;
   --text-tertiary: #687280;

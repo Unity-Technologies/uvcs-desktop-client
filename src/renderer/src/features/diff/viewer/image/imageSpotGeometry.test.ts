@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardPlacement, movedSpot, pinBounds, resizedSpot, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
+import { cardPlacement, cornerPoint, dragRect, movedSpot, pinBounds, resizedSpot, spotInFrame, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
 
 const AT_TWICE = { scale: 2, x: 10, y: 20 };
 const NO_OFFSET = { x: 0, y: 0 };
@@ -113,5 +113,30 @@ describe('resizedSpot', () => {
 
   it('stays within the image', () => {
     expect(resizedSpot(AREA, 'bottomRight', { x: 900, y: 900 }, IMAGE)).toEqual({ x: 10, y: 10, size: { width: 90, height: 40 } });
+  });
+});
+
+describe('spotInFrame', () => {
+  it('places a spot where its image sits in the frame, a point as one pixel', () => {
+    expect(spotInFrame({ x: 3, y: 4 }, { x: 10, y: 0 })).toEqual({ x: 13, y: 4, width: 1, height: 1 });
+    expect(spotInFrame({ x: 3, y: 4, size: { width: 20, height: 8 } }, { x: 0, y: 2 })).toEqual({ x: 3, y: 6, width: 20, height: 8 });
+  });
+});
+
+describe('cornerPoint', () => {
+  it("is each corner of an area's box", () => {
+    const rect = { x: 10, y: 20, width: 30, height: 40 };
+    expect(['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].map((corner) => cornerPoint(rect, corner as never))).toEqual([
+      { x: 10, y: 20 },
+      { x: 40, y: 20 },
+      { x: 10, y: 60 },
+      { x: 40, y: 60 },
+    ]);
+  });
+});
+
+describe('dragRect', () => {
+  it('outlines a drag whichever way it goes', () => {
+    expect(dragRect({ x: 50, y: 10 }, { x: 20, y: 40 })).toEqual({ x: 20, y: 10, width: 30, height: 30 });
   });
 });

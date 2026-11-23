@@ -7,7 +7,7 @@ import { useRef, useState } from 'react';
 import { Avatar } from '../../../../ui/Avatar';
 import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
 import type { ImageAnnotations, ImagePin, ImageSide } from './imageAnnotations';
-import { AREA_CORNERS, AREA_DRAG_THRESHOLD, cardPlacement, imagePointOf, movedSpot, pinBounds, resizedSpot, spotOfGesture, spotOnScreen, type AreaCorner, type ScreenRect } from './imageSpotGeometry';
+import { AREA_CORNERS, AREA_DRAG_THRESHOLD, cardPlacement, cornerPoint, dragRect, imagePointAt, movedSpot, pinBounds, resizedSpot, spotOfGesture, spotOnScreen, type AreaCorner, type ScreenRect } from './imageSpotGeometry';
 import type { ImageSpot } from '@shared/domain/reviewConversation';
 import { followDrag, isDragButton } from './pointerDrag';
 import type { PanZoom } from './usePanZoom';
@@ -61,7 +61,7 @@ export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, imag
             pin.movable
               ? {
                   scale: transform.scale,
-                  toImage: (point) => imagePointOf(point, transform, offset),
+                  toImage: (point) => imagePointAt(point, transform, offset),
                   image,
                   onChange: (spot) => annotations.moveComment(pin.key, spot),
                 }
@@ -141,8 +141,7 @@ function PinMark({ pin, rect, selected, onClick, reshape }: { pin: ImagePin; rec
 
 /** A corner of an area being written on, dragged to reshape it. */
 function CornerHandle({ corner, rect, spot, reshape }: { corner: AreaCorner; rect: ScreenRect; spot: ImageSpot; reshape: Reshape }) {
-  const x = corner === 'topLeft' || corner === 'bottomLeft' ? rect.x : rect.x + rect.width;
-  const y = corner === 'topLeft' || corner === 'topRight' ? rect.y : rect.y + rect.height;
+  const { x, y } = cornerPoint(rect, corner);
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>): void => {
     if (!isDragButton(event.button)) return;
     event.preventDefault();
@@ -194,11 +193,11 @@ function CommentGesture({ onMarked }: { onMarked: (start: Point, end: Point) => 
   };
   return (
     <div ref={surface} className={styles.gesture} data-no-pan="" onPointerDown={onPointerDown}>
-      {drag && <div className={styles.dragArea} style={dragBox(drag.start, drag.end)} />}
+      {drag && <div className={styles.dragArea} style={boxStyle(dragRect(drag.start, drag.end))} />}
     </div>
   );
 }
 
-function dragBox(start: Point, end: Point): React.CSSProperties {
-  return { left: Math.min(start.x, end.x), top: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };
+function boxStyle(rect: ScreenRect): React.CSSProperties {
+  return { left: rect.x, top: rect.y, width: rect.width, height: rect.height };
 }

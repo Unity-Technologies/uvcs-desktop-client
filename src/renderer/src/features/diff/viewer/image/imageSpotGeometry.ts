@@ -46,7 +46,7 @@ export function spotOfGesture(start: Point, end: Point, transform: ViewTransform
 }
 
 /** The point of the image under a point of the viewport, in its pixels, fractions kept. */
-function imagePointAt(point: Point, transform: ViewTransform, offset: Point): Point {
+export function imagePointAt(point: Point, transform: ViewTransform, offset: Point): Point {
   return { x: (point.x - transform.x) / transform.scale - offset.x, y: (point.y - transform.y) / transform.scale - offset.y };
 }
 
@@ -152,7 +152,15 @@ export function resizedSpot(spot: ImageSpot, corner: AreaCorner, to: Point, imag
   return { x: Math.min(left, image.width - width), y: Math.min(top, image.height - height), size: { width, height } };
 }
 
-/** A point of the viewport as a point of an image placed at `offset` in the frame, fractions kept. */
-export function imagePointOf(point: Point, transform: ViewTransform, offset: Point): Point {
-  return imagePointAt(point, transform, offset);
+/** Where a handle on a corner of an area shows on screen. */
+export function cornerPoint(rect: ScreenRect, corner: AreaCorner): Point {
+  return {
+    x: corner === 'topLeft' || corner === 'bottomLeft' ? rect.x : rect.x + rect.width,
+    y: corner === 'topLeft' || corner === 'topRight' ? rect.y : rect.y + rect.height,
+  };
+}
+
+/** The box a drag outlines between where it was pressed and where the pointer is, whichever way it goes. */
+export function dragRect(start: Point, end: Point): ScreenRect {
+  return { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };
 }
