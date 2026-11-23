@@ -378,6 +378,21 @@ describe('New', () => {
   });
 });
 
+describe('threads on 3D models in the panel', () => {
+  const onModel = (id: number, path: string, fields: Partial<ReviewComment> = {}) =>
+    comment(id, { anchor: { kind: 'model', revisionId: 1, itemId: 2, path, spot: { point: { x: id, y: 0, z: 0 } } }, ...fields });
+
+  it("lists them with the threads on lines, by file, a model's in the order they were started", () => {
+    const threads = threadsOf([onModel(5, '/Art/Car.fbx'), onLine(1, '/src/Player.cs', 9), onModel(3, '/Art/Car.fbx'), comment(7)]);
+    expect(commentsPanelThreads(threads, 'all').map((thread) => thread.root.id)).toEqual([3, 5, 1]);
+  });
+
+  it('counts them under each filter', () => {
+    const threads = threadsOf([onModel(1, '/Art/Car.fbx'), onModel(2, '/Art/Car.fbx', { kind: 'comment' }), onLine(3, '/src/Player.cs', 2)]);
+    expect(commentsPanelCounts(threads)).toMatchObject({ open: 2, all: 3 });
+  });
+});
+
 describe('threads on images in the panel', () => {
   const onImage = (id: number, path: string, fields: Partial<ReviewComment> = {}) =>
     comment(id, { anchor: { kind: 'image', revisionId: 1, itemId: 2, path, spot: { x: 10 - id, y: 0 } }, ...fields });

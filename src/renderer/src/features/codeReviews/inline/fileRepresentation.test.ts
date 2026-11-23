@@ -20,27 +20,36 @@ const FILE_COMMENTS = fileCommentsOf({
   textOf: (revision) => (revision === 30 ? 'a\nb\n' : null),
 });
 
+const NONE: ReadonlySet<number> = new Set();
+
 describe('fileCommentsSummaryOf', () => {
   it('counts the code\'s threads, outdated ones too, and the image\'s', () => {
-    const { representation } = fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), focus: null, reviewId: 41 });
-    expect(representation).toEqual({ onText: 2, onImage: 1, asked: null });
+    const { representation } = fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), modelThreadIds: NONE, focus: null, reviewId: 41 });
+    expect(representation).toEqual({ onText: 2, onRendered: 1, asked: null });
   });
 
   it('asks for the view the thread gone to is on', () => {
-    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), focus: { threadId: 7, seq: 3 }, reviewId: 41 }).representation.asked).toEqual({ representation: 'image', key: '41:3' });
-    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), focus: { threadId: 2, seq: 4 }, reviewId: 41 }).representation.asked).toEqual({ representation: 'text', key: '41:4' });
+    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), modelThreadIds: NONE, focus: { threadId: 7, seq: 3 }, reviewId: 41 }).representation.asked).toEqual({ representation: 'rendered', key: '41:3' });
+    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), modelThreadIds: NONE, focus: { threadId: 2, seq: 4 }, reviewId: 41 }).representation.asked).toEqual({ representation: 'text', key: '41:4' });
   });
 
   it('asks for nothing for a thread picked in place, or of another file', () => {
-    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), focus: { threadId: 7, seq: 3, inPlace: true }, reviewId: 41 }).representation.asked).toBeNull();
-    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), focus: { threadId: 99, seq: 3 }, reviewId: 41 }).representation.asked).toBeNull();
+    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), modelThreadIds: NONE, focus: { threadId: 7, seq: 3, inPlace: true }, reviewId: 41 }).representation.asked).toBeNull();
+    expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), modelThreadIds: NONE, focus: { threadId: 99, seq: 3 }, reviewId: 41 }).representation.asked).toBeNull();
   });
 
   it('hides comments from where they are: the code, the image, both, or nowhere', () => {
-    const hidden = (fileComments: typeof FILE_COMMENTS | null, ids: number[]) => fileCommentsSummaryOf({ fileComments, imageThreadIds: new Set(ids), focus: null, reviewId: 41 }).hidden;
+    const hidden = (fileComments: typeof FILE_COMMENTS | null, ids: number[]) => fileCommentsSummaryOf({ fileComments, imageThreadIds: new Set(ids), modelThreadIds: NONE, focus: null, reviewId: 41 }).hidden;
     expect(hidden(FILE_COMMENTS, [])).toBe('code');
     expect(hidden(null, [7])).toBe('image');
     expect(hidden(FILE_COMMENTS, [7])).toBe('both');
     expect(hidden(null, [])).toBeNull();
+  });
+
+  it("counts a 3D model's threads as what the file draws, asks for its view, and hides comments from it", () => {
+    const onModel = fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: NONE, modelThreadIds: new Set([8, 9]), focus: { threadId: 9, seq: 5 }, reviewId: 41 });
+    expect(onModel.representation).toEqual({ onText: 2, onRendered: 2, asked: { representation: 'rendered', key: '41:5' } });
+    expect(onModel.hidden).toBe('both');
+    expect(fileCommentsSummaryOf({ fileComments: null, imageThreadIds: NONE, modelThreadIds: new Set([8]), focus: null, reviewId: 41 }).hidden).toBe('model');
   });
 });

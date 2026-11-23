@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutOf, paneAt, shownLayoutMode } from './viewLayout';
+import { layoutOf, paneAt, paneOfSideAt, shownLayoutMode } from './viewLayout';
 
 describe('layoutOf', () => {
   it('gives a version shown alone the whole canvas', () => {
@@ -69,5 +69,16 @@ describe('paneAt', () => {
     expect(paneAt(layout, 100, 50, 600, 2)?.side).toBe('before');
     expect(paneAt(layout, 700, 50, 600, 2)?.side).toBe('after');
     expect(paneAt(layout, 900, 50, 600, 2)).toBeNull();
+  });
+});
+
+describe('paneOfSideAt', () => {
+  it("finds a version's pane under the pointer however the swipe cuts it, and none off its half in Split", () => {
+    const swipe = layoutOf('swipe', 1600, 1200, 0.5);
+    expect(paneOfSideAt(swipe, 'after', 100, 50, 600, 2)?.side).toBe('after');
+    expect(paneOfSideAt(swipe, 'before', 700, 50, 600, 2)?.side).toBe('before');
+    const split = layoutOf('sideBySide', 1600, 1200);
+    expect(paneOfSideAt(split, 'after', 100, 50, 600, 2)).toBeNull();
+    expect(paneOfSideAt(split, 'after', 700, 50, 600, 2)?.side).toBe('after');
   });
 });

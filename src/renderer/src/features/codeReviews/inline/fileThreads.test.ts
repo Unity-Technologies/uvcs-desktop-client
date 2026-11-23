@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { earlierRevisions, imageThreadsOfFile, placeEarlier, reviewDiffViewOf, threadsOfFile, writtenIn, type LineThread, type ShownFile } from './fileThreads';
+import { earlierRevisions, imageThreadsOfFile, modelThreadsOfFile, placeEarlier, reviewDiffViewOf, threadsOfFile, writtenIn, type LineThread, type ShownFile } from './fileThreads';
 
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/task' };
 const CHANGESET_REVIEW: CodeReviewTarget = { kind: 'changeset', changesetId: 8 };
@@ -162,6 +162,27 @@ describe('earlierRevisions', () => {
   it('names each earlier version once', () => {
     const { earlier } = threadsOfFile(threadsOf([onLine(1, 20, 5), onLine(2, 20, 9), onLine(3, 25, 1)]), BRANCH, WHOLE, PLAYER);
     expect(earlierRevisions(earlier)).toEqual([20, 25]);
+  });
+});
+
+describe('modelThreadsOfFile', () => {
+  const CAR: ShownFile = { path: 'Art/Car.fbx', originalRevision: 10, modifiedRevision: 30 };
+  const onModel = (id: number, revisionId: number, path = '/Art/Car.fbx'): ReviewComment =>
+    comment(id, { anchor: { kind: 'model', revisionId, itemId: 7, path, spot: { point: { x: id, y: 0, z: 0 } } } });
+
+  it('places the threads on a revision a side shows at their spot, and leaves the rest earlier', () => {
+    const threads = threadsOf([onModel(1, 30), onModel(2, 10), onModel(3, 20), onLine(4, 30, 3)]);
+    const { placed, earlier } = modelThreadsOfFile(threads, BRANCH, WHOLE, CAR);
+    expect(placed.map(({ thread, side, spot }) => [thread.root.id, side, spot])).toEqual([
+      [1, 'additions', { point: { x: 1, y: 0, z: 0 } }],
+      [2, 'deletions', { point: { x: 2, y: 0, z: 0 } }],
+    ]);
+    expect(earlier.map(({ thread, revisionId }) => [thread.root.id, revisionId])).toEqual([[3, 20]]);
+  });
+
+  it('finds them on a model moved in the review by the path it had', () => {
+    const moved = { ...CAR, path: 'Art/Vehicles/Car.fbx', oldPath: 'Art/Car.fbx' };
+    expect(modelThreadsOfFile(threadsOf([onModel(1, 10)]), BRANCH, WHOLE, moved).placed).toHaveLength(1);
   });
 });
 

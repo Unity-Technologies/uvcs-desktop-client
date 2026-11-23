@@ -1,7 +1,7 @@
 import { Maximize, SquareArrowUpLeft, SquareDot, ZoomIn, ZoomOut } from 'lucide-react';
 import { ActualSizeIcon } from './ActualSizeIcon';
 import { hotkey } from '../../../../lib/shortcutRegistry';
-import { CommentPinIcon } from './CommentPinIcon';
+import { CommentPinIcon } from '../pins/CommentPinIcon';
 import type { AnchorMode } from './composedFrame';
 import { StageButton, StageControls, StageSeparator, StageTextButton } from './StageControls';
 import { zoomLabel } from './viewTransform';

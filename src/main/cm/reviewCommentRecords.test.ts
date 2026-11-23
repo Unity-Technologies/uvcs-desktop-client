@@ -60,10 +60,29 @@ describe('conversationOf', () => {
   it("reads a comment on a whole file, or on a location of a kind it doesn't read, as the review's", () => {
     const { comments } = conversationIn(
       printed({ id: 1, type: 'comment', revisionid: 29, itemid: 23, path: '/Assets/Scripts/SwitchFlow.cs', location: -1 }),
-      printed({ id: 2, type: 'comment', revisionid: 30, itemid: 24, path: '/Assets/Models/Hero.fbx', location: 'model:0.1,1.5,0' }),
+      printed({ id: 2, type: 'comment', revisionid: 30, itemid: 24, path: '/Assets/Models/Hero.fbx', location: 'mesh:12' }),
+      printed({ id: 3, type: 'comment', revisionid: 30, itemid: 24, path: '/Assets/Models/Hero.fbx', location: 'model:1,2' }),
     );
 
-    expect(comments.map((comment) => comment.anchor)).toEqual([{ kind: 'review' }, { kind: 'review' }]);
+    expect(comments.map((comment) => comment.anchor)).toEqual([{ kind: 'review' }, { kind: 'review' }, { kind: 'review' }]);
+  });
+
+  it('places a comment on a point or a part of a 3D model', () => {
+    const { comments } = conversationIn(
+      printed({ id: 1, type: 'question', revisionid: 30, itemid: 24, path: '/Assets/Models/Car.fbx', location: 'model:0.1,1.5,0' }),
+      printed({ id: 2, type: 'change', revisionid: 30, itemid: 24, path: '/Assets/Models/Car.fbx', location: 'model:1,0,2;node=Car/Wheel_FL;local=0,0,0.5;part' }),
+    );
+
+    expect(comments.map((comment) => comment.anchor)).toEqual([
+      { kind: 'model', revisionId: 30, itemId: 24, path: '/Assets/Models/Car.fbx', spot: { point: { x: 0.1, y: 1.5, z: 0 } } },
+      {
+        kind: 'model',
+        revisionId: 30,
+        itemId: 24,
+        path: '/Assets/Models/Car.fbx',
+        spot: { point: { x: 1, y: 0, z: 2 }, node: { path: ['Car', 'Wheel_FL'], local: { x: 0, y: 0, z: 0.5 } }, wholePart: true },
+      },
+    ]);
   });
 
   it('reads each kind cm prints', () => {

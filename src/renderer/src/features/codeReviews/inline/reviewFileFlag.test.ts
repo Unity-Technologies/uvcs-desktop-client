@@ -32,6 +32,12 @@ describe('reviewFileFlag', () => {
     expect(markOf(entry('Art/Hero.png'))).toBe('2 comments');
   });
 
+  it('counts the comments on points and parts of a 3D model', () => {
+    const onModel = (id: number): ReviewComment => ({ ...onLine(id, 'Art/Car.fbx'), anchor: { kind: 'model', revisionId: 30, itemId: 9, path: '/Art/Car.fbx', spot: { point: { x: id, y: 0, z: 0 } } } });
+    const markOf = reviewFileFlag(threadsOf([onModel(1), onModel(2)]), BRANCH).markOf({ kind: 'branch', branch: '/main/task' });
+    expect(markOf(entry('Art/Car.fbx'))).toBe('2 comments');
+  });
+
   it("counts in a changeset's diff only the comments written in it", () => {
     const markOf = reviewFileFlag(threads, BRANCH).markOf({ kind: 'changeset', changesetId: 8 });
     expect(markOf(entry('src/Player.cs'))).toBeNull();

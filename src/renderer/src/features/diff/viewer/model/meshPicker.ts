@@ -1,23 +1,26 @@
 // What is under the pointer, read on the GPU: the side's pickable meshes drawn into one float pixel through a camera
 // narrowed to the window under the pointer (`pickWindowAt`), each writing where its surface is and which mesh it is
-// (`pickedAt`). Three's `Raycaster` tested every triangle of a mesh on the main thread: a wheel notch, a click or a pan
+// (`pickedAt`), and into a second pixel of the same draw the face's direction there (`normalAt`, from how the point
+// changes across the pixel; float32 points, so a model far from the origin seen from afar gets a rougher one). Three's `Raycaster` tested every triangle of a mesh on the main thread: a wheel notch, a click or a pan
 // on a 3-million-triangle model froze the view for 150 ms. Drawn so, a pick costs one draw of what the narrowed
 // camera sees (three culls every mesh whose bounds miss the window) and one pixel read back, and it picks what is
 // drawn: a skinned mesh posed by a take, a blendshape, exactly as shown, and only the faces its material draws (a
 // double-sided leaf card from behind too: `facesOf`); an alpha-clipped hole still picks the card. A GPU that can't draw into float pixels
 // (`EXT_color_buffer_float`, which WebGL 2 has nearly everywhere) has `supported` false: the renderer raycasts then.
 
-import { BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FloatType, type GeometryGroup, Mesh, PerspectiveCamera, Scene, ShaderMaterial, type Material, type WebGLRenderer, WebGLRenderTarget } from 'three';
+import { BackSide, BufferAttribute, GLSL3, BufferGeometry, Color, DoubleSide, FloatType, type GeometryGroup, Mesh, PerspectiveCamera, Scene, ShaderMaterial, type Material, type WebGLRenderer, WebGLRenderTarget } from 'three';
 import { pickedAt, type PickWindow } from './pickWindow';
 
 /** The layer the pickable meshes are on, beside the default one everything is drawn on. */
 export const PICK_LAYER = 1;
 
 export class MeshPicker {
-  private readonly target = new WebGLRenderTarget(1, 1, { type: FloatType, depthBuffer: true });
+  // Two pixels drawn at once: the point and the mesh, and the surface's direction there (`normalAt`).
+  private readonly target = new WebGLRenderTarget(1, 1, { type: FloatType, depthBuffer: true, count: 2 });
   private readonly material = pickMaterial();
   private readonly camera = new PerspectiveCamera();
   private readonly pixel = new Float32Array(4);
+  private readonly normalPixel = new Float32Array(4);
 
   /**
    * Makes these objects (a mesh and its wireframe twin: either may be what shows) pickable as the side's mesh of
@@ -57,8 +60,12 @@ export class MeshPicker {
     geometry.dispose();
   }
 
-  /** The mesh of `scene` seen through `camera` at the window, and the point of it there; null where none is. */
-  pick(renderer: WebGLRenderer, scene: Scene, camera: PerspectiveCamera, at: PickWindow): { mesh: number; point: [number, number, number] } | null {
+  /**
+   * The mesh of `scene` seen through `camera` at the window, and the point of it there; null where none is. With
+   * `withNormal`, the surface's direction there too: a second pixel read back, so only for who uses it (the ring
+   * aiming a comment), not each click, zoom or pin's occlusion.
+   */
+  pick(renderer: WebGLRenderer, scene: Scene, camera: PerspectiveCamera, at: PickWindow, withNormal = false): { mesh: number; point: [number, number, number]; normal: [number, number, number] | null } | null {
     this.camera.copy(camera);
     this.camera.layers.set(PICK_LAYER);
     this.camera.setViewOffset(at.full.width, at.full.height, at.offset.x, at.offset.y, 1, 1);
@@ -72,13 +79,14 @@ export class MeshPicker {
       renderer.setClearColor(0x000000, 0);
       renderer.clear();
       renderer.render(scene, this.camera);
-      renderer.readRenderTargetPixels(this.target, 0, 0, 1, 1, this.pixel);
+      renderer.readRenderTargetPixels(this.target, 0, 0, 1, 1, this.pixel, undefined, 0);
+      if (withNormal) renderer.readRenderTargetPixels(this.target, 0, 0, 1, 1, this.normalPixel, undefined, 1);
     } finally {
       scene.overrideMaterial = override;
       renderer.setRenderTarget(target);
       renderer.setClearColor(clearColor, clearAlpha);
     }
-    return pickedAt(this.pixel);
+    return pickedAt(this.pixel, withNormal ? this.normalPixel : null);
   }
 
   dispose(): void {
@@ -98,9 +106,14 @@ export function facesOf(material: Material | Material[], group: Pick<GeometryGro
   return drawn?.side === DoubleSide ? 2 : drawn?.side === BackSide ? 1 : 0;
 }
 
-/** Writes the surface's point in the viewer's space and the mesh's place plus one, deformed as drawn (skin, blendshapes). */
+/**
+ * Writes the surface's point in the viewer's space and the mesh's place plus one, deformed as drawn (skin, blendshapes),
+ * and in a second pixel the face's direction there, turned towards the camera (from how the point changes across the
+ * pixel: the face as drawn, posed and flat).
+ */
 function pickMaterial(): ShaderMaterial {
   const material = new ShaderMaterial({
+    glslVersion: GLSL3,
     uniforms: { mesh: { value: 0 }, faces: { value: 0 } },
     side: DoubleSide,
     vertexShader: `
@@ -120,9 +133,14 @@ function pickMaterial(): ShaderMaterial {
       uniform float mesh;
       uniform int faces;
       varying vec3 vPoint;
+      layout(location = 0) out highp vec4 pickedPoint;
+      layout(location = 1) out highp vec4 pickedNormal;
       void main() {
         if ((faces == 0 && !gl_FrontFacing) || (faces == 1 && gl_FrontFacing)) discard;
-        gl_FragColor = vec4(vPoint, mesh);
+        pickedPoint = vec4(vPoint, mesh);
+        vec3 normal = normalize(cross(dFdx(vPoint), dFdy(vPoint)));
+        if (dot(normal, cameraPosition - vPoint) < 0.0) normal = -normal;
+        pickedNormal = vec4(normal, 0.0);
       }`,
   });
   material.userData.picks = true;

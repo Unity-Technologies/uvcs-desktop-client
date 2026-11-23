@@ -1,23 +1,22 @@
 import { ReviewThreadCard } from '../conversation/ReviewThreadCard';
-import { imageEarlierTagOf } from './earlierTag';
-import type { ImageThread } from './fileThreads';
+import type { FileThread } from './fileThreads';
 import type { ReviewComments } from './reviewComments';
 import { cardFocusOf } from './threadSelection';
 
-interface ImageThreadCardProps {
+interface SpotThreadCardProps {
   comments: ReviewComments;
-  thread: ImageThread;
-  /** Written on an earlier version of the image: tagged so. */
-  earlier: boolean;
+  thread: FileThread;
+  /** Written on an earlier version of the file: its tag (`imageEarlierTagOf`, `modelEarlierTagOf`); none on a version shown. */
+  earlier: { label: string; tip: string } | undefined;
   /** Closes the card back to its pin. */
   onClose: () => void;
 }
 
 /**
- * A thread beside its pin on an image: the conversation's card as a line's thread shows it in the code, its × closing
- * it back to its pin. Clicked anywhere, or focused, it's selected (`selectThread`), as a thread in the code is.
+ * A thread beside its pin on an image or a model: the conversation's card as a line's thread shows it in the code, its
+ * × closing it back to its pin. Clicked anywhere, or focused, it's selected (`selectThread`), as a thread in the code is.
  */
-export function ImageThreadCard({ comments, thread, earlier, onClose }: ImageThreadCardProps) {
+export function SpotThreadCard({ comments, thread, earlier, onClose }: SpotThreadCardProps) {
   const { highlight, selected } = cardFocusOf(comments.focus, thread.root.id);
   const select = (): void => comments.selectThread(thread);
   return (
@@ -29,7 +28,7 @@ export function ImageThreadCard({ comments, thread, earlier, onClose }: ImageThr
         highlight={highlight}
         selected={selected}
         inCode={{
-          earlier: earlier ? imageEarlierTagOf(thread) : undefined,
+          earlier,
           showInConversation: () => comments.showInConversation(thread.root.id),
           hide: { label: 'Close', onHide: onClose },
         }}

@@ -762,7 +762,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1 reply"),
   three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which its
   avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that line's
-  threads, and going to a thread opens its line. The outdated ones hide too, and keep a marker of their own on the
+  threads, and going to a thread opens its line; hiding again closes every line opened (`openedAsCommentsToggle`), the
+  thread selected included. The outdated ones hide too, and keep a marker of their own on the
   code's first row (`outdatedMarkerOf`, `lineNumber: 0`; none while that row isn't rendered, `topRowOf`), so hiding
   comments never leaves a file looking as if no one commented on it: a clock, then who wrote and how many comments, as
   a line's marker beside it counts them; its tooltip says they're outdated, then previews them as a line's does. A click shows every one it marks; one gone to
@@ -904,11 +905,11 @@ An image of a review's diff takes comments on a point or an area of it, as code 
 knows nothing of reviews, docs/features/diff.md "Comments on images").
 
 - **Where it's stored.** `cm codereview comment add --location=image:x,y` for a point, `image:x,y,w,h` for an area, on
-  the revision the diff comments on, as lines are (`addImageCommentArgs`, `imageLocationOption`, `imageCommentAt`).
+  the revision the diff comments on, as lines are (`addImageCommentArgs`, `imageLocationOption`, `spotCommentAt`).
   `cm` stores the text as given and doesn't read it; every client reads it alike (`commentedImageSpotOf`): the image's
   own pixels from its top-left corner, x right and y down; an SVG's numbers may have decimals; what follows a `;` is a
   hint a client may ignore. The app writes whole pixels. `ReviewCommentAnchor`'s `image` kind holds it (`ImageSpot`);
-  a thread on a file, its lines or its image, is a `FileThread`.
+  a thread on a file, its lines, its image or its model, is a `FileThread`.
 - **Pins.** Each thread shows as a speech bubble holding the avatar of who started it, its tip on the point, or on the
   top-left corner of the area it outlines (`reviewImagePinsOf`, `ImageCommentsOverlay`): who wrote there, as a line's
   marker shows, the shape of a comment on a canvas as design tools draw it. Numbers were tried and dropped: an avatar
@@ -923,7 +924,7 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   side its revision shows (Split's After pane; Onion, Diffs and Swipe lay both over each other), gliding with the
   zoom.
 - **A thread** opens beside its pin on a click, one at a time: the conversation's card as a line's thread shows it in
-  the code (`ImageThreadCard`), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
+  the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
   below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
   nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the
   conversation opens it and brings it into view at the zoom shown (`transformShowing`): the whole area when it fits, else its
@@ -941,7 +942,8 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window
   lives (`useNewImageCommentsStore`), by file, named by a serial so moving it changes nothing else, on the revision shown, as one on lines is. Once posted it stays
   where it was written: `cm codereview comment edit` changes a comment's text only.
-- **Hidden.** The header's comment button hides the pins, to look at the image alone; one gone to still shows.
+- **Hidden.** The header's comment button hides the pins, to look at the image alone, the one selected included; one
+  gone to while they're hidden shows, as a line of code opens (`threadShownWhileHidden`).
 - **An SVG** shows as code or as the image it draws (docs/features/diff.md "Images written as text"): comments on its
   lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
   comments are on the image", Show image: `otherRepresentationNotice`), and going to a comment shows the view it's on, for that
@@ -951,3 +953,37 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   its own units (they're in the pixels it's drawn at, `decodedSize`, which an SVG declaring more than 16 MP, or no
   size, is drawn at scaled: another client reading its viewBox's units would misplace them); and a pin moved once
   posted (it needs `cm codereview comment edit` to take a location).
+
+## Comments on 3D models
+
+A 3D model of a review's diff takes comments on a point of its surface or on a whole part, as an image takes them on a
+point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAnnotator` through
+`useReviewModelAnnotations`; the diff knows nothing of reviews, docs/features/model-diff.md "Comments on the model").
+
+- **Where it's stored.** `cm codereview comment add --location=model:x,y,z[;node=<path>][;local=x,y,z][;part][;view=dx,dy,dz,d]`
+  on the revision the diff comments on (`addModelCommentArgs`, `modelLocationOption`; the grammar is in
+  `modelCommentLocation.ts`). The point is in the file's own units and axes, so every client places it alike from the
+  file; the rest are hints a client may ignore: the part's names from the root down, the root itself (the file or its scene) not named, so `Car/Wheel` is a
+  top-level `Car`'s child (`node`, each percent-encoded), the point
+  in that part's space (`local`), the whole part (`part`), the camera it was written from (`view`). Past `cm`'s 1,024
+  characters the hints go, the camera first, then `local`, then the part (`modelLocation`); the point always stays.
+  Numbers keep eight significant digits, never an exponent (`locationNumber`). `ReviewCommentAnchor`'s `model` kind
+  holds it (`ModelSpot`); other clients read it as a comment on the file until they learn it.
+- **Pins** are the image's bubble (`PinBubble`, `reviewModelPinsOf`): who started it, an open dot, faded once settled,
+  ringed when selected. The Comments panel and the conversation name the place "point" or "part", the part's name in
+  the tooltip (`writtenPlaceText`, `writtenPlaceTip`). A comment on a part lights the part up only on demand: its bubble
+  pointed at or focused, its card open, or while it's written (`litCommentPart`).
+- **On an earlier version** a pin shows on its part as the version shown has it (`local`), dashed and tagged "Earlier
+  version"; when that part is gone, at its point, the tag saying so (`modelEarlierTagOf`). No earlier version is read.
+- **Writing.** The stage's comment button, or **C** (`modelComment`): a ring lies on the surface under the pointer
+  with the part's name beside the cursor, and with Shift held the whole part lights up instead (`hoveredPartOf`,
+  `hoverLabelOf`; docs/features/model-diff.md "Comments on the model"); a click marks a point (`spotOfHit`), a Shift-click the whole part
+  (`stageClickOf`), and the card
+  (`NewModelCommentCard`) offers its kind, then what it's about, "Point" or the part by its name (`modelCommentAboutOf`,
+  `spotAbout`), then the editor. Before it's sent its bubble drags along the surface. It's kept while the window lives
+  (`useNewModelCommentsStore`), named by a serial. A drag still turns the model: a box drawn in 3D would mean something
+  else from every angle, so a whole part is what an image's area is here.
+- **Going to it** glides the camera to the view its author had, else facing the point with part of the model around it
+  (`viewOfSpot`), and opens its card.
+- **Hidden.** The header's comment button hides the pins ("Hide comments on the model", `commentsToggleLabel`), the
+  one selected included; one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.

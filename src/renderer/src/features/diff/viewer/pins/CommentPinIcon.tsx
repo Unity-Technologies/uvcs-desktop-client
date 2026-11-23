@@ -1,5 +1,5 @@
 /**
- * A comment's pin as an icon: the speech bubble an image's comments are drawn as (`ImageCommentsOverlay`), round with
+ * A comment's pin as an icon: the speech bubble comments on images and models are drawn as (`PinBubble`), round with
  * its tip, the bottom-left corner, square, and a plus inside. The stage's comment button, the comment cursor
  * (`--cursor-add-comment`) and a comment being written share it, so marking, writing and posting read as one thing.
  */

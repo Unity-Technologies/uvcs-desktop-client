@@ -88,10 +88,12 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     nodes[mesh.node]!.add(sceneMesh.solid, sceneMesh.wire, sceneMesh.heat, sceneMesh.ghost);
     return sceneMesh;
   });
-  root.updateMatrixWorld(true);
   model.meshes.forEach((mesh, i) => {
     if (mesh.skin) bindSkin(meshes[i]!, mesh.skin, nodes, root);
   });
+  // After binding, as each frame drawn does: a skinned mesh's world (its bind matrix's inverse) and a stand-in bone's
+  // are then where they're drawn, for what reads them before the first frame (a pin placed on a skin, `pinPlacesOf`).
+  root.updateMatrixWorld(true);
   const rest = nodes.map((node) => ({ position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.clone() }));
   return {
     root,

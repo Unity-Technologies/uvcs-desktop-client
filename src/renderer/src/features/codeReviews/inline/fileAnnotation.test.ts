@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, fileThreadCount, isCommentable, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, fileThreadCount, isCommentable, openedAsCommentsToggle, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -96,6 +96,11 @@ describe('fileThreadCount', () => {
     const onImage = onPlayer(9, 30, { anchor: { kind: 'image', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { x: 1, y: 1 } } });
     expect(fileThreadCount(threadsOf([onPlayer(1, 30), onImage]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
   });
+
+  it('counts the threads on the model with those on lines', () => {
+    const onModel = onPlayer(9, 30, { anchor: { kind: 'model', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { point: { x: 1, y: 1, z: 1 } } } });
+    expect(fileThreadCount(threadsOf([onPlayer(1, 30), onModel]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
+  });
 });
 
 describe('openedOnSend', () => {
@@ -113,5 +118,18 @@ describe('openedOnSend', () => {
     const opened = inFile(['additions:9']);
     expect(openedOnSend(opened, 'src/Player.cs', 'additions:9', false)).toBe(opened);
     expect(openedOnSend(opened, 'src/Player.cs', 'additions:3', true)).toBe(opened);
+  });
+});
+
+describe('openedAsCommentsToggle', () => {
+  const opened = { path: 'a.cs', keys: ['additions:3'] };
+
+  it('closes every line as comments hide, those opened while last hidden too', () => {
+    expect(openedAsCommentsToggle(opened, true, false)).toEqual({ path: 'a.cs', keys: [] });
+  });
+
+  it('keeps them as comments show, and with nothing toggled', () => {
+    expect(openedAsCommentsToggle(opened, false, true)).toBe(opened);
+    expect(openedAsCommentsToggle(opened, false, false)).toBe(opened);
   });
 });

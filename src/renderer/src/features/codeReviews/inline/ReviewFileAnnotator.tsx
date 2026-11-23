@@ -7,7 +7,7 @@ import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type L
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
+import { comparedFile, isCommentable, openedAsCommentsToggle, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
@@ -25,7 +25,9 @@ import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
 import { useReviewImageAnnotations } from './useReviewImageAnnotations';
+import { useReviewModelAnnotations } from './useReviewModelAnnotations';
 import { ImageAnnotationsContext } from '../../diff/viewer/image/imageAnnotations';
+import { ModelAnnotationsContext } from '../../diff/viewer/model/modelAnnotations';
 import { RepresentationCommentsContext } from '../../diff/viewer/representationComments';
 import { fileCommentsSummaryOf } from './fileRepresentation';
 import { suggestLineLabel } from '../suggestions/suggestButton';
@@ -40,8 +42,9 @@ const NO_REVISIONS: number[] = [];
  * comments on takes a new comment (`lineCommentAt`), from the "+" in its gutter or the code's menu, written under it
  * (`NewLineCommentCard`), kept while the window lives (`useNewLineCommentsStore`).
  * One on an earlier version is seen in context in a dialog (`ReviewComments.seeInContext`), which leaves this diff as
- * it is. An image's comments are pins on it (`useReviewImageAnnotations`, through `ImageAnnotationsContext`), and a
- * file shown either as code or as an image (an SVG) says where its comments are (`fileCommentsSummaryOf`).
+ * it is. An image's comments are pins on it (`useReviewImageAnnotations`, through `ImageAnnotationsContext`), a 3D
+ * model's too (`useReviewModelAnnotations`, `ModelAnnotationsContext`), and a file shown either as code or as what it
+ * draws (an SVG, an OBJ) says where its comments are (`fileCommentsSummaryOf`).
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
   const comments = useContext(ReviewCommentsContext);
@@ -51,6 +54,13 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const setInCode = useReviewCommentsStore((state) => state.setInCode);
   // Per file: the lines opened while comments are hidden are a way to read one file.
   const [opened, setOpened] = useState<OpenedLines>({ path: entry.path, keys: NO_KEYS });
+  // Hiding comments closes every line opened (`openedAsCommentsToggle`).
+  const [shownBefore, setShownBefore] = useState(inCode);
+  if (shownBefore !== inCode) {
+    setShownBefore(inCode);
+    const next = openedAsCommentsToggle(opened, shownBefore, inCode);
+    if (next !== opened) setOpened(next);
+  }
   const openedKeys = opened.path === entry.path ? opened.keys : NO_KEYS;
 
   const threads = comments && isCommentable(entry, placeRepository) ? comments.threads : undefined;
@@ -161,16 +171,24 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
   const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
 
-  // Where the file's comments are, and, for a file shown either as code or as an image (an SVG), which view a thread
-  // gone to is on.
-  const summary = useMemo(() => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, focus, reviewId: comments?.review.id ?? 0 }), [fileComments, onImage.threadIds, focus, comments?.review.id]);
+  // A model's, pins on it: read only by the model viewer.
+  const onModel = useReviewModelAnnotations({ comments, threads, view, file, inCode });
+
+  // Where the file's comments are, and, for a file shown either as code or as what it draws (an SVG, an OBJ), which
+  // view a thread gone to is on.
+  const summary = useMemo(
+    () => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, modelThreadIds: onModel.threadIds, focus, reviewId: comments?.review.id ?? 0 }),
+    [fileComments, onImage.threadIds, onModel.threadIds, focus, comments?.review.id],
+  );
   const representationComments = summary.representation;
 
   const controls = summary.hidden && <CommentsInCodeButton shown={inCode} onChange={setInCode} place={summary.hidden} />;
   return (
     <DiffAnnotationsContext.Provider value={annotations}>
       <ImageAnnotationsContext.Provider value={onImage.annotations}>
-        <RepresentationCommentsContext.Provider value={representationComments}>{children({ controls })}</RepresentationCommentsContext.Provider>
+        <ModelAnnotationsContext.Provider value={onModel.annotations}>
+          <RepresentationCommentsContext.Provider value={representationComments}>{children({ controls })}</RepresentationCommentsContext.Provider>
+        </ModelAnnotationsContext.Provider>
       </ImageAnnotationsContext.Provider>
     </DiffAnnotationsContext.Provider>
   );

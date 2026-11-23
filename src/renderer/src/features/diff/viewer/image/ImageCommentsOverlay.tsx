@@ -2,23 +2,18 @@
 // opened pin's card beside it, and, while commenting, the surface a click or a drag marks a new comment's spot on.
 // Positions are worked out in `imageSpotGeometry`; this maps them to the screen and follows the view's glide.
 
-import { Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Avatar } from '../../../../ui/Avatar';
+import type { ImageSpot } from '@shared/domain/reviewConversation';
+import { PinBubble } from '../pins/PinBubble';
+import { PinCard } from '../pins/PinCard';
+import type { ScreenRect } from '../pins/pinPlacement';
 import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
 import type { ImageAnnotations, ImagePin, ImageSide } from './imageAnnotations';
-import { AREA_CORNERS, AREA_DRAG_THRESHOLD, cardPlacement, cornerPoint, dragRect, imagePointAt, movedSpot, pinBounds, resizedSpot, spotOfGesture, spotOnScreen, type AreaCorner, type ScreenRect } from './imageSpotGeometry';
-import type { ImageSpot } from '@shared/domain/reviewConversation';
+import { AREA_CORNERS, AREA_DRAG_THRESHOLD, cornerPoint, dragRect, imagePointAt, movedSpot, resizedSpot, spotOfGesture, spotOnScreen, type AreaCorner } from './imageSpotGeometry';
 import { followDrag, isDragButton } from './pointerDrag';
 import type { PanZoom } from './usePanZoom';
 import type { Point } from './viewTransform';
 import styles from './ImageCommentsOverlay.module.css';
-
-/** A card's width beside its pin: a thread reads as it does under a line of code, at a reading width. */
-const CARD_WIDTH = 360;
-
-/** The width the stage's floating controls take at the viewport's right edge, with their margin. */
-const STAGE_CONTROLS_ROOM = 52;
 
 interface ImageCommentsOverlayProps {
   annotations: ImageAnnotations;
@@ -119,23 +114,17 @@ function PinMark({ pin, rect, selected, opened, onClick, reshape }: { pin: Image
     <>
       {pin.spot.size && <div className={styles.area} {...flags} data-opened={opened || undefined} style={{ transform: `translate(${rect.x}px, ${rect.y}px)`, width: rect.width, height: rect.height }} />}
       {pin.spot.size && reshape && AREA_CORNERS.map((corner) => <CornerHandle key={corner} corner={corner} rect={rect} spot={pin.spot} reshape={reshape} />)}
-      <button
-        type="button"
-        className={styles.pin}
-        {...flags}
-        data-movable={reshape ? '' : undefined}
-        data-tip={pin.tip}
-        aria-label={pin.tip}
-        aria-pressed={selected}
+      <PinBubble
+        pin={pin}
+        selected={selected}
+        className={styles.bubble}
         style={{ transform: `translate(${rect.x}px, ${rect.y}px)` }}
         onPointerDown={onBubbleDown}
         onClick={() => {
           if (!dragged.current) onClick();
           dragged.current = false;
         }}
-      >
-        {pin.author === null ? <Plus size={16} strokeWidth={2.5} aria-hidden /> : <Avatar user={pin.author} size={22} tip={null} />}
-      </button>
+      />
     </>
   );
 }
@@ -152,17 +141,6 @@ function CornerHandle({ corner, rect, spot, reshape }: { corner: AreaCorner; rec
     );
   };
   return <div className={styles.corner} data-corner={corner} data-no-pan="" style={{ transform: `translate(${x}px, ${y}px)` }} onPointerDown={onPointerDown} />;
-}
-
-/** The opened pin's card, beside it and within the viewport, scrolling inside when taller than the room. */
-function PinCard({ rect, viewport, children }: { rect: ScreenRect; viewport: Size; children: React.ReactNode }) {
-  // The stage's controls float at the right edge (`StageControls`): a card never goes under them.
-  const placement = cardPlacement(pinBounds(rect), { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, CARD_WIDTH);
-  return (
-    <div className={styles.card} data-no-pan="" style={{ ...placement, width: CARD_WIDTH }}>
-      {children}
-    </div>
-  );
 }
 
 /** Where the pointer marks a new comment: a press and release, the area dragged between them outlined meanwhile. */

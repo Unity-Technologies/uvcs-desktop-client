@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import { imageThreadsOfFile, type ShownFile } from './fileThreads';
-import { newImageCommentSpot } from './newImageComment';
-import { imageThreadIdsOf, imageThreadOf, newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, reviewImagePinsOf, threadPinKey } from './reviewImagePins';
+import { newSpotComment } from './newSpotComment';
+import { reviewImagePinsOf } from './reviewImagePins';
+import { newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, spotThreadIdsOf, spotThreadOf, threadPinKey } from './reviewPins';
 
 const HERO: ShownFile = { path: 'Art/Hero.png', originalRevision: 10, modifiedRevision: 30 };
 
@@ -51,7 +52,7 @@ describe('reviewImagePinsOf', () => {
   });
 
   it('pins each comment being written, with no one yet', () => {
-    const spot = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 4, y: 4, size: { width: 9, height: 9 } } }, 1);
+    const spot = newSpotComment('image', 41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 4, y: 4, size: { width: 9, height: 9 } } }, 1);
     const pins = reviewImagePinsOf({ threads: { placed: [], earlier: [] }, spots: [spot], inCode: false, focusThreadId: undefined, topSide: 'additions' });
     expect(pins).toEqual([{ key: newCommentPinKey(spot.key), side: 'new', spot: spot.comment.spot, author: null, tip: 'New comment: drag to move it', emphasized: false, earlier: false, movable: true }]);
   });
@@ -68,11 +69,11 @@ describe('the threads of an image', () => {
   const threads = imageThreadsOfFile(threadsOf([onImage(1, 30), onImage(2, 20)]), { kind: 'branch', branch: '/main/task' }, { kind: 'whole' }, HERO);
 
   it('finds a thread, and whether it is on an earlier version', () => {
-    expect(imageThreadOf(threads, 1)?.earlier).toBe(false);
-    expect(imageThreadOf(threads, 2)?.earlier).toBe(true);
-    expect(imageThreadOf(threads, 9)).toBeNull();
-    expect([...imageThreadIdsOf(threads)]).toEqual([1, 2]);
-    expect(imageThreadIdsOf(null).size).toBe(0);
+    expect(spotThreadOf(threads, 1)?.earlier).toBe(false);
+    expect(spotThreadOf(threads, 2)?.earlier).toBe(true);
+    expect(spotThreadOf(threads, 9)).toBeNull();
+    expect([...spotThreadIdsOf(threads)]).toEqual([1, 2]);
+    expect(spotThreadIdsOf(null).size).toBe(0);
   });
 
   it('reveals the pin of a thread gone to, once', () => {

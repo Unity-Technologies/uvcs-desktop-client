@@ -178,6 +178,19 @@ describe('writing on a review', () => {
     ]);
   });
 
+  it('adds a comment on a point or a part of a 3D model, by its revision', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment add': '' });
+
+    await service.addOnModel(IN_WORKSPACE, 41, { revisionId: 812, spot: { point: { x: 0.5, y: 1.25, z: -3 } }, kind: 'question' }, 'Chipped?');
+    const wheel = { point: { x: 1, y: 0, z: 2 }, node: { path: ['Car', 'Wheel FL'], local: { x: 0, y: 0, z: 0.5 } }, wholePart: true as const };
+    await service.addOnModel(IN_WORKSPACE, 41, { revisionId: 812, spot: wheel, kind: 'changeRequest', changesetId: 9 }, 'Too small.');
+
+    expect(commands.map(({ via, args }) => [via, ...args.slice(5)])).toEqual([
+      ['query', '--revision=revid:812', '--location=model:0.5,1.25,-3', '--type=Question'],
+      ['query', '--revision=revid:812', '--location=model:1,0,2;node=Car/Wheel%20FL;local=0,0,0.5;part', '--type=Change', '--changeset=cs:9'],
+    ]);
+  });
+
   it('replies to a comment', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = reviewComments({ 'codereview comment reply': answer });

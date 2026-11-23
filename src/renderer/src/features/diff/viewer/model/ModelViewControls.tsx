@@ -3,6 +3,8 @@
 import { Bone, Box, Focus, Grid3x3, Image, Palette, Shapes } from 'lucide-react';
 import { hotkey } from '../../../../lib/shortcutRegistry';
 import { StageButton, StageControls, StageSeparator } from '../image/StageControls';
+import { CommentPinIcon } from '../pins/CommentPinIcon';
+import { commentButtonLabel } from './commentHover';
 import type { DrawMode } from './modelRenderer';
 import { clickedSurface, materialsButtonLabel, surfaceButtonDisabledReason, surfaceButtonOn, type SurfaceLook } from './surfaceLook';
 
@@ -18,15 +20,29 @@ interface ModelViewControlsProps {
   /** Offered when a version has bones. */
   bones: { shown: boolean; onShow: (shown: boolean) => void } | null;
   onFrame: () => void;
+  /** Marking a comment's spot, on or off; none where the model takes no comments. */
+  comment?: { active: boolean; onToggle: () => void } | null;
 }
 
 /**
- * The view's buttons, bottom right: framing, then Unity's Scene view draw modes, then what the surfaces show (slot
+ * The view's buttons, bottom right: commenting where the model takes comments (first, as on an image), framing, then Unity's Scene view draw modes, then what the surfaces show (slot
  * colors, materials: one choice, the clay when neither is on) and the bones.
  */
-export function ModelViewControls({ drawMode, onDrawMode, surface, onSurface, materialsOffered, differences, bones, onFrame }: ModelViewControlsProps) {
+export function ModelViewControls({ drawMode, onDrawMode, surface, onSurface, materialsOffered, differences, bones, onFrame, comment }: ModelViewControlsProps) {
   return (
     <StageControls>
+      {comment && (
+        <>
+          <StageButton
+            icon={<CommentPinIcon />}
+            label={commentButtonLabel(comment.active)}
+            shortcut={hotkey('modelComment')}
+            active={comment.active}
+            onClick={comment.onToggle}
+          />
+          <StageSeparator />
+        </>
+      )}
       <StageButton icon={<Focus size={15} />} label="Frame the part picked, or the whole model" shortcut={hotkey('modelFrame')} onClick={onFrame} />
       <StageSeparator />
       <StageButton icon={<Box size={15} />} label="Shaded" active={drawMode === 'shaded'} onClick={() => onDrawMode('shaded')} />

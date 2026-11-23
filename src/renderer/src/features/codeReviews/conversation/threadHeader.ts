@@ -1,5 +1,5 @@
 import type { ReviewThread } from './reviewThreads';
-import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceText, type ThreadBadges, type ThreadKindName } from './threadBadges';
+import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceText, writtenPlaceTip, type ThreadBadges, type ThreadKindName } from './threadBadges';
 
 /**
  * Where a thread's card is: the conversation's timeline, the code of the Changes tab (`ThreadInCode`), or the Comments
@@ -33,14 +33,16 @@ export interface ThreadHeaderInput {
   inContext: boolean;
 }
 
-/** The file and line a header names: a link to it in Changes, or, on a card that goes there itself, text. */
+/** The file a header names, and where in it the thread was written: a link to it in Changes, or, on a card that goes there itself, text. */
 export interface HeaderLocation {
   folder: string;
   file: string;
-  /** "line 42", apart from the file: the line it was written on, which an outdated comment's no longer is. */
-  line: string;
+  /** "line 42", "area", apart from the file: where in it the thread was written, which an outdated comment's line no longer is. */
+  writtenPlace: string;
+  /** What hovering the place says it is (`writtenPlaceTip`): "The line it was written on". */
+  writtenPlaceTip: string;
   linked: boolean;
-  /** The text's tooltip, the whole path and line; a link's says where it goes, the path under it. */
+  /** The text's tooltip, the whole path and place; a link's says where it goes, the path under it. */
   tip: string;
   tipSub?: string;
 }
@@ -75,10 +77,12 @@ export interface ThreadHeaderView {
   /** How many replies a folded thread has. */
   replies: string | null;
   /**
-   * Where the file is named already (under its name, in its code): the line it was written on, "line 42". In the code
-   * a thread can sit rows below its line, or away from it once outdated.
+   * Where the file is named already (under its name, in its code): where in it the thread was written, "line 42" or "point". In
+   * the code a thread can sit rows below its line, or away from it once outdated.
    */
-  line: string | null;
+  writtenPlace: string | null;
+  /** What hovering it says (`writtenPlaceTip`); null with no place. */
+  writtenPlaceTip: string | null;
   pill: HeaderPill | null;
   hides: boolean;
 }
@@ -100,6 +104,8 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
   const badges = threadBadges(thread);
   const inCode = place === 'code';
   const underFile = place === 'fileGroup';
+  const anchor = thread.root.anchor.kind === 'review' ? null : thread.root.anchor;
+  const namesPlace = (underFile || inCode) && anchor !== null;
   return {
     foldToggle: foldable ? { expanded: !folded, label: folded ? 'Show the thread' : 'Fold the thread' } : null,
     // In the code, the thread is at its line: its location would name where the user already is. Under its file's
@@ -107,7 +113,8 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     location: inCode || underFile ? null : locationOf(thread, place === 'panel'),
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
-    line: (underFile || inCode) && thread.root.anchor.kind !== 'review' ? writtenPlaceText(thread.root.anchor) : null,
+    writtenPlace: namesPlace ? writtenPlaceText(anchor) : null,
+    writtenPlaceTip: namesPlace ? writtenPlaceTip(anchor) : null,
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };
@@ -116,9 +123,10 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
 function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation | null {
   if (root.anchor.kind === 'review') return null;
   const { folder, file } = locationText(root.anchor);
-  const line = writtenPlaceText(root.anchor);
+  const writtenPlace = writtenPlaceText(root.anchor);
+  const placeTip = writtenPlaceTip(root.anchor);
   // The panel's card goes to the thread: its file and line only name where, whole in the tooltip.
-  return cardOpens ? { folder, file, line, linked: false, tip: `${folder}${file}, ${line}` } : { folder, file, line, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
+  return cardOpens ? { folder, file, writtenPlace, writtenPlaceTip: placeTip, linked: false, tip: `${folder}${file}, ${writtenPlace}` } : { folder, file, writtenPlace, writtenPlaceTip: placeTip, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
 }
 
 /** How the pill looks: the thread's kind (its icon) and where it stands, or, for a plain comment, that it is one. */

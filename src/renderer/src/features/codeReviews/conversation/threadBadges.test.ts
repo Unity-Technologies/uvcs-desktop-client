@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { answerOf, appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenPlaceText } from './threadBadges';
+import { answerOf, appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenPlaceText, writtenPlaceTip } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
@@ -132,6 +132,35 @@ describe('writtenPlaceText', () => {
     const onImage = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png' } as const;
     expect(writtenPlaceText({ ...onImage, spot: { x: 120, y: 80 } })).toBe('point');
     expect(writtenPlaceText({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } })).toBe('area');
+  });
+});
+
+describe('a comment on a 3D model', () => {
+  const onModel = { kind: 'model', revisionId: 30, itemId: 24, path: '/Art/Car.fbx' } as const;
+  const onPoint = { ...onModel, spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Body'] } } };
+  const onPart = { ...onModel, spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Wheel_FL'] }, wholePart: true as const } };
+
+  it('names where it was written: a point of its surface, or a whole part', () => {
+    expect(writtenPlaceText(onPoint)).toBe('point');
+    expect(writtenPlaceText(onPart)).toBe('part');
+  });
+
+  it("says in the tooltip it's on the model, and names the part", () => {
+    expect(writtenPlaceTip(onPoint)).toBe('The point of the model it was written on');
+    expect(writtenPlaceTip(onPart)).toBe('The part of the model it was written on: Wheel_FL');
+  });
+});
+
+describe('writtenPlaceTip', () => {
+  it('says the place is the line or the lines it was written on', () => {
+    expect(writtenPlaceTip({ ...ON_LINE, firstLine: 42, lastLine: 42 })).toBe('The line it was written on');
+    expect(writtenPlaceTip({ ...ON_LINE, firstLine: 12, lastLine: 18 })).toBe('The lines it was written on');
+  });
+
+  it('says the place is the point or the area of the image it was written on, never a line', () => {
+    const onImage = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png' } as const;
+    expect(writtenPlaceTip({ ...onImage, spot: { x: 120, y: 80 } })).toBe('The point of the image it was written on');
+    expect(writtenPlaceTip({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } })).toBe('The area of the image it was written on');
   });
 });
 

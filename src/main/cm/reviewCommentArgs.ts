@@ -1,6 +1,7 @@
-import type { LineCommentKind, NewImageComment, NewLineComment } from '@shared/domain/reviewConversation';
+import type { LineCommentKind, NewImageComment, NewLineComment, NewModelComment } from '@shared/domain/reviewConversation';
 import type { CmPlace } from './cmPlace';
 import { imageLocationOption, lineOption } from './commentLocation';
+import { modelLocationOption } from './modelCommentLocation';
 
 // Every text goes in a file: a comment holds lines, and a `cm shell` line can't carry quotes or line breaks.
 
@@ -25,6 +26,14 @@ export function addLineCommentArgs(reviewId: number, comment: NewLineComment, te
  */
 export function addImageCommentArgs(reviewId: number, comment: NewImageComment, textFile: string, at: CmPlace): string[] {
   return addFileCommentArgs(reviewId, comment, imageLocationOption(comment.spot), textFile, at);
+}
+
+/**
+ * `cm codereview comment add` on a point or a part of a 3D model (`modelLocationOption`), which `cm` stores as written:
+ * on the revision, as for lines.
+ */
+export function addModelCommentArgs(reviewId: number, comment: NewModelComment, textFile: string, at: CmPlace): string[] {
+  return addFileCommentArgs(reviewId, comment, modelLocationOption(comment.spot), textFile, at);
 }
 
 function addFileCommentArgs(
