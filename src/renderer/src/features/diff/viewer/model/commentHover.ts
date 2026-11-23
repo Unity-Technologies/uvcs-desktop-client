@@ -64,6 +64,15 @@ export function litWhileCommenting(hovered: LitNode | null, wholePart: boolean, 
   return comment;
 }
 
+/**
+ * Whether the ring lies on the surface where a click would mark a point (`setCommentAim`): while a part is under the
+ * pointer and Shift doesn't aim at all of it. Never under Diffs by look, where `hoveredPartOf` finds no part: drawn
+ * into the version compared, the ring would compare as a change.
+ */
+export function aimShownWhileCommenting(hovered: HoveredPart | null, wholePart: boolean): boolean {
+  return hovered !== null && !wholePart;
+}
+
 /** The words beside the cursor: what a click marks there, a point on the part or all of it, and how to switch. */
 export function hoverLabelOf(part: HoveredPart, wholePart: boolean): { name: string; hint: string } {
   return wholePart ? { name: `Whole ${part.name}`, hint: 'Click to comment on all of it' } : { name: `Point on ${part.name}`, hint: 'Shift for the whole part' };

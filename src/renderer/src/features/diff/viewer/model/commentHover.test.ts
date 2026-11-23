@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commentButtonLabel, hoverLabelOf, hoverLabelPlacement, hoveredPartOf, hoverPicks, litWhileCommenting, partNameOf, pickAgain, sameHoveredPart, type NamedVersion } from './commentHover';
+import { aimShownWhileCommenting, commentButtonLabel, hoverLabelOf, hoverLabelPlacement, hoveredPartOf, hoverPicks, litWhileCommenting, partNameOf, pickAgain, sameHoveredPart, type NamedVersion } from './commentHover';
 
 /** A car as a glTF writes it: the scene's root, the car, its body, and a wheel GLTFLoader renamed apart (`Wheel_1`). */
 const CAR: NamedVersion = {
@@ -150,5 +150,19 @@ describe('pickAgain', () => {
   it('skips a frame where neither moved, as one a part lit up draws', () => {
     expect(pickAgain(last, { ...last })).toBe(false);
     expect(pickAgain(last, { ...last, x: 100.5, y: 100.4 })).toBe(false);
+  });
+});
+
+describe('aimShownWhileCommenting', () => {
+  const wheel = { side: 'after' as const, key: '0/0/1', name: 'Wheel' };
+
+  it('lays the ring on the point a click would mark', () => {
+    expect(aimShownWhileCommenting(wheel, false)).toBe(true);
+  });
+
+  it('takes it away with Shift held, over empty space, and while Diffs by look compares', () => {
+    expect(aimShownWhileCommenting(wheel, true)).toBe(false);
+    expect(aimShownWhileCommenting(null, false)).toBe(false);
+    expect(aimShownWhileCommenting(hoveredPartOf({ side: 'after', key: '0/0/1' }, CAR, true), false)).toBe(false);
   });
 });

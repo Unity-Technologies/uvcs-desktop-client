@@ -36,7 +36,7 @@ import { viewOfSpot } from './spotView';
 import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
 import { commentKeyAction, stageClickOf, type StageClickModifiers } from '../pins/stageCommenting';
-import { hoveredPartOf, litWhileCommenting } from './commentHover';
+import { aimShownWhileCommenting, hoveredPartOf, litWhileCommenting } from './commentHover';
 import { CommentHoverLabel } from './CommentHoverLabel';
 import { useCommentHover } from './useCommentHover';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
@@ -220,7 +220,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     [renderer, commentsOn, versions, lookDifferences],
   );
   const { hovered, wholePart, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, renderer, enabled: isCommenting, partAt });
-  const aimShown = hovered !== null && !wholePart;
+  const aimShown = aimShownWhileCommenting(hovered, wholePart);
   useEffect(() => {
     renderer?.showCommentAim(aimShown);
   }, [renderer, aimShown]);
