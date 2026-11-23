@@ -83,13 +83,12 @@ function antenna(): ParsedModel {
   return model;
 }
 
-/** Turns the antenna's `Tip` a quarter turn about Z, bending its top to -X, and draws it as a frame does. */
+/** Turns the antenna's `Tip` a quarter turn about Z, bending its top to -X, and places it as a frame does. */
 function sway(version: ReturnType<typeof drawn>): void {
   const tip = version.scene.objects.get('Base/Tip')!;
   tip.quaternion.copy(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), Math.PI / 2));
   tip.updateMatrix();
   version.scene.root.updateMatrixWorld(true);
-  (version.scene.meshes[0]!.solid as unknown as SkinnedMesh).skeleton.update();
 }
 
 const onAntennaTip = pin({ spot: { point: { x: 0, y: 2, z: 0 }, node: { path: ['Antenna'], local: { x: 0, y: 2, z: 0 } } } });
@@ -140,7 +139,6 @@ describe('pinPlacesOf, a skinned mesh', () => {
       hips.position.x += 50;
       hips.updateMatrix();
       after.scene.root.updateMatrixWorld(true);
-      (after.scene.meshes[0]!.solid as unknown as SkinnedMesh).skeleton.update();
       expect(close(place!.point())).toEqual([0.5, 1.8, 0]);
     });
   });

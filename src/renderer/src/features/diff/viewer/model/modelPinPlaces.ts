@@ -52,17 +52,11 @@ export function pinPlacesOf(pins: readonly ModelPin[], versions: Record<Side, Dr
   });
 }
 
-/**
- * The anchor of a spot on a skinned part, and the mesh as drawn that bends it; none for a rigid part. The skeleton is
- * brought up to where its bones are now, as each frame drawn brings it: a pin read before the first frame (a reveal
- * gliding to it) is then where its bones are, not at the origin.
- */
+/** The anchor of a spot on a skinned part, and the mesh as drawn that bends it; none for a rigid part. */
 function skinOf(version: DrawnVersion, node: number, spot: ModelSpot): { anchor: SkinAnchor; mesh: SkinnedMesh } | null {
   const anchor = skinAnchorOfSpot(version.model, node, spot.node?.local);
   if (!anchor) return null;
-  const mesh = drawnSkinnedMesh(version, anchor.mesh);
-  mesh.skeleton.update();
-  return { anchor, mesh };
+  return { anchor, mesh: drawnSkinnedMesh(version, anchor.mesh) };
 }
 
 /** A skinned mesh as the version's scene draws it (`buildModelScene` makes it a `SkinnedMesh`, typed as a mesh). */

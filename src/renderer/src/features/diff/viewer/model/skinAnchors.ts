@@ -74,7 +74,7 @@ export function restMeshesOf(model: Pick<ParsedModel, 'nodes' | 'meshes'>, meshe
 
 /**
  * The meshes' vertices as they are drawn now, a take's pose and blendshapes included, in the viewer's space: what a
- * click on a posed mesh hit. `drawn` is each mesh as the scene draws it, skinned by the skeleton as last drawn.
+ * click on a posed mesh hit. `drawn` is each mesh as the scene draws it.
  */
 export function drawnMeshesOf(model: Pick<ParsedModel, 'meshes'>, meshes: readonly number[], drawn: (mesh: number) => SkinnedMesh): PlacedMesh[] {
   return meshes.map((mesh) => {
@@ -126,8 +126,9 @@ export function anchoredPoint(anchor: SkinAnchor, meshes: readonly PlacedMesh[])
 }
 
 /**
- * Where an anchor is as the mesh is drawn now, in the viewer's space: its three corners skinned by the skeleton as
- * last drawn (three's `getVertexPosition`: blendshapes, then bones), placed by the mesh. Three vertices read, whatever
+ * Where an anchor is as the mesh is drawn now, in the viewer's space: its three corners skinned by where the bones
+ * are now (three's `getVertexPosition`: blendshapes, then each bone's world, read as it is, not the skeleton's
+ * matrices of the last frame drawn), placed by the mesh. Three vertices read, whatever
  * the mesh's size: this runs for every pin, every frame.
  */
 export function drawnAnchorPoint(anchor: SkinAnchor, drawn: SkinnedMesh): Vector3 {
