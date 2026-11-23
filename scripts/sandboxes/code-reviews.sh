@@ -12,7 +12,8 @@
 # three lines replaced by one (a comment on a range, `--line=A-B`), and one outdated, its line changed since; a question
 # holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. An
 # image holds comments on a point and on an area (`--location=image:…`): open, answered, and one on its earlier
-# version, which a later check-in repainted. Two more reviews have
+# version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment on a
+line and one on an area. Two more reviews have
 # no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
 # can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
@@ -92,6 +93,10 @@ w Assets/Scripts/Retry.cs "public static class Retry
 }"
 rm Assets/Scripts/LegacySwitch.cs
 banner 1 Assets/Art/Banner.png
+w Assets/Art/Icon.svg '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <rect x="8" y="8" width="80" height="80" rx="16" fill="#3b82f6"/>
+  <circle cx="48" cy="48" r="20" fill="#fbbf24"/>
+</svg>'
 checkin "$(text shelve 'Shelve, undo, switch, bring')"
 FIRST=$(changeset /main/task-2210)
 
@@ -175,6 +180,8 @@ suggest /Assets/Scripts/Retry.cs 3 'Would this read better?
 on_review --path=/Assets/Art/Banner.png --location=image:150,60 --type=Question -c="Is the sun meant to move this far?" >/dev/null
 SUN=$(on_review --path=/Assets/Art/Banner.png --location=image:0,110,320,90 --type=Change -c="The hills read too orange against the sky.")
 cm cr comment reply "$SUN" -c="Agreed, I'll make them purple." >/dev/null
+on_review --path=/Assets/Art/Icon.svg --line=3 --type=Question -c="Should the circle follow the brand yellow?" >/dev/null
+on_review --path=/Assets/Art/Icon.svg --location=image:8,8,80,80 --type=Change -c="Round these corners a bit more." >/dev/null
 
 cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null
 cm cr review "$REVIEW" --rework-required -c="Two changes before it goes in." >/dev/null
