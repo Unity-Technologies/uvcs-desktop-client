@@ -13,7 +13,11 @@
 # holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. An
 # image holds comments on a point and on an area (`--location=image:…`): open, answered, and one on its earlier
 # version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment on a
-# line and one on an area. Two more reviews have
+# line and one on an area. A car (code-reviews/reviewModels.ts: a GLB whose four wheels share a name, with a take that
+# opens its door) holds comments on 3D models (`--location=model:…`): an open point with the camera it was written from,
+# a whole wheel, an answered question, the door the take moves, and two on its first version: a wheel the second moved
+# forward, and the spoiler it dropped. An OBJ signpost, code or model, holds a comment on a line and one on its board.
+# Two more reviews have
 # no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
 # can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
@@ -47,6 +51,10 @@ checkin() { cm ci --all --private -commentsfile="$1" >/dev/null; }
 banner() { sleep 1; mkdir -p "$(dirname "$2")"; python3 -I "$HERE/code-reviews/banner.py" "$1" "$2"; }
 changeset() { cm find "changeset where branch = '$1'" "order by changesetid desc" limit 1 --format={changesetid} --nototal; }
 on_review() { cm cr comment add "$REVIEW" --format={guid} "$@"; }
+
+# The models' writer, bundled as models.sh bundles its own (three resolves from this repository).
+npx esbuild "$HERE/code-reviews/reviewModels.ts" --bundle --platform=node --format=esm --outfile="$TEXTS/reviewModels.mjs" --log-level=warning
+models() { sleep 1; node "$TEXTS/reviewModels.mjs" "$1" "$WK"; }
 
 cd "$WK"
 switch_flow() {
@@ -90,6 +98,7 @@ w Assets/Art/Icon.svg '<svg xmlns="http://www.w3.org/2000/svg" width="96" height
   <rect x="8" y="8" width="80" height="80" rx="16" fill="#3b82f6"/>
   <circle cx="48" cy="48" r="20" fill="#fbbf24"/>
 </svg>'
+models 1
 checkin "$(text shelve 'Shelve, undo, switch, bring')"
 FIRST=$(changeset /main/task-2210)
 
@@ -175,6 +184,10 @@ SUN=$(on_review --path=/Assets/Art/Banner.png --location=image:0,360,960,240 --t
 cm cr comment reply "$SUN" -c="Agreed, I'll make them purple." >/dev/null
 on_review --path=/Assets/Art/Icon.svg --line=3 --type=Question -c="Should the circle follow the brand yellow?" >/dev/null
 on_review --path=/Assets/Art/Icon.svg --location=image:8,8,80,80 --type=Change -c="Round these corners a bit more." >/dev/null
+# Comments on the car's first version (in metres, the file's own space): its spoiler, which the second drops, and a
+# point on a front wheel, which the second moves forward (`local` places it on the wheel wherever it is).
+on_review --path=/Assets/Models/Car.glb --location="model:-1.8,1.09,0;node=Car/Spoiler;local=0,0.22,0;part" --type=Question -c="Does the spoiler need to be this wide?" >/dev/null
+on_review --path=/Assets/Models/Car.glb --location="model:1.3,0.66,0.95;node=Car/Wheel;local=0,0.3,0.13" --type=Change -c="This tyre's sidewall looks too thin." >/dev/null
 
 cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null
 cm cr review "$REVIEW" --rework-required -c="Two changes before it goes in." >/dev/null
@@ -201,6 +214,17 @@ w Assets/Tests/RetryTests.cs "public class RetryTests
     public void RunsTheActionTheTimesAsked() { }
 }"
 checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
+# The car reshaped (a taller cabin, the front wheels forward, no spoiler) and the sign lowered: comments on their
+# newest versions.
+models 2
+checkin "$(text car 'Taller cabin, front wheels forward, no spoiler; the sign lower')"
+on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.87,0;node=Car/Body;local=1.5,0.25,0;view=0.707107,0.565685,0.424264,4" --type=Change -c="This edge of the hood looks too sharp." >/dev/null
+on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.36,-0.82;node=Car/Wheel;local=0,0,0;part" --type=Change -c="The front wheels look too small for the body now." >/dev/null
+ROOF=$(on_review --path=/Assets/Models/Car.glb --location="model:-0.25,1.42,0;node=Car/Body;local=-0.25,0.8,0" --type=Question -c="Is the roof meant to be this high now?")
+cm cr comment reply "$ROOF" -c="Yes: the driver sits higher in this one." >/dev/null
+on_review --path=/Assets/Models/Car.glb --location="model:-0.1,0.62,0.9;node=Car/Door_L/Door_Panel;local=-0.55,0,0.04;part" --type=Change -c="The door should open wider: play DoorOpen." >/dev/null
+on_review --path=/Assets/Models/Sign.obj --line=12 --type=Comment -c="Four decimals are plenty here." >/dev/null
+on_review --path=/Assets/Models/Sign.obj --location="model:0.3,1.4,0.105;node=Board;local=0.3,1.4,0.105" --type=Question -c="Does the sign read too low now?" >/dev/null
 # The banner repainted: comments on its newest version, a point and an area, and one answered.
 banner 2 Assets/Art/Banner.png
 checkin "$(text banner "Purple hills [apply-change:${SUN:0:8}]")"
