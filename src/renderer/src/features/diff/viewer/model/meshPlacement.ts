@@ -41,7 +41,10 @@ export function leansPastSkeleton(mesh: PlaceableMesh): boolean {
   if (!isSkinned(mesh)) return false;
   const joints = mesh.skin!.bones.length;
   const { skinIndex, skinWeight } = mesh.attributes;
-  return skinIndex!.some((joint, influence) => joint >= joints && skinWeight![influence] !== 0);
+  for (let influence = 0; influence < skinIndex!.length; influence++) {
+    if (skinIndex![influence]! >= joints && skinWeight![influence] !== 0) return true;
+  }
+  return false;
 }
 
 /**
