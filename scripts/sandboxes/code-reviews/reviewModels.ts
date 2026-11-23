@@ -1,6 +1,7 @@
 // The code-review sandbox's 3D models (`code-reviews.sh`), for comments on models: a car as GLB, its body, four
 // wheels that share one name (a spot names its part by its names, and the point tells same-named siblings apart), a
-// spoiler and a door a take swings open; and a signpost as OBJ, a model written as text. Version 1 is the first
+// spoiler, a door a take swings open, and a roof antenna skinned to three bones that a take bends (a comment on its tip
+// rides the skin, not the antenna's node, which stays put); and a signpost as OBJ, a model written as text. Version 1 is the first
 // check-in; version 2 reshapes the body, moves the front wheels forward, drops the spoiler and lowers the sign.
 // Usage: node reviewModels.mjs <1|2> <workspace>   (bundled by code-reviews.sh with esbuild, as models.sh does)
 
@@ -8,7 +9,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
   AnimationClip,
+  Bone,
   BoxGeometry,
+  Float32BufferAttribute,
   CylinderGeometry,
   Group,
   Mesh,
@@ -16,6 +19,9 @@ import {
   Quaternion,
   QuaternionKeyframeTrack,
   Scene,
+  Skeleton,
+  SkinnedMesh,
+  Uint16BufferAttribute,
   Vector3,
   type BufferGeometry,
   type Object3D,
@@ -90,7 +96,64 @@ async function carGlb(version: Version): Promise<Uint8Array> {
   const doorOpen = new AnimationClip('DoorOpen', 2, [
     new QuaternionKeyframeTrack('Door_L.quaternion', [0, 0.8, 1.2, 2], [...closed.toArray(), ...open.toArray(), ...open.toArray(), ...closed.toArray()]),
   ]);
-  return glb(car, [doorOpen]);
+  const antenna = antennaOf(0.87 + cabinHeight, trim);
+  car.add(antenna.mesh, antenna.bones);
+  return glb(car, [doorOpen, antenna.sway]);
+}
+
+const ANTENNA_HEIGHT = 0.6;
+/** Where the antenna stands on the cabin's roof, towards its back and the driver's side. */
+const ANTENNA_BASE = { x: -1.0, z: 0.45 } as const;
+
+/**
+ * A whip antenna on the roof, `roof` metres up: one mesh skinned to three bones up its length (`Antenna_Base`,
+ * `Antenna_Mid`, `Antenna_Tip`), each vertex shared between the two bones it lies between, so a turn of the upper
+ * bones bends it. Its take, AntennaSway, swings it back and forth and home again.
+ */
+function antennaOf(roof: number, material: MeshStandardMaterial): { mesh: SkinnedMesh; bones: Bone; sway: AnimationClip } {
+  const segment = ANTENNA_HEIGHT / 2;
+  const geometry = new CylinderGeometry(0.008, 0.016, ANTENNA_HEIGHT, 8, 12).translate(0, ANTENNA_HEIGHT / 2, 0);
+  const heights = geometry.getAttribute('position');
+  const joints: number[] = [];
+  const weights: number[] = [];
+  for (let vertex = 0; vertex < heights.count; vertex++) {
+    const along = Math.min(heights.getY(vertex) / segment, 1.999);
+    const lower = Math.floor(along);
+    joints.push(lower, lower + 1, 0, 0);
+    weights.push(1 - (along - lower), along - lower, 0, 0);
+  }
+  geometry.setAttribute('skinIndex', new Uint16BufferAttribute(joints, 4));
+  geometry.setAttribute('skinWeight', new Float32BufferAttribute(weights, 4));
+
+  const base = bone('Antenna_Base', [ANTENNA_BASE.x, roof, ANTENNA_BASE.z]);
+  const middle = bone('Antenna_Mid', [0, segment, 0]);
+  const tip = bone('Antenna_Tip', [0, segment, 0]);
+  base.add(middle);
+  middle.add(tip);
+  const mesh = new SkinnedMesh(geometry, material);
+  mesh.name = 'Antenna';
+  mesh.position.set(ANTENNA_BASE.x, roof, ANTENNA_BASE.z);
+  // Bound where both stand: the skeleton's bones and the mesh at their places, so at rest the antenna is upright.
+  const rig = new Group().add(mesh, base);
+  rig.updateMatrixWorld(true);
+  mesh.bind(new Skeleton([base, middle, tip]));
+  rig.remove(mesh, base);
+
+  const lean = (angle: number) => new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), angle).toArray();
+  const rest = lean(0);
+  const times = [0, 0.6, 1.4, 2];
+  const sway = new AnimationClip('AntennaSway', 2, [
+    new QuaternionKeyframeTrack('Antenna_Mid.quaternion', times, [...rest, ...lean(0.35), ...lean(-0.3), ...rest]),
+    new QuaternionKeyframeTrack('Antenna_Tip.quaternion', times, [...rest, ...lean(0.5), ...lean(-0.45), ...rest]),
+  ]);
+  return { mesh, bones: base, sway };
+}
+
+function bone(name: string, [x, y, z]: [number, number, number]): Bone {
+  const made = new Bone();
+  made.name = name;
+  made.position.set(x, y, z);
+  return made;
 }
 
 /** A signpost as OBJ: a post and a board, one object each, as Blender writes them. */
