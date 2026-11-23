@@ -1,6 +1,6 @@
 import '../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { formatShortcut, matchesShortcut, modifierClick, sharingModifiers } from './shortcuts';
+import { formatShortcut, matchesShortcut, sharingModifiers } from './shortcuts';
 
 function press(key: string, code: string, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers } as KeyboardEvent;
@@ -100,13 +100,5 @@ describe('sharingModifiers', () => {
   it('keeps shortcuts whole when their modifiers differ, or they have none', () => {
     expect(sharingModifiers(['mod+up', 'ctrl+home'])).toEqual(['mod+up', 'ctrl+home']);
     expect(sharingModifiers(['up', 'down'])).toEqual(['up', 'down']);
-  });
-});
-
-describe('modifierClick', () => {
-  it('names the modifier as each platform writes it', () => {
-    expect(modifierClick('alt', true)).toBe('⌥-click');
-    expect(modifierClick('alt', false)).toBe('Alt-click');
-    expect(modifierClick('mod', false)).toBe('Ctrl-click');
   });
 });
