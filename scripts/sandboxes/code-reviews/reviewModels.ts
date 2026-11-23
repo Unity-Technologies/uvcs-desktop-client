@@ -117,7 +117,8 @@ function antennaOf(roof: number, material: MeshStandardMaterial): { mesh: Skinne
   const joints: number[] = [];
   const weights: number[] = [];
   for (let vertex = 0; vertex < heights.count; vertex++) {
-    const along = Math.min(heights.getY(vertex) / segment, 1.999);
+    // Clamped: the cylinder moved up leaves its foot a hair below 0, which would name no bone.
+    const along = Math.min(Math.max(heights.getY(vertex) / segment, 0), 1.999);
     const lower = Math.floor(along);
     joints.push(lower, lower + 1, 0, 0);
     weights.push(1 - (along - lower), along - lower, 0, 0);
