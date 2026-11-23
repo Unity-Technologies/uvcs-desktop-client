@@ -44,7 +44,7 @@ export function NewModelCommentCard({ spot, onSent }: NewModelCommentCardProps) 
         {about && (
           <div className={styles.about}>
             <span className={styles.aboutLabel} aria-hidden>
-              On
+              Comment on
             </span>
             <SegmentedControl<ModelCommentAbout>
               small

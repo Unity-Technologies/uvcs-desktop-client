@@ -33,7 +33,7 @@
   font-size: var(--text-sm);
 }
 
-/* What a model comment is on, the point or its whole part: a row of its own under the kind, introduced by "On", so
+/* What a model comment is on, the point or its whole part: a row of its own under the kind, introduced by "Comment on", so
    the two switches never read as one choice. */
 .about {
   display: flex;
