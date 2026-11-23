@@ -147,7 +147,8 @@ export function writtenPlaceNamesPart(anchor: FileAnchor): boolean {
 
 /**
  * A model's spot in full: the part's whole path from the root, "A point on Car › Wheel", which its name alone may not
- * tell apart. Names the file left empty are left out of it.
+ * tell apart. Names the file left empty are left out of it. " › " joins them, not "/": a part's name can hold a "/"
+ * (the location percent-encodes it), which would read as one more level.
  */
 function modelSpotTip(spot: ModelSpot): string {
   const named = spot.node?.path.filter((name) => name.trim() !== '') ?? [];
