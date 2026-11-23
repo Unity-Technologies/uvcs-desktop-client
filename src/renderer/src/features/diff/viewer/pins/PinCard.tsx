@@ -14,8 +14,9 @@ interface PinCardProps {
 }
 
 /**
- * The opened pin's card, beside it and within the stage, scrolling inside when taller than the room. It's placed
- * after each render from where its pane sits on the stage (`stageCardPlacement`), which only the page knows.
+ * The opened pin's card, beside it and within the stage, scrolling inside when taller than the room; hidden while its
+ * pin is out of view. It's placed after each render from where its pane sits on the stage (`stageCardPlacement`),
+ * which only the page knows.
  */
 export function PinCard({ rect, pane, layer, children }: PinCardProps) {
   const card = useRef<HTMLDivElement>(null);
@@ -24,7 +25,10 @@ export function PinCard({ rect, pane, layer, children }: PinCardProps) {
     const paneBox = pane.getBoundingClientRect();
     const layerBox = layer.getBoundingClientRect();
     const onStage = { x: paneBox.left - layerBox.left, y: paneBox.top - layerBox.top, width: paneBox.width, height: paneBox.height };
-    Object.assign(card.current.style, cardStyleOf(stageCardPlacement(rect, onStage, { width: layer.clientWidth, height: layer.clientHeight })));
+    const placement = stageCardPlacement(rect, onStage, { width: layer.clientWidth, height: layer.clientHeight });
+    // Hidden, never unmounted, while its pin is out of view: a reply being written in it stays.
+    card.current.toggleAttribute('data-off-screen', placement === null);
+    if (placement) Object.assign(card.current.style, cardStyleOf(placement));
   });
   if (!layer) return null;
   return createPortal(

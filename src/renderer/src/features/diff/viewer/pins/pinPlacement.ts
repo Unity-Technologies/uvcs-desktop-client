@@ -76,10 +76,18 @@ export function pinCardPlacement(rect: ScreenRect, viewport: Size, about: Screen
 /**
  * Where the card of a pin at `rect` in one of the stage's panes (`pane`, its box on the stage: Split's two halves, or
  * the whole stage) goes over the whole stage (`pinCardPlacement`): a narrow pane's card may reach over the other pane,
- * rather than being cut off at its edge.
+ * rather than being cut off at its edge. None while the spot is out of its pane, panned or zoomed away: the card hides
+ * with nothing to point at, as a model's does, and shows again as it was (a reply being written in it kept) once the
+ * spot is back.
  */
-export function stageCardPlacement(rect: ScreenRect, pane: ScreenRect, stage: Size): CardPlacement {
+export function stageCardPlacement(rect: ScreenRect, pane: ScreenRect, stage: Size): CardPlacement | null {
+  if (!spotInPane(rect, pane)) return null;
   return pinCardPlacement({ ...rect, x: rect.x + pane.x, y: rect.y + pane.y }, stage);
+}
+
+/** Whether any of a spot (a point, or an area) shows in a pane of its size, its edges included. */
+function spotInPane(spot: ScreenRect, pane: Size): boolean {
+  return spot.x <= pane.width && spot.y <= pane.height && spot.x + spot.width >= 0 && spot.y + spot.height >= 0;
 }
 
 /** A card's place as the style of its element: its edges and sizes, in pixels. */

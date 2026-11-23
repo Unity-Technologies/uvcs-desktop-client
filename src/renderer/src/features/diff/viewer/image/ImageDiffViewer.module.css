@@ -42,3 +42,8 @@
   pointer-events: none;
   overflow: hidden;
 }
+
+/* Its pin panned or zoomed out of view: hidden, still there with what's written in it (`stageCardPlacement`). */
+.cardLayer > [data-off-screen] {
+  visibility: hidden;
+}
