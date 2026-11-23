@@ -1,4 +1,3 @@
-import { ChevronsDownUp } from 'lucide-react';
 import { FoldedComment } from '../../../components/FoldedComment';
 import { ReferenceChip } from '../../../components/comments/ReferenceChip';
 import { RelativeTime } from '../../../ui/RelativeTime';
@@ -34,9 +33,10 @@ export function RoundMarker({
   open: boolean;
   onToggle: () => void;
 }) {
-  // Folded, the line is the verdict: its status's mark and time. Unfolded, it heads what the round held, so a neutral
-  // mark and no time: the status's own event at its end shows them once (repeated, they read as a second review).
-  const Mark = open ? ChevronsDownUp : REVIEW_STATUS_ICONS[round.status];
+  // Folded, the line is the verdict: its status's mark in its color, and its time. Unfolded, it heads what the round
+  // held: the same mark in gray and no time, as the status's own event at its end shows them once in color (both in
+  // color read as a second review; another picture, as noise).
+  const Mark = REVIEW_STATUS_ICONS[round.status];
   const { bold, rest, changeset, counts, label, dotBeforeTime } = roundText(round, user, roundCount, open);
   const comment = roundLineComment(round, open);
   return (

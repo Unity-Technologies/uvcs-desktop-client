@@ -208,8 +208,10 @@
   font-size: var(--text-sm);
 }
 
-/* A foldable thread's band folds it with a click anywhere on it (`rowTakesClick`), as its chevron does. */
-.threadHeader[data-folds] {
+/* A foldable thread's band folds it with a click anywhere on it (`rowTakesClick`), as its chevron does: the hand on
+   both. */
+.threadHeader[data-folds],
+.threadHeader[data-folds] .foldToggle {
   cursor: pointer;
 }
 
@@ -740,6 +742,8 @@ button.pill:hover {
   border-radius: var(--radius-sm);
   background: none;
   color: var(--text-tertiary);
+  /* The hand, as the rest of the line it folds (buttons otherwise show the arrow). */
+  cursor: pointer;
 }
 
 .foldableLine:hover .foldChevron {
