@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, cardPlacement, cardStyleOf, pinBounds, pinCardPlacement, keptCardPlacement, PIN_CARD_WIDTH, stageCardPlacement } from './pinPlacement';
+import { boundsOf, cardPlacement, cardStyleOf, focusLeavesHiddenCard, pinBounds, pinCardPlacement, keptCardPlacement, PIN_CARD_WIDTH, stageCardPlacement } from './pinPlacement';
 
 describe('cardPlacement', () => {
   const VIEWPORT = { width: 1000, height: 600 };
@@ -120,6 +120,17 @@ describe('keptCardPlacement', () => {
 
   it('is placed afresh when there is none held yet', () => {
     expect(keptCardPlacement(null, fresh(PIN), pinBounds(PIN), false)).toEqual(fresh(PIN));
+  });
+});
+
+describe('focusLeavesHiddenCard', () => {
+  it('hands the focus to the stage when a card holding it hides: a hidden card would swallow the keys typed next', () => {
+    expect(focusLeavesHiddenCard(true, true)).toBe(true);
+  });
+
+  it('leaves the focus where it is when the card shows, or when it hides without holding it', () => {
+    expect(focusLeavesHiddenCard(false, true)).toBe(false);
+    expect(focusLeavesHiddenCard(true, false)).toBe(false);
   });
 });
 
