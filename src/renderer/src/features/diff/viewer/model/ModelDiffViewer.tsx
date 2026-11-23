@@ -369,7 +369,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
 
   return (
     <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown} onKeyUp={flyKeys.onKeyUp} onBlur={flyKeys.onBlur}>
-      <div className={styles.stage} ref={stageRef} data-mode={shownMode ?? 'single'} data-commenting={isCommenting || undefined}>
+      <div className={styles.stage} ref={stageRef} data-mode={shownMode ?? 'single'} data-commenting={isCommenting || undefined} data-whole-part={wholePart || undefined}>
         <div ref={canvasHostRef} className={styles.canvasHost} role="img" aria-label="3D view of the model" />
         {annotations && renderer && bounds && !loading && (
           <ModelCommentsOverlay annotations={annotations} renderer={renderer} versions={versions} modelSize={diagonalOf(bounds)} spotAt={spotAt} onPointed={setPointedPin} />

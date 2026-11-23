@@ -46,6 +46,13 @@
   cursor: var(--cursor-aim-comment);
 }
 
+/* Shift held for the whole part: no ring on the surface, so the cursor marks its hot spot with a dot itself, in the
+   same place (a thin part, an antenna, shows which it aims at). */
+.stage[data-commenting][data-whole-part],
+.stage[data-commenting][data-whole-part]:active {
+  cursor: var(--cursor-aim-part);
+}
+
 /* Holds the renderer's canvas, which `useModelRenderer` puts in and takes out. */
 .canvasHost {
   position: absolute;
