@@ -1,6 +1,6 @@
 import { CODE_REVIEW_STATUSES, MERGE_REQUEST_STATES, type CodeReviewStatus, type MergeRequestState } from '@shared/domain/codeReview';
 import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind, ReviewConversation, ReviewEventChange } from '@shared/domain/reviewConversation';
-import { commentedLinesOf } from './commentLocation';
+import { commentedImageSpotOf, commentedLinesOf } from './commentLocation';
 import { foundObjects } from './foundObjects';
 import { integerValue } from './formatRecords';
 
@@ -18,7 +18,7 @@ export interface RawReviewComment {
   revisionId: number;
   itemId: number;
   path: string;
-  /** Where in the file, as the server stores it (`commentedLinesOf`): `-1` when the comment isn't on lines. */
+  /** Where in the file, as the server stores it (`commentedLinesOf`, `commentedImageSpotOf`): `-1` when it's on none. */
   location: string;
   changesetId: number;
   appliedInChangeset: number;
@@ -94,12 +94,16 @@ function commentOf(record: RawReviewComment): ReviewComment {
 }
 
 /**
- * Where a comment is: on lines of a revision, or the whole review. A comment on a whole file, or on a location another
- * client writes (a point of an image), reads as the review's for now: this app shows threads on lines only.
+ * Where a comment is: on lines of a revision, on a spot of its image, or the whole review. A comment on a whole file, or
+ * on a location of a kind this app doesn't read (a point of a 3D model), reads as the review's for now.
  */
 function anchorOf(record: RawReviewComment): ReviewCommentAnchor {
-  const lines = record.revisionId >= 0 ? commentedLinesOf(record.location) : null;
-  return lines ? { kind: 'line', revisionId: record.revisionId, itemId: record.itemId, path: record.path, ...lines } : { kind: 'review' };
+  if (record.revisionId < 0) return { kind: 'review' };
+  const revision = { revisionId: record.revisionId, itemId: record.itemId, path: record.path };
+  const lines = commentedLinesOf(record.location);
+  if (lines) return { kind: 'line', ...revision, ...lines };
+  const spot = commentedImageSpotOf(record.location);
+  return spot ? { kind: 'image', ...revision, spot } : { kind: 'review' };
 }
 
 /** `{modifieddate}` prints the creation date for a comment never edited. */

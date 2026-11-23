@@ -15,8 +15,37 @@ export interface LineRange {
   lastLine: number;
 }
 
-/** Where a comment is: the whole review, or lines of one revision of a file (one line, or a range of them). */
-export type ReviewCommentAnchor = { kind: 'review' } | ({ kind: 'line'; revisionId: number; itemId: number; path: string } & LineRange);
+/** An image's size, in its own pixels. */
+export interface ImageSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * Where on an image a comment is, in the image's own pixels from its top-left corner (x to the right, y down): a point,
+ * or, with a `size`, the area that runs from it.
+ */
+export interface ImageSpot {
+  x: number;
+  y: number;
+  size?: ImageSize;
+}
+
+/** The revision of a file a comment is on, by the item and the path it had there. */
+export interface CommentedRevision {
+  revisionId: number;
+  itemId: number;
+  path: string;
+}
+
+/**
+ * Where a comment is: the whole review, or one revision of a file: its lines (one line, or a range of them) or a spot
+ * of the image it is.
+ */
+export type ReviewCommentAnchor = { kind: 'review' } | ({ kind: 'line' } & CommentedRevision & LineRange) | ({ kind: 'image'; spot: ImageSpot } & CommentedRevision);
+
+/** An anchor on a file: its lines, or a spot of its image. */
+export type FileAnchor = Exclude<ReviewCommentAnchor, { kind: 'review' }>;
 
 export interface ReviewComment {
   id: number;
@@ -37,7 +66,10 @@ export interface ReviewComment {
   appliedInChangeset?: number;
 }
 
-/** The kinds a comment on a line is written as: the reviewer picks one, and it can't change once posted. */
+/**
+ * The kinds a comment on a file (its lines, a spot of its image) is written as: the reviewer picks one, and it can't
+ * change once posted.
+ */
 export type LineCommentKind = Extract<ReviewCommentKind, 'changeRequest' | 'question' | 'comment'>;
 
 /**
@@ -46,6 +78,14 @@ export type LineCommentKind = Extract<ReviewCommentKind, 'changeRequest' | 'ques
  */
 export interface NewLineComment extends LineRange {
   revisionId: number;
+  kind: LineCommentKind;
+  changesetId?: number;
+}
+
+/** Where a new comment on an image goes, and as what: a spot of the revision the review's diff shows, as for lines. */
+export interface NewImageComment {
+  revisionId: number;
+  spot: ImageSpot;
   kind: LineCommentKind;
   changesetId?: number;
 }

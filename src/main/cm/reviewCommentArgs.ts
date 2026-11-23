@@ -1,6 +1,6 @@
-import type { LineCommentKind, NewLineComment } from '@shared/domain/reviewConversation';
+import type { LineCommentKind, NewImageComment, NewLineComment } from '@shared/domain/reviewConversation';
 import type { CmPlace } from './cmPlace';
-import { lineOption } from './commentLocation';
+import { imageLocationOption, lineOption } from './commentLocation';
 
 // Every text goes in a file: a comment holds lines, and a `cm shell` line can't carry quotes or line breaks.
 
@@ -16,6 +16,24 @@ export function addCommentArgs(reviewId: number, textFile: string, at: CmPlace):
  * changesets.
  */
 export function addLineCommentArgs(reviewId: number, comment: NewLineComment, textFile: string, at: CmPlace): string[] {
+  return addFileCommentArgs(reviewId, comment, lineOption(comment), textFile, at);
+}
+
+/**
+ * `cm codereview comment add` on a point or an area of an image (`imageLocationOption`), which `cm` stores as written:
+ * on the revision, as for lines.
+ */
+export function addImageCommentArgs(reviewId: number, comment: NewImageComment, textFile: string, at: CmPlace): string[] {
+  return addFileCommentArgs(reviewId, comment, imageLocationOption(comment.spot), textFile, at);
+}
+
+function addFileCommentArgs(
+  reviewId: number,
+  comment: Pick<NewLineComment, 'revisionId' | 'kind' | 'changesetId'>,
+  locationOption: string,
+  textFile: string,
+  at: CmPlace,
+): string[] {
   return [
     'codereview',
     'comment',
@@ -23,7 +41,7 @@ export function addLineCommentArgs(reviewId: number, comment: NewLineComment, te
     String(reviewId),
     `-commentsfile=${textFile}`,
     `--revision=revid:${comment.revisionId}`,
-    lineOption(comment),
+    locationOption,
     `--type=${CM_COMMENT_TYPES[comment.kind]}`,
     ...(comment.changesetId === undefined ? [] : [`--changeset=cs:${comment.changesetId}`]),
     ...at.repositoryOption,
