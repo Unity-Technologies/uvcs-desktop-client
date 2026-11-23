@@ -927,8 +927,9 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin. Esc closes it too, wherever the keyboard is in
   the Changes tab (the Comments panel, the file list), not only on the stage: a command (`useLeaveCommentCommand`,
   decided by `leaveCommentCommandOf`), so a field, a menu or a dialog keeps its own Esc and Expand Diff's Esc waits for
-  it. Only a viewer with a card open or a spot being marked registers it (`leaveCommentCommands`): the commands keep one
-  per id, and every image and model viewer in the app shares it. Going to a comment leaves the keyboard where it was,
+  it. Only a viewer with a card open or a spot being marked registers it (`leaveCommentCommands`): every image and model
+  viewer in the app uses the same command id, and the commands keep one per id (`registeredCommands`), so an idle
+  viewer registered later would hide this one. Going to a comment leaves the keyboard where it was,
   so N and P keep stepping from the panel. It goes right of the pin, else left, else
   below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
   nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the

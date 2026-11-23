@@ -9,7 +9,7 @@ export type LeaveCommentShortcutId = Extract<ShortcutId, 'imageCommentLeave' | '
 export interface LeaveCommentInput {
   shortcut: LeaveCommentShortcutId;
   state: StageCommenting;
-  /** The diff shows (`ViewShownContext`): not a review's Changes tab behind its conversation. */
+  /** The diff shows (`ViewShownContext`): not behind its review's conversation, nor under a page. */
   shown: boolean;
   apply: (action: LeaveCommentCommand['action']) => void;
 }
