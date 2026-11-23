@@ -330,7 +330,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   any mix of **Draft**, **Open**, **Merged** and **Closed**, each with its glyph in its color, the menu staying open
   so the list shows each change. It rests on Draft and Open (`STILL_TO_MERGE`), the merge requests still to merge, and
   is highlighted on any other mix (`isFilteringStates`). Its label names the states ticked ("Draft or open",
-  "Merged") or says "Any state" with all four (`statesChipLabel`), and its icon is their glyphs side by side. The last
+  "Merged") or says "Any state" with all four (`statesChipLabel`); its icon stays the plain merge request glyph. The last
   state ticked can't be unticked (`toggledState`): a chip with none would show nothing. A code review has no state and
   shows while Draft or Open is ticked: it is still under way, as they are (`matchesStates`). Merged alone or Closed
   alone is the server's (`where mergerequeststatus = 'Merged'`, `serverStateOf`); every other mix asks for no state,

@@ -6,7 +6,7 @@ import { keepMenuOpen, MenuMark } from '../../ui/menu/MenuChoice';
 import menuStyles from '../../ui/menu/Menu.module.css';
 import { MenuChip } from '../../ui/ToggleChip';
 import { MERGE_REQUEST_STATE_ICONS } from './mergeRequestState';
-import { EVERY_STATE, isOnlyState, statesChipLabel, toggledState, type MergeRequestStates } from './mergeRequestStatesFilter';
+import { isOnlyState, statesChipLabel, toggledState, type MergeRequestStates } from './mergeRequestStatesFilter';
 import styles from './MergeRequestStatesChip.module.css';
 
 interface MergeRequestStatesChipProps {
@@ -18,15 +18,15 @@ interface MergeRequestStatesChipProps {
 
 /**
  * The State chip of Merge requests: any mix of Draft, Open, Merged and Closed, each ticked with the menu still open so
- * the list behind it shows each change. The chip shows the states ticked by their glyphs, in their colors, and names
- * them ("Draft or open"); the last one ticked can't be unticked (`toggledState`).
+ * the list behind it shows each change. The menu shows each state's glyph in its color; the chip keeps the plain merge
+ * request glyph and names the states ticked ("Draft or open"). The last one ticked can't be unticked (`toggledState`).
  */
 export function MergeRequestStatesChip({ states, onChange, active }: MergeRequestStatesChipProps) {
   const label = statesChipLabel(states);
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
-        <MenuChip icon={<StateGlyphs states={states} />} active={active} aria-label={`State: ${label}`}>
+        <MenuChip icon={<GitPullRequest size={13} />} active={active} aria-label={`State: ${label}`}>
           {label}
         </MenuChip>
       </DropdownMenu.Trigger>
@@ -62,22 +62,5 @@ export function MergeRequestStatesChip({ states, onChange, active }: MergeReques
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
-  );
-}
-
-/** The glyphs of the states ticked, side by side in their colors; the plain merge request glyph with every state. */
-function StateGlyphs({ states }: { states: MergeRequestStates }) {
-  if (states.length === EVERY_STATE.length) return <GitPullRequest size={13} />;
-  return (
-    <span className={styles.glyphs} aria-hidden>
-      {states.map((state) => {
-        const StateIcon = MERGE_REQUEST_STATE_ICONS[state];
-        return (
-          <span key={state} className={styles.stateIcon} data-state={state}>
-            <StateIcon size={13} />
-          </span>
-        );
-      })}
-    </span>
   );
 }

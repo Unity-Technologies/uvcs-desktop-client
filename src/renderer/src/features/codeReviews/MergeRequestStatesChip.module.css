@@ -1,4 +1,4 @@
-/* Each state's glyph in its color (`--merge-request-<state>`), in the menu and on the chip. */
+/* Each state's glyph in its color (`--merge-request-<state>`), in the menu. */
 .stateIcon {
   composes: stateColor from './mergeRequestStateColors.module.css';
   display: inline-flex;
@@ -10,10 +10,4 @@
 [data-highlighted] > .stateIcon {
   color: inherit;
   opacity: 1;
-}
-
-/* The ticked states' glyphs, close together as one mark. */
-.glyphs {
-  display: inline-flex;
-  gap: 1px;
 }
