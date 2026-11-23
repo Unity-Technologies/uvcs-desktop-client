@@ -58,7 +58,7 @@ import { modelOrientation, type ModelScene } from './modelScene';
 import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
-import { AIM_RING_PIXELS, aimRingPass, aimRingPlacement, type CommentAim } from './commentAim';
+import { AIM_RING_PIXELS, aimRingPass, aimRingPlacement, type AimRingPass, type CommentAim } from './commentAim';
 import { paneOnCanvas, projectorOf, type Projector } from './modelProjection';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, paneOfSideAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Rect, type Side } from './viewLayout';
@@ -500,7 +500,7 @@ export class ModelRenderer {
       const toCss = (value: number) => value / this.pixelRatio;
       this.renderer.setViewport(toCss(pane.viewport.x), toCss(pane.viewport.y), toCss(pane.viewport.width), toCss(pane.viewport.height));
       this.renderer.setScissor(toCss(pane.scissor.x), toCss(pane.scissor.y), toCss(pane.scissor.width), toCss(pane.scissor.height));
-      this.drawSide(side, pane.viewport.width / pane.viewport.height, !pane.overlay);
+      this.drawSide(side, pane.viewport.width / pane.viewport.height, !pane.overlay, aimRingPass(layout.drawn));
     }
   }
 
@@ -515,7 +515,7 @@ export class ModelRenderer {
       this.renderer.setRenderTarget(targets[i]!);
       this.renderer.clear();
       const side = this.sides[pane.side];
-      if (side) this.drawSide(side, this.width / this.height);
+      if (side) this.drawSide(side, this.width / this.height, true, aimRingPass(layout.drawn));
     });
     this.renderer.setClearAlpha(1);
     this.renderer.setRenderTarget(null);
@@ -540,7 +540,7 @@ export class ModelRenderer {
       const side = this.sides[pane.side];
       if (!side) continue;
       side.markers.visible = false;
-      this.drawSide(side, this.width / this.height, false, aimRingPass(layout.drawn) === 'withVersion');
+      this.drawSide(side, this.width / this.height, false, aimRingPass(layout.drawn));
       side.markers.visible = true;
     }
     this.renderer.setClearAlpha(1);
@@ -560,7 +560,11 @@ export class ModelRenderer {
     if (aimRingPass(layout.drawn) === 'afterComparison') this.drawAimOver();
   }
 
-  /** The aim ring alone, over what's drawn (Diffs by look's comparison), where it lies on its version. */
+  /**
+   * The aim ring alone, over what's drawn (Diffs by look's comparison), where it lies on its version. The versions'
+   * depth stays in their own targets, so nothing nearer hides it: at a silhouette, a part in front may not cover its
+   * edge, as it does in the other modes.
+   */
   private drawAimOver(): void {
     const side = this.aim && this.sides[this.aim.side];
     if (!side || !this.aimShown) return;
@@ -582,8 +586,8 @@ export class ModelRenderer {
     }
   }
 
-  /** `withAim`: the aim ring drawn with its version (`aimRingPass`), or left out of it. */
-  private drawSide(side: SideScene, aspect: number, withGrid = true, withAim = true): void {
+  /** `aim`: whether the aim ring is drawn with its version or left out of it, for a pass after (`aimRingPass`). */
+  private drawSide(side: SideScene, aspect: number, withGrid: boolean, aim: AimRingPass): void {
     this.placeCamera(aspect);
     // The key light rides over the camera's right shoulder, so the side facing the viewer is always lit.
     const position = new Vector3(...cameraPositionOf(this.view));
@@ -593,7 +597,7 @@ export class ModelRenderer {
     side.key.target.position.copy(target);
     if (withGrid) side.scene.add(this.grid, this.region);
     else this.grid.removeFromParent();
-    if (withAim) this.placeAimRing(side, side.scene);
+    if (aim === 'withVersion') this.placeAimRing(side, side.scene);
     else if (this.aimRing.parent === side.scene) this.aimRing.removeFromParent();
     side.pivot.visible = withGrid;
     // Under the version drawn with the grid only: Diffs' version before is a ghost, and by look a shadow would compare.
@@ -813,7 +817,7 @@ export class ModelRenderer {
 
 /**
  * The first mesh a ray from the camera meets, testing each triangle on the main thread: where the GPU can't pick
- * (`MeshPicker.supported`). The meshes shown count, solid or wireframe.
+ * (`MeshPicker.supported`). The meshes shown count, whichever twin shows them (`shownToPicking`).
  */
 function raycastHit(raycaster: Raycaster, model: ModelScene): { mesh: number; point: Vector; normal: Vector | null } | null {
   // Through the solid, which shares the geometry and node of whichever twin shows.
