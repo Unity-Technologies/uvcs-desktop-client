@@ -7,7 +7,7 @@ import type { FileThread, ReviewDiffView, ShownFile, ThreadSide } from './fileTh
 import { newSpotComment, newSpotCommentsIn, spotCommentAt, spotCommentSide, type NewSpotComment } from './newSpotComment';
 import type { NewSpotComments } from './newSpotCommentsStore';
 import type { ReviewComments } from './reviewComments';
-import { newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, spotThreadIdsOf, spotThreadOf, threadPinKey, type SpotThreads } from './reviewPins';
+import { newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, spotThreadIdsOf, spotThreadOf, threadPinKey, threadShownWhileHidden, type SpotThreads } from './reviewPins';
 import { SpotThreadCard } from './SpotThreadCard';
 
 /** What the viewer found placing a pin, which its card may say (a model's part not in the version shown). */
@@ -83,12 +83,17 @@ export function useReviewSpotAnnotations<Spot, Thread extends FileThread, Thread
     setOpened({ path: file.path, key: revealed.key });
   }
 
+  // Where the focus was when comments were last hidden (`threadShownWhileHidden`): a thread selected then hides too.
+  const [hiddenAt, setHiddenAt] = useState<{ inCode: boolean; seq: number | null }>({ inCode, seq: null });
+  if (hiddenAt.inCode !== inCode) setHiddenAt({ inCode, seq: inCode ? null : (focus?.seq ?? null) });
+  const shownWhileHidden = threadShownWhileHidden(focus, hiddenAt.seq);
+
   const annotations = useMemo((): SpotAnnotations<Spot, Side, Pin> | null => {
     if (!comments || !view || !spotThreads) return null;
     const open = (key: string | null): void => setOpened(key === null ? null : { path: file.path, key });
     const topSide = topSideOf(file);
     const side = spotCommentSide(file);
-    const pins = kind.pinsOf({ threads: spotThreads, spots, inCode, focusThreadId: focus?.threadId, topSide });
+    const pins = kind.pinsOf({ threads: spotThreads, spots, inCode, focusThreadId: inCode ? focus?.threadId : shownWhileHidden, topSide });
     const threadOfPin = (key: string) => {
       const threadId = pinThreadId(key);
       return threadId === null ? null : spotThreadOf(spotThreads, threadId);
@@ -122,6 +127,6 @@ export function useReviewSpotAnnotations<Spot, Thread extends FileThread, Thread
       },
       reveal,
     };
-  }, [comments, view, spotThreads, spots, inCode, focus, opened, reveal, fileKey, startSpot, moveSpot]);
+  }, [comments, view, spotThreads, spots, inCode, focus, shownWhileHidden, opened, reveal, fileKey, startSpot, moveSpot]);
   return { annotations, threadIds };
 }

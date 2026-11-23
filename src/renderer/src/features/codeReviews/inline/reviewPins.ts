@@ -52,3 +52,12 @@ export function pinRevealedBy(focus: ThreadFocus | null, threads: SpotThreads<Re
 export function openedPin(pins: readonly { key: string }[], opened: { path: string; key: string } | null, path: string): string | null {
   return opened?.path === path && pins.some((pin) => pin.key === opened.key) ? opened.key : null;
 }
+
+/**
+ * The thread whose pin still shows while comments are hidden: one gone to since they were hidden (`hiddenAtSeq`: the
+ * focus's `seq` then, none when nothing was selected), as a line of code opens only when gone to while hidden
+ * (`openedOnFocus`). The one selected when Hide was pressed hides with the rest: Hide is for looking at the diff alone.
+ */
+export function threadShownWhileHidden(focus: ThreadFocus | null, hiddenAtSeq: number | null): number | undefined {
+  return focus && focus.seq !== hiddenAtSeq ? focus.threadId : undefined;
+}
