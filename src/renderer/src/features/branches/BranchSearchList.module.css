@@ -136,7 +136,7 @@
 
 .comment {
   color: var(--text-tertiary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   line-height: 15px;
 }
 
