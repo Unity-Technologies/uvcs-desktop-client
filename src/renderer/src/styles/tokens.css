@@ -140,6 +140,11 @@
      (`CommentPinIcon`), a plus in it, its square tip the point marked. Light's accent fill with a white rim and plus, so
      it reads over any image in either theme; a cursor's image can't read tokens, so its colors are written out here. */
   --cursor-add-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></svg>") 2 22, crosshair;
+  /* The same, drawn up and to the right of its hot spot: aiming at a point of a model, the ring on the surface shows
+     there, clear of it. */
+  --cursor-aim-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(8 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g></svg>") 5 27, crosshair;
+  /* The same with a dot on its hot spot: commenting on a whole part (Shift), with no ring to show the part aimed at. */
+  --cursor-aim-part: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(8 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g><circle cx='5' cy='27' r='2.5' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/></svg>") 5 27, crosshair;
 }
 
 :root,

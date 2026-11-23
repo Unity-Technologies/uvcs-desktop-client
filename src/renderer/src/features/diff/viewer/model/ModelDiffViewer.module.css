@@ -38,9 +38,19 @@
 }
 
 /* Marking a comment's spot: the pointer is the comment's bubble with a plus, as on an image. A drag still turns. */
+/* Commenting: the comment cursor, drawn up and to the right of its hot spot so the ring lying on the surface where a
+   click marks a point (`setCommentAim`) shows whole, its tip on the ring's edge; the same with Shift held, so it never
+   jumps. */
 .stage[data-commenting],
 .stage[data-commenting]:active {
-  cursor: var(--cursor-add-comment);
+  cursor: var(--cursor-aim-comment);
+}
+
+/* Shift held for the whole part: no ring on the surface, so the cursor marks its hot spot with a dot itself, in the
+   same place (a thin part, an antenna, shows which it aims at). */
+.stage[data-commenting][data-whole-part],
+.stage[data-commenting][data-whole-part]:active {
+  cursor: var(--cursor-aim-part);
 }
 
 /* Holds the renderer's canvas, which `useModelRenderer` puts in and takes out. */
