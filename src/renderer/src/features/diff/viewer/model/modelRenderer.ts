@@ -21,6 +21,7 @@ import {
   LineBasicMaterial,
   LineSegments,
   type Material,
+  Matrix3,
   Mesh,
   MeshBasicMaterial,
   NeutralToneMapping,
@@ -344,7 +345,7 @@ export class ModelRenderer {
    * skin, the version blended in most. `only`: that version, wherever its pane is under the point (a comment marked on
    * the version that takes comments, whichever shows there in a swipe or the onion skin).
    */
-  pick(x: number, y: number, only?: Side): { side: Side; key: string | null; point: Vector | null; normal: Vector | null; ray: Ray } | null {
+  pick(x: number, y: number, only?: Side, withNormal = false): { side: Side; key: string | null; point: Vector | null; normal: Vector | null; ray: Ray } | null {
     const layout = this.layout();
     let pane = only ? paneOfSideAt(layout, only, x, y, this.height, this.pixelRatio) : paneAt(layout, x, y, this.height, this.pixelRatio);
     if (!only && layout.drawn === 'blended') pane = layout.panes.find((candidate) => candidate.side === (this.layoutState.blend >= 0.5 ? 'after' : 'before')) ?? null;
@@ -356,7 +357,7 @@ export class ModelRenderer {
     const raycaster = new Raycaster();
     raycaster.setFromCamera(new Vector2(...at.ndc), this.camera);
     const ray: Ray = { origin: raycaster.ray.origin.toArray(), direction: raycaster.ray.direction.toArray() };
-    const hit = this.picker ? this.picker.pick(this.renderer, side.scene, this.camera, at) : raycastHit(raycaster, side.model);
+    const hit = this.picker ? this.picker.pick(this.renderer, side.scene, this.camera, at, withNormal) : raycastHit(raycaster, side.model);
     return { side: pane.side, key: hit ? side.model.meshes[hit.mesh]!.key : null, point: hit?.point ?? null, normal: hit?.normal ?? null, ray };
   }
 
@@ -802,7 +803,8 @@ function raycastHit(raycaster: Raycaster, model: ModelScene): { mesh: number; po
   const [hit]: Intersection[] = raycaster.intersectObjects(shown, false);
   if (!hit) return null;
   // The face's direction in the viewer's space, turned towards the camera (a face seen from behind).
-  const normal = hit.face?.normal.clone().transformDirection(hit.object.matrixWorld) ?? null;
+  // Through the normal matrix: a node scaled unevenly (an FBX's 1, 3, 1) would tilt a direction moved as a point.
+  const normal = hit.face?.normal.clone().applyNormalMatrix(new Matrix3().getNormalMatrix(hit.object.matrixWorld)).normalize() ?? null;
   if (normal && normal.dot(raycaster.ray.direction) > 0) normal.negate();
   return { mesh: model.meshes.findIndex((mesh) => mesh.solid === hit.object), point: hit.point.toArray() as Vector, normal: (normal?.toArray() as Vector | undefined) ?? null };
 }

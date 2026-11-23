@@ -18,7 +18,7 @@ describe('pickWindowAt', () => {
 
 describe('pickedAt', () => {
   it('reads the mesh by its place plus one, and the point of its surface', () => {
-    expect(pickedAt(new Float32Array([1.5, -2, 0.25, 3]))).toEqual({ mesh: 2, point: [1.5, -2, 0.25], normal: null });
+    expect(pickedAt(new Float32Array([1.5, -2, 0.25, 3]), null)).toEqual({ mesh: 2, point: [1.5, -2, 0.25], normal: null });
   });
 
   it('reads the surface’s direction from the second pixel', () => {
@@ -26,7 +26,7 @@ describe('pickedAt', () => {
   });
 
   it('reads nothing where nothing was drawn', () => {
-    expect(pickedAt(new Float32Array(4))).toBeNull();
+    expect(pickedAt(new Float32Array(4), null)).toBeNull();
   });
 });
 

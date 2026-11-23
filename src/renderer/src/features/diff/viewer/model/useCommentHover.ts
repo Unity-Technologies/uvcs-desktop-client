@@ -17,7 +17,10 @@ interface CommentHoverOptions {
   renderer: Pick<ModelRenderer, 'moves' | 'onFrameDrawn'> | null;
   /** Commenting, and the stage takes comments: hovering shows nothing otherwise. */
   enabled: boolean;
-  /** The part under a point of the stage (CSS pixels from its top left), or none. */
+  /**
+   * The part under a point of the stage (CSS pixels from its top left), or none; picking it also places the ring where a
+   * click would mark a point (`setCommentAim`), which shows only while `aimShownWhileCommenting` says so.
+   */
   partAt: (x: number, y: number) => HoveredPart | null;
 }
 

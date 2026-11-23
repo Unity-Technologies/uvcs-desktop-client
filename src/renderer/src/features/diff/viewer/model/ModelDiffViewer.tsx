@@ -212,7 +212,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const partAt = useCallback(
     (x: number, y: number) => {
       if (!commentsOn) return null;
-      const hit = renderer?.pick(x, y, commentsOn) ?? null;
+      const hit = renderer?.pick(x, y, commentsOn, true) ?? null;
       // Where a click would mark a point: the ring on the surface there (`aimRingPlacement`).
       renderer?.setCommentAim(commentsOn, hit?.point ? { point: hit.point, normal: hit.normal } : null);
       return hoveredPartOf(hit, versions[commentsOn], lookDifferences);

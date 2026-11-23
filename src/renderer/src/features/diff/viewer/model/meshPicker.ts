@@ -1,6 +1,7 @@
 // What is under the pointer, read on the GPU: the side's pickable meshes drawn into one float pixel through a camera
 // narrowed to the window under the pointer (`pickWindowAt`), each writing where its surface is and which mesh it is
-// (`pickedAt`). Three's `Raycaster` tested every triangle of a mesh on the main thread: a wheel notch, a click or a pan
+// (`pickedAt`), and into a second pixel of the same draw the face's direction there (`normalAt`, from how the point
+// changes across the pixel; float32 points, so a model far from the origin seen from afar gets a rougher one). Three's `Raycaster` tested every triangle of a mesh on the main thread: a wheel notch, a click or a pan
 // on a 3-million-triangle model froze the view for 150 ms. Drawn so, a pick costs one draw of what the narrowed
 // camera sees (three culls every mesh whose bounds miss the window) and one pixel read back, and it picks what is
 // drawn: a skinned mesh posed by a take, a blendshape, exactly as shown, and only the faces its material draws (a
@@ -59,8 +60,12 @@ export class MeshPicker {
     geometry.dispose();
   }
 
-  /** The mesh of `scene` seen through `camera` at the window, and the point of it there; null where none is. */
-  pick(renderer: WebGLRenderer, scene: Scene, camera: PerspectiveCamera, at: PickWindow): { mesh: number; point: [number, number, number]; normal: [number, number, number] | null } | null {
+  /**
+   * The mesh of `scene` seen through `camera` at the window, and the point of it there; null where none is. With
+   * `withNormal`, the surface's direction there too: a second pixel read back, so only for who uses it (the ring
+   * aiming a comment), not each click, zoom or pin's occlusion.
+   */
+  pick(renderer: WebGLRenderer, scene: Scene, camera: PerspectiveCamera, at: PickWindow, withNormal = false): { mesh: number; point: [number, number, number]; normal: [number, number, number] | null } | null {
     this.camera.copy(camera);
     this.camera.layers.set(PICK_LAYER);
     this.camera.setViewOffset(at.full.width, at.full.height, at.offset.x, at.offset.y, 1, 1);
@@ -75,13 +80,13 @@ export class MeshPicker {
       renderer.clear();
       renderer.render(scene, this.camera);
       renderer.readRenderTargetPixels(this.target, 0, 0, 1, 1, this.pixel, undefined, 0);
-      renderer.readRenderTargetPixels(this.target, 0, 0, 1, 1, this.normalPixel, undefined, 1);
+      if (withNormal) renderer.readRenderTargetPixels(this.target, 0, 0, 1, 1, this.normalPixel, undefined, 1);
     } finally {
       scene.overrideMaterial = override;
       renderer.setRenderTarget(target);
       renderer.setClearColor(clearColor, clearAlpha);
     }
-    return pickedAt(this.pixel, this.normalPixel);
+    return pickedAt(this.pixel, withNormal ? this.normalPixel : null);
   }
 
   dispose(): void {
