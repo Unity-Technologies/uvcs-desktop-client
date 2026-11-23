@@ -14,9 +14,12 @@ export interface ThreadCardFold {
  */
 export type ThreadCardFoldEvent = 'toggle' | 'unfold' | 'editRoot' | 'editorOpened';
 
-/** A settled thread starts folded (`startsFolded`), unless it's gone to (`highlight`), which shows it whole. */
-export function initialThreadCardFold(thread: Pick<ReviewThread, 'state'>, highlight: number | undefined): ThreadCardFold {
-  return { folded: startsFolded(thread) && highlight === undefined, editsRoot: false };
+/**
+ * A settled thread starts folded (`startsFolded`), unless it's gone to (`highlight`), which shows it whole, or an answer
+ * to it was left unsent (`answerShownOnReturn`), which shows open under it.
+ */
+export function initialThreadCardFold(thread: Pick<ReviewThread, 'state'>, highlight: number | undefined, hasAnswerDraft = false): ThreadCardFold {
+  return { folded: startsFolded(thread) && highlight === undefined && !hasAnswerDraft, editsRoot: false };
 }
 
 export function nextThreadCardFold(state: ThreadCardFold, event: ThreadCardFoldEvent): ThreadCardFold {

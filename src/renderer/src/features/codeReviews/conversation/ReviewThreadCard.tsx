@@ -1,8 +1,9 @@
 import { ChevronRight, X } from 'lucide-react';
-import { placeId } from '@shared/domain/place';
+import { placeId, type Place } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
+import { useCommentDraftStore } from '../../../components/commentDraftStore';
 import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
@@ -23,6 +24,7 @@ import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction } from './threadBadges';
 import { initialThreadCardFold, nextThreadCardFold } from './threadCardFold';
+import { answerOpenedByHand, answerShownOnReturn, type AnswerBox, type AnswerDrafts } from './threadAnswer';
 import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, threadElementId, type AnswerLight, type ShownCommentLight } from './threadPick';
 import { foldsByHand, hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
@@ -71,8 +73,6 @@ export interface ThreadInCode {
   hide?: { label: string; onHide: () => void };
 }
 
-type Answering = 'reply' | 'discard' | null;
-
 /**
  * A comment and its replies as one card. A change request, a question or a comment on a line has a header band: its
  * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. Any card with
@@ -80,7 +80,10 @@ type Answering = 'reply' | 'discard' | null;
  * (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
-  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight));
+  const place = usePlace();
+  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () =>
+    initialThreadCardFold(thread, highlight, answerShownOnReturn(answerDraftsOf(place, thread), canDiscard(thread, user)).answering !== null),
+  );
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
   const [answerShown, setAnswerShown] = useState<AnswerLight | null>(null);
@@ -415,7 +418,9 @@ interface WholeThreadProps {
 
 function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEditorOpened, lit, commentIds }: WholeThreadProps) {
   const place = usePlace();
-  const [answering, setAnswering] = useState<Answering>(null);
+  // An answer left unsent opens again with its words as the thread shows again; only one opened by hand takes the focus.
+  const [{ answering, focuses }, setAnswerBox] = useState<AnswerBox>(() => answerShownOnReturn(answerDraftsOf(place, thread), canDiscard(thread, user)));
+  const closeAnswer = (): void => setAnswerBox({ answering: null, focuses: false });
   const { root, replies } = thread;
 
   return (
@@ -441,13 +446,13 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
             placeholder="Reply"
             label="Reply"
             submitLabel="Reply"
-            autoFocus
+            autoFocus={focuses}
             onSubmit={async (text) => {
               const sent = await replyToComment(place, root, text);
-              if (sent) setAnswering(null);
+              if (sent) closeAnswer();
               return sent;
             }}
-            onCancel={() => setAnswering(null)}
+            onCancel={closeAnswer}
           />
         )}
         {answering === 'discard' && (
@@ -457,22 +462,22 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
             label="Why the change request is discarded"
             submitLabel="Discard change request"
             danger
-            autoFocus
+            autoFocus={focuses}
             onSubmit={async (text) => {
               const sent = await discardChangeRequest(place, root, text);
-              if (sent) setAnswering(null);
+              if (sent) closeAnswer();
               return sent;
             }}
-            onCancel={() => setAnswering(null)}
+            onCancel={closeAnswer}
           />
         )}
         {answering === null && (
           <div className={styles.answerButtons}>
-            <button type="button" className={styles.replyPrompt} onClick={() => setAnswering('reply')}>
+            <button type="button" className={styles.replyPrompt} onClick={() => setAnswerBox(answerOpenedByHand('reply'))}>
               Reply…
             </button>
             {canDiscard(thread, user) && (
-              <Button size="small" variant="ghost" onClick={() => setAnswering('discard')}>
+              <Button size="small" variant="ghost" onClick={() => setAnswerBox(answerOpenedByHand('discard'))}>
                 Discard…
               </Button>
             )}
@@ -481,4 +486,13 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
       </div>
     </>
   );
+}
+
+/** The thread's answers left unsent, as the store holds them when its card mounts. */
+function answerDraftsOf(place: Place, { root }: Pick<ReviewThread, 'root'>): AnswerDrafts {
+  const { drafts } = useCommentDraftStore.getState();
+  return {
+    reply: drafts[commentDraftKey(placeId(place), 'reviewReply', root.guid)],
+    discard: drafts[commentDraftKey(placeId(place), 'reviewDiscard', root.guid)],
+  };
 }
