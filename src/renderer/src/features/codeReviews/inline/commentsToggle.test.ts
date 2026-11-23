@@ -5,6 +5,7 @@ describe('commentsToggleLabel', () => {
   it('says which way it goes, and where', () => {
     expect(commentsToggleLabel(true, 'code')).toBe('Hide comments in the code');
     expect(commentsToggleLabel(false, 'image')).toBe('Show comments on the image');
+    expect(commentsToggleLabel(true, 'model')).toBe('Hide comments on the model');
     expect(commentsToggleLabel(true, 'both')).toBe('Hide comments');
   });
 });

@@ -10,7 +10,8 @@ import { ReviewCommentsContext } from './reviewComments';
 import { comparedFile, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
-import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
+import { modelThreadsOfFile, reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
+import { spotThreadIdsOf } from './reviewPins';
 import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
@@ -161,9 +162,14 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
   const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
 
-  // Where the file's comments are, and, for a file shown either as code or as an image (an SVG), which view a thread
-  // gone to is on.
-  const summary = useMemo(() => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, focus, reviewId: comments?.review.id ?? 0 }), [fileComments, onImage.threadIds, focus, comments?.review.id]);
+  const modelThreadIds = useMemo(() => spotThreadIdsOf(threads && comments && view ? modelThreadsOfFile(threads, comments.review.target, view, file) : null), [threads, comments?.review.target, fileKey]);
+
+  // Where the file's comments are, and, for a file shown either as code or as what it draws (an SVG, an OBJ), which
+  // view a thread gone to is on.
+  const summary = useMemo(
+    () => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, modelThreadIds, focus, reviewId: comments?.review.id ?? 0 }),
+    [fileComments, onImage.threadIds, modelThreadIds, focus, comments?.review.id],
+  );
   const representationComments = summary.representation;
 
   const controls = summary.hidden && <CommentsInCodeButton shown={inCode} onChange={setInCode} place={summary.hidden} />;
