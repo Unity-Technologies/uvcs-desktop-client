@@ -12,6 +12,10 @@ describe('modelCommentAboutOf', () => {
   it('offers nothing for a point on no part', () => {
     expect(modelCommentAboutOf({ point: { x: 1, y: 2, z: 3 } })).toBeNull();
   });
+
+  it('offers nothing for a point on a part the file left unnamed, which "part" could not name', () => {
+    expect(modelCommentAboutOf({ point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', ''] } })).toBeNull();
+  });
 });
 
 describe('spotAbout', () => {
