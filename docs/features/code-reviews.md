@@ -939,7 +939,7 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
 - **Hidden.** The header's comment button hides the pins, to look at the image alone; one gone to still shows.
 - **An SVG** shows as code or as the image it draws (docs/features/diff.md "Images written as text"): comments on its
   lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
-  comments are on the image", Show image: `otherRepresentationNotice`), and going to a comment shows the view it's on
-  (`representationCommentsOf`, `RepresentationCommentsContext`).
+  comments are on the image", Show image: `otherRepresentationNotice`), and going to a comment shows the view it's on, for that
+  file only (`representationCommentsOf`, `RepresentationCommentsContext`).
 - **Not yet**: EXIF orientation (a rotated JPEG's comments are in the pixels as shown, not as stored), and a pin moved
   once posted (it needs `cm codereview comment edit` to take a location).

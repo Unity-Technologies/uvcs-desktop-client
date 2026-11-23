@@ -999,7 +999,9 @@ makes each into an image the browser paints before anything shows it (`usePainta
 An SVG reads as both (`toFileContent` ships its text and its image; past the text cap,
 only the image), so its diff shows rendered or as text, with a "Code | Image" switch in the header remembered per
 extension (`representations`, rendered by default). A place's comments on it (`RepresentationCommentsContext`) say
-how many the other view holds, with the switch to it, and one gone to shows its own view (`otherRepresentationNotice`). The text keeps every text feature (editing, discarding, the
+how many the other view holds, with the switch to it (`otherRepresentationNotice`), and one gone to shows its own
+view, for that file while it shows, once (`askToTake`, `shownRepresentation`): the user's choice for the type stays as
+it was. The text keeps every text feature (editing, discarding, the
 comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`
 (no scripts, nothing fetched), and one declaring a huge size is drawn within 16 MP (`decodedSize`).
 

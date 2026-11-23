@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { otherRepresentationNotice } from './representationComments';
+import { askToTake, otherRepresentationNotice, shownRepresentation } from './representationComments';
 
 describe('otherRepresentationNotice', () => {
   it("says how many comments the image holds while the code shows, and the way to them", () => {
@@ -13,5 +13,23 @@ describe('otherRepresentationNotice', () => {
   it('says nothing when the other way holds none, or outside a review', () => {
     expect(otherRepresentationNotice('text', { onText: 4, onImage: 0, asked: null })).toBeNull();
     expect(otherRepresentationNotice('image', null)).toBeNull();
+  });
+});
+
+describe('askToTake', () => {
+  it('takes an ask once', () => {
+    const asked = { representation: 'image' as const, seq: 4 };
+    expect(askToTake(asked, null)).toBe(asked);
+    expect(askToTake(asked, 4)).toBeNull();
+    expect(askToTake(null, 3)).toBeNull();
+  });
+});
+
+describe('shownRepresentation', () => {
+  it("shows the view asked for the versions shown, else the user's for the type", () => {
+    const override = { versionsKey: 'a', representation: 'image' };
+    expect(shownRepresentation('text', override, 'a')).toBe('image');
+    expect(shownRepresentation('text', override, 'b')).toBe('text');
+    expect(shownRepresentation('text', null, 'a')).toBe('text');
   });
 });

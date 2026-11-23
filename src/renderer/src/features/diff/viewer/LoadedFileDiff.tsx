@@ -16,10 +16,11 @@ import { DiffFrameHostContext, diffContentsKey, type DiffFrameHost } from './dif
 import type { ChangeView } from './changeView';
 import { diffBodyOf, stepsCanCome } from './diffBody';
 import { diffDiscards } from './diffDiscards';
-import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines, type Representation } from './diffPresentation';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
-import { otherRepresentationNotice, RepresentationCommentsContext } from './representationComments';
+import { askToTake, otherRepresentationNotice, RepresentationCommentsContext, shownRepresentation } from './representationComments';
+import { useRepresentationAsksStore } from './representationAsksStore';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { hasLineTooLongToDraw } from './longLines';
@@ -88,7 +89,24 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const twoRepresentations = hasTwoRepresentations(left, right);
   const rendered = renderedRepresentation(left, right) ?? 'image';
   const extension = extensionOf(fileName)?.toLowerCase() ?? '';
-  const representation = representations[extension] ?? rendered;
+  // A place's comments on a file shown either way (a review's on an SVG): one gone to shows the view it's on, for this
+  // file while it shows, leaving the user's choice for the type as it was; each view says how many the other holds.
+  const representationComments = useContext(RepresentationCommentsContext);
+  const versionsKey = diffContentsKey(contents.original, contents.modified);
+  const [override, setOverride] = useState<{ versionsKey: string; representation: Representation } | null>(null);
+  const takenAsk = useRepresentationAsksStore((state) => state.taken);
+  const takeAsk = useRepresentationAsksStore((state) => state.take);
+  const ask = askToTake(twoRepresentations ? representationComments?.asked : null, takenAsk);
+  useEffect(() => {
+    if (!ask) return;
+    takeAsk(ask.seq);
+    setOverride({ versionsKey, representation: ask.representation });
+  }, [ask?.seq]);
+  const representation = shownRepresentation(representations[extension] ?? rendered, override, versionsKey);
+  const chooseRepresentation = (value: Representation): void => {
+    setOverride(null);
+    setRepresentation(extension, value);
+  };
   const presentation = diffPresentation(left, right, representation);
   const isText = presentation.kind === 'text';
   // A model's .meta shows as the model under its import settings where the model can be found beside it, unless the
@@ -96,8 +114,7 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const findSibling = useContext(SiblingFinderContext);
   // Where neither side's model was beside it after all (in History, a .meta moved since: `metaModelView`), the .meta is
   // its text, as any other, arrows and notices included; told by ModelMetaDiff once read, for these versions only.
-  // The versions shown, as a key: what a model's absence is told for, and whose this diff's navigation is.
-  const versionsKey = diffContentsKey(contents.original, contents.modified);
+  // The versions shown (`versionsKey`, above) are what a model's absence is told for, and whose this diff's navigation is.
   const [modelAbsentFor, setModelAbsentFor] = useState<string | null>(null);
   const modelFound = modelAbsentFor !== versionsKey;
   const metaModel = isText && modelFound && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
@@ -136,22 +153,15 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
   useShortcut(hotkey('editFile'), () => buffer.editor.current?.focus(), editable);
 
-  // A place's comments on a file shown either way (a review's on an SVG): one gone to shows the way it's on, and each
-  // way says how many the other holds (`otherRepresentationNotice`).
-  const representationComments = useContext(RepresentationCommentsContext);
-  const askedRepresentation = twoRepresentations ? representationComments?.asked : undefined;
-  useEffect(() => {
-    if (askedRepresentation) setRepresentation(extension, askedRepresentation.representation);
-  }, [askedRepresentation?.seq]);
   const otherWay = twoRepresentations ? otherRepresentationNotice(representation === 'text' ? 'text' : 'image', representationComments) : null;
   const otherWayNotice = otherWay && (
-    <DiffNotice tone="info" icon={<MessageSquare size={13} />} action={<Button size="small" onClick={() => setRepresentation(extension, otherWay.showing)}>{otherWay.action}</Button>}>
+    <DiffNotice tone="info" icon={<MessageSquare size={13} />} action={<Button size="small" onClick={() => chooseRepresentation(otherWay.showing)}>{otherWay.action}</Button>}>
       {otherWay.text}
     </DiffNotice>
   );
 
   const representationSwitch = twoRepresentations && (
-    <RepresentationSwitch value={representation === 'text' ? 'text' : rendered} rendered={rendered} onChange={(value) => setRepresentation(extension, value)} />
+    <RepresentationSwitch value={representation === 'text' ? 'text' : rendered} rendered={rendered} onChange={chooseRepresentation} />
   );
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
   // of the others. The change arrows aren't controls: the frame draws them last, at the header's right edge, in the

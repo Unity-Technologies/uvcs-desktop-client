@@ -29,3 +29,16 @@ export function otherRepresentationNotice(shown: CommentedRepresentation, commen
   const where = other === 'image' ? 'the image' : 'the code';
   return { text: `${pluralize(count, 'comment')} ${count === 1 ? 'is' : 'are'} on ${where}`, action: other === 'image' ? 'Show image' : 'Show code', showing: other };
 }
+
+/**
+ * The view a comment gone to asks for, unless an earlier showing of the file took it already (`takenSeq`): it applies
+ * once, to the diff on screen, so going elsewhere and back finds the file as the user left it, not switched again.
+ */
+export function askToTake(asked: RepresentationComments['asked'] | undefined, takenSeq: number | null): RepresentationComments['asked'] {
+  return asked && asked.seq !== takenSeq ? asked : null;
+}
+
+/** The view shown: one asked for this file's versions (`versionsKey`) while it shows, else the user's for its type. */
+export function shownRepresentation<T extends string>(preferred: T, override: { versionsKey: string; representation: T } | null, versionsKey: string): T {
+  return override?.versionsKey === versionsKey ? override.representation : preferred;
+}
