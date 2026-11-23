@@ -3,6 +3,7 @@
 
 import { Quaternion, Vector3 } from 'three';
 import type { Vector } from './orbitCamera';
+import type { Layout } from './viewLayout';
 
 /** The ring's size on screen, in CSS pixels across. */
 export const AIM_RING_PIXELS = 14;
@@ -41,3 +42,15 @@ export function aimRingPlacement(aim: CommentAim, camera: Vector, fovDegrees: nu
 
 /** How far off the surface the ring sits, as a share of its distance from the camera. */
 const LIFT_SHARE = 0.002;
+
+/** When the ring is drawn: in its version's scene, or alone after every version is drawn. */
+export type AimRingPass = 'withVersion' | 'afterComparison';
+
+/**
+ * When the ring is drawn, for every layout (`ModelRenderer.drawSide` asks it for each version drawn): with the version it
+ * lies on, where the versions reach the canvas straight or blended; over Diffs by look once the versions are compared,
+ * since drawn into a version it would compare as a change.
+ */
+export function aimRingPass(drawn: Layout['drawn']): AimRingPass {
+  return drawn === 'compared' ? 'afterComparison' : 'withVersion';
+}
