@@ -804,7 +804,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
     and a row goes there. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): who started it, "line N"
     and its replies, then the conversation's pill (its kind's icon and its state, **Comment** for a plain one); its
     first words under them, as wide as the row. A line number in a column of its own read as an id, and the icon beside the words took their room. In a narrow
-    panel, who started it is cut first, then the replies, the line last. The one gone to has the accent bar on its left.
+    panel, who started it is cut first, then the replies, the line last; a place naming a model's part ("point on
+    Wheel", `writtenPlaceNamesPart`) can be long, so it's cut first instead, at most half the row. The one gone to has
+    the accent bar on its left.
   - **Newest first** and **Oldest first**: by the latest comment or reply in each thread, so a reply brings an old
     thread up; one list, as the conversation sums up a settled thread (`ThreadSummaryCard`; its file and line only name
     where it goes, cut short in turn, the folder first, then the line, the file's name last, and whole in a tooltip).

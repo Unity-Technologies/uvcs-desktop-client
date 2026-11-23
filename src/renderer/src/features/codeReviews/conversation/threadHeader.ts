@@ -1,5 +1,5 @@
 import type { ReviewThread } from './reviewThreads';
-import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceText, writtenPlaceTip, type ThreadBadges, type ThreadKindName } from './threadBadges';
+import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceNamesPart, writtenPlaceText, writtenPlaceTip, type ThreadBadges, type ThreadKindName } from './threadBadges';
 
 /**
  * Where a thread's card is: the conversation's timeline, the code of the Changes tab (`ThreadInCode`), or the Comments
@@ -83,6 +83,8 @@ export interface ThreadHeaderView {
   writtenPlace: string | null;
   /** What hovering it says (`writtenPlaceTip`); null with no place. */
   writtenPlaceTip: string | null;
+  /** Whether the place names a model's part (`writtenPlaceNamesPart`), which a narrow row cuts before who wrote it. */
+  writtenPlaceNamesPart: boolean;
   pill: HeaderPill | null;
   hides: boolean;
 }
@@ -115,6 +117,7 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     replies: folded ? (repliesText(thread) ?? null) : null,
     writtenPlace: namesPlace ? writtenPlaceText(anchor) : null,
     writtenPlaceTip: namesPlace ? writtenPlaceTip(anchor) : null,
+    writtenPlaceNamesPart: anchor !== null && writtenPlaceNamesPart(anchor),
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };

@@ -186,7 +186,7 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
           <Highlight text={displayName(author)} />
         </span>
         {header.writtenPlace && (
-          <span className={styles.rowPlace} data-tip={header.writtenPlaceTip ?? undefined}>
+          <span className={styles.rowPlace} data-tip={header.writtenPlaceTip ?? undefined} data-names-part={header.writtenPlaceNamesPart || undefined}>
             {header.writtenPlace}
           </span>
         )}

@@ -125,10 +125,24 @@ export function modelSpotWords(spot: ModelSpot): string {
  * The name is the location's own: no file is read.
  */
 function modelSpotText(spot: ModelSpot): string {
-  const name = modelPartName(spot);
+  const name = tellingPartName(spot);
   const words = modelSpotWords(spot);
-  if (name === null || partNameSaysNothing(name)) return words;
+  if (name === null) return words;
   return spot.wholePart ? `${words} ${name}` : `${words} on ${name}`;
+}
+
+/** The name of the part a model's spot is on when it tells a reader something: none for no name or an exporter's. */
+export function tellingPartName(spot: ModelSpot): string | null {
+  const name = modelPartName(spot);
+  return name === null || partNameSaysNothing(name) ? null : name;
+}
+
+/**
+ * Whether where a comment was written names a model's part (`writtenPlaceText`): a name as long as an artist made it,
+ * which a narrow row cuts before who wrote it, where "line 42" or "point" stays whole.
+ */
+export function writtenPlaceNamesPart(anchor: FileAnchor): boolean {
+  return anchor.kind === 'model' && tellingPartName(anchor.spot) !== null;
 }
 
 /**
