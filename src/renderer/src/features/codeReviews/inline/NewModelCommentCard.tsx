@@ -1,7 +1,9 @@
 import { Box, LocateFixed } from 'lucide-react';
+import { useRef } from 'react';
 import { placeId } from '@shared/domain/place';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { commentDraftKey } from '../../../components/DetailsHeading';
+import type { CommentFieldHandle } from '../../../components/commentEditor/commentFieldProps';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { CommentComposer } from '../conversation/CommentComposer';
@@ -9,6 +11,7 @@ import { addModelComment } from '../conversation/reviewCommentOperations';
 import { modelSpotWords } from '../conversation/threadBadges';
 import { conversationReadAt, conversationReadSince } from '../conversation/useReviewConversation';
 import { CommentKindSwitch } from './CommentKindSwitch';
+import { returnsToFieldAfterPick } from './focusAfterPick';
 import { modelCommentAboutOf, spotAbout, type ModelCommentAbout } from './modelCommentAbout';
 import { lineCommentWords } from './newLineComment';
 import type { NewModelCommentSpot } from './newSpotComment';
@@ -33,13 +36,14 @@ export function NewModelCommentCard({ spot, onSent }: NewModelCommentCardProps) 
   const moveTo = useNewModelCommentsStore((state) => state.moveTo);
   const close = useNewModelCommentsStore((state) => state.close);
   const { kind } = spot.comment;
+  const field = useRef<CommentFieldHandle>(null);
   const words = lineCommentWords(kind);
   const about = modelCommentAboutOf(spot.comment.spot);
   return (
     <CommentedFileContext.Provider value={spot.path}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} />
+          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} field={field} />
         </div>
         {about && (
           <div className={styles.about}>
@@ -54,11 +58,15 @@ export function NewModelCommentCard({ spot, onSent }: NewModelCommentCardProps) 
                 { value: 'point', label: <><LocateFixed size={12} aria-hidden />Point</>, title: 'This point of the surface' },
                 { value: 'part', label: <><Box size={12} aria-hidden /><span className={styles.partName}>{about.partName}</span></>, title: `The whole part: ${about.partName}` },
               ]}
-              onChange={(picked) => moveTo(spot.key, spotAbout(spot.comment.spot, picked))}
+              onChange={(picked, pick) => {
+                moveTo(spot.key, spotAbout(spot.comment.spot, picked));
+                if (returnsToFieldAfterPick(pick)) field.current?.focus();
+              }}
             />
           </div>
         )}
         <CommentComposer
+          fieldRef={field}
           fieldClassName={styles.field}
           draftKey={commentDraftKey(placeId(place), 'reviewLineComment', spot.key)}
           placeholder={words.placeholder}

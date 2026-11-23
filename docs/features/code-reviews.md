@@ -875,7 +875,10 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   threads, its lines outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
   as the official client's: it's written where it's read. Its kind comes first, as it can't change once posted: Change
   request (the default, `DEFAULT_LINE_COMMENT_KIND`), Question or Comment, the placeholder and the button following it
-  ("Request change", "Ask question", "Comment": `lineCommentWords`). ⌘↵ sends it at once, as every comment is (`cm
+  ("Request change", "Ask question", "Comment": `lineCommentWords`). A kind clicked gives the focus back to the text,
+  its caret where it was, so typing goes on; picked with keys (← →, Space), the focus stays on the switch, as in any
+  radio group (`returnsToFieldAfterPick`, `segmentPickOfClick`). The cards on an image and a model do the same, and a
+  model's "Point" or part too. ⌘↵ sends it at once, as every comment is (`cm
   codereview comment add <id> --revision=revid:N --line=L|A-B --type=Change|Question|Comment`, and `--changeset=cs:N`
   on one changeset picked in the list, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
   thread, opened even while comments are hidden (`openedOnSend`): the card stays, sending, until the conversation read

@@ -84,7 +84,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
     <CommentedFileContext.Provider value={spot.path}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} />
+          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} field={field} />
           <Tooltip content={suggest.tip}>
             <Button size="small" variant="ghost" className={styles.suggest} icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={suggestAtCaret}>
               Suggest change
