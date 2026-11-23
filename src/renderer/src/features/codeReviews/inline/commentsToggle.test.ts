@@ -8,7 +8,7 @@ describe('commentsToggleLabel', () => {
   });
 
   it("says the comment dialog's button hides or shows its thread in the code", () => {
-    expect(commentsToggleLabel(true, 'thisCode')).toBe('Hide comments in the code');
-    expect(commentsToggleLabel(false, 'thisCode')).toBe('Show comments in the code');
+    expect(commentsToggleLabel(true, 'thisThread')).toBe('Hide comments in the code');
+    expect(commentsToggleLabel(false, 'thisThread')).toBe('Show comments in the code');
   });
 });
