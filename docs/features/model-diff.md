@@ -191,8 +191,8 @@ only what changes:
 - **Meshes drawn alike share their materials** (`SceneMaterials`): one clay material per slot name and emphasis (lit,
   faded, plain: `emphasisOf`), one wire material per emphasis, one heat and one ghost. A material each made three
   refresh every material's uniforms for every mesh, each frame. The look sets each shared material's color once.
-- **Picking reads the GPU** (`MeshPicker`): the side's meshes shown (solid, wireframe, or Diffs' heat and ghost
-  twins: `drawnTwinsOf`, `shownToPicking`; picked by the solid alone, Diffs picked nothing) are drawn into one float
+- **Picking reads the GPU** (`MeshPicker`): the side's meshes shown, whichever way they're drawn (solid, wireframe, or
+  Diffs' heat and ghost twins: `drawnTwinsOf`, `shownToPicking`), are drawn into one float
   pixel through the camera narrowed to the point under the pointer (`pickWindowAt`, three's `setViewOffset`, which
   culls every mesh whose bounds miss it), writing where the surface is and which mesh it is (`pickedAt`), deformed as
   drawn, and in a second pixel of the same draw the face's direction there, from how the point changes across the
@@ -401,10 +401,10 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`). The comment cursor is drawn up and to the right of its hot
   spot, its tip on the ring's edge, so it covers nothing it marks (`--cursor-aim-comment`); with Shift, with no ring,
   it marks the hot spot with a dot of its own, in the same place, so it never jumps (`--cursor-aim-part`).
-  A part is never lit while a click would mark a point, so the light never promises the whole part. Nothing over empty space, a pin, a card or a
-  button, nor while a button is held (`hoverPicks`: a drag turns the model); in every mode, Diffs too, where the ring is
-  drawn after the versions are compared by look, so it never compares as a change (`aimRingPass`); it
-  goes once commenting stops or the pointer leaves the stage. It lights as soon as commenting starts with the pointer
+  A part is never lit while a click would mark a point, so the light never promises the whole part. Nothing shows over empty space, a pin, a card or
+  a button, nor while a button is held (`hoverPicks`: a drag turns the model). It shows in every mode: in Diffs by look
+  the ring is drawn after the versions are compared, so it never shows as a change (`aimRingPass`). It goes once
+  commenting stops or the pointer leaves the stage. It lights as soon as commenting starts with the pointer
   over the model, and follows what moves under a still pointer (a turn's coast, a glide, flying, a take): each frame
   drawn asks again. Picking reads the GPU, so it runs at most once a frame, and only when the pointer moved a pixel or
   the model moved under it (`pickAgain`, `ModelRenderer.moves`: the camera, a pose, the layout, the size, the models;
