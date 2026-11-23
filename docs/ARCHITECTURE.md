@@ -1713,6 +1713,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     quieter than the name, pale yellows as much as dark blues. Focus shows with `--focus-ring-visible`, or
     `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
+  - A translucent state tint (pressed, selected) on a control floating over content lies over `--bg-surface-raised`
+    (`linear-gradient(tint, tint) var(--bg-surface-raised)`), so the picture or model behind never shows through it
+    (`StageControls.module.css`).
   - Overlays lie over the whole window, whatever the page around them. One drawn in the page (a comment's larger
     editor, `CommentFocusGroup`) draws its backdrop beside its panel, never portaled apart: one parent keeps them in
     one stacking context (`focusModeSurfaces.test.ts`). The boxes every view sits in (`PlaceLayout`, `SignInCover`,

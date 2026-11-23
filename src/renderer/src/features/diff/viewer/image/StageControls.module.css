@@ -29,10 +29,15 @@
   color: inherit;
 }
 
+/* Tints go over the solid surface: over the picture or model, nothing behind may show through. */
 .controls .button[data-active] {
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  background: var(--bg-selected-strong);
+  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)) var(--bg-surface-raised);
   color: var(--accent-text);
+}
+
+.controls .button[data-active]:hover:not([aria-disabled='true']) {
+  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)) var(--bg-subtle);
 }
 
 .percent {

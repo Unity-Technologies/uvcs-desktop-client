@@ -311,9 +311,18 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   (`reviewChipPage`, through `ChipOpenerContext`, which a page fills to open a chip first); anything else opens as every
   chip does (docs/features/rich-comments.md).
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
-  ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
-  reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete
-  (`… comment delete`, asked first), discard a change request with a reply saying why (`… reply --discard`).
+  ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent or cancelled;
+  each text reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only),
+  delete (`… comment delete`, asked first), discard a change request with a reply saying why (`… reply --discard`).
+- A thread's reply box follows its drafts (`useAnswerBox`), wherever the thread shows (the conversation, a line, an
+  image, a model). A reply (or discard) left with words in it shows open with them when the thread shows again, a
+  settled thread unfolded for it (`answerShownOnReturn`, `initialThreadCardFold`); a box emptied before leaving shows
+  the "Reply…" prompt again. The same thread shows in both tabs, kept mounted: words written in one open the box in
+  the other, its card unfolded if folded, and a reply sent or cancelled in one closes it there, unless the focus is in
+  it, showing a discard still left if there is one (`nextAnswerBox`, `followDrafts`). The box follows each draft's
+  state (none, emptied, words: `answerDraftOf`), not its text, so typing renders no other card. Only a box opened by
+  hand ("Reply…", "Discard…") takes the focus. A draft in a folded round of the conversation stays hidden until the
+  round opens.
 - Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
   on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
@@ -940,7 +949,13 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   side its revision shows (Split's After pane; Onion, Diffs and Swipe lay both over each other), gliding with the
   zoom.
 - **A thread** opens beside its pin on a click, one at a time: the conversation's card as a line's thread shows it in
-  the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
+  the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin. Esc closes it too, wherever the keyboard is in
+  the Changes tab (the Comments panel, the file list), not only on the stage: a command (`useLeaveCommentCommand`,
+  decided by `leaveCommentCommandOf`), so a field, a menu or a dialog keeps its own Esc and Expand Diff's Esc waits for
+  it. Only a viewer with a card open or a spot being marked registers it (`leaveCommentCommands`): every image and model
+  viewer in the app uses the same command id, and the commands keep one per id (`registeredCommands`), so an idle
+  viewer registered later would hide this one. Going to a comment leaves the keyboard where it was,
+  so N and P keep stepping from the panel. It goes right of the pin, else left, else
   below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
   nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the
   conversation opens it and brings it into view at the zoom shown (`transformShowing`): the whole area when it fits, else its

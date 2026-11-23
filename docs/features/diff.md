@@ -935,7 +935,11 @@ docs/features/code-reviews.md "Comments on images"):
 - **Pins** (`ImagePin`): a spot (`ImageSpot`, the image's own pixels) on the side whose image shows it, drawn by
   `ImageCommentsOverlay` over every viewport of every mode (`StageOverlay`; Split's two panes each their side's), placed
   from the composed frame (`anchoredOffset`) and the view (`spotOnScreen`), gliding with the zoom. One opens its card
-  beside it (`cardPlacement`).
+  beside it (`cardPlacement`), in a layer over the whole stage (`PinCard`, `stageCardPlacement`): in Split a card
+  beside a pin in a narrow pane reaches over the other one rather than being cut off, and a stage narrower than the
+  card narrows it, always clear of the zoom controls. While the spot is panned or zoomed out of its pane the card
+  hides, still mounted, and shows again as it was, what's being written in it kept; the focus it held goes to the stage
+  (`setCardHidden`), so the stage's keys keep working.
 - **Marking a spot**: where the place takes comments (`commentsOn`, a side shown: `takesComments`), the stage's first
   control and **C** (`stageCommandOf`) turn the pointer into the comment cursor; a click is a point, a drag an area
   (`spotOfGesture`, `AREA_DRAG_THRESHOLD`). A pin still `movable` drags by its bubble and reshapes by its area's

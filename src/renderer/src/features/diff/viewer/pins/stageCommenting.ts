@@ -28,6 +28,24 @@ export function commentKeyAction(command: 'comment' | 'leaveComment', state: Sta
   return state.opened ? 'closeCard' : null;
 }
 
+/** Esc wherever the keyboard is in the diff: what it does, and its name in the palette. */
+export interface LeaveCommentCommand {
+  action: 'stopCommenting' | 'closeCard';
+  label: string;
+}
+
+/**
+ * Esc does to the stage what it does on the focused stage (`commentKeyAction`) wherever else the keyboard is in the
+ * diff shown: the Comments panel a comment was gone to from, the file list, nowhere after the conversation hid. None
+ * with nothing to stop or close, or while the diff is hidden (`ViewShownContext`), so Esc stays what else takes it.
+ */
+export function leaveCommentCommandOf(state: StageCommenting, shown: boolean): LeaveCommentCommand | null {
+  const action = shown ? commentKeyAction('leaveComment', state) : null;
+  if (action === 'stopCommenting') return { action, label: 'Stop commenting' };
+  if (action === 'closeCard') return { action, label: "Close the comment's card" };
+  return null;
+}
+
 /** The modifiers held for a click on the stage. */
 export type StageClickModifiers = Pick<MouseEvent, 'shiftKey'>;
 

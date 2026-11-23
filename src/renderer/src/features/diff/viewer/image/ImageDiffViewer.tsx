@@ -13,8 +13,9 @@
 // diff, saying why.
 
 import { ImageOff } from 'lucide-react';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { keyTakenByText } from '../../../../lib/textEntry';
+import { useKeptElement } from '../../../../lib/useKeptElement';
 import type { FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
@@ -42,6 +43,7 @@ import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
 import { stageCommandOf } from './zoomKeys';
 import { commentKeyAction } from '../pins/stageCommenting';
+import { useStageCommenting } from '../pins/useStageCommenting';
 import { ImageAnnotationsContext, takesComments, type ImageSide } from './imageAnnotations';
 import { ImageCommentsOverlay } from './ImageCommentsOverlay';
 import { revealedRect, spotInFrame } from './imageSpotGeometry';
@@ -72,6 +74,10 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
   // The pair compared for Differences stays in the worker for the next tolerance, as long as this viewer shows it.
   useEffect(() => forgetComparedImages, []);
   const stageRef = useRef<HTMLDivElement>(null);
+  // The focusable pane, which takes the focus from a comment's card hiding with it.
+  const paneRef = useRef<HTMLDivElement>(null);
+  // Where an opened pin's card shows: over the whole stage, so Split's narrow pane doesn't cut it off.
+  const [cardLayer, keepCardLayer] = useKeptElement<HTMLDivElement>();
 
   const view = imagePairView(oldState, newState);
   const oldImage = view.kind === 'painted' ? view.old : null;
@@ -94,8 +100,9 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
   const annotations = useContext(ImageAnnotationsContext);
   const shownImages = { old: oldImage, new: newImage };
   const commentable = takesComments(annotations, shownImages);
-  const [commenting, setCommenting] = useState(false);
-  const isCommenting = commenting && commentable;
+  // Esc closes the card open from anywhere in the diff too (the Comments panel a comment was gone to from).
+  const { state: stageCommenting, apply: applyCommentAction, setCommenting } = useStageCommenting('imageCommentLeave', annotations, commentable);
+  const isCommenting = stageCommenting.commenting;
 
   // A pin gone to (from the Comments panel, the conversation) comes into view, at the zoom shown.
   const revealSeq = annotations?.reveal?.seq;
@@ -109,24 +116,20 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
 
   // The stage's keys while it has the focus (`stageCommandOf`, `commentKeyAction`); none typed in a comment's card
   // over it.
-  const onKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (keyTakenByText(event.nativeEvent)) return;
-      const command = stageCommandOf(event.nativeEvent);
-      if (!command) return;
-      if (command === 'comment' || command === 'leaveComment') {
-        const action = commentKeyAction(command, { commenting: isCommenting, commentable, opened: annotations?.opened != null });
-        if (!action) return;
-        event.preventDefault();
-        if (action === 'closeCard') annotations?.onOpen(null);
-        else setCommenting(action === 'startCommenting');
-        return;
-      }
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (keyTakenByText(event.nativeEvent)) return;
+    const command = stageCommandOf(event.nativeEvent);
+    if (!command) return;
+    if (command === 'comment' || command === 'leaveComment') {
+      const action = commentKeyAction(command, stageCommenting);
+      if (!action) return;
       event.preventDefault();
-      panZoom[command]();
-    },
-    [panZoom, annotations, commentable, isCommenting],
-  );
+      applyCommentAction(action);
+      return;
+    }
+    event.preventDefault();
+    panZoom[command]();
+  };
 
   // No version paints: too large reads as any image too large to preview; otherwise the binary diff, saying why.
   if (view.kind === 'unpainted') {
@@ -149,11 +152,13 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
             images={imagesOn(sides, shownImages)}
             commenting={isCommenting && annotations.commentsOn !== null && sides.includes(annotations.commentsOn)}
             onCommented={() => setCommenting(false)}
+            cardLayer={cardLayer}
+            stage={paneRef}
           />
         );
 
   return (
-    <div className={styles.pane} tabIndex={0} onKeyDown={onKeyDown}>
+    <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown}>
       {view.kind === 'painted' && view.unpainted && (
         <DiffNotice tone="info" icon={<ImageOff size={13} />}>
           {unpaintedNotice(view.unpainted.side, view.unpainted.problem)}
@@ -192,6 +197,8 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
             {mode === 'swipe' && <SwipeMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} overlay={overlay} />}
           </>
         )}
+
+        {annotations && <div ref={keepCardLayer} className={styles.cardLayer} />}
 
         {/* Resized image: the anchor toggle asks how the two sizes align. Hidden when sizes match — it would do nothing. */}
         <ZoomControls

@@ -17,26 +17,26 @@ const CAR: NamedVersion = {
 
 describe('hoveredPartOf', () => {
   it('names the part under the pointer as a comment on it would', () => {
-    expect(hoveredPartOf({ side: 'after', key: '0/0/0' }, CAR, false)).toEqual({ side: 'after', key: '0/0/0', name: 'Body' });
+    expect(hoveredPartOf({ side: 'after', key: '0/0/0' }, CAR)).toEqual({ side: 'after', key: '0/0/0', name: 'Body' });
   });
 
   it("names a part by the file's own name, not the one the loader gave it", () => {
-    expect(hoveredPartOf({ side: 'after', key: '0/0/2' }, CAR, false)?.name).toBe('Wheel');
+    expect(hoveredPartOf({ side: 'after', key: '0/0/2' }, CAR)?.name).toBe('Wheel');
   });
 
   it('shows nothing over empty space', () => {
-    expect(hoveredPartOf({ side: 'after', key: null }, CAR, false)).toBeNull();
-    expect(hoveredPartOf(null, CAR, false)).toBeNull();
+    expect(hoveredPartOf({ side: 'after', key: null }, CAR)).toBeNull();
+    expect(hoveredPartOf(null, CAR)).toBeNull();
   });
 
   it('shows nothing for a mesh the file names no part for, or a key the version hasn’t', () => {
-    expect(hoveredPartOf({ side: 'after', key: '0' }, CAR, false)).toBeNull();
-    expect(hoveredPartOf({ side: 'after', key: '9/9' }, CAR, false)).toBeNull();
-    expect(hoveredPartOf({ side: 'after', key: '0/0/0' }, null, false)).toBeNull();
+    expect(hoveredPartOf({ side: 'after', key: '0' }, CAR)).toBeNull();
+    expect(hoveredPartOf({ side: 'after', key: '9/9' }, CAR)).toBeNull();
+    expect(hoveredPartOf({ side: 'after', key: '0/0/0' }, null)).toBeNull();
   });
 
-  it('lights nothing while Diffs by look compares, where a part lit would compare as a change', () => {
-    expect(hoveredPartOf({ side: 'after', key: '0/0/0' }, CAR, true)).toBeNull();
+  it('names the part in every mode, Diffs by look too: the renderer keeps a part from lighting up there', () => {
+    expect(hoveredPartOf({ side: 'after', key: '0/0/0' }, CAR)?.name).toBe('Body');
   });
 });
 
@@ -160,9 +160,8 @@ describe('aimShownWhileCommenting', () => {
     expect(aimShownWhileCommenting(wheel, false)).toBe(true);
   });
 
-  it('takes it away with Shift held, over empty space, and while Diffs by look compares', () => {
+  it('takes it away with Shift held, and over empty space', () => {
     expect(aimShownWhileCommenting(wheel, true)).toBe(false);
     expect(aimShownWhileCommenting(null, false)).toBe(false);
-    expect(aimShownWhileCommenting(hoveredPartOf({ side: 'after', key: '0/0/1' }, CAR, true), false)).toBe(false);
   });
 });

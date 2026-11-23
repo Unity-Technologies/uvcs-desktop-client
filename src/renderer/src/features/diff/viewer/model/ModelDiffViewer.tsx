@@ -36,6 +36,7 @@ import { viewOfSpot } from './spotView';
 import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
 import { commentKeyAction, stageClickOf, type StageClickModifiers } from '../pins/stageCommenting';
+import { useStageCommenting } from '../pins/useStageCommenting';
 import { aimShownWhileCommenting, hoveredPartOf, litWhileCommenting } from './commentHover';
 import { CommentHoverLabel } from './CommentHoverLabel';
 import { useCommentHover } from './useCommentHover';
@@ -199,14 +200,16 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     [old, next, sceneBefore, sceneAfter],
   );
   const commentable = takesModelComments(annotations, present);
-  const [commenting, setCommenting] = useState(false);
-  const isCommenting = commenting && commentable;
+  // Esc closes the card open from anywhere in the diff too (the Comments panel a comment was gone to from).
+  const { state: stageCommenting, apply: applyCommentAction, setCommenting } = useStageCommenting('modelCommentLeave', annotations, commentable);
+  const isCommenting = stageCommenting.commenting;
   // The pin pointed at or focused: a comment on a whole part lights the part meanwhile (`litCommentPart`).
   const [pointedPin, setPointedPin] = useState<string | null>(null);
   const litPin = annotations ? litCommentPart(annotations.pins, annotations.opened, pointedPin, lookDifferences) : null;
   const litPart = useMemo(() => (litPin ? (pinPlacesOf([litPin], versions)[0] ?? null) : null), [litPin, versions]);
   // Commenting, the pointer shows what a click marks (`hoveredPartOf`, `hoverLabelOf`): a ring lying on the surface
-  // at the point and the part's name beside it, or with Shift held, the whole part lit up.
+  // at the point and the part's name beside it, or with Shift held, the whole part lit up (named only in Diffs, whose
+  // colors say what changed).
   const hoverLabelRef = useRef<HTMLDivElement>(null);
   const commentsOn = annotations?.commentsOn ?? null;
   const partAt = useCallback(
@@ -215,9 +218,9 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
       const hit = renderer?.pick(x, y, commentsOn, true) ?? null;
       // Where a click would mark a point: the ring on the surface there (`aimRingPlacement`).
       renderer?.setCommentAim(commentsOn, hit?.point ? { point: hit.point, normal: hit.normal } : null);
-      return hoveredPartOf(hit, versions[commentsOn], lookDifferences);
+      return hoveredPartOf(hit, versions[commentsOn]);
     },
-    [renderer, commentsOn, versions, lookDifferences],
+    [renderer, commentsOn, versions],
   );
   const { hovered, wholePart, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, renderer, enabled: isCommenting, partAt });
   const aimShown = aimShownWhileCommenting(hovered, wholePart);
@@ -338,11 +341,10 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     const command = modelCommandOf(event.nativeEvent);
     if (!command) return;
     if (command === 'comment' || command === 'leaveComment') {
-      const action = commentKeyAction(command, { commenting: isCommenting, commentable, opened: annotations?.opened != null });
+      const action = commentKeyAction(command, stageCommenting);
       if (!action) return;
       event.preventDefault();
-      if (action === 'closeCard') annotations?.onOpen(null);
-      else setCommenting(action === 'startCommenting');
+      applyCommentAction(action);
       return;
     }
     event.preventDefault();
@@ -372,7 +374,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
       <div className={styles.stage} ref={stageRef} data-mode={shownMode ?? 'single'} data-commenting={isCommenting || undefined} data-whole-part={wholePart || undefined}>
         <div ref={canvasHostRef} className={styles.canvasHost} role="img" aria-label="3D view of the model" />
         {annotations && renderer && bounds && !loading && (
-          <ModelCommentsOverlay annotations={annotations} renderer={renderer} versions={versions} modelSize={diagonalOf(bounds)} spotAt={spotAt} onPointed={setPointedPin} />
+          <ModelCommentsOverlay annotations={annotations} renderer={renderer} versions={versions} modelSize={diagonalOf(bounds)} spotAt={spotAt} onPointed={setPointedPin} stage={paneRef} />
         )}
         {hovered && <CommentHoverLabel part={hovered} wholePart={wholePart} ref={hoverLabelRef} />}
         {loading && spin && <CenteredSpinner />}

@@ -1,5 +1,5 @@
-/* Over the viewport and the swipe divider (a card open over it reads whole), under the stage's floating controls and
-   pills. Only its marks take the pointer: the image under it pans. */
+/* Over the viewport and the swipe divider, under the stage's floating controls and pills; the opened pin's card is in
+   the stage's own layer (`.cardLayer`, ImageDiffViewer). Only its marks take the pointer: the image under it pans. */
 .overlay {
   position: absolute;
   inset: 0;

@@ -51,14 +51,14 @@ import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
 import { emphasisOf, outlinesWhenLit } from './meshEmphasis';
-import { MeshPicker } from './meshPicker';
+import { drawnTwinsOf, MeshPicker, shownToPicking } from './meshPicker';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
 import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
-import { AIM_RING_PIXELS, aimRingPlacement, type CommentAim } from './commentAim';
+import { AIM_RING_PIXELS, aimRingPass, aimRingPlacement, type AimRingPass, type CommentAim } from './commentAim';
 import { paneOnCanvas, projectorOf, type Projector } from './modelProjection';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, paneOfSideAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Rect, type Side } from './viewLayout';
@@ -154,6 +154,8 @@ export class ModelRenderer {
   private readonly comparer = new LookComparer();
   /** The grid, under Diffs by look's comparison. */
   private readonly under = new Scene();
+  /** The aim ring, over Diffs by look's comparison (`aimRingPass`). */
+  private readonly over = new Scene();
   /** Picks on the GPU; null where it can't, or isn't asked to pick, and picks raycast (`raycastHit`). */
   private readonly picker: MeshPicker | null;
   /** three's one DFG LUT, once a frame drew it: released as the renderer goes (`sharedDfgLut.ts`). */
@@ -382,6 +384,11 @@ export class ModelRenderer {
     return paneOnCanvas(pane.scissor, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
   }
 
+  /** The view the camera draws from now. */
+  currentView(): OrbitView {
+    return this.view;
+  }
+
   /** Where the camera is, in the viewer's space. */
   cameraPosition(): Vector {
     return cameraPositionOf(this.view);
@@ -498,7 +505,7 @@ export class ModelRenderer {
       const toCss = (value: number) => value / this.pixelRatio;
       this.renderer.setViewport(toCss(pane.viewport.x), toCss(pane.viewport.y), toCss(pane.viewport.width), toCss(pane.viewport.height));
       this.renderer.setScissor(toCss(pane.scissor.x), toCss(pane.scissor.y), toCss(pane.scissor.width), toCss(pane.scissor.height));
-      this.drawSide(side, pane.viewport.width / pane.viewport.height, !pane.overlay);
+      this.drawSide(side, pane.viewport.width / pane.viewport.height, !pane.overlay, aimRingPass(layout.drawn));
     }
   }
 
@@ -513,7 +520,7 @@ export class ModelRenderer {
       this.renderer.setRenderTarget(targets[i]!);
       this.renderer.clear();
       const side = this.sides[pane.side];
-      if (side) this.drawSide(side, this.width / this.height);
+      if (side) this.drawSide(side, this.width / this.height, true, aimRingPass(layout.drawn));
     });
     this.renderer.setClearAlpha(1);
     this.renderer.setRenderTarget(null);
@@ -522,8 +529,9 @@ export class ModelRenderer {
 
   /**
    * Diffs by look: each version drawn apart with its materials, the grid on the canvas, then the comparison over it,
-   * and on top what isn't the model: the version after's bones and the dots of the nodes picked. Drawn into the
-   * versions, those would compare as changes (a bone or a node only one version has) or turn gray where they match.
+   * and on top what isn't the model: the version after's bones, the dots of the nodes picked and the ring aiming a
+   * comment. Drawn into the versions, those would compare as changes (a bone or a node only one version has, the ring
+   * on one version) or turn gray where they match.
    */
   private renderCompared(layout: Layout): void {
     const targets = (this.targets ??= [this.target(), this.target()]);
@@ -537,7 +545,7 @@ export class ModelRenderer {
       const side = this.sides[pane.side];
       if (!side) continue;
       side.markers.visible = false;
-      this.drawSide(side, this.width / this.height, false);
+      this.drawSide(side, this.width / this.height, false, aimRingPass(layout.drawn));
       side.markers.visible = true;
     }
     this.renderer.setClearAlpha(1);
@@ -554,6 +562,19 @@ export class ModelRenderer {
       this.renderer.render(after.joints, this.camera);
     }
     for (const side of Object.values(this.sides)) if (side) this.renderer.render(side.markers, this.camera);
+    if (aimRingPass(layout.drawn) === 'afterComparison') this.drawAimOver();
+  }
+
+  /**
+   * The aim ring alone, over what's drawn (Diffs by look's comparison), where it lies on its version. The versions'
+   * depth stays in their own targets, so nothing nearer hides it: at a silhouette, a part in front may not cover its
+   * edge, as it does in the other modes.
+   */
+  private drawAimOver(): void {
+    const side = this.aim && this.sides[this.aim.side];
+    if (!side || !this.aimShown) return;
+    this.placeAimRing(side, this.over);
+    this.renderer.render(this.over, this.camera);
   }
 
   /**
@@ -570,7 +591,8 @@ export class ModelRenderer {
     }
   }
 
-  private drawSide(side: SideScene, aspect: number, withGrid = true): void {
+  /** `aim`: whether the aim ring is drawn with its version or left out of it, for a pass after (`aimRingPass`). */
+  private drawSide(side: SideScene, aspect: number, withGrid: boolean, aim: AimRingPass): void {
     this.placeCamera(aspect);
     // The key light rides over the camera's right shoulder, so the side facing the viewer is always lit.
     const position = new Vector3(...cameraPositionOf(this.view));
@@ -580,7 +602,8 @@ export class ModelRenderer {
     side.key.target.position.copy(target);
     if (withGrid) side.scene.add(this.grid, this.region);
     else this.grid.removeFromParent();
-    this.placeAimRing(side);
+    if (aim === 'withVersion') this.placeAimRing(side, side.scene);
+    else if (this.aimRing.parent === side.scene) this.aimRing.removeFromParent();
     side.pivot.visible = withGrid;
     // Under the version drawn with the grid only: Diffs' version before is a ghost, and by look a shadow would compare.
     side.shadow.plane.visible = withGrid;
@@ -588,10 +611,13 @@ export class ModelRenderer {
     this.renderer.render(side.scene, this.camera);
   }
 
-  /** The aim ring in the scene of the version it's on, placed for the camera and pane drawn now; off elsewhere. */
-  private placeAimRing(side: SideScene): void {
+  /**
+   * The aim ring in `into` (the scene of the version it's on, or the one drawn over the comparison), placed on that
+   * version for the camera and pane drawn now; off elsewhere.
+   */
+  private placeAimRing(side: SideScene, into: Scene): void {
     if (!this.aimShown || !this.aim || this.sides[this.aim.side] !== side) {
-      if (this.aimRing.parent === side.scene) this.aimRing.removeFromParent();
+      if (this.aimRing.parent === into) this.aimRing.removeFromParent();
       return;
     }
     const paneHeight = this.renderer.getCurrentViewport(new Vector4()).w;
@@ -599,7 +625,7 @@ export class ModelRenderer {
     this.aimRing.position.set(...ring.position);
     this.aimRing.quaternion.set(...ring.quaternion);
     this.aimRing.scale.setScalar(ring.radius);
-    side.scene.add(this.aimRing);
+    into.add(this.aimRing);
   }
 
   /** The skeleton where the bones are now: a take may have moved them since the last frame. */
@@ -670,7 +696,7 @@ export class ModelRenderer {
     pivot.renderOrder = 10;
     scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
     const looks = new SlotLookMaterials(model, this.lookTextures);
-    model.meshes.forEach((mesh, index) => MeshPicker.makePickable([mesh.solid, mesh.wire], index));
+    model.meshes.forEach((mesh, index) => MeshPicker.makePickable(drawnTwinsOf(mesh), index));
     const shadow = new ContactShadow();
     for (const mesh of model.meshes) mesh.solid.layers.enable(SHADOW_LAYER);
     scene.add(shadow.plane);
@@ -796,10 +822,11 @@ export class ModelRenderer {
 
 /**
  * The first mesh a ray from the camera meets, testing each triangle on the main thread: where the GPU can't pick
- * (`MeshPicker.supported`). The meshes shown count, solid or wireframe.
+ * (`MeshPicker.supported`). The meshes shown count, whichever twin shows them (`shownToPicking`).
  */
 function raycastHit(raycaster: Raycaster, model: ModelScene): { mesh: number; point: Vector; normal: Vector | null } | null {
-  const shown = model.meshes.filter((mesh) => mesh.solid.visible || mesh.wire.visible).map((mesh) => mesh.solid);
+  // Through the solid, which shares the geometry and node of whichever twin shows.
+  const shown = model.meshes.filter(shownToPicking).map((mesh) => mesh.solid);
   const [hit]: Intersection[] = raycaster.intersectObjects(shown, false);
   if (!hit) return null;
   // The face's direction in the viewer's space, turned towards the camera (a face seen from behind).
