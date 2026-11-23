@@ -52,8 +52,8 @@ reads a file otherwise:
   compression, which the viewer has no decoder for (`modelReadFailureWords`).
 - **A skin leaning on a joint it hasn't is unreadable** (`leansPastSkeleton`, checked by `fromThreeObject`): a vertex
   weighted to a joint index past its skin's joints, as a broken glTF export can write, would make three read a bone
-  that isn't there each time it draws, places or picks the mesh. It shows "Couldn't display this model" instead. An
-  FBX can't carry one: FBXLoader numbers the joints from the skin's own clusters.
+  that isn't there each time it draws, places or picks the mesh. It shows "Couldn't display this model" instead.
+  FBXLoader numbers the joints from the skin's own clusters, so a sound FBX can't carry one.
 
 Checked against Unity 6000.3's own import of six real exports (Blender's, a Z-up one among them): sizes and centres
 match to the centimetre; Unity's `Renderer.bounds` only differ where a node is rotated, as they box a box.
@@ -373,9 +373,9 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   so comments written before follow too), and each frame is that mix of the triangle's three corners as drawn now
   (`drawnAnchorPoint`, three's `getVertexPosition`): three vertices a pin, whatever the mesh's size. A triangle rather
   than the nearest vertex: on a low-poly part the nearest corner can be far from the point, and an offset kept from it
-  turns wrong as the bones turn it. Anchors are kept per spot and model (`deformedMeshesOn`, `restMeshesOn`): a part is
-  placed at rest once for all its pins, and a comment dragged while it's written is the only one anchored again. A
-  part another version hasn't leaves the pin at its point (`partGone`). Where the point shows is projected as the version's pane
+  turns wrong as the bones turn it. Rest meshes are kept per node and model (`restMeshesOn`), anchors per spot
+  (`skinAnchorOfSpot`): a part is placed at rest once for all its pins, and a comment dragged while it's written is the
+  only one anchored again. A part another version hasn't leaves the pin at its point (`partGone`). Where the point shows is projected as the version's pane
   draws it (`ModelRenderer.screenProjectorOf`, `projectorOf`) after every frame drawn (`onFrameDrawn`): a turn, a
   glide, a take, a resize move the bubbles without React rendering for each frame. Off its pane or behind the camera, a
   bubble hides; each version's pins sit in a layer cut to where it shows (`ModelRenderer.paneRectOf`, `paneOnCanvas`:
