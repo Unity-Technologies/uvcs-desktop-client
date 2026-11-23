@@ -84,11 +84,11 @@ describe('hoverLabelOf', () => {
   const wheel = { side: 'after' as const, key: '0/0/1', name: 'Wheel' };
 
   it('names the point a click marks, and how to take the whole part', () => {
-    expect(hoverLabelOf(wheel, false)).toEqual({ name: 'Point on Wheel', hint: 'Shift for the whole part' });
+    expect(hoverLabelOf(wheel, false)).toEqual({ name: 'Point on Wheel', hint: 'Click to comment here, Shift for the whole part' });
   });
 
   it('names the whole part while Shift is held', () => {
-    expect(hoverLabelOf(wheel, true)).toEqual({ name: 'Whole Wheel', hint: 'Click to comment on all of it' });
+    expect(hoverLabelOf(wheel, true)).toEqual({ name: 'Whole Wheel', hint: 'Click to comment on the whole part' });
   });
 });
 

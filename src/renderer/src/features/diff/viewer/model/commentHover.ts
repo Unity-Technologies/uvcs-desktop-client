@@ -75,7 +75,7 @@ export function aimShownWhileCommenting(hovered: HoveredPart | null, wholePart: 
 
 /** The words beside the cursor: what a click marks there, a point on the part or all of it, and how to switch. */
 export function hoverLabelOf(part: HoveredPart, wholePart: boolean): { name: string; hint: string } {
-  return wholePart ? { name: `Whole ${part.name}`, hint: 'Click to comment on all of it' } : { name: `Point on ${part.name}`, hint: 'Shift for the whole part' };
+  return wholePart ? { name: `Whole ${part.name}`, hint: 'Click to comment on the whole part' } : { name: `Point on ${part.name}`, hint: 'Click to comment here, Shift for the whole part' };
 }
 
 /** The words of the stage's comment button: what a click and a Shift-click mark, or how to stop. */
