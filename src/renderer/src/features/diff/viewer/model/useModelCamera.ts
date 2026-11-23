@@ -45,6 +45,9 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
       frameWhole: () => control.frameWhole(),
       framePart: (part: BoundsLike) => control.framePart(part),
       frameRegion: (region: BoundsLike) => control.frameRegion(region),
+      /** Glides to a view worked out elsewhere (a comment gone to: `viewOfSpot`). */
+      frameView: (view: OrbitView) => control.frameView(view),
+      paneAspect: () => control.paneAspect(),
       onGesture: (view: OrbitView) => control.onGesture(view),
       /** A wheel's notch: closer (`factor` over 1) or farther, towards the point under the pointer. */
       onDollyStep: (point: Vector | null, factor: number) => control.onDollyStep(point, factor),

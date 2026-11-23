@@ -52,6 +52,20 @@ export function cardPlacement(target: ScreenRect, viewport: Size, cardWidth: num
   return { left: centered, ...beside };
 }
 
+/** A card's width beside its pin: a thread reads as it does under a line of code, at a reading width. */
+export const PIN_CARD_WIDTH = 360;
+
+/** The width the stage's floating controls take at the viewport's right edge, with their margin. */
+const STAGE_CONTROLS_ROOM = 52;
+
+/**
+ * Where the card of a pin at `rect` goes in a viewer's stage (`cardPlacement`, its bubble included: `pinBounds`),
+ * never under the stage's floating controls at its right edge (`StageControls`).
+ */
+export function pinCardPlacement(rect: ScreenRect, viewport: Size): CardPlacement {
+  return cardPlacement(pinBounds(rect), { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, PIN_CARD_WIDTH);
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }

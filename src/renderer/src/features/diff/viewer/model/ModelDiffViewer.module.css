@@ -37,6 +37,12 @@
   cursor: grabbing;
 }
 
+/* Marking a comment's spot: the pointer is the comment's bubble with a plus, as on an image. A drag still turns. */
+.stage[data-commenting],
+.stage[data-commenting]:active {
+  cursor: var(--cursor-add-comment);
+}
+
 /* Holds the renderer's canvas, which `useModelRenderer` puts in and takes out. */
 .canvasHost {
   position: absolute;

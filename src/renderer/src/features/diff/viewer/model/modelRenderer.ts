@@ -53,8 +53,9 @@ import { modelOrientation, type ModelScene } from './modelScene';
 import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
+import { projectedPoint, type ScreenPoint } from './modelProjection';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
-import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
+import { layoutOf, paneAt, paneOfSideAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
 
 export type DrawMode = 'shaded' | 'wireframe' | 'shadedWireframe';
 
@@ -147,6 +148,8 @@ export class ModelRenderer {
   private dfgLut: Texture | null = null;
   /** Whether the LUT was looked for in the sides drawn now: once per set of sides, not every frame until found. */
   private dfgLutSought = false;
+  /** Told after each frame is drawn: what sits over the canvas follows what it shows (`onFrameDrawn`). */
+  private readonly frameListeners = new Set<() => void>();
 
   /**
    * `picks`: what is under the pointer is asked of it (`pick`), so the GPU's picking is made and compiled at once
@@ -305,12 +308,13 @@ export class ModelRenderer {
   /**
    * What is under a point of the canvas (CSS pixels): the side, the node key of the mesh hit and where, in the
    * viewer's space, and the ray from the camera through it (`pointOnRay`: a zoom where nothing is hit). On the onion
-   * skin, the version blended in most.
+   * skin, the version blended in most. `only`: that version, wherever its pane is under the point (a comment marked on
+   * the version that takes comments, whichever shows there in a swipe or the onion skin).
    */
-  pick(x: number, y: number): { side: Side; key: string | null; point: Vector | null; ray: Ray } | null {
+  pick(x: number, y: number, only?: Side): { side: Side; key: string | null; point: Vector | null; ray: Ray } | null {
     const layout = this.layout();
-    let pane = paneAt(layout, x, y, this.height, this.pixelRatio);
-    if (layout.drawn === 'blended') pane = layout.panes.find((candidate) => candidate.side === (this.layoutState.blend >= 0.5 ? 'after' : 'before')) ?? null;
+    let pane = only ? paneOfSideAt(layout, only, x, y, this.height, this.pixelRatio) : paneAt(layout, x, y, this.height, this.pixelRatio);
+    if (!only && layout.drawn === 'blended') pane = layout.panes.find((candidate) => candidate.side === (this.layoutState.blend >= 0.5 ? 'after' : 'before')) ?? null;
     const side = pane && this.sides[pane.side];
     if (!pane || !side) return null;
     const { viewport } = pane;
@@ -321,6 +325,31 @@ export class ModelRenderer {
     const ray: Ray = { origin: raycaster.ray.origin.toArray(), direction: raycaster.ray.direction.toArray() };
     const hit = this.picker ? this.picker.pick(this.renderer, side.scene, this.camera, at) : raycastHit(raycaster, side.model);
     return { side: pane.side, key: hit ? side.model.meshes[hit.mesh]!.key : null, point: hit?.point ?? null, ray };
+  }
+
+  /**
+   * Where a point of a version's scene (the viewer's space) shows on the canvas, in CSS pixels from its top left, as
+   * the last frame drew it: in that version's pane. None for a version the layout doesn't draw, or a point behind the
+   * camera.
+   */
+  screenPointOf(side: Side, point: Vector): ScreenPoint | null {
+    const pane = this.layout().panes.find((candidate) => candidate.side === side);
+    if (!pane || !this.sides[side]) return null;
+    return projectedPoint(point, this.view, this.bounds, pane.viewport, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
+  }
+
+  /** Where the camera is, in the viewer's space. */
+  cameraPosition(): Vector {
+    return cameraPositionOf(this.view);
+  }
+
+  /**
+   * Tells `listener` after each frame is drawn (a move of the camera, a take's pose, a resize, a mode): what sits over
+   * the canvas (a comment's bubble) follows the model without React rendering for each frame. Returns what stops it.
+   */
+  onFrameDrawn(listener: () => void): () => void {
+    this.frameListeners.add(listener);
+    return () => this.frameListeners.delete(listener);
   }
 
   /**
@@ -356,6 +385,7 @@ export class ModelRenderer {
   /** Draws, and remembers the shared DFG LUT the first frame that drew it: a side replaced later can't hide it. */
   private drawFrame(): void {
     this.render();
+    for (const listener of this.frameListeners) listener();
     if (this.dfgLut || this.dfgLutSought || !this.palette) return;
     this.dfgLutSought = true;
     this.dfgLut = sharedDfgLutOf(this.renderer, this.drawnMaterials());
@@ -367,6 +397,7 @@ export class ModelRenderer {
    */
   dispose(): void {
     cancelAnimationFrame(this.frame);
+    this.frameListeners.clear();
     this.canvas.removeEventListener('webglcontextrestored', this.redrawShadows);
     (this.dfgLut ?? sharedDfgLutOf(this.renderer, this.drawnMaterials()))?.dispose();
     this.dfgLut = null;

@@ -89,3 +89,10 @@ export function paneAt(layout: Layout, x: number, y: number, height: number, pix
   const py = (height - y) * pixelRatio;
   return layout.panes.find(({ scissor }) => px >= scissor.x && px < scissor.x + scissor.width && py >= scissor.y && py < scissor.y + scissor.height) ?? null;
 }
+
+/** The pane of `side` whose view holds a point of the canvas (CSS pixels from the top left), wherever the layout cuts it. */
+export function paneOfSideAt(layout: Layout, side: Side, x: number, y: number, height: number, pixelRatio: number): Pane | null {
+  const px = x * pixelRatio;
+  const py = (height - y) * pixelRatio;
+  return layout.panes.find(({ side: own, viewport }) => own === side && px >= viewport.x && px < viewport.x + viewport.width && py >= viewport.y && py < viewport.y + viewport.height) ?? null;
+}

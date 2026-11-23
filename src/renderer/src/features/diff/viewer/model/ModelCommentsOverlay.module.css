@@ -1,0 +1,25 @@
+/* Over the canvas, under the stage's floating controls and pills. Only the bubbles and the card take the pointer: the
+   model under it turns and pans. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Placed each frame by the overlay (`ModelCommentsOverlay`): no transition, or it would lag behind the model. */
+.bubble[data-off-screen] {
+  visibility: hidden;
+}
+
+/* Something else is drawn in front of its point: faded and smaller, still there to click, its tip where it was. */
+.bubble[data-behind]:not(:hover, :focus-visible, [data-selected], [data-writing]) {
+  opacity: 0.45;
+  scale: 0.75;
+  transform-origin: 0 100%;
+}
+
+.overlay > [data-off-screen] {
+  visibility: hidden;
+}

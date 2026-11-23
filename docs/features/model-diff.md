@@ -351,6 +351,38 @@ only what changes:
   (`modelStats`): Tris, Verts, materials, bones, blendshapes, animations and size, "before → after" where they changed,
   both sizes in one unit.
 
+### Comments on the model
+
+A place may pin comments on the model and take what a click marks on it without the model diff knowing what they are
+(`ModelAnnotationsContext`, as `ImageAnnotationsContext` does for an image; a review's comments,
+docs/features/code-reviews.md "Comments on 3D models"):
+
+- **Pins** (`ModelPin`): a spot (`ModelSpot`: a point in the file's own space, and the part it's on with the point in
+  that part's space) on a version, drawn by `ModelCommentsOverlay` over the canvas in the bubble every pin shares
+  (`PinBubble`). Each is placed on its part as that version draws it now (`pinPlacesOf`, `placedSpot`: the part found
+  by its names, `nodeOfSpot`, same-named siblings told apart by the point), so it follows the part to where another
+  version has it, and while a take plays; a point on a skinned mesh follows its node, not the skin. A part another
+  version hasn't leaves the pin at its point (`partGone`). Where the point shows is projected as the version's pane
+  draws it (`ModelRenderer.screenPointOf`, `projectedPoint`) after every frame drawn (`onFrameDrawn`): a turn, a glide,
+  a take, a resize move the bubbles without React rendering for each frame. Off its pane or behind the camera, a bubble
+  hides. Once the view is still (`SETTLE_MS`), a pin whose point something else is drawn in front of, picked under its
+  tip (`hiddenBehind`), shows faded and smaller, still there to click. The opened pin's card sits beside it
+  (`pinCardPlacement`), following it.
+- **Marking a spot**: where the place takes comments (`takesModelComments`: the version it comments on shows), the
+  stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point
+  under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion
+  shows there), a click on nothing marks nothing, and a drag still turns the model. What it writes is
+  `spotOfPick`/`spotOfHit`: the point where the part rests (a take playing moves the part, not where on it the comment
+  is), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along
+  the surface, picked again under the pointer. **Esc** (`modelCommentLeave`) stops, or closes the card open. Keys typed
+  in a card (F, 0, C) stay the card's (`keyTakenByText`).
+- **A part lit up**: a comment on a whole part lights its part (the view's own emphasis, the rest faded) while its
+  bubble is pointed at or focused, its card open, or it's being written (`litCommentPart`); never while Diffs by look
+  compares, where a part lit would compare as a change.
+- **Going to a pin** glides the camera (`ModelCameraControl.frameView`) to the view its author had, carried onto the
+  part as it is now, or, when the comment doesn't say, facing the point from the side its surface faces, as stepping to
+  a changed region does (`viewOfSpot`, `regionView`): the point in the middle, so its bubble shows.
+
 ## Beside the model: its `.bin` and its `.meta`
 
 A version is read with what it needs beside it (`useModelReadOptions`), found by a `SiblingFinder`

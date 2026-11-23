@@ -8,6 +8,7 @@ import { Box as BoxIcon } from 'lucide-react';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Place } from '@shared/domain/place';
 import type { ContentSource, FileContent } from '@shared/domain/content';
+import { keyTakenByText } from '../../../../lib/textEntry';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner, Spinner } from '../../../../ui/Spinner';
@@ -27,6 +28,12 @@ import type { ModelDiffMode } from './modelDiffModes';
 import { everyVersionHas, framedBounds, nodesBounds } from './modelFraming';
 import type { ModelImportSettings } from './modelImportSettings';
 import { ModelInfoStrip } from './ModelInfoStrip';
+import { litCommentPart, ModelAnnotationsContext, takesModelComments } from './modelAnnotations';
+import { ModelCommentsOverlay } from './ModelCommentsOverlay';
+import { pinPlacesOf, spotOfHit, type DrawnVersion } from './modelPinPlaces';
+import { viewerSpaceOf } from './modelSpaces';
+import { viewOfSpot } from './spotView';
+import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
@@ -35,7 +42,7 @@ import { useModelMaterials, type MaterialVersion } from './materials/useModelMat
 import { modelStats, movedStat, texturesStat } from './modelStats';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
-import { centreOf, type OrbitView } from './orbitCamera';
+import { centreOf, diagonalOf, type OrbitView } from './orbitCamera';
 import { useModelCamera } from './useModelCamera';
 import { useModelDifferences } from './useModelDifferences';
 import { useModelPalette } from './useModelPalette';
@@ -181,6 +188,27 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     else camera.frameWhole();
   }, [camera, picked, pickedBounds]);
 
+  // A review's comments on the model (`ModelAnnotationsContext`): its pins, and marking a new one's spot.
+  const annotations = useContext(ModelAnnotationsContext);
+  const versions = useMemo(
+    (): Record<Side, DrawnVersion | null> => ({ before: drawnVersionOf(old, sceneBefore), after: drawnVersionOf(next, sceneAfter) }),
+    [old, next, sceneBefore, sceneAfter],
+  );
+  const commentable = takesModelComments(annotations, present);
+  const [commenting, setCommenting] = useState(false);
+  const isCommenting = commenting && commentable;
+  // The pin pointed at or focused: a comment on a whole part lights the part meanwhile (`litCommentPart`).
+  const [pointedPin, setPointedPin] = useState<string | null>(null);
+  const litPin = annotations ? litCommentPart(annotations.pins, annotations.opened, pointedPin, lookDifferences) : null;
+  const litPart = useMemo(() => (litPin ? (pinPlacesOf([litPin], versions)[0] ?? null) : null), [litPin, versions]);
+  const spotAt = useCallback(
+    (x: number, y: number, side: Side, wholePart: boolean) => {
+      const hit = renderer?.pick(x, y, side);
+      const version = versions[side];
+      return hit && version && renderer ? spotOfHit(version, hit, renderer.cameraPosition(), wholePart) : null;
+    },
+    [renderer, versions],
+  );
   useEffect(() => {
     if (!renderer || !bounds) return;
     renderer.setModels(sceneBefore, sceneAfter, bounds);
@@ -200,9 +228,10 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
       if (node.before) highlighted.before.add(node.before);
       if (node.after) highlighted.after.add(node.after);
     }
+    if (litPart?.nodeKey) highlighted[litPart.pin.side].add(litPart.nodeKey);
     renderer?.setLook({ drawMode: modelDrawMode, surface, highlighted, diffsCompares: compares, looksLoaded });
     renderer?.setMarkers(markersOf(picked?.nodes ?? [], sceneBefore, sceneAfter));
-  }, [renderer, picked, modelDrawMode, surface, compares, looksLoaded, sceneBefore, sceneAfter]);
+  }, [renderer, picked, litPart, modelDrawMode, surface, compares, looksLoaded, sceneBefore, sceneAfter]);
   // After the scenes are set (`setModels` lets a replaced side's looks go), whenever either changes.
   useEffect(() => {
     if (renderer && bounds) renderer.setMaterialLooks(materials.looks);
@@ -228,13 +257,34 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   }, [renderer, hasBones, modelShowBones]);
   const scenes = useMemo(() => ({ before: sceneBefore, after: sceneAfter }), [sceneBefore, sceneAfter]);
 
+  // A pin gone to (from the Comments panel, the conversation): the camera glides to show it (`viewOfSpot`), once per
+  // time, as soon as the pair is framed.
+  const revealed = useRef<number | null>(null);
+  const reveal = annotations?.reveal ?? null;
+  useEffect(() => {
+    if (!reveal || revealed.current === reveal.seq || !framing || !bounds) return;
+    const pin = annotations?.pins.find((candidate) => candidate.key === reveal.key);
+    const [place] = pin ? pinPlacesOf([pin], versions) : [];
+    const version = pin && versions[pin.side];
+    if (!pin || !place || !version) return;
+    revealed.current = reveal.seq;
+    camera.frameView(viewOfSpot(place.point(), pin.spot.view, viewerSpaceOf(version.model), camera.currentView(), bounds, camera.paneAspect()));
+  }, [reveal?.seq, framing, versions]);
+
   const onClick = useCallback(
     (x: number, y: number) => {
+      // Commenting, a click marks a point of the version that takes comments; one on nothing marks nothing.
+      if (isCommenting && annotations?.commentsOn) {
+        setCommenting(false);
+        const spot = spotAt(x, y, annotations.commentsOn, false);
+        if (spot) annotations.addComment(spot);
+        return;
+      }
       const hit = renderer?.pick(x, y);
       if (!hit?.key) return setPicked(null);
       setPicked({ id: `node:${hit.side}:${hit.key}`, nodes: [clickedNode(hit.side, hit.key, old?.summary ?? null, next?.summary ?? null, matching)] });
     },
-    [renderer, old, next, matching],
+    [renderer, old, next, matching, isCommenting, annotations, spotAt],
   );
   const stopCoasting = useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, modelCentre, onClick });
   useEffect(() => camera.setInterrupt(stopCoasting), [camera, stopCoasting]);
@@ -259,10 +309,21 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
       event.preventDefault();
       return;
     }
+    // What's typed in a comment's card over the model is the card's: F, 0 and C are letters there.
+    if (keyTakenByText(event.nativeEvent)) return;
     const command = modelCommandOf(event.nativeEvent);
-    if (!command) return;
+    if (!command || (command === 'comment' && !commentable)) return;
+    if (command === 'leaveComment') {
+      // Esc stops marking a comment's spot, else closes the card open.
+      if (!isCommenting && !annotations?.opened) return;
+      event.preventDefault();
+      if (isCommenting) setCommenting(false);
+      else annotations?.onOpen(null);
+      return;
+    }
     event.preventDefault();
-    if (command === 'frameAll') camera.frameWhole();
+    if (command === 'comment') setCommenting(!isCommenting);
+    else if (command === 'frameAll') camera.frameWhole();
     else frameShown();
   };
 
@@ -285,8 +346,11 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
 
   return (
     <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown} onKeyUp={flyKeys.onKeyUp} onBlur={flyKeys.onBlur}>
-      <div className={styles.stage} ref={stageRef} data-mode={shownMode ?? 'single'}>
+      <div className={styles.stage} ref={stageRef} data-mode={shownMode ?? 'single'} data-commenting={isCommenting || undefined}>
         <div ref={canvasHostRef} className={styles.canvasHost} role="img" aria-label="3D view of the model" />
+        {annotations && renderer && bounds && !loading && (
+          <ModelCommentsOverlay annotations={annotations} renderer={renderer} versions={versions} modelSize={diagonalOf(bounds)} spotAt={spotAt} onPointed={setPointedPin} />
+        )}
         {loading && spin && <CenteredSpinner />}
         {!loading && (
           <>
@@ -350,6 +414,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
               differences={differences}
               bones={hasBones ? { shown: modelShowBones, onShow: setModelShowBones } : null}
               onFrame={frameShown}
+              comment={commentable ? { active: isCommenting, onToggle: () => setCommenting(!isCommenting) } : null}
             />
             <div className={styles.dock}>
               {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} take={take} onTake={setTake} />}
@@ -387,6 +452,11 @@ function materialVersionOf(
 /** Where a side's pane is across the stage, as fractions of its width: left of the split, or right of it. */
 function sideArea(side: 'before' | 'after', split: number): { left: number; width: number } {
   return side === 'before' ? { left: 0, width: split } : { left: split, width: 1 - split };
+}
+
+/** A version as the comments' pins are placed on it: read and drawn. */
+function drawnVersionOf(read: Extract<ModelReadState, { status: 'ready' }> | null, scene: ReturnType<typeof useModelScene>): DrawnVersion | null {
+  return read && scene ? { model: read.model, summary: read.summary, scene } : null;
 }
 
 function readyOf(state: ModelReadState): Extract<ModelReadState, { status: 'ready' }> | null {
