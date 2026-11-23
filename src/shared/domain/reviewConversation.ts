@@ -31,6 +31,40 @@ export interface ImageSpot {
   size?: ImageSize;
 }
 
+/** A point in a 3D model's file, in its own units and axes: before any import scale or axis turn a viewer applies. */
+export interface ModelPoint {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * Where on a 3D model a comment is: a point on its surface, in the file's own space, so every client places it alike
+ * from the file. The rest are hints a reader may go without:
+ * - `node`: the part the point is on, by the names from the file's root down to it, and the point in that part's own
+ *   space (`local`), which places it on the part wherever the part is now: on another version, or while a take moves it;
+ * - `wholePart`: the comment is about that whole part, not the point (only with a `node`);
+ * - `view`: where the camera was when it was written, as a direction from the point and a distance, in the file's space.
+ */
+export interface ModelSpot {
+  point: ModelPoint;
+  node?: ModelSpotNode;
+  wholePart?: true;
+  view?: ModelSpotView;
+}
+
+/** The part of a model a spot is on: its names from the root, and the point in its own space when known. */
+export interface ModelSpotNode {
+  path: string[];
+  local?: ModelPoint;
+}
+
+/** The camera a spot was written from: the direction from the point to it, and how far it was, in the file's space. */
+export interface ModelSpotView {
+  direction: ModelPoint;
+  distance: number;
+}
+
 /** The revision of a file a comment is on, by the item and the path it had there. */
 export interface CommentedRevision {
   revisionId: number;
@@ -86,6 +120,14 @@ export interface NewLineComment extends LineRange {
 export interface NewImageComment {
   revisionId: number;
   spot: ImageSpot;
+  kind: LineCommentKind;
+  changesetId?: number;
+}
+
+/** Where a new comment on a 3D model goes, and as what: a spot of the revision the review's diff shows, as for lines. */
+export interface NewModelComment {
+  revisionId: number;
+  spot: ModelSpot;
   kind: LineCommentKind;
   changesetId?: number;
 }
