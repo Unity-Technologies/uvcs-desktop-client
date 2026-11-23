@@ -56,6 +56,7 @@ export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, imag
           pin={pin}
           rect={rect}
           selected={pin.key === annotations.selected || pin.key === annotations.opened}
+          opened={pin.key === annotations.opened}
           onClick={() => annotations.onOpen(pin.key === annotations.opened ? null : pin.key)}
           reshape={
             pin.movable
@@ -97,7 +98,7 @@ interface Reshape {
  * as a comment on a canvas reads in design tools; the area outlined. A movable one (a comment being written) drags by
  * its bubble, and its area's corners reshape it.
  */
-function PinMark({ pin, rect, selected, onClick, reshape }: { pin: ImagePin; rect: ScreenRect; selected: boolean; onClick: () => void; reshape: Reshape | null }) {
+function PinMark({ pin, rect, selected, opened, onClick, reshape }: { pin: ImagePin; rect: ScreenRect; selected: boolean; opened: boolean; onClick: () => void; reshape: Reshape | null }) {
   const flags = { 'data-emphasized': pin.emphasized || undefined, 'data-earlier': pin.earlier || undefined, 'data-selected': selected || undefined, 'data-writing': pin.author === null || undefined };
   // A drag that moved the pin isn't a click on it.
   const dragged = useRef(false);
@@ -116,7 +117,7 @@ function PinMark({ pin, rect, selected, onClick, reshape }: { pin: ImagePin; rec
   };
   return (
     <>
-      {pin.spot.size && <div className={styles.area} {...flags} style={{ transform: `translate(${rect.x}px, ${rect.y}px)`, width: rect.width, height: rect.height }} />}
+      {pin.spot.size && <div className={styles.area} {...flags} data-opened={opened || undefined} style={{ transform: `translate(${rect.x}px, ${rect.y}px)`, width: rect.width, height: rect.height }} />}
       {pin.spot.size && reshape && AREA_CORNERS.map((corner) => <CornerHandle key={corner} corner={corner} rect={rect} spot={pin.spot} reshape={reshape} />)}
       <button
         type="button"

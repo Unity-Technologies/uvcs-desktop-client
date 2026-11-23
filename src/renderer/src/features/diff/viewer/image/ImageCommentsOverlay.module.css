@@ -111,15 +111,15 @@
 }
 
 /* An area: a border, never a fill, so the image under it reads as it is (as a commented line is outlined). Only its
-   bubble shows until it's pointed at, opened or selected, or being written: every area drawn at once hid the image
-   under their outlines. */
+   bubble shows until it's pointed at, its card is open, or it's being written: every area drawn at once hid the image
+   under their outlines. Its thread staying selected once the card closes doesn't keep it drawn. */
 .area {
   opacity: 0;
   transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .area:has(+ .pin:hover),
-.area[data-selected],
+.area[data-opened],
 .area[data-writing] {
   opacity: 1;
 }

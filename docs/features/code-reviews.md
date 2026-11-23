@@ -915,7 +915,8 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   says more, and the Comments panel and the conversation name it "point" or "area" beside its file
   (`writtenPlaceText`). The bubble's border says where it stands: the Open color while open, quiet once settled, the
   accent when selected; an area is a border, never a fill, so the image reads as it is, and it shows only while its
-  bubble is pointed at, its thread open or selected, or it's being written, as design tools do: every area drawn at
+  bubble is pointed at, its card open, or it's being written (its thread staying selected once the card closes
+  doesn't keep it), as design tools do: every area drawn at
   once hid the image under their outlines. In every image mode, on the
   side its revision shows (Split's After pane; Onion, Diffs and Swipe lay both over each other), gliding with the
   zoom.
