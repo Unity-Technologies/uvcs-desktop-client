@@ -13,6 +13,10 @@ describe('initialThreadCardFold', () => {
   it('starts a thread gone to whole, even settled', () => {
     expect(initialThreadCardFold({ state: { kind: 'discarded' } }, 0)).toEqual(whole);
   });
+
+  it('starts a settled thread whole when a reply to it was left unsent, so its draft shows', () => {
+    expect(initialThreadCardFold({ state: { kind: 'answered' } }, undefined, true)).toEqual(whole);
+  });
 });
 
 describe('nextThreadCardFold', () => {
