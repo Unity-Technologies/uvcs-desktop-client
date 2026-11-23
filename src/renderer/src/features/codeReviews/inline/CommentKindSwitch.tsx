@@ -4,7 +4,7 @@ import type { CommentFieldHandle } from '../../../components/commentEditor/comme
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
 import { threadKindName } from '../conversation/threadBadges';
-import { returnsToFieldAfterPick } from './focusAfterPick';
+import { focusFieldAfterPick } from './focusAfterPick';
 import { LINE_COMMENT_KINDS } from './newLineComment';
 
 const KIND_SEGMENTS = LINE_COMMENT_KINDS.map((kind) => {
@@ -37,7 +37,7 @@ export function CommentKindSwitch({ kind, onChange, field }: CommentKindSwitchPr
       segments={KIND_SEGMENTS}
       onChange={(picked, pick) => {
         onChange(picked);
-        if (returnsToFieldAfterPick(pick)) field.current?.focus();
+        focusFieldAfterPick(field, pick);
       }}
       label="Comment kind"
     />

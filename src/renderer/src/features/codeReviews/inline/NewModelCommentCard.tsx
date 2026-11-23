@@ -11,7 +11,7 @@ import { addModelComment } from '../conversation/reviewCommentOperations';
 import { modelSpotWords } from '../conversation/threadBadges';
 import { conversationReadAt, conversationReadSince } from '../conversation/useReviewConversation';
 import { CommentKindSwitch } from './CommentKindSwitch';
-import { returnsToFieldAfterPick } from './focusAfterPick';
+import { focusFieldAfterPick } from './focusAfterPick';
 import { modelCommentAboutOf, spotAbout, type ModelCommentAbout } from './modelCommentAbout';
 import { lineCommentWords } from './newLineComment';
 import type { NewModelCommentSpot } from './newSpotComment';
@@ -60,7 +60,7 @@ export function NewModelCommentCard({ spot, onSent }: NewModelCommentCardProps) 
               ]}
               onChange={(picked, pick) => {
                 moveTo(spot.key, spotAbout(spot.comment.spot, picked));
-                if (returnsToFieldAfterPick(pick)) field.current?.focus();
+                focusFieldAfterPick(field, pick);
               }}
             />
           </div>
