@@ -137,6 +137,8 @@ export class ModelRenderer {
   /** The size last given to the canvas; null until then, when it has the browser's default size. */
   private applied: CanvasSize | null = null;
   private frame = 0;
+  /** Counts what may move the model under a still point of the canvas (`moves`). */
+  private moveCount = 0;
   private targets: [WebGLRenderTarget, WebGLRenderTarget] | null = null;
   private readonly blender = new Blender();
   private readonly comparer = new LookComparer();
@@ -196,17 +198,20 @@ export class ModelRenderer {
     this.rebuildGrid();
     this.applyHeat();
     this.applyLook();
+    this.moveCount++;
     this.requestRender();
   }
 
   setView(view: OrbitView): void {
     this.view = view;
+    this.moveCount++;
     this.requestRender();
   }
 
   setLayout(layout: ModelLayoutState): void {
     const modeChanged = layout.mode !== this.layoutState.mode;
     this.layoutState = layout;
+    this.moveCount++;
     if (modeChanged) this.applyLook();
     this.requestRender();
   }
@@ -290,6 +295,7 @@ export class ModelRenderer {
     this.width = next.width;
     this.height = next.height;
     this.pixelRatio = pixelRatio;
+    this.moveCount++;
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(this.width, this.height, false);
     this.targets?.forEach((target) => target.dispose());
@@ -374,7 +380,17 @@ export class ModelRenderer {
 
   /** A take moved the nodes: the shadows follow on the next frame. */
   posed(): void {
+    this.moveCount++;
     this.redrawShadows();
+  }
+
+  /**
+   * A count that changes whenever what is under a still point of the canvas may: the camera, a take's pose, the
+   * layout, the canvas's size, the models. What picks under a pointer that hasn't moved picks again only once it
+   * changed (`useCommentHover`); a new look (a part lit) changes nothing under it.
+   */
+  moves(): number {
+    return this.moveCount;
   }
 
   /** The shadows drawn again on the next frame: a pose changed, or a restored context lost their drawings. */

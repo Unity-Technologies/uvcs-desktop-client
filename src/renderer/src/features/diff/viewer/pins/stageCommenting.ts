@@ -28,10 +28,15 @@ export function commentKeyAction(command: 'comment' | 'leaveComment', state: Sta
   return state.opened ? 'closeCard' : null;
 }
 
+/** The modifiers held for a click on the stage. */
+export type StageClickModifiers = Pick<MouseEvent, 'shiftKey'>;
+
 /**
  * What a click on the stage does: while marking, it marks a spot on the version comments are written on (`commentsOn`)
- * and stops marking, whether or not it hits anything; otherwise it's the stage's own click (picking a part).
+ * and stops marking, whether or not it hits anything; otherwise it's the stage's own click (picking a part). A click
+ * marks a point; with Shift held, the whole part under it (Shift, not Alt: many Linux desktops take an
+ * Alt-click to move the window).
  */
-export function stageClickOf<Side>(commenting: boolean, commentsOn: Side | null): { marks: Side } | 'stage' {
-  return commenting && commentsOn !== null ? { marks: commentsOn } : 'stage';
+export function stageClickOf<Side>(commenting: boolean, commentsOn: Side | null, modifiers: StageClickModifiers): { marks: Side; wholePart: boolean } | 'stage' {
+  return commenting && commentsOn !== null ? { marks: commentsOn, wholePart: modifiers.shiftKey } : 'stage';
 }

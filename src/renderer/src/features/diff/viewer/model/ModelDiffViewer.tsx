@@ -5,7 +5,7 @@
 // about, and so does a click on the model; the info strip narrates the figures a budget checks.
 
 import { Box as BoxIcon } from 'lucide-react';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Place } from '@shared/domain/place';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { keyTakenByText } from '../../../../lib/textEntry';
@@ -35,7 +35,10 @@ import { viewerSpaceOf } from './modelSpaces';
 import { viewOfSpot } from './spotView';
 import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
-import { commentKeyAction, stageClickOf } from '../pins/stageCommenting';
+import { commentKeyAction, stageClickOf, type StageClickModifiers } from '../pins/stageCommenting';
+import { hoveredPartOf, litWhileCommenting } from './commentHover';
+import { CommentHoverLabel } from './CommentHoverLabel';
+import { useCommentHover } from './useCommentHover';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
 import { fileMaterialChanges } from './materials/fileMaterialChanges';
@@ -202,6 +205,16 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const [pointedPin, setPointedPin] = useState<string | null>(null);
   const litPin = annotations ? litCommentPart(annotations.pins, annotations.opened, pointedPin, lookDifferences) : null;
   const litPart = useMemo(() => (litPin ? (pinPlacesOf([litPin], versions)[0] ?? null) : null), [litPin, versions]);
+  // Commenting, the part under the pointer lights up with its name beside the cursor (`hoveredPartOf`).
+  const hoverLabelRef = useRef<HTMLDivElement>(null);
+  const commentsOn = annotations?.commentsOn ?? null;
+  const partAt = useCallback(
+    (x: number, y: number) => (commentsOn ? hoveredPartOf(renderer?.pick(x, y, commentsOn) ?? null, versions[commentsOn], lookDifferences) : null),
+    [renderer, commentsOn, versions, lookDifferences],
+  );
+  const { hovered, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, renderer, enabled: isCommenting, partAt });
+  useLayoutEffect(placeLabel, [hovered, placeLabel]);
+  const commentLit = litWhileCommenting(hovered, litPart?.nodeKey ? { side: litPart.pin.side, key: litPart.nodeKey } : null);
   const spotAt = useCallback(
     (x: number, y: number, side: Side, wholePart: boolean) => {
       const hit = renderer?.pick(x, y, side);
@@ -229,10 +242,10 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
       if (node.before) highlighted.before.add(node.before);
       if (node.after) highlighted.after.add(node.after);
     }
-    if (litPart?.nodeKey) highlighted[litPart.pin.side].add(litPart.nodeKey);
+    if (commentLit) highlighted[commentLit.side].add(commentLit.key);
     renderer?.setLook({ drawMode: modelDrawMode, surface, highlighted, diffsCompares: compares, looksLoaded });
     renderer?.setMarkers(markersOf(picked?.nodes ?? [], sceneBefore, sceneAfter));
-  }, [renderer, picked, litPart, modelDrawMode, surface, compares, looksLoaded, sceneBefore, sceneAfter]);
+  }, [renderer, picked, commentLit?.side, commentLit?.key, modelDrawMode, surface, compares, looksLoaded, sceneBefore, sceneAfter]);
   // After the scenes are set (`setModels` lets a replaced side's looks go), whenever either changes.
   useEffect(() => {
     if (renderer && bounds) renderer.setMaterialLooks(materials.looks);
@@ -270,12 +283,13 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   }, [reveal?.seq, framing, versions, annotations?.pins, camera]);
 
   const onClick = useCallback(
-    (x: number, y: number) => {
-      // Commenting, a click marks a point of the version that takes comments; one on nothing marks nothing.
-      const click = stageClickOf(isCommenting, annotations?.commentsOn ?? null);
+    (x: number, y: number, modifiers: StageClickModifiers) => {
+      // Commenting, a click marks a point of the version that takes comments, a Shift-click its whole part; one on
+      // nothing marks nothing.
+      const click = stageClickOf(isCommenting, annotations?.commentsOn ?? null, modifiers);
       if (click !== 'stage') {
         setCommenting(false);
-        const spot = spotAt(x, y, click.marks, false);
+        const spot = spotAt(x, y, click.marks, click.wholePart);
         if (spot) annotations?.addComment(spot);
         return;
       }
@@ -349,6 +363,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
         {annotations && renderer && bounds && !loading && (
           <ModelCommentsOverlay annotations={annotations} renderer={renderer} versions={versions} modelSize={diagonalOf(bounds)} spotAt={spotAt} onPointed={setPointedPin} />
         )}
+        {hovered && <CommentHoverLabel part={hovered} ref={hoverLabelRef} />}
         {loading && spin && <CenteredSpinner />}
         {!loading && (
           <>

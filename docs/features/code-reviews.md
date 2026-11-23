@@ -975,7 +975,9 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
   pointed at or focused, its card open, or while it's written (`litCommentPart`).
 - **On an earlier version** a pin shows on its part as the version shown has it (`local`), dashed and tagged "Earlier
   version"; when that part is gone, at its point, the tag saying so (`modelEarlierTagOf`). No earlier version is read.
-- **Writing.** The stage's comment button, or **C** (`modelComment`): a click marks a point (`spotOfHit`), and the card
+- **Writing.** The stage's comment button, or **C** (`modelComment`): the part under the pointer lights up with its
+  name beside the cursor (`hoveredPartOf`); a click marks a point (`spotOfHit`), a Shift-click the whole part
+  (`stageClickOf`), and the card
   (`NewModelCommentCard`) offers its kind, then what it's about, "Point" or the part by its name (`modelCommentAboutOf`,
   `spotAbout`), then the editor. Before it's sent its bubble drags along the surface. It's kept while the window lives
   (`useNewModelCommentsStore`), named by a serial. A drag still turns the model: a box drawn in 3D would mean something
