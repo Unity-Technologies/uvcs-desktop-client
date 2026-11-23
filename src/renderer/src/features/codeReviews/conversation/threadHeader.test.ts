@@ -59,6 +59,17 @@ describe('a thread on a 3D model', () => {
     expect(headerOf(onPart, { place: 'panel' }).location).toMatchObject({ writtenPlace: 'part Wheel_FL', tip: 'Art/Car.fbx, part Wheel_FL' });
     expect(headerOf(onPart, { place: 'fileGroup' })).toMatchObject({ writtenPlace: 'part Wheel_FL', writtenPlaceTip: tip });
   });
+
+  it('says its place names a part, which can be long, so a row cuts it before who wrote it', () => {
+    expect(headerOf(onPart, { place: 'fileGroup' }).writtenPlaceNamesPart).toBe(true);
+  });
+
+  it("says its place names no part when it reads only \"point\" or \"part\", as a line's never does", () => {
+    const unnamed = threadOf(comment(1, { anchor: { kind: 'model', revisionId: 30, itemId: 24, path: '/Art/Car.fbx', spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'mesh_0'] } } } }));
+    expect(headerOf(unnamed, { place: 'fileGroup' }).writtenPlaceNamesPart).toBe(false);
+    expect(headerOf(plainOnLine, { place: 'fileGroup' }).writtenPlaceNamesPart).toBe(false);
+    expect(headerOf(general).writtenPlaceNamesPart).toBe(false);
+  });
 });
 
 describe('hasThreadHeader', () => {
