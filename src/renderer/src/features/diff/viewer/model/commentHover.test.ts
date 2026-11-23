@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commentButtonLabel, hoverLabelOf, hoverLabelPlacement, hoveredPartOf, litWhileCommenting, partNameOf, sameHoveredPart, type NamedVersion } from './commentHover';
+import { commentButtonLabel, hoverLabelOf, hoverLabelPlacement, hoveredPartOf, hoverPicks, litWhileCommenting, partNameOf, pickAgain, sameHoveredPart, type NamedVersion } from './commentHover';
 
 /** A car as a glTF writes it: the scene's root, the car, its body, and a wheel GLTFLoader renamed apart (`Wheel_1`). */
 const CAR: NamedVersion = {
@@ -106,5 +106,39 @@ describe('hoverLabelPlacement', () => {
     const { left } = hoverLabelPlacement({ x: 70, y: 100 }, label, narrow);
     expect(left).toBeGreaterThanOrEqual(6);
     expect(left + label.width).toBeLessThanOrEqual(narrow.width - 6);
+  });
+});
+
+describe('hoverPicks', () => {
+  it('picks under a pointer moving freely over the model', () => {
+    expect(hoverPicks({ buttons: 0 }, false)).toBe(true);
+  });
+
+  it('picks nothing while a button is held (a drag turns the model) or over a pin, a card or a button', () => {
+    expect(hoverPicks({ buttons: 1 }, false)).toBe(false);
+    expect(hoverPicks({ buttons: 2 }, false)).toBe(false);
+    expect(hoverPicks({ buttons: 0 }, true)).toBe(false);
+  });
+});
+
+describe('pickAgain', () => {
+  const last = { x: 100, y: 100, moves: 7 };
+
+  it('picks the first time', () => {
+    expect(pickAgain(null, last)).toBe(true);
+  });
+
+  it('picks once the pointer moved a pixel or more', () => {
+    expect(pickAgain(last, { ...last, x: 101 })).toBe(true);
+    expect(pickAgain(last, { ...last, y: 99 })).toBe(true);
+  });
+
+  it('picks once the model moved under the still pointer: a turn’s coast, a glide, a take', () => {
+    expect(pickAgain(last, { ...last, moves: 8 })).toBe(true);
+  });
+
+  it('skips a frame where neither moved, as one a part lit up draws', () => {
+    expect(pickAgain(last, { ...last })).toBe(false);
+    expect(pickAgain(last, { ...last, x: 100.5, y: 100.4 })).toBe(false);
   });
 });
