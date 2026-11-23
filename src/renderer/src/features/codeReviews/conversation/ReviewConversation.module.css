@@ -957,8 +957,8 @@ button.earlierTag:hover {
 
 /*
  * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
- * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). A long place (a model's part) is
- * cut at half the row (`.rowPlace`), leaving the rest to who started it.
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). A model's part name can make the
+ * place long: `.rowPlace` then gives way before who started it, so the name keeps its first letters.
  */
 .rowAbout {
   display: flex;
@@ -988,13 +988,15 @@ button.earlierTag:hover {
 }
 
 /*
- * Short ("line 42", "point") it stays whole while the author's name gives way; a model's part name can be long, so it
- * takes at most half the row and is cut there, leaving room for who wrote it.
+ * At most half the row, and cut before who wrote it: its weight is four times the author's, and flex weighs it by its
+ * width too, so a long part name gives way many times faster than a name, while "line 42" or "point" stays nearly
+ * whole.
  */
 .rowPlace {
   overflow: hidden;
   min-width: 0;
   max-width: 50%;
+  flex-shrink: 400000000;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
