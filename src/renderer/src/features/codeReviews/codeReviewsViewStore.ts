@@ -35,10 +35,13 @@ export const restoredReviewersFilter: FilterUpgrade<CodeReviewsFilters> = (remem
  */
 export const restoredStatesFilter: FilterUpgrade<CodeReviewsFilters> = (remembered) => ({ mergeRequestStates: restoredStates(remembered.mergeRequestStates ?? remembered.mergeRequestState) });
 
+/** Every filter Merge requests renamed, read as today's (`FilterUpgrade`): the reviewers and the states. */
+export const restoredCodeReviewFilters: FilterUpgrade<CodeReviewsFilters> = (remembered) => ({ ...restoredReviewersFilter(remembered), ...restoredStatesFilter(remembered) });
+
 export const useCodeReviewsViewStore = createViewFilters<CodeReviewsFilters>(
   'code-reviews-view',
   { text: '', people: EVERYONE, since: 'last3Months', status: 'any', mergeRequestStates: STILL_TO_MERGE, kind: 'any', reviewers: EVERYONE, waitingForMe: false, openedByMe: false },
   CLEARED_CODE_REVIEW_FILTERS,
   [],
-  (remembered) => ({ ...restoredReviewersFilter(remembered), ...restoredStatesFilter(remembered) }),
+  restoredCodeReviewFilters,
 );

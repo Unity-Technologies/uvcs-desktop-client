@@ -5,9 +5,9 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { compactFilter } from '../../lib/compactFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
-import { isFiltering } from '../../lib/viewFilters';
+import { isFiltering, restoredFilters } from '../../lib/viewFilters';
 import { codeReviewsListQuery, codeReviewsQuery, isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, showsStateChip, statesUnderKind, matchesWaiting, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
-import { CLEARED_CODE_REVIEW_FILTERS, restoredReviewersFilter, restoredStatesFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
+import { CLEARED_CODE_REVIEW_FILTERS, restoredCodeReviewFilters, restoredReviewersFilter, restoredStatesFilter, useCodeReviewsViewStore } from './codeReviewsViewStore';
 import { EVERY_STATE, STILL_TO_MERGE } from './mergeRequestStatesFilter';
 
 const today = new Date(2026, 8, 25);
@@ -60,10 +60,15 @@ describe('the State chip', () => {
     }
   });
 
-  it("reads an older version's one choice as the states it showed, beside the reviewers' own upgrade", () => {
-    expect(restoredStatesFilter({ mergeRequestStates: ['Merged'] })).toEqual({ mergeRequestStates: ['Merged'] });
+  it("reads the states remembered, in order, and rests with none", () => {
     expect(restoredStatesFilter({ mergeRequestStates: ['Open', 'Draft'] })).toEqual({ mergeRequestStates: STILL_TO_MERGE });
     expect(restoredStatesFilter({})).toEqual({ mergeRequestStates: STILL_TO_MERGE });
+  });
+
+  it("reads an older version's remembered filters, one choice and I'm a reviewer, as today's, dropping the old keys", () => {
+    const defaults = useCodeReviewsViewStore.getInitialState();
+    expect(restoredFilters({ since: 'lastYear', mergeRequestState: 'merged', reviewerIsMe: true }, defaults, restoredCodeReviewFilters)).toEqual({ since: 'lastYear', mergeRequestStates: ['Merged'], reviewers: MINE });
+    expect(restoredFilters({ mergeRequestState: 'all' }, defaults, restoredCodeReviewFilters)).toEqual({ mergeRequestStates: EVERY_STATE });
   });
 });
 
