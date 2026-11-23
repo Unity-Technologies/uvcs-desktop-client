@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, cardPlacement, pinBounds, pinCardPlacement } from './pinPlacement';
+import { boundsOf, cardPlacement, cardStyleOf, pinBounds, pinCardPlacement, PIN_CARD_WIDTH, stageCardPlacement } from './pinPlacement';
 
 describe('cardPlacement', () => {
   const VIEWPORT = { width: 1000, height: 600 };
 
   it('goes right of the spot, level with it', () => {
-    expect(cardPlacement({ x: 100, y: 50, width: 20, height: 10 }, VIEWPORT, 360)).toEqual({ left: 132, top: 50, maxHeight: 542 });
+    expect(cardPlacement({ x: 100, y: 50, width: 20, height: 10 }, VIEWPORT, 360)).toEqual({ left: 132, top: 50, width: 360, maxHeight: 542 });
   });
 
   it('goes left when the right has no room', () => {
@@ -17,15 +17,19 @@ describe('cardPlacement', () => {
   });
 
   it('goes below the spot when neither side has room, not over what it is about', () => {
-    expect(cardPlacement({ x: 150, y: 40, width: 100, height: 60 }, { width: 400, height: 600 }, 360)).toEqual({ left: 32, top: 112, maxHeight: 480 });
+    expect(cardPlacement({ x: 150, y: 40, width: 100, height: 60 }, { width: 400, height: 600 }, 360)).toEqual({ left: 32, top: 112, width: 360, maxHeight: 480 });
   });
 
   it('goes above it when below has less room', () => {
-    expect(cardPlacement({ x: 20, y: 400, width: 300, height: 150 }, { width: 400, height: 600 }, 360)).toEqual({ left: 20, bottom: 212, maxHeight: 380 });
+    expect(cardPlacement({ x: 20, y: 400, width: 300, height: 150 }, { width: 400, height: 600 }, 360)).toEqual({ left: 20, bottom: 212, width: 360, maxHeight: 380 });
   });
 
   it('goes over it only when no side has room', () => {
     expect(cardPlacement({ x: 20, y: 100, width: 300, height: 150 }, { width: 400, height: 300 }, 360)).toMatchObject({ left: 20, top: 92 });
+  });
+
+  it('narrows to the viewport when it is narrower than the card, within its margins', () => {
+    expect(cardPlacement({ x: 100, y: 40, width: 0, height: 0 }, { width: 300, height: 600 }, 360)).toMatchObject({ left: 8, width: 284 });
   });
 });
 
@@ -43,10 +47,42 @@ describe('pinCardPlacement', () => {
   });
 });
 
+describe('pinCardPlacement on a narrow stage', () => {
+  it("narrows a model's card to a stage narrower than it, clear of the controls, in a narrow window", () => {
+    // A 340 px stage beside the Comments panel: 340 - 52 for the controls - 8 each side leaves 272.
+    const placement = pinCardPlacement({ x: 120, y: 200, width: 0, height: 0 }, { width: 340, height: 450 });
+    expect(placement).toMatchObject({ left: 8, width: 272 });
+  });
+});
+
+describe('stageCardPlacement', () => {
+  const STAGE = { width: 600, height: 600 };
+
+  it("places a card over the whole stage from a pin in one of Split's panes, clear of the controls", () => {
+    // The right pane starts at 300: its pin at 50 is at 350 on the stage; a card right of it would reach the controls.
+    const placement = stageCardPlacement({ x: 50, y: 100, width: 0, height: 0 }, { x: 300, y: 0, width: 300, height: 600 }, STAGE);
+    expect(placement).toMatchObject({ width: PIN_CARD_WIDTH });
+    expect(placement!.left + placement!.width).toBeLessThanOrEqual(STAGE.width - 52);
+    expect(placement!.left).toBeGreaterThanOrEqual(0);
+  });
+
+  it('narrows a card on a stage narrower than it, clear of the controls', () => {
+    const placement = stageCardPlacement({ x: 50, y: 100, width: 0, height: 0 }, { x: 150, y: 0, width: 150, height: 600 }, { width: 300, height: 600 });
+    expect(placement).toMatchObject({ left: 8, width: 232 });
+  });
+});
+
 describe('pinCardPlacement beside what the pin is about', () => {
   it("goes below a model's part, not just below its bubble, when neither side of the part has room", () => {
     const placement = pinCardPlacement({ x: 500, y: 100, width: 0, height: 0 }, { width: 1000, height: 800 }, { x: 300, y: 80, width: 400, height: 150 });
     expect(placement).toMatchObject({ top: 242 });
+  });
+});
+
+describe('cardStyleOf', () => {
+  it('sets the edge the card hangs from and clears the other, which an earlier placement may have set', () => {
+    expect(cardStyleOf({ left: 8, width: 300, top: 20, maxHeight: 400 })).toEqual({ left: '8px', width: '300px', maxHeight: '400px', top: '20px', bottom: '' });
+    expect(cardStyleOf({ left: 8, width: 300, bottom: 20, maxHeight: 400 })).toEqual({ left: '8px', width: '300px', maxHeight: '400px', top: '', bottom: '20px' });
   });
 });
 
