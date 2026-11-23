@@ -11,7 +11,7 @@ import { PinBubble } from '../pins/PinBubble';
 import { boundsOf, PIN_CARD_WIDTH, pinCardPlacement } from '../pins/pinPlacement';
 import pinStyles from '../pins/CommentPins.module.css';
 import type { ModelAnnotations } from './modelAnnotations';
-import { hiddenBehind } from './modelProjection';
+import { depthOfHit, hiddenBehind, type Projector, type ScreenPoint } from './modelProjection';
 import type { ModelRenderer } from './modelRenderer';
 import { pinPlacesOf, type DrawnVersion, type PinPlace } from './modelPinPlaces';
 import type { Side } from './viewLayout';
@@ -45,13 +45,15 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
   // Before the page paints: a card opened shows beside its pin from its first frame.
   useLayoutEffect(() => {
     let settle = 0;
-    const onScreen = new Map<string, { x: number; y: number; depth: number }>();
+    const onScreen = new Map<string, ScreenPoint>();
+    let projectors: Record<Side, Projector | null> = { before: null, after: null };
     const place = (): void => {
       onScreen.clear();
+      projectors = { before: renderer.screenProjectorOf('before'), after: renderer.screenProjectorOf('after') };
       for (const { pin, point } of places) {
         const bubble = bubbles.current.get(pin.key);
         if (!bubble) continue;
-        const at = renderer.screenPointOf(pin.side, point());
+        const at = projectors[pin.side]?.(point()) ?? null;
         bubble.toggleAttribute('data-off-screen', at === null);
         if (!at) continue;
         onScreen.set(pin.key, at);
@@ -68,20 +70,18 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       card.current.toggleAttribute('data-off-screen', !at);
       if (!at) return;
       // A part comment's card leaves its part in view too, as it lights up while the card is open.
-      const corners = opened.partCorners()?.flatMap((corner) => renderer.screenPointOf(opened.pin.side, corner) ?? []) ?? [];
+      const corners = opened.partCorners()?.flatMap((corner) => projectors[opened.pin.side]?.(corner) ?? []) ?? [];
       const placement = pinCardPlacement({ x: at.x, y: at.y, width: 0, height: 0 }, { width: box.clientWidth, height: box.clientHeight }, boundsOf(corners));
       Object.assign(card.current.style, { left: `${placement.left}px`, maxHeight: `${placement.maxHeight}px`, top: 'top' in placement ? `${placement.top}px` : '', bottom: 'bottom' in placement ? `${placement.bottom}px` : '' });
     };
-    // What hides each point, picked under its bubble's tip once the view is still: something nearer on its version.
+    // What hides each point, picked under its bubble's tip on its own version once the view is still: something nearer.
     const markHidden = (): void => {
       const camera = renderer.cameraPosition();
       for (const { pin } of places) {
         const at = onScreen.get(pin.key);
         const bubble = bubbles.current.get(pin.key);
         if (!at || !bubble) continue;
-        const hit = renderer.pick(at.x, at.y);
-        const hitDepth = hit?.side === pin.side && hit.point ? Math.hypot(...hit.point.map((value, i) => value - camera[i]!)) : null;
-        bubble.toggleAttribute('data-behind', hiddenBehind(at.depth, hitDepth, modelSize));
+        bubble.toggleAttribute('data-behind', hiddenBehind(at.depth, depthOfHit(renderer.pick(at.x, at.y), camera), modelSize));
       }
     };
     place();

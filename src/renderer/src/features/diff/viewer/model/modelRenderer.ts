@@ -53,7 +53,7 @@ import { modelOrientation, type ModelScene } from './modelScene';
 import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
-import { projectedPoint, type ScreenPoint } from './modelProjection';
+import { projectorOf, type Projector } from './modelProjection';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, paneOfSideAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
 
@@ -328,14 +328,14 @@ export class ModelRenderer {
   }
 
   /**
-   * Where a point of a version's scene (the viewer's space) shows on the canvas, in CSS pixels from its top left, as
-   * the last frame drew it: in that version's pane. None for a version the layout doesn't draw, or a point behind the
-   * camera.
+   * Where points of a version's scene (the viewer's space) show on the canvas, in CSS pixels from its top left, as the
+   * last frame drew it: in that version's pane (a point behind the camera, nowhere). None for a version the layout
+   * doesn't draw.
    */
-  screenPointOf(side: Side, point: Vector): ScreenPoint | null {
+  screenProjectorOf(side: Side): Projector | null {
     const pane = this.layout().panes.find((candidate) => candidate.side === side);
     if (!pane || !this.sides[side]) return null;
-    return projectedPoint(point, this.view, this.bounds, pane.viewport, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
+    return projectorOf(this.view, this.bounds, pane.viewport, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
   }
 
   /** Where the camera is, in the viewer's space. */

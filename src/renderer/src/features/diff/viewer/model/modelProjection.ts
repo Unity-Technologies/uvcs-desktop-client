@@ -1,5 +1,5 @@
 // Where a point of a version's scene shows on the canvas: what places a comment's bubble over a model, every frame the
-// view draws (`ModelRenderer.screenPointOf`). The camera is set as the renderer sets it for that version's pane
+// view draws (`ModelRenderer.screenProjectorOf`). The camera is set as the renderer sets it for that version's pane
 // (`placeCamera`), so the bubble's tip stays on the point drawn.
 
 import { PerspectiveCamera, Vector3 } from 'three';
@@ -20,11 +20,15 @@ export interface CanvasMetrics {
   pixelRatio: number;
 }
 
+/** Where a point of the viewer's space shows on the canvas; none behind the camera. */
+export type Projector = (point: Vector) => ScreenPoint | null;
+
 /**
- * Where `point` (the viewer's space) shows in a pane (`viewport`: canvas pixels from the bottom left, as WebGL and the
- * layout count), seen through `view`; none behind the camera, which would show it mirrored in front.
+ * Where points (the viewer's space) show in a pane (`viewport`: canvas pixels from the bottom left, as WebGL and the
+ * layout count), seen through `view`; none behind the camera, which would show them mirrored in front. The camera is
+ * built once for every point: a frame projects each pin with one per pane.
  */
-export function projectedPoint(point: Vector, view: OrbitView, bounds: BoundsLike, viewport: Rect, canvas: CanvasMetrics): ScreenPoint | null {
+export function projectorOf(view: OrbitView, bounds: BoundsLike, viewport: Rect, canvas: CanvasMetrics): Projector {
   const camera = new PerspectiveCamera(FIELD_OF_VIEW, viewport.width / Math.max(viewport.height, 1));
   const { near, far } = clipPlanesOf(view, bounds);
   camera.near = near;
@@ -33,13 +37,20 @@ export function projectedPoint(point: Vector, view: OrbitView, bounds: BoundsLik
   camera.lookAt(...view.target);
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
-  const seen = new Vector3(...point).applyMatrix4(camera.matrixWorldInverse);
-  // Three's cameras look down their -Z: a point at 0 or more is level with the camera or behind it.
-  if (seen.z >= 0) return null;
-  const ndc = new Vector3(...point).project(camera);
-  const x = (viewport.x + ((ndc.x + 1) / 2) * viewport.width) / canvas.pixelRatio;
-  const y = canvas.height - (viewport.y + ((ndc.y + 1) / 2) * viewport.height) / canvas.pixelRatio;
-  return { x, y, depth: camera.position.distanceTo(new Vector3(...point)) };
+  const seen = new Vector3();
+  return (point) => {
+    // Three's cameras look down their -Z: a point at 0 or more is level with the camera or behind it.
+    if (seen.set(...point).applyMatrix4(camera.matrixWorldInverse).z >= 0) return null;
+    const ndc = seen.set(...point).project(camera);
+    const x = (viewport.x + ((ndc.x + 1) / 2) * viewport.width) / canvas.pixelRatio;
+    const y = canvas.height - (viewport.y + ((ndc.y + 1) / 2) * viewport.height) / canvas.pixelRatio;
+    return { x, y, depth: camera.position.distanceTo(seen.set(...point)) };
+  };
+}
+
+/** How far from the camera the surface a pick hit is; none where it hit nothing. */
+export function depthOfHit(hit: { point: Vector | null } | null, camera: Vector): number | null {
+  return hit?.point ? Math.hypot(...hit.point.map((value, i) => value - camera[i]!)) : null;
 }
 
 /**
