@@ -8,6 +8,7 @@ import { layoutReader } from '../cm/formatRecords';
 import {
   addCommentArgs,
   addImageCommentArgs,
+  addModelCommentArgs,
   addLineCommentArgs,
   applyChangeRequestArgs,
   descriptionArgs,
@@ -69,6 +70,11 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
     async addOnImage(place, reviewId, comment, text) {
       const at = cmPlace(place);
       await withTempFile(text, (textFile) => cm.query(addImageCommentArgs(reviewId, comment, textFile, at), at.options));
+    },
+
+    async addOnModel(place, reviewId, comment, text) {
+      const at = cmPlace(place);
+      await withTempFile(text, (textFile) => cm.query(addModelCommentArgs(reviewId, comment, textFile, at), at.options));
     },
 
     async reply(place, commentGuid, text, options) {
