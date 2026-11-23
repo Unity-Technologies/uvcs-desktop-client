@@ -355,7 +355,8 @@ only what changes:
 
 A place may pin comments on the model and take what a click marks on it without the model diff knowing what they are
 (`ModelAnnotationsContext`, as `ImageAnnotationsContext` does for an image; a review's comments,
-docs/features/code-reviews.md "Comments on 3D models"):
+docs/features/code-reviews.md "Comments on 3D models"). A `.meta` shown as its model takes none (`ModelMetaDiff`): its
+comment would sit on the `.meta`'s revision with a point in the model's space, which no other client could place.
 
 - **Pins** (`ModelPin`): a spot (`ModelSpot`: a point in the file's own space, and the part it's on with the point in
   that part's space) on a version, drawn by `ModelCommentsOverlay` over the canvas in the bubble every pin shares
