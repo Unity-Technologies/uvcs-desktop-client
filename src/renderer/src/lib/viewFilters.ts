@@ -64,7 +64,13 @@ export function clearedFilters<Filters extends ViewFilters>(cleared: Partial<Fil
 /** Whether "Clear filters" would show more: text typed, people picked, or a kind narrowing the list. */
 export function isFiltering<Filters extends ViewFilters>(filters: Filters, cleared: Partial<Filters> = {}): boolean {
   if (filters.text.trim() !== '' || !isEveryone(filters.people)) return true;
-  return (Object.keys(cleared) as (keyof Filters)[]).some((key) => filters[key] !== cleared[key]);
+  return (Object.keys(cleared) as (keyof Filters)[]).some((key) => !sameFilterValue(filters[key], cleared[key]));
+}
+
+/** Whether a filter holds its cleared value: a list (the states ticked) by its items, in order; anything else as it is. */
+function sameFilterValue(value: unknown, cleared: unknown): boolean {
+  if (Array.isArray(value) && Array.isArray(cleared)) return value.length === cleared.length && value.every((item, index) => item === cleared[index]);
+  return value === cleared;
 }
 
 /** What is kept across sessions: everything but the text, the actions, the people picked by name and `forSession`. */

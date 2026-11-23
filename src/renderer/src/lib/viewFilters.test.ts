@@ -16,6 +16,13 @@ describe('isFiltering', () => {
     expect(isFiltering({ ...DEFAULTS, status: 'Open' }, { status: 'any' })).toBe(true);
     expect(isFiltering({ ...DEFAULTS, since: 'anyTime' }, { status: 'any' })).toBe(false);
   });
+
+  it('compares a list kept by a filter by its items, so a list equal to the cleared one is no filter', () => {
+    const cleared = { states: ['Draft', 'Open'] };
+    expect(isFiltering({ ...DEFAULTS, states: ['Draft', 'Open'] }, cleared)).toBe(false);
+    expect(isFiltering({ ...DEFAULTS, states: ['Open'] }, cleared)).toBe(true);
+    expect(isFiltering({ ...DEFAULTS, states: ['Open', 'Draft'] }, cleared)).toBe(true);
+  });
 });
 
 describe('clearedFilters', () => {
