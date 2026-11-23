@@ -1,4 +1,4 @@
-import { Box, Dot } from 'lucide-react';
+import { Box, LocateFixed } from 'lucide-react';
 import { placeId } from '@shared/domain/place';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { commentDraftKey } from '../../../components/DetailsHeading';
@@ -51,7 +51,7 @@ export function NewModelCommentCard({ spot, onSent }: NewModelCommentCardProps) 
               value={about.about}
               label="What the comment is on"
               segments={[
-                { value: 'point', label: <><Dot size={12} aria-hidden />Point</>, title: 'This point of the surface' },
+                { value: 'point', label: <><LocateFixed size={12} aria-hidden />Point</>, title: 'This point of the surface' },
                 { value: 'part', label: <><Box size={12} aria-hidden /><span className={styles.partName}>{about.partName}</span></>, title: `The whole part: ${about.partName}` },
               ]}
               onChange={(picked) => moveTo(spot.key, spotAbout(spot.comment.spot, picked))}
