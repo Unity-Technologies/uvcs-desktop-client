@@ -1,7 +1,8 @@
 .popover {
   display: flex;
   flex-direction: column;
-  /* Wide enough for an editor and a terminal side by side in the actions below ("Open in Visual Studio Code",
+  /* As wide as the branch switcher's popover (features/branches/WorkingObjectButton.module.css), and wide enough for
+     an editor and a terminal side by side in the actions below ("Open in Visual Studio Code",
      "Open in Windows Terminal"). */
   width: 460px;
   max-width: calc(100vw - 24px);
