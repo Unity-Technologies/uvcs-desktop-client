@@ -32,6 +32,13 @@ describe('projectorOf', () => {
     expect(points.map(project)).toEqual(points.map((point) => projectorOf(FRONT, BOUNDS, FULL, CANVAS)(point)));
   });
 
+  it("shows nothing off its version's pane, where Split would draw it over the other version", () => {
+    const after = { x: 800, y: 0, width: 800, height: 800 };
+    // Far to the left of the target: off the right half's left edge, in the left half.
+    expect(projectorOf(FRONT, BOUNDS, after, CANVAS)([-4, 0, 0])).toBeNull();
+    expect(projectorOf(FRONT, BOUNDS, after, CANVAS)([0, 4, 0])).toBeNull();
+  });
+
   it('shows nothing behind the camera', () => {
     expect(projectorOf(FRONT, BOUNDS, FULL, CANVAS)([0, 0, 6])).toBeNull();
   });
