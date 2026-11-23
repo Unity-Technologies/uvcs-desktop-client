@@ -1,5 +1,6 @@
-// What the comment keys and a click do on a stage that takes comments, an image's or a model's: the same rules for
-// both, so the two viewers only switch on the answer.
+// What the comment keys do on a stage that takes comments, an image's or a model's alike, and what a click on a
+// model's does (an image marks its spots by a click or a drag, in `ImageCommentsOverlay`). The viewers only switch on
+// the answer.
 
 /** The state a stage's comment keys and clicks depend on. */
 export interface StageCommenting {
