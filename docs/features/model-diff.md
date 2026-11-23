@@ -50,6 +50,10 @@ reads a file otherwise:
   BoatAttack's `Renegade.fbx`): they show "Couldn't display this model", a known limit of the loader.
 - **A glTF that needs more than its bytes says so** (`gltfNeed`): a buffer in a `.bin` beside it, or Draco or meshopt
   compression, which the viewer has no decoder for (`modelReadFailureWords`).
+- **A skin leaning on a joint it hasn't is unreadable** (`leansPastSkeleton`, checked by `fromThreeObject`): a vertex
+  weighted to a joint index past its skin's joints, as a broken glTF export can write, would make three read a bone
+  that isn't there each time it draws, places or picks the mesh. It shows "Couldn't display this model" instead. An
+  FBX can't carry one: FBXLoader numbers the joints from the skin's own clusters.
 
 Checked against Unity 6000.3's own import of six real exports (Blender's, a Z-up one among them): sizes and centres
 match to the centimetre; Unity's `Renderer.bounds` only differ where a node is rotated, as they box a box.
