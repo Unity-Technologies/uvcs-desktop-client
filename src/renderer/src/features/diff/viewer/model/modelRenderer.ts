@@ -51,7 +51,7 @@ import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
 import { emphasisOf, outlinesWhenLit } from './meshEmphasis';
-import { MeshPicker } from './meshPicker';
+import { drawnTwinsOf, MeshPicker, shownToPicking } from './meshPicker';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
@@ -670,7 +670,7 @@ export class ModelRenderer {
     pivot.renderOrder = 10;
     scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
     const looks = new SlotLookMaterials(model, this.lookTextures);
-    model.meshes.forEach((mesh, index) => MeshPicker.makePickable([mesh.solid, mesh.wire], index));
+    model.meshes.forEach((mesh, index) => MeshPicker.makePickable(drawnTwinsOf(mesh), index));
     const shadow = new ContactShadow();
     for (const mesh of model.meshes) mesh.solid.layers.enable(SHADOW_LAYER);
     scene.add(shadow.plane);
@@ -799,7 +799,8 @@ export class ModelRenderer {
  * (`MeshPicker.supported`). The meshes shown count, solid or wireframe.
  */
 function raycastHit(raycaster: Raycaster, model: ModelScene): { mesh: number; point: Vector; normal: Vector | null } | null {
-  const shown = model.meshes.filter((mesh) => mesh.solid.visible || mesh.wire.visible).map((mesh) => mesh.solid);
+  // Through the solid, which shares the geometry and node of whichever twin shows.
+  const shown = model.meshes.filter(shownToPicking).map((mesh) => mesh.solid);
   const [hit]: Intersection[] = raycaster.intersectObjects(shown, false);
   if (!hit) return null;
   // The face's direction in the viewer's space, turned towards the camera (a face seen from behind).

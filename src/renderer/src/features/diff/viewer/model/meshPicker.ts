@@ -14,6 +14,28 @@ import { pickedAt, type PickWindow } from './pickWindow';
 /** The layer the pickable meshes are on, beside the default one everything is drawn on. */
 export const PICK_LAYER = 1;
 
+/** The objects a mesh is drawn as, sharing its geometry: only the ones visible show. */
+export interface MeshTwins {
+  solid: Mesh;
+  wire: Mesh;
+  heat: Mesh;
+  ghost: Mesh;
+}
+
+/**
+ * Every object a mesh is drawn as, each made pickable as the mesh (`makePickable`): Diffs hides the solid and draws the
+ * version after as its heat twin and the one before as its ghost, and a mesh picked only by its solid picked nothing
+ * there, so commenting in Diffs showed no ring and a click marked nothing.
+ */
+export function drawnTwinsOf(mesh: MeshTwins): Mesh[] {
+  return [mesh.solid, mesh.wire, mesh.heat, mesh.ghost];
+}
+
+/** Whether a pick can find the mesh: one of the objects it's drawn as shows (the raycast's test, as the GPU's draw is). */
+export function shownToPicking(mesh: MeshTwins): boolean {
+  return drawnTwinsOf(mesh).some((twin) => twin.visible);
+}
+
 export class MeshPicker {
   // Two pixels drawn at once: the point and the mesh, and the surface's direction there (`normalAt`).
   private readonly target = new WebGLRenderTarget(1, 1, { type: FloatType, depthBuffer: true, count: 2 });

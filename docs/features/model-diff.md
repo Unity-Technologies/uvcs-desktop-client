@@ -191,7 +191,8 @@ only what changes:
 - **Meshes drawn alike share their materials** (`SceneMaterials`): one clay material per slot name and emphasis (lit,
   faded, plain: `emphasisOf`), one wire material per emphasis, one heat and one ghost. A material each made three
   refresh every material's uniforms for every mesh, each frame. The look sets each shared material's color once.
-- **Picking reads the GPU** (`MeshPicker`): the side's meshes shown (solid or wireframe) are drawn into one float
+- **Picking reads the GPU** (`MeshPicker`): the side's meshes shown (solid, wireframe, or Diffs' heat and ghost
+  twins: `drawnTwinsOf`, `shownToPicking`; picked by the solid alone, Diffs picked nothing) are drawn into one float
   pixel through the camera narrowed to the point under the pointer (`pickWindowAt`, three's `setViewOffset`, which
   culls every mesh whose bounds miss it), writing where the surface is and which mesh it is (`pickedAt`), deformed as
   drawn, and in a second pixel of the same draw the face's direction there, from how the point changes across the
