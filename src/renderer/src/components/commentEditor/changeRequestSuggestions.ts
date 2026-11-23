@@ -1,3 +1,4 @@
+import type { LineRange } from '@shared/domain/reviewConversation';
 import type { ReviewChangeRequest } from '../../features/codeReviews/changeRequests/changeRequests';
 import { indexCandidates, rankCandidates, type CandidateIndex } from '../../lib/candidateRanking';
 import { applyChangeText, shortGuid } from '../../lib/comments/commentReferences';
@@ -27,8 +28,13 @@ export function changeRequestSuggestions(index: CandidateIndex<ReviewChangeReque
     key: `apply:${request.guid}`,
     kind: 'changeRequest',
     label: suggestionDetail(request.text, typed, LABEL_ROOM),
-    detail: [...(request.location ? [`${lastSegment(request.location.path)}:${rangeSpan(request.location)}`] : []), `cr:${request.reviewId}`].join(' · '),
+    detail: [...(request.location ? [locationText(request.location)] : []), `cr:${request.reviewId}`].join(' · '),
     owner: request.author,
     insert: applyChangeText(request.guid),
   }));
+}
+
+/** A change request's file as editors write it, with its lines when on lines: `Player.cs:12-18`, `Hero.png`. */
+function locationText({ path, lines }: { path: string; lines?: LineRange }): string {
+  return lines ? `${lastSegment(path)}:${rangeSpan(lines)}` : lastSegment(path);
 }

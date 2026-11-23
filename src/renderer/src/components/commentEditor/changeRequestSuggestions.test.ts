@@ -11,7 +11,7 @@ function request(commentId: number, text: string, fields: Partial<ReviewChangeRe
     author: 'ana',
     date: '2026-11-06T10:00:00+01:00',
     text,
-    location: { path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 },
+    location: { path: '/Assets/Scripts/SwitchFlow.cs', lines: { firstLine: 11, lastLine: 11 } },
     state: { kind: 'open' },
     ...fields,
   };
@@ -28,8 +28,14 @@ describe('changeRequestSuggestions', () => {
   });
 
   it('names a request on a range of lines by its first and last line', () => {
-    const range = request(3, 'Extract these.', { location: { path: '/src/Player.cs', firstLine: 12, lastLine: 18 } });
+    const range = request(3, 'Extract these.', { location: { path: '/src/Player.cs', lines: { firstLine: 12, lastLine: 18 } } });
     expect(changeRequestSuggestions(changeRequestIndex([range]), '')[0]?.detail).toBe('Player.cs:12-18 · cr:43');
+  });
+
+  it('names a request on an image by its file alone, and finds it by it', () => {
+    const onImage = request(4, 'Crop the sun.', { location: { path: '/Art/Banner.png' } });
+    expect(changeRequestSuggestions(changeRequestIndex([onImage]), '')[0]?.detail).toBe('Banner.png · cr:43');
+    expect(changeRequestSuggestions(changeRequestIndex([onImage]), 'banner')).toHaveLength(1);
   });
 
   it("filters by the request's words, its file, who asked or its number", () => {
