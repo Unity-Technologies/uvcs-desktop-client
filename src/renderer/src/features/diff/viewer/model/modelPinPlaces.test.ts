@@ -1,10 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { Quaternion, Vector3, type SkinnedMesh } from 'three';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { countCalls } from '@shared/testing/countCalls';
 import type { ModelPin } from './modelAnnotations';
 import { buildModelScene } from './modelScene';
+import { nodeNamesOf } from './modelSpots';
 import { pinPlacesOf, revealedPin, spotOfHit } from './modelPinPlaces';
 import { modelSummary } from './modelSummary';
+import { parseModel } from './parseModel';
+import { SKINNED_TOP_CORNER, skinnedGltf } from './testing/skinnedGltf';
 import { testModel } from './testing/testModels';
 import type { ParsedModel } from './parsedModel';
+import type { Vector } from './orbitCamera';
 
 const CAR = testModel({ nodes: [{ name: 'Car' }, { name: 'Body', parent: 'Car', mesh: { size: [4, 1.2, 1.8] }, position: [0, 1, 0] }] });
 
@@ -60,12 +66,102 @@ describe('pinPlacesOf', () => {
   });
 });
 
+/**
+ * A car's roof antenna, 2 m tall, skinned to two bones: its lower half to `Base`, at its foot, and its upper half to
+ * `Tip`, halfway up, so turning `Tip` bends the top over as a sway does.
+ */
+function antenna(): ParsedModel {
+  const model = testModel({
+    nodes: [
+      { name: 'Base', kind: 'bone' },
+      { name: 'Tip', parent: 'Base', kind: 'bone', position: [0, 1, 0] },
+      { name: 'Antenna', kind: 'skinnedMesh', mesh: { size: [0.2, 2, 0.2], center: [0, 1, 0], bones: ['Base', 'Tip'] } },
+    ],
+  });
+  const { position, skinIndex } = model.meshes[0]!.attributes;
+  for (let vertex = 0; vertex < position.length / 3; vertex++) skinIndex![vertex * 4] = position[vertex * 3 + 1]! > 1 ? 1 : 0;
+  return model;
+}
+
+/** Turns the antenna's `Tip` a quarter turn about Z, bending its top to -X, and draws it as a frame does. */
+function sway(version: ReturnType<typeof drawn>): void {
+  const tip = version.scene.objects.get('Base/Tip')!;
+  tip.quaternion.copy(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), Math.PI / 2));
+  tip.updateMatrix();
+  version.scene.root.updateMatrixWorld(true);
+  (version.scene.meshes[0]!.solid as unknown as SkinnedMesh).skeleton.update();
+}
+
+const onAntennaTip = pin({ spot: { point: { x: 0, y: 2, z: 0 }, node: { path: ['Antenna'], local: { x: 0, y: 2, z: 0 } } } });
+const close = (vector: Vector) => vector.map((value) => Number(value.toFixed(5)) + 0);
+const closePoint = ({ x, y, z }: { x: number; y: number; z: number }) => close([x, y, z]);
+
+describe('pinPlacesOf, a skinned mesh', () => {
+  it("follows the skin as the bones bend it, though the mesh's node stays where it is", () => {
+    const after = drawn(antenna());
+    const [place] = pinPlacesOf([onAntennaTip], { before: null, after });
+    expect(close(place!.point())).toEqual([0, 2, 0]);
+    sway(after);
+    expect(close(place!.point())).toEqual([-1, 1, 0]);
+  });
+
+  it('anchors where the point is at rest, whatever pose a take holds when the pins arrive', () => {
+    const after = drawn(antenna());
+    sway(after);
+    const [place] = pinPlacesOf([onAntennaTip], { before: null, after });
+    expect(close(place!.point())).toEqual([-1, 1, 0]);
+  });
+
+  it('reads three vertices a frame, however many the mesh has', () => {
+    const after = drawn(antenna());
+    const [place] = pinPlacesOf([onAntennaTip], { before: null, after });
+    expect(countCalls(after.scene.meshes[0]!.solid as unknown as SkinnedMesh, 'getVertexPosition', () => place!.point()).calls).toBe(3);
+  });
+
+  describe('a glTF, whose skinned mesh its node places nothing of', () => {
+    // GLTFLoader reads `self.URL`, and its FileLoader reports progress with `ProgressEvent`: globals a page has and Node hasn't.
+    beforeEach(() => {
+      vi.stubGlobal('self', globalThis);
+      vi.stubGlobal('ProgressEvent', class extends Event {});
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('follows the joint that carries it', async () => {
+      const read = await parseModel({ bytes: new TextEncoder().encode(skinnedGltf()), format: 'gltf' });
+      if (read.kind !== 'parsed') throw new Error('Not parsed');
+      const after = drawn(read.model);
+      const body = read.model.meshes[0]!;
+      const top = Array.from(body.attributes.position.slice(SKINNED_TOP_CORNER * 3, SKINNED_TOP_CORNER * 3 + 3));
+      const onTop = pin({ spot: { point: { x: 0, y: 0, z: 180 }, node: { path: nodeNamesOf(read.model.nodes, body.node), local: { x: top[0]!, y: top[1]!, z: top[2]! } } } });
+      const [place] = pinPlacesOf([onTop], { before: null, after });
+      expect(close(place!.point())).toEqual([0, 1.8, 0]);
+      // The hips step 50 cm along X: the whole body, and the pin on its top, with them.
+      const hips = after.scene.objects.get(after.summary.nodes[body.skin!.bones[0]!]!.key)!;
+      hips.position.x += 50;
+      hips.updateMatrix();
+      after.scene.root.updateMatrixWorld(true);
+      (after.scene.meshes[0]!.solid as unknown as SkinnedMesh).skeleton.update();
+      expect(close(place!.point())).toEqual([0.5, 1.8, 0]);
+    });
+  });
+});
+
 describe('spotOfHit', () => {
   it("writes the spot of the point hit on a part, in its space, with the camera", () => {
     const spot = spotOfHit(drawn(CAR), { key: 'Car/Body', point: [0, 1.6, 0] }, [0, 1.6, 5], true)!;
     expect(spot).toMatchObject({ node: { path: ['Car', 'Body'] }, wholePart: true, view: { direction: { x: 0, y: 0, z: 1 }, distance: 5 } });
     expect(spot.point.y).toBeCloseTo(1.6);
     expect(spot.node!.local!.y).toBeCloseTo(0.6);
+  });
+
+  it('writes a point hit on a skinned mesh a take bends where that place on it is at rest', () => {
+    const after = drawn(antenna());
+    sway(after);
+    const spot = spotOfHit(after, { key: 'Antenna', point: [-1, 1, 0] }, [-1, 1, 5], false)!;
+    expect(closePoint(spot.point)).toEqual([0, 2, 0]);
+    expect(closePoint(spot.node!.local!)).toEqual([0, 2, 0]);
+    // The camera stays as its author saw the bent antenna.
+    expect(spot.view).toEqual({ direction: { x: 0, y: 0, z: 1 }, distance: 5 });
   });
 
   it('marks nothing where nothing was hit', () => {
