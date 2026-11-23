@@ -81,7 +81,7 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
         const at = onScreen.get(pin.key);
         const bubble = bubbles.current.get(pin.key);
         if (!at || !bubble) continue;
-        bubble.toggleAttribute('data-behind', hiddenBehind(at.depth, depthOfHit(renderer.pick(at.x, at.y), camera), modelSize));
+        bubble.toggleAttribute('data-behind', hiddenBehind(at.depth, depthOfHit(renderer.pick(at.x, at.y, pin.side), camera), modelSize));
       }
     };
     place();
