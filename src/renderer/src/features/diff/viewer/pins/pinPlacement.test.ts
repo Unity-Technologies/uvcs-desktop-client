@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, cardPlacement, cardStyleOf, pinBounds, pinCardPlacement, PIN_CARD_WIDTH, stageCardPlacement } from './pinPlacement';
+import { boundsOf, cardPlacement, cardStyleOf, pinBounds, pinCardPlacement, PIN_CARD_WIDTH, PIN_SIZE, roomBesideCard, stageCardPlacement } from './pinPlacement';
 
 describe('cardPlacement', () => {
   const VIEWPORT = { width: 1000, height: 600 };
@@ -89,6 +89,30 @@ describe('pinCardPlacement beside what the pin is about', () => {
   it("goes below a model's part, not just below its bubble, when neither side of the part has room", () => {
     const placement = pinCardPlacement({ x: 500, y: 100, width: 0, height: 0 }, { width: 1000, height: 800 }, { x: 300, y: 80, width: 400, height: 150 });
     expect(placement).toMatchObject({ top: 242 });
+  });
+});
+
+describe('roomBesideCard', () => {
+  it("is the pane's left, short of the card and the controls, where a card fits beside a point", () => {
+    expect(roomBesideCard({ width: 1200, height: 700 })).toEqual({ x: 0, y: 0, width: 738, height: 700 });
+  });
+
+  it("is the pane's top, short of a card below a point, where none fits beside it", () => {
+    expect(roomBesideCard({ width: 600, height: 700 })).toEqual({ x: 0, y: 0, width: 548, height: 480 });
+  });
+
+  it('is the whole pane where a card fits neither beside nor below a point', () => {
+    expect(roomBesideCard({ width: 400, height: 300 })).toEqual({ x: 0, y: 0, width: 400, height: 300 });
+  });
+
+  it('leaves the card room beside a point in its middle: the card goes there, not over it', () => {
+    for (const pane of [{ width: 1200, height: 700 }, { width: 600, height: 700 }]) {
+      const room = roomBesideCard(pane);
+      const point = { x: room.x + room.width / 2, y: room.y + room.height / 2, width: 0, height: 0 };
+      const placement = pinCardPlacement(point, pane);
+      const card = { x: placement.left, y: 'top' in placement ? placement.top : 0, width: placement.width, height: 1 };
+      expect(card.x >= point.x + PIN_SIZE || card.y > point.y).toBe(true);
+    }
   });
 });
 
