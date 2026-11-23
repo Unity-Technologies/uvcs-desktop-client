@@ -66,6 +66,19 @@ describe('stageCardPlacement', () => {
     expect(placement!.left).toBeGreaterThanOrEqual(0);
   });
 
+  it('has none while the spot is out of its pane, panned or zoomed away: a card there would point at nothing', () => {
+    const pane = { x: 300, y: 0, width: 300, height: 600 };
+    expect(stageCardPlacement({ x: -5, y: 100, width: 0, height: 0 }, pane, STAGE)).toBeNull();
+    expect(stageCardPlacement({ x: 100, y: 601, width: 0, height: 0 }, pane, STAGE)).toBeNull();
+    expect(stageCardPlacement({ x: 301, y: 100, width: 0, height: 0 }, pane, STAGE)).toBeNull();
+  });
+
+  it('has one while any of an area shows, and for a point on the pane\'s edge', () => {
+    const pane = { x: 300, y: 0, width: 300, height: 600 };
+    expect(stageCardPlacement({ x: -100, y: 100, width: 120, height: 50 }, pane, STAGE)).not.toBeNull();
+    expect(stageCardPlacement({ x: 0, y: 600, width: 0, height: 0 }, pane, STAGE)).not.toBeNull();
+  });
+
   it('narrows a card on a stage narrower than it, clear of the controls', () => {
     const placement = stageCardPlacement({ x: 50, y: 100, width: 0, height: 0 }, { x: 150, y: 0, width: 150, height: 600 }, { width: 300, height: 600 });
     expect(placement).toMatchObject({ left: 8, width: 232 });
