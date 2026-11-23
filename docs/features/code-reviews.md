@@ -913,8 +913,10 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   top-left corner of the area it outlines (`reviewImagePinsOf`, `ImageCommentsOverlay`): who wrote there, as a line's
   marker shows, the shape of a comment on a canvas as design tools draw it. Numbers were tried and dropped: an avatar
   says more, and the Comments panel and the conversation name it "point" or "area" beside its file
-  (`writtenPlaceText`). The bubble's border says where it stands: the Open color while open, quiet once settled, the
-  accent when selected; an area is a border, never a fill, so the image reads as it is, and it shows only while its
+  (`writtenPlaceText`). The bubble is always white with a soft shadow (`--image-pin-rim`,
+  `--image-pin-shadow`), so it reads over any image; where the thread stands is a mark on it, never a color the image
+  could swallow: an Open-colored dot while open, faded once settled, an accent ring around the avatar when selected
+  (a state border, then a bubble filled with the state's color, each vanished over an image of that color); an area is a border, never a fill, so the image reads as it is, and it shows only while its
   bubble is pointed at, its card open, or it's being written (its thread staying selected once the card closes
   doesn't keep it), as design tools do: every area drawn at
   once hid the image under their outlines. In every image mode, on the

@@ -22,7 +22,9 @@
 }
 
 /* A speech bubble, its tip (the bottom-left corner, square) on the point: the avatar of who started the thread inside,
-   as a line's marker shows who wrote there (LineMarkers). Its border says where the thread stands. */
+   as a line's marker shows who wrote there (LineMarkers). Always white with a soft shadow, so it reads over any image,
+   light or dark; where the thread stands is a mark on it, never a color the image could swallow: a dot while open,
+   faded once settled, an accent ring around the avatar when selected. */
 .pin {
   display: inline-flex;
   align-items: center;
@@ -32,50 +34,62 @@
   height: 30px;
   margin-top: -30px;
   padding: 0;
-  border: 2px solid var(--border-strong);
+  border: 2px solid var(--image-pin-rim);
   border-radius: var(--radius-full) var(--radius-full) var(--radius-full) 0;
-  /* Avatars drawn in it are ringed apart in its own color. */
-  --avatar-ring: var(--bg-surface-raised);
-  background: var(--bg-surface-raised);
-  box-shadow: var(--shadow-sm);
+  background: var(--image-pin-rim);
+  box-shadow: 0 1px 4px var(--image-pin-shadow);
   color: var(--text-secondary);
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
+  opacity: 0.8;
   pointer-events: auto;
   cursor: pointer;
 }
 
+/* Pointed at, open, selected or being written, it shows whole. */
+.pin:hover,
+.pin[data-emphasized],
+.pin[data-selected],
+.pin[data-writing] {
+  opacity: 1;
+}
+
 .pin:hover {
-  border-color: var(--accent);
-  color: var(--accent-text);
   z-index: 1;
 }
 
 .pin:focus-visible {
   outline: var(--focus-outline);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
-/* Something there still waits for an answer: the color a review's Open pill has. */
-.pin[data-emphasized] {
-  border-color: var(--status-changed);
+/* Something there still waits for an answer: a dot in the color a review's Open pill has, as an unread badge. */
+.pin[data-emphasized]::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 11px;
+  height: 11px;
+  box-sizing: border-box;
+  border: 2px solid var(--image-pin-rim);
+  border-radius: var(--radius-full);
+  background: var(--status-changed);
 }
 
+/* Written on an earlier version: its edge dashed. */
 .pin[data-earlier] {
   border-style: dashed;
+  border-color: var(--text-secondary);
 }
 
-/* The thread selected or its card open: the accent, as its card and line are. */
-.pin[data-selected] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-sm);
-}
-
-/* A comment being written: the accent bubble, a plus where the avatar will be. */
+/* Selected, its card open, pointed at, or a comment being written (a plus where the avatar will be): the accent shows
+   between the white edge and the avatar, as its card and line are outlined in it. */
+.pin:hover,
+.pin[data-selected],
 .pin[data-writing] {
-  border-color: var(--accent);
   background: var(--accent);
+}
+
+.pin[data-writing] {
   color: var(--accent-contrast);
 }
 
