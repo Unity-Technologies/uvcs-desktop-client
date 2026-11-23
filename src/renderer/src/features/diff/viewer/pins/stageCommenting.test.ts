@@ -24,19 +24,19 @@ describe('commentKeyAction', () => {
 });
 
 describe('stageClickOf', () => {
-  const plain = { altKey: false };
+  const plain = { shiftKey: false };
 
   it('marks a point on the version comments are written on while marking', () => {
     expect(stageClickOf(true, 'after', plain)).toEqual({ marks: 'after', wholePart: false });
   });
 
-  it('marks the whole part with Alt (Option) held', () => {
-    expect(stageClickOf(true, 'after', { altKey: true })).toEqual({ marks: 'after', wholePart: true });
+  it('marks the whole part with Shift held', () => {
+    expect(stageClickOf(true, 'after', { shiftKey: true })).toEqual({ marks: 'after', wholePart: true });
   });
 
-  it('is the stage’s own click otherwise, Alt held or not', () => {
+  it('is the stage’s own click otherwise, Shift held or not', () => {
     expect(stageClickOf(false, 'after', plain)).toBe('stage');
-    expect(stageClickOf(false, 'after', { altKey: true })).toBe('stage');
+    expect(stageClickOf(false, 'after', { shiftKey: true })).toBe('stage');
     expect(stageClickOf(true, null, plain)).toBe('stage');
   });
 });
