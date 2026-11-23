@@ -50,8 +50,9 @@ export interface PlacedSpot {
 /**
  * Where a spot shows in a version: on its part as the part is drawn now (`nodeWorld`: the node's matrix to the
  * viewer's space, a take's pose included) when the version has it and the spot says where on it; else at its point in
- * the file's space, carried into the viewer's (`viewerSpace`). A point on a skinned mesh follows the skin instead
- * (`skinAnchorOfSpot`): its node stays where it is as a take bends it.
+ * the file's space, carried into the viewer's (`viewerSpace`). A point on a mesh a take bends or morphs (skinned,
+ * or with blendshapes) follows the surface instead (`skinAnchorOfSpot`): its node stays where it is as the take
+ * reshapes it.
  */
 export function placedSpot(spot: ModelSpot, node: number | null, nodeWorld: (index: number) => Matrix4, viewerSpace: Matrix4): PlacedSpot {
   const local = spot.node?.local;
