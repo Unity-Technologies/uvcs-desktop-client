@@ -141,20 +141,20 @@ describe('a comment on a 3D model', () => {
   const onPointOf = (...path: string[]) => ({ ...onModel, spot: { point, node: { path } } });
   const onPartOf = (...path: string[]) => ({ ...onModel, spot: { point, node: { path }, wholePart: true as const } });
 
-  it('names the part a point is on, and a whole part, as a line is named: its kind, then its name', () => {
+  it('names the part a point is on, and a whole part by the part alone: "on Wheel"', () => {
     expect(writtenPlaceText(onPointOf('Wheel'))).toBe('point on Wheel');
-    expect(writtenPlaceText(onPartOf('Wheel'))).toBe('part Wheel');
+    expect(writtenPlaceText(onPartOf('Wheel'))).toBe('on Wheel');
   });
 
   it('names a nested part by its own name, the last of its path', () => {
     expect(writtenPlaceText(onPointOf('Car', 'Door_L', 'Door_Panel'))).toBe('point on Door_Panel');
-    expect(writtenPlaceText(onPartOf('Car', 'Door_L', 'Door_Panel'))).toBe('part Door_Panel');
+    expect(writtenPlaceText(onPartOf('Car', 'Door_L', 'Door_Panel'))).toBe('on Door_Panel');
   });
 
   it('names a part as the file names it, whatever characters it holds', () => {
     // The location stores names percent-encoded; the reader (`commentedModelSpotOf`) decodes them.
     expect(writtenPlaceText(onPointOf('Root/A', 'Wheel; FL=1'))).toBe('point on Wheel; FL=1');
-    expect(writtenPlaceText(onPartOf('車', '車輪'))).toBe('part 車輪');
+    expect(writtenPlaceText(onPartOf('車', '車輪'))).toBe('on 車輪');
     expect(writtenPlaceText(onPointOf('Car', '🚗'))).toBe('point on 🚗');
   });
 

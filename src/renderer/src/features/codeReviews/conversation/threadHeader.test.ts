@@ -55,9 +55,9 @@ describe('a thread on a 3D model', () => {
 
   it("names its file and the part it is on, with the part's whole path in the tooltip", () => {
     const tip = 'The whole part Car › Wheel_FL';
-    expect(headerOf(onPart).location).toEqual({ folder: 'Art/', file: 'Car.fbx', writtenPlace: 'part Wheel_FL', writtenPlaceTip: tip, linked: true, tip: 'Show in Changes', tipSub: 'Art/Car.fbx' });
-    expect(headerOf(onPart, { place: 'panel' }).location).toMatchObject({ writtenPlace: 'part Wheel_FL', tip: 'Art/Car.fbx, part Wheel_FL' });
-    expect(headerOf(onPart, { place: 'fileGroup' })).toMatchObject({ writtenPlace: 'part Wheel_FL', writtenPlaceTip: tip });
+    expect(headerOf(onPart).location).toEqual({ folder: 'Art/', file: 'Car.fbx', writtenPlace: 'on Wheel_FL', writtenPlaceTip: tip, linked: true, tip: 'Show in Changes', tipSub: 'Art/Car.fbx' });
+    expect(headerOf(onPart, { place: 'panel' }).location).toMatchObject({ writtenPlace: 'on Wheel_FL', tip: 'Art/Car.fbx, on Wheel_FL' });
+    expect(headerOf(onPart, { place: 'fileGroup' })).toMatchObject({ writtenPlace: 'on Wheel_FL', writtenPlaceTip: tip });
   });
 
   it('says its place names a part, which can be long, so a row cuts it before who wrote it', () => {
