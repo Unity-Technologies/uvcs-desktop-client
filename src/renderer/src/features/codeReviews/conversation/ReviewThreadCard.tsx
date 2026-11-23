@@ -3,12 +3,13 @@ import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
+import { useReducer, useState, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
 import { suggestionNameOf } from '../suggestions/suggestionPreview';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
+import { rowTakesClick } from '../../../lib/clickedOutsideControls';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { Button } from '../../../ui/Button';
@@ -161,7 +162,7 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
   return (
     // Anywhere on the card goes to it, as its first words do: what's inside that does something else (a pill) does that.
     // The buttons inside stay the way there by keyboard.
-    <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+    <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => rowTakesClick(event) && onOpen()}>
       <ThreadHeader reviewId={reviewId} thread={thread} folded cardOpens onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} excerpt={excerpt} />
@@ -179,7 +180,7 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
   const header = threadHeaderOf({ thread, place: 'fileGroup', folded: true, foldable: false, hides: false, seesHowApplied: onSeeApplied !== undefined, showsAnswer: false, inContext: false });
   const author = excerpt?.author ?? thread.root.author;
   return (
-    <section className={styles.row} data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+    <section className={styles.row} data-current={current || undefined} onClick={(event) => rowTakesClick(event) && onOpen()}>
       <span className={styles.rowAbout}>
         <Avatar user={author} size={16} tip={null} />
         <span className={styles.author}>
@@ -202,12 +203,6 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
       </button>
     </section>
   );
-}
-
-/** A click on the card itself, not on a control inside it, nor the end of a drag selecting its text to copy. */
-function clickedOutsideControls(event: MouseEvent): boolean {
-  if (window.getSelection()?.isCollapsed === false) return false;
-  return event.target instanceof Element && event.target.closest('button, a, input, textarea, select, label, [role="button"]') === null;
 }
 
 interface ThreadHeaderProps {
