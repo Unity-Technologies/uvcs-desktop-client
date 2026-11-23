@@ -40,7 +40,8 @@ const NO_REVISIONS: number[] = [];
  * comments on takes a new comment (`lineCommentAt`), from the "+" in its gutter or the code's menu, written under it
  * (`NewLineCommentCard`), kept while the window lives (`useNewLineCommentsStore`).
  * One on an earlier version is seen in context in a dialog (`ReviewComments.seeInContext`), which leaves this diff as
- * it is.
+ * it is. An image's comments are pins on it (`useReviewImageAnnotations`, through `ImageAnnotationsContext`), and a
+ * file shown either as code or as an image (an SVG) says where its comments are (`fileCommentsSummaryOf`).
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
   const comments = useContext(ReviewCommentsContext);

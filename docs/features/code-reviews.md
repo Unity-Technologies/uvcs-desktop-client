@@ -941,5 +941,7 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
   comments are on the image", Show image: `otherRepresentationNotice`), and going to a comment shows the view it's on, for that
   file only (`representationCommentsOf`, `RepresentationCommentsContext`).
-- **Not yet**: EXIF orientation (a rotated JPEG's comments are in the pixels as shown, not as stored), and a pin moved
-  once posted (it needs `cm codereview comment edit` to take a location).
+- **Not yet**: EXIF orientation (a rotated JPEG's comments are in the pixels as shown, not as stored); an SVG's spots in
+  its own units (they're in the pixels it's drawn at, `decodedSize`, which an SVG declaring more than 16 MP, or no
+  size, is drawn at scaled: another client reading its viewBox's units would misplace them); and a pin moved once
+  posted (it needs `cm codereview comment edit` to take a location).
