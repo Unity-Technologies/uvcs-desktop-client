@@ -43,6 +43,13 @@
   cursor: var(--cursor-add-comment);
 }
 
+/* Aiming at a point of the surface: the ring lying there is the cursor (`setCommentAim`), as the comment cursor would
+   cover the very spot it marks. Over empty space, or with Shift held for the whole part, the comment cursor shows. */
+.stage[data-aiming],
+.stage[data-aiming]:active {
+  cursor: none;
+}
+
 /* Holds the renderer's canvas, which `useModelRenderer` puts in and takes out. */
 .canvasHost {
   position: absolute;
