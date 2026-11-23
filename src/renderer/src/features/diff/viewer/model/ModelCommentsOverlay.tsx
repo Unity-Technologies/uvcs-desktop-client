@@ -14,11 +14,20 @@ import type { ModelAnnotations } from './modelAnnotations';
 import { depthOfHit, hiddenBehind, type Projector, type ScreenPoint } from './modelProjection';
 import type { ModelRenderer } from './modelRenderer';
 import { pinPlacesOf, type DrawnVersion, type PinPlace } from './modelPinPlaces';
-import type { Side } from './viewLayout';
+import type { Rect, Side } from './viewLayout';
 import styles from './ModelCommentsOverlay.module.css';
 
 /** How long the view stays still before what hides each pin's point is looked for: a pick per pin, never per frame. */
 const SETTLE_MS = 150;
+
+const SIDES: readonly Side[] = ['before', 'after'];
+
+/** A version's layer covers its pane alone, so its pins slide out of view at the pane's edge (Split's divider). */
+function clipTo(layer: HTMLDivElement | null, pane: Rect | null): void {
+  if (!layer) return;
+  layer.hidden = pane === null;
+  if (pane) Object.assign(layer.style, { left: `${pane.x}px`, top: `${pane.y}px`, width: `${pane.width}px`, height: `${pane.height}px` });
+}
 
 /** How far the pointer moves, in pixels, before a press on a comment being written drags it. */
 const DRAG_THRESHOLD = 4;
@@ -39,6 +48,7 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
   const places = useMemo(() => pinPlacesOf(annotations.pins, versions), [annotations.pins, versions]);
   const overlay = useRef<HTMLDivElement>(null);
   const bubbles = useRef(new Map<string, HTMLButtonElement>());
+  const sideLayers = useRef<Record<Side, HTMLDivElement | null>>({ before: null, after: null });
   const card = useRef<HTMLDivElement>(null);
   const opened = places.find((place) => place.pin.key === annotations.opened) ?? null;
 
@@ -50,6 +60,8 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
     const place = (): void => {
       onScreen.clear();
       projectors = { before: renderer.screenProjectorOf('before'), after: renderer.screenProjectorOf('after') };
+      const panes = { before: renderer.paneRectOf('before'), after: renderer.paneRectOf('after') };
+      for (const side of SIDES) clipTo(sideLayers.current[side], panes[side]);
       for (const { pin, point } of places) {
         const bubble = bubbles.current.get(pin.key);
         if (!bubble) continue;
@@ -59,7 +71,9 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
         onScreen.set(pin.key, at);
         // `translate`, not `transform`: a pin behind the model is scaled down about its tip (`scale`, in the CSS), and
         // CSS scales a `transform` with it, which would pull the bubble towards the overlay's corner.
-        bubble.style.translate = `${at.x}px ${at.y}px`;
+        // In its version's layer, which starts where its pane does.
+        const pane = panes[pin.side]!;
+        bubble.style.translate = `${at.x - pane.x}px ${at.y - pane.y}px`;
       }
       placeCard(onScreen);
       window.clearTimeout(settle);
@@ -96,23 +110,29 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
 
   return (
     <>
-      <div ref={overlay} className={styles.overlay}>
-        {places.map((place) => (
-          <ModelPinBubble
-            key={place.pin.key}
-            place={place}
-            selected={place.pin.key === annotations.selected || place.pin.key === annotations.opened}
-            bubbleRef={(element) => {
-              if (element) bubbles.current.set(place.pin.key, element);
-              else bubbles.current.delete(place.pin.key);
-            }}
-            onOpen={() => annotations.onOpen(place.pin.key === annotations.opened ? null : place.pin.key)}
-            onPointed={onPointed}
-            onDragTo={(x, y) => {
-              const spot = spotAt(x, y, place.pin.side, place.pin.spot.wholePart === true);
-              if (spot) annotations.moveComment(place.pin.key, spot);
-            }}
-          />
+      <div ref={overlay} className={styles.overlay} data-pins="">
+        {SIDES.map((side) => (
+          <div key={side} ref={(element) => void (sideLayers.current[side] = element)} className={styles.sideLayer}>
+            {places
+              .filter((place) => place.pin.side === side)
+              .map((place) => (
+                <ModelPinBubble
+                  key={place.pin.key}
+                  place={place}
+                  selected={place.pin.key === annotations.selected || place.pin.key === annotations.opened}
+                  bubbleRef={(element) => {
+                    if (element) bubbles.current.set(place.pin.key, element);
+                    else bubbles.current.delete(place.pin.key);
+                  }}
+                  onOpen={() => annotations.onOpen(place.pin.key === annotations.opened ? null : place.pin.key)}
+                  onPointed={onPointed}
+                  onDragTo={(x, y) => {
+                    const spot = spotAt(x, y, place.pin.side, place.pin.spot.wholePart === true);
+                    if (spot) annotations.moveComment(place.pin.key, spot);
+                  }}
+                />
+              ))}
+          </div>
         ))}
       </div>
       {opened && (
@@ -144,7 +164,7 @@ function ModelPinBubble({ place, selected, bubbleRef, onOpen, onPointed, onDragT
   const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>): void => {
     if (!pin.movable || !isDragButton(event.button)) return;
     const bubble = event.currentTarget;
-    const canvas = bubble.parentElement!.getBoundingClientRect();
+    const canvas = bubble.closest('[data-pins]')!.getBoundingClientRect();
     const start = { x: event.clientX, y: event.clientY };
     dragged.current = false;
     followDrag(bubble, event.pointerId, (move) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { depthOfHit, hiddenBehind, projectorOf } from './modelProjection';
+import { depthOfHit, hiddenBehind, paneOnCanvas, projectorOf } from './modelProjection';
 import type { OrbitView } from './orbitCamera';
 
 const BOUNDS = { min: [-1, -1, -1] as [number, number, number], max: [1, 1, 1] as [number, number, number] };
@@ -61,5 +61,15 @@ describe('depthOfHit', () => {
     expect(depthOfHit({ point: [0, 3, 4] }, [0, 0, 0])).toBe(5);
     expect(depthOfHit({ point: null }, [0, 0, 0])).toBeNull();
     expect(depthOfHit(null, [0, 0, 0])).toBeNull();
+  });
+});
+
+describe('paneOnCanvas', () => {
+  it("is Split's right half in CSS pixels from the top left", () => {
+    expect(paneOnCanvas({ x: 800, y: 0, width: 800, height: 800 }, CANVAS)).toEqual({ x: 400, y: 0, width: 400, height: 400 });
+  });
+
+  it('counts a pane short of the canvas from the top', () => {
+    expect(paneOnCanvas({ x: 0, y: 200, width: 1600, height: 600 }, CANVAS)).toEqual({ x: 0, y: 0, width: 800, height: 300 });
   });
 });

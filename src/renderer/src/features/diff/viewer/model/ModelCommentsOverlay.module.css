@@ -8,6 +8,14 @@
   overflow: hidden;
 }
 
+/* One per version, over its pane alone (`clipTo`): in Split a bubble near the divider is cut there, never drawn over
+   the other version. */
+.sideLayer {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* Off its pane or behind the camera: hidden at once. */
 .bubble[data-off-screen] {
   visibility: hidden;

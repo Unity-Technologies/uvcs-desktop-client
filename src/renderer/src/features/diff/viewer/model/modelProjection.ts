@@ -67,3 +67,12 @@ export function hiddenBehind(depth: number, hitDepth: number | null, modelSize: 
 
 /** How much nearer, as a share of the model's size, a surface is before it hides a point behind it. */
 const HIDDEN_MARGIN_SHARE = 0.005;
+
+/**
+ * A pane's rectangle on the canvas in CSS pixels from its top left, from its viewport (canvas pixels from the bottom
+ * left, as WebGL and the layout count): where a version's pins are clipped, so in Split none crosses into the other's.
+ */
+export function paneOnCanvas(viewport: Rect, canvas: CanvasMetrics): Rect {
+  const { pixelRatio } = canvas;
+  return { x: viewport.x / pixelRatio, y: canvas.height - (viewport.y + viewport.height) / pixelRatio, width: viewport.width / pixelRatio, height: viewport.height / pixelRatio };
+}

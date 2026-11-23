@@ -53,9 +53,9 @@ import { modelOrientation, type ModelScene } from './modelScene';
 import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
-import { projectorOf, type Projector } from './modelProjection';
+import { paneOnCanvas, projectorOf, type Projector } from './modelProjection';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
-import { layoutOf, paneAt, paneOfSideAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
+import { layoutOf, paneAt, paneOfSideAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Rect, type Side } from './viewLayout';
 
 export type DrawMode = 'shaded' | 'wireframe' | 'shadedWireframe';
 
@@ -336,6 +336,13 @@ export class ModelRenderer {
     const pane = this.layout().panes.find((candidate) => candidate.side === side);
     if (!pane || !this.sides[side]) return null;
     return projectorOf(this.view, this.bounds, pane.viewport, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
+  }
+
+  /** A version's pane on the canvas, in CSS pixels from its top left; none for a version the layout doesn't draw. */
+  paneRectOf(side: Side): Rect | null {
+    const pane = this.layout().panes.find((candidate) => candidate.side === side);
+    if (!pane || !this.sides[side]) return null;
+    return paneOnCanvas(pane.viewport, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
   }
 
   /** Where the camera is, in the viewer's space. */
