@@ -762,7 +762,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1 reply"),
   three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which its
   avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that line's
-  threads, and going to a thread opens its line. The outdated ones hide too, and keep a marker of their own on the
+  threads, and going to a thread opens its line; hiding again closes every line opened (`openedAsCommentsToggle`), the
+  thread selected included. The outdated ones hide too, and keep a marker of their own on the
   code's first row (`outdatedMarkerOf`, `lineNumber: 0`; none while that row isn't rendered, `topRowOf`), so hiding
   comments never leaves a file looking as if no one commented on it: a clock, then who wrote and how many comments, as
   a line's marker beside it counts them; its tooltip says they're outdated, then previews them as a line's does. A click shows every one it marks; one gone to

@@ -49,6 +49,14 @@ export interface OpenedLines {
 }
 
 /**
+ * The lines opened as comments show or hide: hiding them closes every line, those opened while they were last hidden
+ * too, so Hide always leaves the diff alone (a thread selected as they hide included, as on an image or a model).
+ */
+export function openedAsCommentsToggle(opened: OpenedLines, wasInCode: boolean, inCode: boolean): OpenedLines {
+  return wasInCode && !inCode && opened.keys.length > 0 ? { path: opened.path, keys: [] } : opened;
+}
+
+/**
  * The lines opened while comments are hidden, once a comment written on one of `path` is sent: its line opens, so the
  * new thread shows where it was written rather than folding into a marker; lines opened in another file aren't this
  * one's. Unchanged when comments show in the code (read as it's sent: they may have been hidden meanwhile), or the line

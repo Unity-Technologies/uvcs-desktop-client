@@ -7,7 +7,7 @@ import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type L
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
+import { comparedFile, isCommentable, openedAsCommentsToggle, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
@@ -54,6 +54,13 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const setInCode = useReviewCommentsStore((state) => state.setInCode);
   // Per file: the lines opened while comments are hidden are a way to read one file.
   const [opened, setOpened] = useState<OpenedLines>({ path: entry.path, keys: NO_KEYS });
+  // Hiding comments closes every line opened (`openedAsCommentsToggle`).
+  const [shownBefore, setShownBefore] = useState(inCode);
+  if (shownBefore !== inCode) {
+    setShownBefore(inCode);
+    const next = openedAsCommentsToggle(opened, shownBefore, inCode);
+    if (next !== opened) setOpened(next);
+  }
   const openedKeys = opened.path === entry.path ? opened.keys : NO_KEYS;
 
   const threads = comments && isCommentable(entry, placeRepository) ? comments.threads : undefined;
