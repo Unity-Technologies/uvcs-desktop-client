@@ -311,9 +311,18 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   (`reviewChipPage`, through `ChipOpenerContext`, which a page fills to open a chip first); anything else opens as every
   chip does (docs/features/rich-comments.md).
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
-  ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
-  reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete
-  (`… comment delete`, asked first), discard a change request with a reply saying why (`… reply --discard`).
+  ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent or cancelled;
+  each text reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only),
+  delete (`… comment delete`, asked first), discard a change request with a reply saying why (`… reply --discard`).
+- A thread's reply box follows its drafts (`useAnswerBox`), wherever the thread shows (the conversation, a line, an
+  image, a model). A reply (or discard) left with words in it shows open with them when the thread shows again, a
+  settled thread unfolded for it (`answerShownOnReturn`, `initialThreadCardFold`); a box emptied before leaving shows
+  the "Reply…" prompt again. The same thread shows in both tabs, kept mounted: words written in one open the box in
+  the other, its card unfolded if folded, and a reply sent or cancelled in one closes it there, unless the focus is in
+  it, showing a discard still left if there is one (`nextAnswerBox`, `followDrafts`). The box follows each draft's
+  state (none, emptied, words: `answerDraftOf`), not its text, so typing renders no other card. Only a box opened by
+  hand ("Reply…", "Discard…") takes the focus. A draft in a folded round of the conversation stays hidden until the
+  round opens.
 - Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
   on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
   comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it

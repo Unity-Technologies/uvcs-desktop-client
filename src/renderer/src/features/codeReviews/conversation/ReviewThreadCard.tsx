@@ -1,8 +1,6 @@
 import { ChevronRight, X } from 'lucide-react';
-import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
-import { commentDraftKey } from '../../../components/DetailsHeading';
 import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
@@ -23,6 +21,7 @@ import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction } from './threadBadges';
 import { initialThreadCardFold, nextThreadCardFold } from './threadCardFold';
+import { useAnswerBox, type AnswerBoxControl } from './useAnswerBox';
 import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, threadElementId, type AnswerLight, type ShownCommentLight } from './threadPick';
 import { foldsByHand, hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
@@ -71,8 +70,6 @@ export interface ThreadInCode {
   hide?: { label: string; onHide: () => void };
 }
 
-type Answering = 'reply' | 'discard' | null;
-
 /**
  * A comment and its replies as one card. A change request, a question or a comment on a line has a header band: its
  * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. Any card with
@@ -80,7 +77,9 @@ type Answering = 'reply' | 'discard' | null;
  * (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
-  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight));
+  // Words written in the thread elsewhere open its box, and unfold the card to show it.
+  const answerBox = useAnswerBox(thread, user, () => foldEvent('unfold'));
+  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight, answerBox.box));
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
   const [answerShown, setAnswerShown] = useState<AnswerLight | null>(null);
@@ -135,7 +134,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
               <FirstCommentMenu review={review} thread={thread} user={user} threadActions={threadActions} onEdit={() => foldEvent('editRoot')} />
             </div>
           ) : (
-            <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} />
+            <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} answerBox={answerBox} />
           )}
         </div>
       </section>
@@ -411,11 +410,13 @@ interface WholeThreadProps {
   lit?: ShownCommentLight;
   /** In the conversation, each comment's element has its id (`commentElementId`), which going to a reply scrolls to. */
   commentIds: boolean;
+  /** The reply or discard box under it, kept by the card so it outlives a fold (`useAnswerBox`). */
+  answerBox: AnswerBoxControl;
 }
 
-function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEditorOpened, lit, commentIds }: WholeThreadProps) {
+function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEditorOpened, lit, commentIds, answerBox }: WholeThreadProps) {
   const place = usePlace();
-  const [answering, setAnswering] = useState<Answering>(null);
+  const { answering, focuses } = answerBox.box;
   const { root, replies } = thread;
 
   return (
@@ -434,45 +435,45 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
           elementId={commentIds ? commentElementId(reply.id) : undefined}
         />
       ))}
-      <div className={styles.answer}>
+      <div className={styles.answer} ref={answerBox.boxRef}>
         {answering === 'reply' && (
           <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewReply', root.guid)}
+            draftKey={answerBox.replyKey}
             placeholder="Reply"
             label="Reply"
             submitLabel="Reply"
-            autoFocus
+            autoFocus={focuses}
             onSubmit={async (text) => {
               const sent = await replyToComment(place, root, text);
-              if (sent) setAnswering(null);
+              if (sent) answerBox.close();
               return sent;
             }}
-            onCancel={() => setAnswering(null)}
+            onCancel={answerBox.close}
           />
         )}
         {answering === 'discard' && (
           <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewDiscard', root.guid)}
+            draftKey={answerBox.discardKey}
             placeholder="Why isn't this change needed?"
             label="Why the change request is discarded"
             submitLabel="Discard change request"
             danger
-            autoFocus
+            autoFocus={focuses}
             onSubmit={async (text) => {
               const sent = await discardChangeRequest(place, root, text);
-              if (sent) setAnswering(null);
+              if (sent) answerBox.close();
               return sent;
             }}
-            onCancel={() => setAnswering(null)}
+            onCancel={answerBox.close}
           />
         )}
         {answering === null && (
           <div className={styles.answerButtons}>
-            <button type="button" className={styles.replyPrompt} onClick={() => setAnswering('reply')}>
+            <button type="button" className={styles.replyPrompt} onClick={() => answerBox.open('reply')}>
               Reply…
             </button>
             {canDiscard(thread, user) && (
-              <Button size="small" variant="ghost" onClick={() => setAnswering('discard')}>
+              <Button size="small" variant="ghost" onClick={() => answerBox.open('discard')}>
                 Discard…
               </Button>
             )}
