@@ -1,21 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { initialThreadCardFold, nextThreadCardFold, type ThreadCardFold } from './threadCardFold';
+import { answerShownOnReturn, type AnswerBox } from './threadAnswer';
 
 const folded: ThreadCardFold = { folded: true, editsRoot: false };
 const whole: ThreadCardFold = { folded: false, editsRoot: false };
+const noBox: AnswerBox = { answering: null, focuses: false };
+const draft = (description: string) => ({ summary: '', description });
 
 describe('initialThreadCardFold', () => {
   it('starts a settled thread folded and an open one whole, with no editor waiting', () => {
-    expect(initialThreadCardFold({ state: { kind: 'applied', changesetId: 4 } }, undefined)).toEqual(folded);
-    expect(initialThreadCardFold({ state: { kind: 'open' } }, undefined)).toEqual(whole);
+    expect(initialThreadCardFold({ state: { kind: 'applied', changesetId: 4 } }, undefined, noBox)).toEqual(folded);
+    expect(initialThreadCardFold({ state: { kind: 'open' } }, undefined, noBox)).toEqual(whole);
   });
 
   it('starts a thread gone to whole, even settled', () => {
-    expect(initialThreadCardFold({ state: { kind: 'discarded' } }, 0)).toEqual(whole);
+    expect(initialThreadCardFold({ state: { kind: 'discarded' } }, 0, noBox)).toEqual(whole);
   });
 
   it('starts a settled thread whole when a reply to it was left unsent, so its draft shows', () => {
-    expect(initialThreadCardFold({ state: { kind: 'answered' } }, undefined, true)).toEqual(whole);
+    const box = answerShownOnReturn({ reply: draft('One more thing'), discard: undefined }, false);
+    expect(initialThreadCardFold({ state: { kind: 'answered' } }, undefined, box)).toEqual(whole);
+  });
+
+  it('keeps a settled thread folded when only a discard was left unsent: it can no longer be discarded', () => {
+    const box = answerShownOnReturn({ reply: undefined, discard: draft('Not needed') }, false);
+    expect(initialThreadCardFold({ state: { kind: 'applied', changesetId: 4 } }, undefined, box)).toEqual(folded);
   });
 });
 

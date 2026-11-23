@@ -36,3 +36,7 @@ export function answerShownOnReturn(drafts: AnswerDrafts, discardable: boolean):
 export function answerOpenedByHand(answering: Answering): AnswerBox {
   return { answering, focuses: true };
 }
+
+export function nextAnswerBox(box: AnswerBox, _previous: AnswerDrafts, _drafts: AnswerDrafts, _discardable: boolean, _focused: boolean): AnswerBox {
+  return box;
+}
