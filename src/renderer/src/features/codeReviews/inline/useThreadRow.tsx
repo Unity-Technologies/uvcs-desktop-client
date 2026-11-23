@@ -76,5 +76,5 @@ export function useThreadRow({ review, thread, user, comparison, onClose }: Thre
       opensAtRow: true,
     };
   }, [review, thread, user, side, firstLine, line, shown, scrollTo, onClose]);
-  return { annotations, controls: <CommentsInCodeButton shown={shown} onChange={setShown} reach="thisThread" /> };
+  return { annotations, controls: <CommentsInCodeButton shown={shown} onChange={setShown} /> };
 }

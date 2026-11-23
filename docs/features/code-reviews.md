@@ -755,8 +755,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
 - **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides the
-  threads from the code, and the pins from every image and model, in every file at once (its tooltip says which way it
-  goes and how far: Hide or Show comments in every file, `commentsToggleLabel`): each line holding some
+  threads from the code, and the pins from every image and model, in every file at once (its tooltip says only which way it
+  goes, Hide or Show comments, the same for code, images and models: `commentsToggleLabel`; "in every file" and "on the
+  model" read as more than a show-or-hide switch): each line holding some
   keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments there are,
   as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is open
   (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
@@ -988,4 +989,4 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
 - **Going to it** glides the camera to the view its author had, else facing the point with part of the model around it
   (`viewOfSpot`), and opens its card.
 - **Hidden.** The header's comment button hides the pins, the one selected included, and the comments of every other
-  file with them (see "Hidden" under lines; "Hide comments in every file"); one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.
+  file with them (see "Hidden" under lines); one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.
