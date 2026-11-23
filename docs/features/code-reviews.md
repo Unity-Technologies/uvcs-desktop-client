@@ -924,7 +924,10 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   side its revision shows (Split's After pane; Onion, Diffs and Swipe lay both over each other), gliding with the
   zoom.
 - **A thread** opens beside its pin on a click, one at a time: the conversation's card as a line's thread shows it in
-  the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
+  the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin, Esc too, wherever the keyboard is in the diff
+  shown (the Comments panel a comment was gone to from, the file list) and not only on the focused stage: a command
+  (`useLeaveCommentCommand`, decided by `leaveCommentCommandOf`), so a field typed into, a menu or a dialog keeps its
+  own Esc, and Expand Diff's Esc waits for it. It goes right of the pin, else left, else
   below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
   nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the
   conversation opens it and brings it into view at the zoom shown (`transformShowing`): the whole area when it fits, else its

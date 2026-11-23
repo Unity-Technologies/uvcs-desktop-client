@@ -13,7 +13,7 @@
 // diff, saying why.
 
 import { ImageOff } from 'lucide-react';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { keyTakenByText } from '../../../../lib/textEntry';
 import type { FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
@@ -41,7 +41,8 @@ import type { CachedHeatmap } from './useHeatmap';
 import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
 import { stageCommandOf } from './zoomKeys';
-import { commentKeyAction } from '../pins/stageCommenting';
+import { commentKeyAction, type CommentKeyAction } from '../pins/stageCommenting';
+import { useLeaveCommentCommand } from '../pins/useLeaveCommentCommand';
 import { ImageAnnotationsContext, takesComments, type ImageSide } from './imageAnnotations';
 import { ImageCommentsOverlay } from './ImageCommentsOverlay';
 import { revealedRect, spotInFrame } from './imageSpotGeometry';
@@ -107,26 +108,30 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
     panZoom.showRect(panZoom.viewport ? revealedRect(rect, panZoom.viewport, panZoom.transform.scale) : rect);
   }, [revealSeq, frame]);
 
+  const stageCommenting = { commenting: isCommenting, commentable, opened: annotations?.opened != null };
+  const applyCommentAction = (action: NonNullable<CommentKeyAction>): void => {
+    if (action === 'closeCard') annotations?.onOpen(null);
+    else setCommenting(action === 'startCommenting');
+  };
+  // Esc wherever else the keyboard is in the diff (the Comments panel a comment was gone to from).
+  useLeaveCommentCommand('imageCommentLeave', stageCommenting, applyCommentAction);
+
   // The stage's keys while it has the focus (`stageCommandOf`, `commentKeyAction`); none typed in a comment's card
   // over it.
-  const onKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (keyTakenByText(event.nativeEvent)) return;
-      const command = stageCommandOf(event.nativeEvent);
-      if (!command) return;
-      if (command === 'comment' || command === 'leaveComment') {
-        const action = commentKeyAction(command, { commenting: isCommenting, commentable, opened: annotations?.opened != null });
-        if (!action) return;
-        event.preventDefault();
-        if (action === 'closeCard') annotations?.onOpen(null);
-        else setCommenting(action === 'startCommenting');
-        return;
-      }
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (keyTakenByText(event.nativeEvent)) return;
+    const command = stageCommandOf(event.nativeEvent);
+    if (!command) return;
+    if (command === 'comment' || command === 'leaveComment') {
+      const action = commentKeyAction(command, stageCommenting);
+      if (!action) return;
       event.preventDefault();
-      panZoom[command]();
-    },
-    [panZoom, annotations, commentable, isCommenting],
-  );
+      applyCommentAction(action);
+      return;
+    }
+    event.preventDefault();
+    panZoom[command]();
+  };
 
   // No version paints: too large reads as any image too large to preview; otherwise the binary diff, saying why.
   if (view.kind === 'unpainted') {

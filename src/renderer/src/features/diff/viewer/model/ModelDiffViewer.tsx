@@ -35,7 +35,8 @@ import { viewerSpaceOf } from './modelSpaces';
 import { viewOfSpot } from './spotView';
 import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
-import { commentKeyAction, stageClickOf, type StageClickModifiers } from '../pins/stageCommenting';
+import { commentKeyAction, stageClickOf, type CommentKeyAction, type StageClickModifiers } from '../pins/stageCommenting';
+import { useLeaveCommentCommand } from '../pins/useLeaveCommentCommand';
 import { aimShownWhileCommenting, hoveredPartOf, litWhileCommenting } from './commentHover';
 import { CommentHoverLabel } from './CommentHoverLabel';
 import { useCommentHover } from './useCommentHover';
@@ -326,6 +327,14 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     [camera, pickedBounds],
   );
 
+  const stageCommenting = { commenting: isCommenting, commentable, opened: annotations?.opened != null };
+  const applyCommentAction = (action: NonNullable<CommentKeyAction>): void => {
+    if (action === 'closeCard') annotations?.onOpen(null);
+    else setCommenting(action === 'startCommenting');
+  };
+  // Esc wherever else the keyboard is in the diff (the Comments panel a comment was gone to from).
+  useLeaveCommentCommand('modelCommentLeave', stageCommenting, applyCommentAction);
+
   const flyKeys = useFlyKeys({ view: camera.currentView, onView: camera.onGesture, modelCentre });
   const onKeyDown = (event: KeyboardEvent): void => {
     // Only the stage's own: the arrows of a control in it (the take's scrubber, the panel's rows) stay the control's.
@@ -338,11 +347,10 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     const command = modelCommandOf(event.nativeEvent);
     if (!command) return;
     if (command === 'comment' || command === 'leaveComment') {
-      const action = commentKeyAction(command, { commenting: isCommenting, commentable, opened: annotations?.opened != null });
+      const action = commentKeyAction(command, stageCommenting);
       if (!action) return;
       event.preventDefault();
-      if (action === 'closeCard') annotations?.onOpen(null);
-      else setCommenting(action === 'startCommenting');
+      applyCommentAction(action);
       return;
     }
     event.preventDefault();

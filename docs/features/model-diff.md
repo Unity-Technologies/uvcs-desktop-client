@@ -410,7 +410,7 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   `spotOfPick`/`spotOfHit`: the point where the part rests (a take playing moves the part, not where on it the comment
   is; on a skinned mesh or one with blendshapes it reshapes the surface, so the hit is carried to rest by the same place on
   the same triangle, `restPointOfHit`), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along
-  the surface, picked again under the pointer. **Esc** (`modelCommentLeave`) stops, or closes the card open. Keys typed
+  the surface, picked again under the pointer. **Esc** (`modelCommentLeave`) stops, or closes the card open, wherever the keyboard is in the diff, as on an image (docs/features/code-reviews.md). Keys typed
   in a card (F, 0, C) stay the card's (`keyTakenByText`).
 - **A part lit up**: a comment on a whole part lights its part (the view's own emphasis, the rest faded) while its
   bubble is pointed at or focused, its card open, or it's being written (`litCommentPart`); never while Diffs by look
