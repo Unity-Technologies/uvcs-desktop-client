@@ -1,5 +1,6 @@
 import type { ReviewThread } from './reviewThreads';
 import { startsFolded } from './threadBadges';
+import type { AnswerBox } from './threadAnswer';
 
 /** Whether a thread's card is folded, and whether its first comment opens in its editor when it shows whole. */
 export interface ThreadCardFold {
@@ -16,10 +17,10 @@ export type ThreadCardFoldEvent = 'toggle' | 'unfold' | 'editRoot' | 'editorOpen
 
 /**
  * A settled thread starts folded (`startsFolded`), unless it's gone to (`highlight`), which shows it whole, or an answer
- * to it was left unsent (`answerShownOnReturn`), which shows open under it.
+ * to it was left unsent and its box opens again (`answerShownOnReturn`), which shows under it.
  */
-export function initialThreadCardFold(thread: Pick<ReviewThread, 'state'>, highlight: number | undefined, hasAnswerDraft = false): ThreadCardFold {
-  return { folded: startsFolded(thread) && highlight === undefined && !hasAnswerDraft, editsRoot: false };
+export function initialThreadCardFold(thread: Pick<ReviewThread, 'state'>, highlight: number | undefined, answerBox: AnswerBox): ThreadCardFold {
+  return { folded: startsFolded(thread) && highlight === undefined && answerBox.answering === null, editsRoot: false };
 }
 
 export function nextThreadCardFold(state: ThreadCardFold, event: ThreadCardFoldEvent): ThreadCardFold {
