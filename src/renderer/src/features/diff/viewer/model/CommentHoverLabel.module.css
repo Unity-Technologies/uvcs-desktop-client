@@ -1,12 +1,13 @@
 /*
  * The tooltip's look (`TooltipLayer.module.css`) without its caret, at the stage's top left and moved to the cursor by
- * `transform` (`useCommentHover`): above the pins, under the cards, which hovering never reaches.
+ * `transform` (`useCommentHover`): above everything on the stage (the pins, "What changed", the dock), so it never
+ * hides behind what it passes; it shows nowhere a card or a control is, which hovering never reaches.
  */
 .label {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 3;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   max-width: 260px;

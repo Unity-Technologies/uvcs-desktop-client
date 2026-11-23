@@ -1,16 +1,20 @@
 // The part under the pointer while commenting on a model (`commentHover.ts` decides what it is and where its label
-// goes). Picking reads the GPU (`ModelRenderer.pick`), so it runs at most once per frame however fast the pointer
-// moves, and never while a drag turns the model.
+// goes). Picking reads the GPU (`ModelRenderer.pick`), so it runs at most once per frame, and only when the pointer
+// or the model moved since the last pick (`pickAgain`): a turn's coast, a glide, a take or flying moves the model
+// under a still pointer, and each frame drawn asks again (`onFrameDrawn`).
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { isOnStageControl } from '../image/pointerDrag';
-import { hoverLabelPlacement, sameHoveredPart, type HoveredPart } from './commentHover';
+import { hoverLabelPlacement, hoverPicks, pickAgain, sameHoveredPart, type HoveredPart, type PickedAt } from './commentHover';
+import type { ModelRenderer } from './modelRenderer';
 
 interface CommentHoverOptions {
   /** The stage the pointer moves over. */
   element: RefObject<HTMLElement | null>;
   /** The label beside the cursor: placed here as the pointer moves, without React rendering for each move. */
   label: RefObject<HTMLElement | null>;
+  /** What draws the model: when it moved (`moves`) and each frame it drew (`onFrameDrawn`). */
+  renderer: Pick<ModelRenderer, 'moves' | 'onFrameDrawn'> | null;
   /** Commenting, and the stage takes comments: hovering shows nothing otherwise. */
   enabled: boolean;
   /** The part under a point of the stage (CSS pixels from its top left), or none. */
@@ -20,11 +24,14 @@ interface CommentHoverOptions {
 /**
  * The part under the pointer, and what places its label at the pointer (for the label's first draw). None while not
  * enabled, off the stage, over a stage control (a pin, a card, a button), or while a button is held (a drag orbits).
+ * Turned on with the pointer already over the model (C), it picks at once.
  */
-export function useCommentHover({ element, label, enabled, partAt }: CommentHoverOptions): { hovered: HoveredPart | null; placeLabel: () => void } {
+export function useCommentHover({ element, label, renderer, enabled, partAt }: CommentHoverOptions): { hovered: HoveredPart | null; placeLabel: () => void } {
   const [hovered, setHovered] = useState<HoveredPart | null>(null);
   const latestPartAt = useRef(partAt);
   latestPartAt.current = partAt;
+  // Where the pointer is on the stage, while it may pick (`hoverPicks`): followed whether or not commenting, so C
+  // pressed over the model lights the part at once.
   const pointer = useRef<{ x: number; y: number } | null>(null);
 
   const placeLabel = useCallback(() => {
@@ -37,50 +44,73 @@ export function useCommentHover({ element, label, enabled, partAt }: CommentHove
 
   useEffect(() => {
     const target = element.current;
-    if (!enabled || !target) return;
+    if (!target) return;
+    const follow = (event: PointerEvent): void => {
+      const rect = target.getBoundingClientRect();
+      pointer.current = hoverPicks(event, isOnStageControl(event)) ? { x: event.clientX - rect.left, y: event.clientY - rect.top } : null;
+    };
+    const leave = (): void => {
+      pointer.current = null;
+    };
+    target.addEventListener('pointermove', follow);
+    // A drag's end: the model may coast on under the pointer let go where it is.
+    target.addEventListener('pointerup', follow);
+    target.addEventListener('pointerdown', leave);
+    target.addEventListener('pointerleave', leave);
+    return () => {
+      target.removeEventListener('pointermove', follow);
+      target.removeEventListener('pointerup', follow);
+      target.removeEventListener('pointerdown', leave);
+      target.removeEventListener('pointerleave', leave);
+    };
+  }, [element]);
+
+  useEffect(() => {
+    const target = element.current;
+    if (!enabled || !target || !renderer) return;
     let frame: number | null = null;
-    const cancelFrame = (): void => {
+    let last: PickedAt | null = null;
+    const clear = (): void => {
       if (frame !== null) cancelAnimationFrame(frame);
       frame = null;
-    };
-    const clear = (): void => {
-      cancelFrame();
-      pointer.current = null;
+      last = null;
       setHovered(null);
     };
     const pickNow = (): void => {
       frame = null;
-      if (!pointer.current) return;
-      const part = latestPartAt.current(pointer.current.x, pointer.current.y);
+      if (!pointer.current) return clear();
+      const now = { ...pointer.current, moves: renderer.moves() };
+      if (!pickAgain(last, now)) return;
+      last = now;
+      const part = latestPartAt.current(now.x, now.y);
       setHovered((shown) => (sameHoveredPart(shown, part) ? shown : part));
       placeLabel();
     };
-    const pickSoon = (event: MouseEvent): void => {
-      const rect = target.getBoundingClientRect();
-      pointer.current = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    // Once a frame however often it's asked: by the pointer, a wheel, a frame drawn.
+    const pickSoon = (): void => {
       frame ??= requestAnimationFrame(pickNow);
     };
-    const onPointerMove = (event: PointerEvent): void => {
-      if (event.buttons !== 0 || isOnStageControl(event)) return clear();
-      pickSoon(event);
-    };
-    // A zoom moves the model under a still pointer.
-    const onWheel = (event: WheelEvent): void => {
-      if (!isOnStageControl(event)) pickSoon(event);
+    // Registered after the listener following the pointer (the effect above), so it reads where the pointer is now.
+    const onPointerMove = (): void => (pointer.current ? pickSoon() : clear());
+    const onFrameDrawn = (): void => {
+      if (pointer.current) pickSoon();
     };
 
     target.addEventListener('pointermove', onPointerMove);
+    target.addEventListener('pointerup', onPointerMove);
     target.addEventListener('pointerdown', clear);
     target.addEventListener('pointerleave', clear);
-    target.addEventListener('wheel', onWheel, { passive: true });
+    const stopFollowingFrames = renderer.onFrameDrawn(onFrameDrawn);
+    pickSoon();
     return () => {
       clear();
+      stopFollowingFrames();
       target.removeEventListener('pointermove', onPointerMove);
+      target.removeEventListener('pointerup', onPointerMove);
       target.removeEventListener('pointerdown', clear);
       target.removeEventListener('pointerleave', clear);
-      target.removeEventListener('wheel', onWheel);
     };
-  }, [element, enabled, placeLabel]);
+  }, [element, renderer, enabled, placeLabel]);
 
   return { hovered: enabled ? hovered : null, placeLabel };
 }

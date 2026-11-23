@@ -72,6 +72,30 @@ export function commentButtonLabel(active: boolean): string {
   return active ? 'Stop commenting' : 'Comment: click for a point, Shift-click for the whole part';
 }
 
+/**
+ * Whether the pointer picks what's under it: not while a button is held (a drag turns the model) nor over a stage
+ * control (`isOnStageControl`: a pin, a card, a button), which shows its own tooltip.
+ */
+export function hoverPicks(event: Pick<PointerEvent, 'buttons'>, onStageControl: boolean): boolean {
+  return event.buttons === 0 && !onStageControl;
+}
+
+/** Where a pick was made: the pointer on the stage, and how far the model had moved then (`ModelRenderer.moves`). */
+export interface PickedAt {
+  x: number;
+  y: number;
+  moves: number;
+}
+
+/**
+ * Whether to pick again: the pointer moved a pixel or more, or the model moved under it (a turn's coast, a glide, a
+ * take, the camera flying). A frame that only redrew (the part lit up) changes neither: picking reads the GPU.
+ */
+export function pickAgain(last: PickedAt | null, now: PickedAt): boolean {
+  if (!last || last.moves !== now.moves) return true;
+  return Math.abs(now.x - last.x) >= 1 || Math.abs(now.y - last.y) >= 1;
+}
+
 /** How far the label sits from the cursor's hot spot, right and down: clear of the comment cursor drawn there. */
 export const HOVER_LABEL_OFFSET = { x: 18, y: 20 };
 /** The least room kept between the label and the stage's edges. */

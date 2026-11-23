@@ -212,7 +212,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     (x: number, y: number) => (commentsOn ? hoveredPartOf(renderer?.pick(x, y, commentsOn) ?? null, versions[commentsOn], lookDifferences) : null),
     [renderer, commentsOn, versions, lookDifferences],
   );
-  const { hovered, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, enabled: isCommenting, partAt });
+  const { hovered, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, renderer, enabled: isCommenting, partAt });
   useLayoutEffect(placeLabel, [hovered, placeLabel]);
   const commentLit = litWhileCommenting(hovered, litPart?.nodeKey ? { side: litPart.pin.side, key: litPart.nodeKey } : null);
   const spotAt = useCallback(
