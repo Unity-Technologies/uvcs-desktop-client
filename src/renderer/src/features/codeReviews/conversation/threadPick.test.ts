@@ -223,4 +223,10 @@ describe('openItemsOf', () => {
     // On the whole review, it is in no file.
     expect(general!.inChanges).toBeUndefined();
   });
+
+  it('shows one on an image in Changes, at its pin', () => {
+    const anchor = { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Banner.png', spot: { x: 1, y: 2 } } as const;
+    const [onImage] = openItemsOf(41, openThreads(threadsOf([comment(5, { kind: 'question', anchor })])), undefined);
+    expect(onImage!.inChanges).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Banner.png', focusThread: 5 }, path: 'Assets/Art/Banner.png' });
+  });
 });

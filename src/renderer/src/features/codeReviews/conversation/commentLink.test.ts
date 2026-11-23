@@ -25,6 +25,14 @@ describe('commentLinkPage', () => {
     expect(commentLinkPage(41, 9, replies)).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7, focusReply: 9 }, found: true });
   });
 
+  it('opens a comment on an image in Changes, at its pin', () => {
+    const anchor = { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Banner.png', spot: { x: 4, y: 2 } } as const;
+    expect(commentLinkPage(41, 7, conversation(comment(7, { kind: 'question', anchor })))).toEqual({
+      page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Banner.png', focusThread: 7 },
+      found: true,
+    });
+  });
+
   it('opens a comment on a line in Changes, at its thread, in the mode it was written in', () => {
     expect(commentLinkPage(41, 7, conversation(comment(7, { kind: 'question', anchor: ON_LINE })))).toEqual({
       page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs', focusThread: 7 },

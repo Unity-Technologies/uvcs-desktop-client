@@ -3,7 +3,7 @@ import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { sameUser } from '../../../lib/userName';
 import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
-import { isFileThread } from '../inline/fileThreads';
+import { isLineThread } from '../inline/fileThreads';
 import { changesetIdsOf, foldReviewerChanges, threadsOf, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
 
 /**
@@ -356,14 +356,15 @@ export interface StepGroup {
 }
 
 /**
- * The settled threads on lines (applied, answered, discarded) "How it was applied" steps through, part by part of the
+ * The settled threads on lines (applied, answered, discarded) "How it was applied" steps through (an image's have no
+ * "How it was applied" yet), part by part of the
  * conversation, each in the order it shows them: a closed round's; after every round, those under the "New since last
  * review" line for a reviewer, by when each settled, or those after the last round for anyone else. Stepping stays in
  * the part the reviewer is reading: a round closed long ago doesn't mix with what they came back to check.
  */
 export function stepGroupsOf(blocks: readonly ConversationBlock[]): StepGroup[] {
   const settledIn = (entries: readonly ConversationEntry[]): number[] =>
-    entries.flatMap((entry) => (entry.kind === 'thread' && isFileThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
+    entries.flatMap((entry) => (entry.kind === 'thread' && isLineThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
   const rounds = blocks.flatMap((block) => (block.kind === 'round' ? [block] : []));
   const roundCount = roundCountOf(blocks);
   const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: roundName(block.round.number, roundCount) ?? '' }));

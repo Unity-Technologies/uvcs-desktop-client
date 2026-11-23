@@ -23,6 +23,19 @@ const general = threadOf(comment(1));
 const headerOf = (thread: ReviewThread, input: Partial<ThreadHeaderInput> = {}) =>
   threadHeaderOf({ thread, place: 'conversation', folded: false, foldable: false, hides: false, seesHowApplied: false, showsAnswer: true, inContext: false, ...input });
 
+describe('a thread on an image', () => {
+  const onArea = threadOf(comment(1, { kind: 'comment', anchor: { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png', spot: { x: 1, y: 2, size: { width: 3, height: 4 } } } }));
+
+  it('has a header band, as one on a line', () => {
+    expect(hasThreadHeader(onArea)).toBe(true);
+  });
+
+  it('names its file and the area it is on, in the conversation and under its file', () => {
+    expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', line: 'area', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
+    expect(headerOf(onArea, { place: 'fileGroup' }).line).toBe('area');
+  });
+});
+
 describe('hasThreadHeader', () => {
   it('gives a header to a thread on a line, a change request and a question, and none to a comment on the whole review', () => {
     expect(hasThreadHeader(plainOnLine)).toBe(true);

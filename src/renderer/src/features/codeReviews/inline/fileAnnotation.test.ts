@@ -99,6 +99,11 @@ describe('fileThreadCount', () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/Other.cs' })).toBe(0);
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/game/Player.cs', oldPath: 'src/Player.cs' })).toBe(3);
   });
+
+  it('counts the threads on the image with those on lines', () => {
+    const onImage = onPlayer(9, 30, { anchor: { kind: 'image', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { x: 1, y: 1 } } });
+    expect(fileThreadCount(threadsOf([onPlayer(1, 30), onImage]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
+  });
 });
 
 describe('openedOnSend', () => {
