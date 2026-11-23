@@ -382,6 +382,11 @@ export class ModelRenderer {
     return paneOnCanvas(pane.scissor, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
   }
 
+  /** The view the camera draws from now. */
+  currentView(): OrbitView {
+    return this.view;
+  }
+
   /** Where the camera is, in the viewer's space. */
   cameraPosition(): Vector {
     return cameraPositionOf(this.view);

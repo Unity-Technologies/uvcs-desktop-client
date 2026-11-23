@@ -9,7 +9,7 @@ import type { ModelSpot } from '@shared/domain/reviewConversation';
 import { followDrag, isDragButton } from '../image/pointerDrag';
 import { setCardHidden } from '../pins/hideCard';
 import { PinBubble } from '../pins/PinBubble';
-import { boundsOf, cardStyleOf, keptCardPlacement, pinCardPlacement, pinTargetOf, type HeldCard } from '../pins/pinPlacement';
+import { boundsOf, cardStyleOf, keptCardPlacement, pinCardPlacement, pinTargetOf, viewKeyOf, type HeldCard } from '../pins/pinPlacement';
 import pinStyles from '../pins/CommentPins.module.css';
 import type { ModelAnnotations } from './modelAnnotations';
 import { depthOfHit, hiddenBehind, type Projector, type ScreenPoint } from './modelProjection';
@@ -79,7 +79,7 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
         const pane = panes[pin.side]!;
         bubble.style.translate = `${at.x - pane.x}px ${at.y - pane.y}px`;
       }
-      placeCard(onScreen, `${renderer.cameraPosition().join()} ${JSON.stringify(panes)}`);
+      placeCard(onScreen, viewKeyOf(renderer.currentView(), [panes.before, panes.after]));
       window.clearTimeout(settle);
       settle = window.setTimeout(markHidden, SETTLE_MS);
     };

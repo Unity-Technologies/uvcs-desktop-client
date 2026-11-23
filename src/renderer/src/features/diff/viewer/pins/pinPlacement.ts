@@ -118,6 +118,23 @@ export function keptCardPlacement(held: HeldCard | null, next: CardPlacement, ta
   return covers || gapX > CARD_LEASH || gapY > CARD_LEASH ? next : held.placement;
 }
 
+/** What a model's camera looks from, as `OrbitView` has it: the pins module stays apart from the model's. */
+interface CameraView {
+  target: readonly number[];
+  yaw: number;
+  pitch: number;
+  distance: number;
+}
+
+/**
+ * The view a card was placed in, as one string: the camera, every part of it, and the panes the versions are drawn
+ * in. It changes on a turn, a pan, a zoom, a resize or a mode, never as a take plays, so a card that keeps its place
+ * while a take moves its pin (`keptCardPlacement`) follows it as soon as it differs.
+ */
+export function viewKeyOf(view: CameraView, panes: readonly (ScreenRect | null)[]): string {
+  return JSON.stringify([view.target, view.yaw, view.pitch, view.distance, panes.map((pane) => pane && [pane.x, pane.y, pane.width, pane.height])]);
+}
+
 /**
  * Whether a card being hidden (its pin out of view) hands the focus to its stage: when it holds it, as a hidden card
  * can't take keys, and they'd go nowhere. The stage keeps its own keys working (zoom, C), and the card's text stays.
