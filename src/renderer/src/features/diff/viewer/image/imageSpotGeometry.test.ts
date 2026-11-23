@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardPlacement, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
+import { cardPlacement, pinBounds, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
 
 const AT_TWICE = { scale: 2, x: 10, y: 20 };
 const NO_OFFSET = { x: 0, y: 0 };
@@ -76,5 +76,12 @@ describe('transformShowing', () => {
 
   it('centers a spot out of view, at the same zoom', () => {
     expect(transformShowing({ scale: 1, x: 0, y: 0 }, VIEWPORT, FRAME, { x: 1000, y: 800, width: 0, height: 0 })).toEqual({ scale: 1, x: -800, y: -650 });
+  });
+});
+
+describe('pinBounds', () => {
+  it("covers a point's bubble above it, and an area with its bubble", () => {
+    expect(pinBounds({ x: 100, y: 100, width: 0, height: 0 })).toEqual({ x: 100, y: 70, width: 30, height: 30 });
+    expect(pinBounds({ x: 100, y: 100, width: 200, height: 50 })).toEqual({ x: 100, y: 70, width: 200, height: 80 });
   });
 });

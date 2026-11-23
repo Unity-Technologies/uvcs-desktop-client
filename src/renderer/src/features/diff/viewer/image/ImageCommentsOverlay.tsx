@@ -7,7 +7,7 @@ import { useRef, useState } from 'react';
 import { Avatar } from '../../../../ui/Avatar';
 import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
 import type { ImageAnnotations, ImagePin, ImageSide } from './imageAnnotations';
-import { cardPlacement, spotOfGesture, spotOnScreen, type ScreenRect } from './imageSpotGeometry';
+import { cardPlacement, pinBounds, spotOfGesture, spotOnScreen, type ScreenRect } from './imageSpotGeometry';
 import { followDrag, isDragButton } from './pointerDrag';
 import type { PanZoom } from './usePanZoom';
 import type { Point } from './viewTransform';
@@ -99,7 +99,7 @@ function PinMark({ pin, rect, selected, onClick }: { pin: ImagePin; rect: Screen
 /** The opened pin's card, beside it and within the viewport, scrolling inside when taller than the room. */
 function PinCard({ rect, viewport, children }: { rect: ScreenRect; viewport: Size; children: React.ReactNode }) {
   // The stage's controls float at the right edge (`StageControls`): a card never goes under them.
-  const placement = cardPlacement(rect, { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, CARD_WIDTH);
+  const placement = cardPlacement(pinBounds(rect), { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, CARD_WIDTH);
   return (
     <div className={styles.card} data-no-pan="" style={{ ...placement, width: CARD_WIDTH }}>
       {children}

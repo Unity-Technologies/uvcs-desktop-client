@@ -111,3 +111,11 @@ function clamp(value: number, min: number, max: number): number {
 export function spotInFrame(spot: ImageSpot, offset: Point): Point & Size {
   return { x: offset.x + spot.x, y: offset.y + spot.y, width: Math.max(1, spot.size?.width ?? 1), height: Math.max(1, spot.size?.height ?? 1) };
 }
+
+/** A pin's bubble: its tip on the spot's top-left corner, the bubble above it (`ImageCommentsOverlay.module.css`). */
+export const PIN_SIZE = 30;
+
+/** What a pin covers on screen, its bubble and its area: a card placed beside it leaves it all in view. */
+export function pinBounds(spot: ScreenRect): ScreenRect {
+  return { x: spot.x, y: spot.y - PIN_SIZE, width: Math.max(spot.width, PIN_SIZE), height: spot.height + PIN_SIZE };
+}

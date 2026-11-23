@@ -25,6 +25,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* PIN_SIZE (imageSpotGeometry), which places cards clear of it. */
   width: 30px;
   height: 30px;
   margin-top: -30px;
