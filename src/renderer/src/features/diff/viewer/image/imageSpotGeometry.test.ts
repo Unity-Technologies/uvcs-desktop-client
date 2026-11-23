@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardPlacement, pinBounds, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
+import { cardPlacement, movedSpot, pinBounds, resizedSpot, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
 
 const AT_TWICE = { scale: 2, x: 10, y: 20 };
 const NO_OFFSET = { x: 0, y: 0 };
@@ -83,5 +83,35 @@ describe('pinBounds', () => {
   it("covers a point's bubble above it, and an area with its bubble", () => {
     expect(pinBounds({ x: 100, y: 100, width: 0, height: 0 })).toEqual({ x: 100, y: 70, width: 30, height: 30 });
     expect(pinBounds({ x: 100, y: 100, width: 200, height: 50 })).toEqual({ x: 100, y: 70, width: 200, height: 80 });
+  });
+});
+
+describe('movedSpot', () => {
+  it('moves a point or an area by whole pixels', () => {
+    expect(movedSpot({ x: 10, y: 10 }, { x: 4.4, y: -2.6 }, IMAGE)).toEqual({ x: 14, y: 7 });
+    expect(movedSpot({ x: 10, y: 10, size: { width: 20, height: 10 } }, { x: 5, y: 5 }, IMAGE)).toEqual({ x: 15, y: 15, size: { width: 20, height: 10 } });
+  });
+
+  it('keeps a point on the image, and an area whole inside it', () => {
+    expect(movedSpot({ x: 10, y: 10 }, { x: 500, y: -500 }, IMAGE)).toEqual({ x: 99, y: 0 });
+    expect(movedSpot({ x: 10, y: 10, size: { width: 20, height: 10 } }, { x: 500, y: 500 }, IMAGE)).toEqual({ x: 80, y: 40, size: { width: 20, height: 10 } });
+  });
+});
+
+describe('resizedSpot', () => {
+  const AREA = { x: 10, y: 10, size: { width: 20, height: 10 } };
+
+  it('moves the corner dragged, the opposite one staying', () => {
+    expect(resizedSpot(AREA, 'bottomRight', { x: 40.4, y: 30 }, IMAGE)).toEqual({ x: 10, y: 10, size: { width: 30, height: 20 } });
+    expect(resizedSpot(AREA, 'topLeft', { x: 5, y: 2 }, IMAGE)).toEqual({ x: 5, y: 2, size: { width: 25, height: 18 } });
+  });
+
+  it('turns over when dragged past the other corner, and stays a pixel at least', () => {
+    expect(resizedSpot(AREA, 'bottomRight', { x: 4, y: 6 }, IMAGE)).toEqual({ x: 4, y: 6, size: { width: 6, height: 4 } });
+    expect(resizedSpot(AREA, 'topRight', { x: 10, y: 5 }, IMAGE)).toEqual({ x: 10, y: 5, size: { width: 1, height: 15 } });
+  });
+
+  it('stays within the image', () => {
+    expect(resizedSpot(AREA, 'bottomRight', { x: 900, y: 900 }, IMAGE)).toEqual({ x: 10, y: 10, size: { width: 90, height: 40 } });
   });
 });

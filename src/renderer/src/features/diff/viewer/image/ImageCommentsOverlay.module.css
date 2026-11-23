@@ -15,6 +15,7 @@
 
 /* The world glides when the controls zoom (`PanZoom.animated`): the marks glide on the same curve, as one with it. */
 .overlay[data-gliding] .pin,
+.overlay[data-gliding] .corner,
 .overlay[data-gliding] .area {
   transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out);
 }
@@ -75,6 +76,37 @@
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-contrast);
+}
+
+/* A comment being written moves by its bubble. */
+.pin[data-movable] {
+  cursor: move;
+  touch-action: none;
+}
+
+/* The corners of an area being written on: small squares that reshape it, each with the cursor of its diagonal. */
+.corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid var(--accent);
+  border-radius: 2px;
+  background: var(--bg-surface-raised);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.corner[data-corner='topLeft'],
+.corner[data-corner='bottomRight'] {
+  cursor: nwse-resize;
+}
+
+.corner[data-corner='topRight'],
+.corner[data-corner='bottomLeft'] {
+  cursor: nesw-resize;
 }
 
 /* An area: a border, never a fill, so the image under it reads as it is (as a commented line is outlined). */

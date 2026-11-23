@@ -30,6 +30,7 @@ interface ReviewImageInput {
 export function useReviewImageAnnotations({ comments, threads, view, file, inCode }: ReviewImageInput): ReviewImageAnnotations {
   const allSpots = useNewImageCommentsStore((state) => state.spots);
   const openSpot = useNewImageCommentsStore((state) => state.open);
+  const moveSpot = useNewImageCommentsStore((state) => state.moveTo);
   const fileKey = JSON.stringify([view, file]);
   const review = comments?.review;
   const imageThreads = useMemo(() => (threads && review && view ? imageThreadsOfFile(threads, review.target, view, file) : null), [threads, review, fileKey]);
@@ -79,6 +80,10 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
       const started = newImageCommentSpot(reviewId, file.path, topSide, at);
       openSpot(started);
       open(newCommentPinKey(started.key));
+    },
+    moveComment: (key, spot) => {
+      const moved = spots.find((candidate) => newCommentPinKey(candidate.key) === key);
+      if (moved) moveSpot(moved.key, spot);
     },
     reveal,
   };

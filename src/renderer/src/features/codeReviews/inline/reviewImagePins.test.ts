@@ -26,10 +26,10 @@ function pinsOf(comments: ReviewComment[], options: { inCode?: boolean; focusThr
 }
 
 describe('reviewImagePinsOf', () => {
-  it('pins each thread at its spot on the side its revision shows, with who started it', () => {
-    expect(pinsOf([onImage(1, 30), onImage(2, 10, { author: 'borja' })]).map(({ key, side, spot, author, earlier }) => ({ key, side, spot, author, earlier }))).toEqual([
-      { key: 'thread:1', side: 'new', spot: { x: 1, y: 5 }, author: 'ana', earlier: false },
-      { key: 'thread:2', side: 'old', spot: { x: 2, y: 5 }, author: 'borja', earlier: false },
+  it('pins each thread at its spot on the side its revision shows, with who started it, where it stays', () => {
+    expect(pinsOf([onImage(1, 30), onImage(2, 10, { author: 'borja' })]).map(({ key, side, spot, author, earlier, movable }) => ({ key, side, spot, author, earlier, movable }))).toEqual([
+      { key: 'thread:1', side: 'new', spot: { x: 1, y: 5 }, author: 'ana', earlier: false, movable: false },
+      { key: 'thread:2', side: 'old', spot: { x: 2, y: 5 }, author: 'borja', earlier: false, movable: false },
     ]);
   });
 
@@ -53,7 +53,7 @@ describe('reviewImagePinsOf', () => {
   it('pins each comment being written, with no one yet', () => {
     const spot = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 4, y: 4, size: { width: 9, height: 9 } } });
     const pins = reviewImagePinsOf({ threads: { placed: [], earlier: [] }, spots: [spot], inCode: false, focusThreadId: undefined, topSide: 'additions' });
-    expect(pins).toEqual([{ key: newCommentPinKey(spot.key), side: 'new', spot: spot.comment.spot, author: null, tip: 'New comment', emphasized: false, earlier: false }]);
+    expect(pins).toEqual([{ key: newCommentPinKey(spot.key), side: 'new', spot: spot.comment.spot, author: null, tip: 'New comment: drag to move it', emphasized: false, earlier: false, movable: true }]);
   });
 });
 

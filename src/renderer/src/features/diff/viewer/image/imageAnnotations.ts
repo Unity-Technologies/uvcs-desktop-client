@@ -20,6 +20,8 @@ export interface ImagePin {
   emphasized: boolean;
   /** Written on an earlier version of the image, which may show something else there now: drawn dashed. */
   earlier: boolean;
+  /** Its spot can still change (a comment being written): its bubble drags it, its area's corners reshape it. */
+  movable: boolean;
 }
 
 /**
@@ -40,6 +42,8 @@ export interface ImageAnnotations {
   commentsOn: ImageSide | null;
   /** Starts a comment on a point or an area of the image `commentsOn` names. */
   addComment: (spot: ImageSpot) => void;
+  /** Moves or reshapes a movable pin's spot. */
+  moveComment: (key: string, spot: ImageSpot) => void;
   /** A pin to bring into view, at the zoom shown, each time `seq` changes. */
   reveal: { key: string; seq: number } | null;
 }

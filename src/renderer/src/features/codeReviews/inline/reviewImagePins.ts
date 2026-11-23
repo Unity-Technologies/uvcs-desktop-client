@@ -46,7 +46,7 @@ export function reviewImagePinsOf({ threads, spots, inCode, focusThreadId, topSi
   const placed = threads.placed.filter(({ thread }) => shows(thread)).map(({ thread, side }) => threadPin(thread, imageSideOf(side), false));
   const earlier = threads.earlier.filter(({ thread }) => shows(thread)).map(({ thread }) => threadPin(thread, imageSideOf(topSide), true));
   const writing = spots.map(
-    (spot): ImagePin => ({ key: newCommentPinKey(spot.key), side: imageSideOf(spot.side), spot: spot.comment.spot, author: null, tip: 'New comment', emphasized: false, earlier: false }),
+    (spot): ImagePin => ({ key: newCommentPinKey(spot.key), side: imageSideOf(spot.side), spot: spot.comment.spot, author: null, tip: 'New comment: drag to move it', emphasized: false, earlier: false, movable: true }),
   );
   return [...placed, ...earlier, ...writing];
 }
@@ -61,5 +61,7 @@ function threadPin(thread: ImageThread, side: ImageSide, earlier: boolean): Imag
     tip: earlier ? `${tip}\n${imageEarlierTagOf(thread).label}` : tip,
     emphasized: thread.state.kind === 'open',
     earlier,
+    // `cm codereview comment edit` changes a comment's text only: a posted pin stays where it was written.
+    movable: false,
   };
 }

@@ -119,3 +119,40 @@ export const PIN_SIZE = 30;
 export function pinBounds(spot: ScreenRect): ScreenRect {
   return { x: spot.x, y: spot.y - PIN_SIZE, width: Math.max(spot.width, PIN_SIZE), height: spot.height + PIN_SIZE };
 }
+
+/** A corner of an area, which a handle drags to reshape it. */
+export type AreaCorner = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
+
+export const AREA_CORNERS: readonly AreaCorner[] = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
+
+/** A spot moved by whole pixels of its image, kept within it: a point on a pixel of it, an area whole inside it. */
+export function movedSpot(spot: ImageSpot, by: Point, image: Size): ImageSpot {
+  const width = spot.size?.width ?? 1;
+  const height = spot.size?.height ?? 1;
+  const x = clamp(Math.round(spot.x + by.x), 0, Math.max(0, image.width - width));
+  const y = clamp(Math.round(spot.y + by.y), 0, Math.max(0, image.height - height));
+  return spot.size ? { x, y, size: spot.size } : { x, y };
+}
+
+/**
+ * An area reshaped by dragging one of its corners to `to` (a point of the image, fractions kept): the opposite corner
+ * stays, the dragged one goes to the whole pixel nearest the pointer, within the image; dragged past the other, the
+ * area turns over, as it would being drawn again. At least a pixel each way.
+ */
+export function resizedSpot(spot: ImageSpot, corner: AreaCorner, to: Point, image: Size): ImageSpot {
+  const size = spot.size ?? { width: 1, height: 1 };
+  const fixedX = corner === 'topLeft' || corner === 'bottomLeft' ? spot.x + size.width : spot.x;
+  const fixedY = corner === 'topLeft' || corner === 'topRight' ? spot.y + size.height : spot.y;
+  const movedX = clamp(Math.round(to.x), 0, image.width);
+  const movedY = clamp(Math.round(to.y), 0, image.height);
+  const left = Math.min(fixedX, movedX);
+  const top = Math.min(fixedY, movedY);
+  const width = Math.max(1, Math.abs(movedX - fixedX));
+  const height = Math.max(1, Math.abs(movedY - fixedY));
+  return { x: Math.min(left, image.width - width), y: Math.min(top, image.height - height), size: { width, height } };
+}
+
+/** A point of the viewport as a point of an image placed at `offset` in the frame, fractions kept. */
+export function imagePointOf(point: Point, transform: ViewTransform, offset: Point): Point {
+  return imagePointAt(point, transform, offset);
+}
