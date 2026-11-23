@@ -353,4 +353,4 @@ function compareLines(a: LineRange, b: LineRange): number {
 }
 
 /** A review whose files nobody commented on: what to comment on, as text files and images both take comments. */
-const NO_COMMENTS_YET = { title: 'No comments on the changes yet', description: 'Comment on lines of a file, or on a point or an area of an image.' };
+const NO_COMMENTS_YET = { title: 'No comments on the changes yet', description: 'Comment on lines of a file, a point or an area of an image, or a point or a part of a 3D model.' };
