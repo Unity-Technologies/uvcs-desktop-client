@@ -321,6 +321,10 @@ describe('parseModel, glTF', () => {
     expect(body.skin!.bindMatrix).toEqual(new Matrix4().toArray());
   });
 
+  it('reads a skin whose vertex leans on a joint past its skeleton as unreadable, never as a model to draw', async () => {
+    expect(await parseModel(bytesOf(skinnedGltf({ jointPastSkeleton: true }), 'gltf'))).toEqual({ kind: 'failed', failure: { kind: 'unreadable' } });
+  });
+
   it('names the compression a glTF needs a decoder for', async () => {
     const draco = triangleGltf('inline', { extensionsUsed: ['KHR_draco_mesh_compression'], extensionsRequired: ['KHR_draco_mesh_compression'] });
     expect(await parseModel(bytesOf(draco, 'gltf'))).toEqual({ kind: 'failed', failure: { kind: 'compressed', compression: 'Draco' } });
