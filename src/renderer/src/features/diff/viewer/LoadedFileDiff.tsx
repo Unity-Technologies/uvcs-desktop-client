@@ -291,15 +291,18 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
       break;
     case 'model':
       body = (
-        <Suspense fallback={<CenteredSpinner />}>
-          <ModelDiffViewer
-            place={place}
-            sources={{ original: contents.original, modified: contents.modified }}
-            original={left}
-            modified={shownRendering}
-            mode={modelMode}
-          />
-        </Suspense>
+        <>
+          {otherWayNotice}
+          <Suspense fallback={<CenteredSpinner />}>
+            <ModelDiffViewer
+              place={place}
+              sources={{ original: contents.original, modified: contents.modified }}
+              original={left}
+              modified={shownRendering}
+              mode={modelMode}
+            />
+          </Suspense>
+        </>
       );
       break;
     default:
