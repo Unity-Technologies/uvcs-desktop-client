@@ -98,7 +98,7 @@ function liftTop(model: ParsedModel, name: string, offset: Vector): void {
 }
 
 /** A point in the file's space as the viewer draws it. */
-const inViewer = (model: ParsedModel, point: Vector): Vector => close(new Vector3(...point).applyMatrix4(viewerSpaceOf(model)).toArray() as Vector);
+const inViewer = (model: ParsedModel, point: Vector): Vector => close(new Vector3(...point).applyMatrix4(viewerSpaceOf(model)).toArray() as Vector) as Vector;
 
 /** Turns the antenna's `Tip` a quarter turn about Z, bending its top to -X, and places it as a frame does. */
 function sway(version: ReturnType<typeof drawn>): void {
