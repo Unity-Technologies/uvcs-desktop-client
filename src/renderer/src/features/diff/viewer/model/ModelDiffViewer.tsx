@@ -30,7 +30,7 @@ import type { ModelImportSettings } from './modelImportSettings';
 import { ModelInfoStrip } from './ModelInfoStrip';
 import { litCommentPart, ModelAnnotationsContext, takesModelComments } from './modelAnnotations';
 import { ModelCommentsOverlay } from './ModelCommentsOverlay';
-import { pinPlacesOf, spotOfHit, type DrawnVersion } from './modelPinPlaces';
+import { pinPlacesOf, revealedPin, spotOfHit, type DrawnVersion } from './modelPinPlaces';
 import { viewerSpaceOf } from './modelSpaces';
 import { viewOfSpot } from './spotView';
 import type { Side } from './viewLayout';
@@ -263,14 +263,11 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const revealed = useRef<number | null>(null);
   const reveal = annotations?.reveal ?? null;
   useEffect(() => {
-    if (!reveal || revealed.current === reveal.seq || !framing || !bounds) return;
-    const pin = annotations?.pins.find((candidate) => candidate.key === reveal.key);
-    const [place] = pin ? pinPlacesOf([pin], versions) : [];
-    const version = pin && versions[pin.side];
-    if (!pin || !place || !version) return;
+    const shown = revealedPin(reveal, revealed.current, framing !== null, annotations?.pins ?? [], versions);
+    if (!shown || !reveal || !framing) return;
     revealed.current = reveal.seq;
-    camera.frameView(viewOfSpot(place.point(), pin.spot.view, viewerSpaceOf(version.model), camera.currentView(), bounds, camera.paneAspect()));
-  }, [reveal?.seq, framing, versions, annotations?.pins, bounds, camera]);
+    camera.frameView(viewOfSpot(shown.place.point(), shown.pin.spot.view, viewerSpaceOf(shown.version.model), camera.currentView(), framing, camera.paneAspect()));
+  }, [reveal?.seq, framing, versions, annotations?.pins, camera]);
 
   const onClick = useCallback(
     (x: number, y: number) => {

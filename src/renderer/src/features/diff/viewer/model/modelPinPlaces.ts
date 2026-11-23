@@ -48,6 +48,26 @@ export function pinPlacesOf(pins: readonly ModelPin[], versions: Record<Side, Dr
   });
 }
 
+/** A pin gone to, and where it is on the version it's on: what the camera glides to show. */
+export interface RevealedPin {
+  pin: ModelPin;
+  place: PinPlace;
+  version: DrawnVersion;
+}
+
+/**
+ * The pin a reveal asks for (the Comments panel, the conversation, a link), once per reveal (`revealedSeq`: the last
+ * one shown), once the pair is framed (`ready`) and the pins hold it: they may arrive after the framing, or before.
+ * None until then, or for a pin on a version not shown.
+ */
+export function revealedPin(reveal: { key: string; seq: number } | null, revealedSeq: number | null, ready: boolean, pins: readonly ModelPin[], versions: Record<Side, DrawnVersion | null>): RevealedPin | null {
+  if (!reveal || reveal.seq === revealedSeq || !ready) return null;
+  const pin = pins.find((candidate) => candidate.key === reveal.key);
+  const version = pin && versions[pin.side];
+  const [place] = pin ? pinPlacesOf([pin], versions) : [];
+  return pin && version && place ? { pin, place, version } : null;
+}
+
 /**
  * The spot a pick on a version marks (`spotOfPick`): the point hit on the mesh of the node `key` names, as that node is
  * drawn now, and the camera then. None where nothing was hit.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ModelPin } from './modelAnnotations';
 import { buildModelScene } from './modelScene';
-import { pinPlacesOf, spotOfHit } from './modelPinPlaces';
+import { pinPlacesOf, revealedPin, spotOfHit } from './modelPinPlaces';
 import { modelSummary } from './modelSummary';
 import { testModel } from './testing/testModels';
 import type { ParsedModel } from './parsedModel';
@@ -70,5 +70,28 @@ describe('spotOfHit', () => {
 
   it('marks nothing where nothing was hit', () => {
     expect(spotOfHit(drawn(CAR), { key: null, point: null }, [0, 0, 5], false)).toBeNull();
+  });
+});
+
+describe('revealedPin', () => {
+  const versions = () => ({ before: null, after: drawn(CAR) });
+  const reveal = { key: 'thread:1', seq: 2 };
+
+  it('shows the pin asked for, on the version it is on', () => {
+    const shown = revealedPin(reveal, null, true, [pin({})], versions());
+    expect(shown?.pin.key).toBe('thread:1');
+    expect(shown?.place.point()).toEqual([0, 1.6, 0]);
+  });
+
+  it('waits for the framing, and for the pins when they arrive after it', () => {
+    expect(revealedPin(reveal, null, false, [pin({})], versions())).toBeNull();
+    expect(revealedPin(reveal, null, true, [], versions())).toBeNull();
+    expect(revealedPin(reveal, null, true, [pin({})], versions())).not.toBeNull();
+  });
+
+  it('shows each reveal once, and none for a pin on a version not shown', () => {
+    expect(revealedPin(reveal, 2, true, [pin({})], versions())).toBeNull();
+    expect(revealedPin(null, null, true, [pin({})], versions())).toBeNull();
+    expect(revealedPin(reveal, null, true, [pin({ side: 'before' })], versions())).toBeNull();
   });
 });
