@@ -9,7 +9,8 @@ import { imageCommentAt, imageCommentSide, newImageCommentSpot, newImageComments
 import { useNewImageCommentsStore } from './newImageCommentsStore';
 import { NewImageCommentCard } from './NewImageCommentCard';
 import type { ReviewComments } from './reviewComments';
-import { imageSideOf, imageThreadIdsOf, imageThreadOf, newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, reviewImagePinsOf, threadPinKey } from './reviewImagePins';
+import { imageSideOf, reviewImagePinsOf } from './reviewImagePins';
+import { newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, spotThreadIdsOf, spotThreadOf, threadPinKey } from './reviewPins';
 
 interface ReviewImageInput {
   comments: ReviewComments | null;
@@ -34,7 +35,7 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
   const fileKey = JSON.stringify([view, file]);
   const review = comments?.review;
   const imageThreads = useMemo(() => (threads && review && view ? imageThreadsOfFile(threads, review.target, view, file) : null), [threads, review, fileKey]);
-  const threadIds = useMemo(() => imageThreadIdsOf(imageThreads), [imageThreads]);
+  const threadIds = useMemo(() => spotThreadIdsOf(imageThreads), [imageThreads]);
   const spots = useMemo(() => (review && view && threads ? newImageCommentsIn(allSpots, review.id, view, file) : NO_SPOTS), [allSpots, review, threads !== undefined, fileKey]);
 
   // The card open, per file: going to another file closes it.
@@ -56,7 +57,7 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
     const pins = reviewImagePinsOf({ threads: imageThreads, spots, inCode, focusThreadId: focus?.threadId, topSide });
     const threadOfPin = (key: string) => {
       const threadId = pinThreadId(key);
-      return threadId === null ? null : imageThreadOf(imageThreads, threadId);
+      return threadId === null ? null : spotThreadOf(imageThreads, threadId);
     };
     const spotOfPin = (key: string) => spots.find((candidate) => newCommentPinKey(candidate.key) === key);
     return {
