@@ -380,7 +380,9 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
 - **Marking a spot**: where the place takes comments (`takesModelComments`: the version it comments on shows), the
   stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point
   under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion
-  shows there), a click on nothing marks nothing, and a drag still turns the model. What it writes is
+  shows there), a click on nothing marks nothing, and a drag still turns the model. A click marks a point; with Alt
+  held (Option on a Mac) it marks the whole part (`stageClickOf`), which the shortcut's label says in the platform's
+  words (`modifierClick`). What it writes is
   `spotOfPick`/`spotOfHit`: the point where the part rests (a take playing moves the part, not where on it the comment
   is; on a skinned mesh it bends the skin, so the hit is carried to rest by the same place on the same triangle,
   `restPointOfHit`), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along

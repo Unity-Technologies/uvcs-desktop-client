@@ -1,13 +1,15 @@
 // The model stage's pointer, as Unity's Scene view takes it: drag to orbit (Alt+drag too, Unity's habit), drag with
 // the right or middle button or with Shift to pan, each coasting a little once let go (`TURN_FLING`, `SHORT_FLING`);
 // scroll or pinch to zoom at the pointer (a wheel's notches glide: `dollyGlide`); double-click to orbit around the
-// point clicked. A press that doesn't move is a click: it picks the part under it.
+// point clicked. A press that doesn't move is a click: it picks the part under it (with Alt held, commenting, it marks
+// the whole part: `stageClickOf`).
 
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { SHORT_FLING, type FlingFeel } from '../../../../lib/fling';
 import { browserFrameClock } from '../../../../lib/frameClock';
 import { isDiscreteWheel, wheelZoomFactor } from '../../../../lib/wheelZoom';
 import { followDrag, isOnStageControl } from '../image/pointerDrag';
+import type { StageClickModifiers } from '../pins/stageCommenting';
 import type { ModelRenderer } from './modelRenderer';
 import { ViewCoast } from './viewCoast';
 import { dollied, orbited, panned, pointOnRay, workingDepth, type OrbitView, type Vector } from './orbitCamera';
@@ -32,8 +34,8 @@ interface OrbitGestures {
   onDollyStep: (point: Vector | null, factor: number) => void;
   /** The centre of what is shown: a pan that grabs nothing moves it with the pointer (`workingDepth`). */
   modelCentre: () => Vector | null;
-  /** A click: what is under the pointer, in CSS pixels of the element. */
-  onClick: (x: number, y: number) => void;
+  /** A click: what is under the pointer, in CSS pixels of the element, and the modifiers held (Alt: a whole part). */
+  onClick: (x: number, y: number, modifiers: StageClickModifiers) => void;
 }
 
 /**
@@ -93,7 +95,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
           latest.current.onView(pans ? panned(current, dx, dy, target.clientHeight, panDepth) : orbited(current, dx, dy));
         },
         () => {
-          if (travelled < CLICK_SLOP && !pans) latest.current.onClick(...local(event));
+          if (travelled < CLICK_SLOP && !pans) latest.current.onClick(...local(event), { altKey: event.altKey });
           else inertia.release();
         },
       );

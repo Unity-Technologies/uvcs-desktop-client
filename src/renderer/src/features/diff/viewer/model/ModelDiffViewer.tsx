@@ -35,7 +35,7 @@ import { viewerSpaceOf } from './modelSpaces';
 import { viewOfSpot } from './spotView';
 import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
-import { commentKeyAction, stageClickOf } from '../pins/stageCommenting';
+import { commentKeyAction, stageClickOf, type StageClickModifiers } from '../pins/stageCommenting';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
 import { fileMaterialChanges } from './materials/fileMaterialChanges';
@@ -270,12 +270,13 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   }, [reveal?.seq, framing, versions, annotations?.pins, camera]);
 
   const onClick = useCallback(
-    (x: number, y: number) => {
-      // Commenting, a click marks a point of the version that takes comments; one on nothing marks nothing.
-      const click = stageClickOf(isCommenting, annotations?.commentsOn ?? null);
+    (x: number, y: number, modifiers: StageClickModifiers) => {
+      // Commenting, a click marks a point of the version that takes comments, an Alt-click its whole part; one on
+      // nothing marks nothing.
+      const click = stageClickOf(isCommenting, annotations?.commentsOn ?? null, modifiers);
       if (click !== 'stage') {
         setCommenting(false);
-        const spot = spotAt(x, y, click.marks, false);
+        const spot = spotAt(x, y, click.marks, click.wholePart);
         if (spot) annotations?.addComment(spot);
         return;
       }

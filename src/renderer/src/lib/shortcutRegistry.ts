@@ -10,6 +10,7 @@
  * Polish), so no shortcut uses it there.
  */
 import { isMac } from './platform';
+import { modifierClick } from './shortcuts';
 
 export const SHORTCUT_AREAS = [
   'General',
@@ -231,7 +232,7 @@ export const SHORTCUTS = {
 
   modelFrame: { area: 'Model diff', label: 'Frame the part picked, or the whole model', keys: ['f'] },
   modelFrameAll: { area: 'Model diff', label: 'Frame the whole model', keys: ['0'] },
-  modelComment: { area: 'Model diff', label: 'Comment on a point or a part', keys: ['c'] },
+  modelComment: { area: 'Model diff', label: `Comment on a point, or ${modifierClick('alt', isMac)} a whole part`, keys: ['c'] },
   modelCommentLeave: { area: 'Model diff', label: 'Stop commenting, or close the comment open', keys: ['escape'] },
   modelFlyForward: { area: 'Model diff', label: 'Move forward (Shift: faster)', keys: ['w', 'up'] },
   modelFlyBack: { area: 'Model diff', label: 'Move back (Shift: faster)', keys: ['s', 'down'] },
