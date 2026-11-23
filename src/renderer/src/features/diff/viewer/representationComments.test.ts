@@ -18,10 +18,14 @@ describe('otherRepresentationNotice', () => {
 
 describe('askToTake', () => {
   it('takes an ask once', () => {
-    const asked = { representation: 'image' as const, seq: 4 };
+    const asked = { representation: 'image' as const, key: '41:4' };
     expect(askToTake(asked, null)).toBe(asked);
-    expect(askToTake(asked, 4)).toBeNull();
-    expect(askToTake(null, 3)).toBeNull();
+    expect(askToTake(asked, '41:4')).toBeNull();
+    expect(askToTake(null, '41:3')).toBeNull();
+  });
+
+  it("takes another review's ask though its own counter gave it the same number", () => {
+    expect(askToTake({ representation: 'image', key: '42:1' }, '41:1')).not.toBeNull();
   });
 });
 

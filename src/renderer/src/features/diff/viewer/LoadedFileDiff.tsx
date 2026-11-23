@@ -99,9 +99,9 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   const ask = askToTake(twoRepresentations ? representationComments?.asked : null, takenAsk);
   useEffect(() => {
     if (!ask) return;
-    takeAsk(ask.seq);
+    takeAsk(ask.key);
     setOverride({ versionsKey, representation: ask.representation });
-  }, [ask?.seq]);
+  }, [ask?.key]);
   const representation = shownRepresentation(representations[extension] ?? rendered, override, versionsKey);
   const chooseRepresentation = (value: Representation): void => {
     setOverride(null);

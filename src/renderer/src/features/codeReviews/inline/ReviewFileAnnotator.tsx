@@ -163,7 +163,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
 
   // Where the file's comments are, and, for a file shown either as code or as an image (an SVG), which view a thread
   // gone to is on.
-  const summary = useMemo(() => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, focus }), [fileComments, onImage.threadIds, focus]);
+  const summary = useMemo(() => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, focus, reviewId: comments?.review.id ?? 0 }), [fileComments, onImage.threadIds, focus, comments?.review.id]);
   const representationComments = summary.representation;
 
   const controls = summary.hidden && <CommentsInCodeButton shown={inCode} onChange={setInCode} place={summary.hidden} />;

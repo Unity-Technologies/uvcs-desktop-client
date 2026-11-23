@@ -9,6 +9,8 @@ interface FileCommentsInput {
   /** The threads on its image. */
   imageThreadIds: ReadonlySet<number>;
   focus: ThreadFocus | null;
+  /** The review's id: with the focus's `seq`, it names each time a thread is gone to in the window. */
+  reviewId: number;
 }
 
 interface FileCommentsSummary {
@@ -23,11 +25,11 @@ interface FileCommentsSummary {
  * where the header's button hides them from; and, for a file shown either way (an SVG), the view a thread gone to from
  * elsewhere is on (one picked in place, `ThreadFocus.inPlace`, is on screen already and asks for nothing).
  */
-export function fileCommentsSummaryOf({ fileComments, imageThreadIds, focus }: FileCommentsInput): FileCommentsSummary {
+export function fileCommentsSummaryOf({ fileComments, imageThreadIds, focus, reviewId }: FileCommentsInput): FileCommentsSummary {
   const onText = fileComments ? fileComments.lines.reduce((count, line) => count + line.threads.length, 0) + fileComments.outdated.length : 0;
   const onImage = imageThreadIds.size;
   const focusedOn: CommentedRepresentation | null = focus === null ? null : holdsThread(fileComments, focus.threadId) ? 'text' : imageThreadIds.has(focus.threadId) ? 'image' : null;
-  const asked = focus !== null && !focus.inPlace && focusedOn !== null ? { representation: focusedOn, seq: focus.seq } : null;
+  const asked = focus !== null && !focus.inPlace && focusedOn !== null ? { representation: focusedOn, key: `${reviewId}:${focus.seq}` } : null;
   const hidden = onText > 0 && onImage > 0 ? 'both' : onText > 0 ? 'code' : onImage > 0 ? 'image' : null;
   return { representation: { onText, onImage, asked }, hidden };
 }
