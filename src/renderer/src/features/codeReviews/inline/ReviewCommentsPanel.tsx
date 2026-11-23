@@ -40,7 +40,7 @@ import {
   type CommentsSearch,
   type ThreadKind,
 } from './commentsPanel';
-import type { LineThread } from './fileThreads';
+import { isLineThread, type FileThread } from './fileThreads';
 import { CommentsOrderMenu } from './CommentsOrderMenu';
 import type { ReviewComments } from './reviewComments';
 import styles from './ReviewCommentsPanel.module.css';
@@ -55,7 +55,7 @@ interface ReviewCommentsPanelProps {
   /** The words and kinds the filter row narrows it to, kept by the Changes tab too. */
   search: CommentsSearch;
   onSearchChange: (search: CommentsSearch) => void;
-  listed: readonly LineThread[];
+  listed: readonly FileThread[];
   /** How they're ordered, kept for every review; in the code's order, `listed` under their files (`groups`). */
   order: CommentsOrder;
   onOrderChange: (order: CommentsOrder) => void;
@@ -64,7 +64,7 @@ interface ReviewCommentsPanelProps {
   folded: FoldedFiles;
   onFoldedChange: (folded: FoldedFiles) => void;
   /** Every comment, in the order the panel lists them: where one that left the list sat. */
-  all: readonly LineThread[];
+  all: readonly FileThread[];
   /** Goes to the comment after or before the one gone to (`steppedThread`). */
   onStep: (direction: 1 | -1) => void;
   onClose: () => void;
@@ -133,7 +133,7 @@ function PanelBody({ comments, threads, filter, newIds, onFilterChange, search, 
                         thread={thread}
                         current={current === thread.root.id}
                         onOpen={() => comments.goToThread(thread)}
-                        onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+                        onSeeApplied={seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined}
                         excerpt={matchExcerpt(thread, search.query)}
                       />
                     </li>
@@ -150,7 +150,7 @@ function PanelBody({ comments, threads, filter, newIds, onFilterChange, search, 
                     thread={thread}
                     current={current === thread.root.id}
                     onOpen={() => comments.goToThread(thread)}
-                    onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+                    onSeeApplied={seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined}
                     excerpt={matchExcerpt(thread, search.query)}
                   />
                 </li>

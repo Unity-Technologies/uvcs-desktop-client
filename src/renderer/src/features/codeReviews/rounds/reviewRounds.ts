@@ -3,7 +3,7 @@ import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import type { ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
 import { sameUser } from '../../../lib/userName';
 import type { ReviewedUpTo } from '../../diff/branchChangesetRows';
-import { isLineThread } from '../inline/fileThreads';
+import { isFileThread } from '../inline/fileThreads';
 import { changesetIdsOf, foldReviewerChanges, threadsOf, timelineOf, type ReviewThread, type TimelineEntry, type TimelineItem } from '../conversation/reviewThreads';
 
 /**
@@ -363,7 +363,7 @@ export interface StepGroup {
  */
 export function stepGroupsOf(blocks: readonly ConversationBlock[]): StepGroup[] {
   const settledIn = (entries: readonly ConversationEntry[]): number[] =>
-    entries.flatMap((entry) => (entry.kind === 'thread' && isLineThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
+    entries.flatMap((entry) => (entry.kind === 'thread' && isFileThread(entry.thread) && SETTLED.has(entry.thread.state.kind) ? [entry.thread.root.id] : []));
   const rounds = blocks.flatMap((block) => (block.kind === 'round' ? [block] : []));
   const roundCount = roundCountOf(blocks);
   const groups = rounds.map((block) => ({ threadIds: settledIn(block.entries), scope: roundName(block.round.number, roundCount) ?? '' }));

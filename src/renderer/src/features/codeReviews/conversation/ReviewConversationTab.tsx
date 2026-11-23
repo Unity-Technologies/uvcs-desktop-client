@@ -14,6 +14,7 @@ import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
 import { ReviewThreadCard } from './ReviewThreadCard';
 import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
+import { imagePinNumbers, ImagePinNumbersContext } from '../inline/imagePins';
 import { conversationLaidOut, openItemsOf, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
@@ -72,7 +73,9 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   // "How it was applied" steps through the threads where this page shows them, not where a fresh layout would.
   const steps = useMemo(() => stepGroupsOf(blocks), [blocks]);
   const [toggledRounds, setToggledRounds] = useState<ReadonlySet<number>>(() => new Set());
-  const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
+  const allThreads = useMemo(() => (conversation ? threadsOf(conversation.comments) : []), [conversation]);
+  const open = useMemo(() => openThreads(allThreads), [allThreads]);
+  const pinNumbers = useMemo(() => imagePinNumbers(allThreads), [allThreads]);
 
   // The thread gone to: opened at (Show in conversation, from the code) or picked in Open. Lit, ringed, marked in Open.
   const [pick, setPick] = useState(() => pickOnFocus(undefined, focusThread, focusReply));
@@ -154,6 +157,7 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
 
   return (
     // The whole tab scrolls, its scrollbar at the window's edge; the conversation is a column centered in it.
+    <ImagePinNumbersContext.Provider value={pinNumbers}>
     <div ref={scrollerRef} className={styles.scroller}>
       <div className={styles.conversation}>
         <div className={styles.main}>
@@ -189,6 +193,7 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
           }} />
       </div>
     </div>
+    </ImagePinNumbersContext.Provider>
   );
 }
 

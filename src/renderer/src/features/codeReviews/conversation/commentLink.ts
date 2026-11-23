@@ -3,7 +3,7 @@ import type { ReviewComment, ReviewConversation } from '@shared/domain/reviewCon
 import { linkCopyText } from '../../../app/links/linkTo';
 import type { PageOf } from '../../../app/navigation/pages';
 import type { CopyTexts } from '../../../components/copyMenu';
-import { isLineThread } from '../inline/fileThreads';
+import { isFileThread } from '../inline/fileThreads';
 import { threadsOf } from './reviewThreads';
 import { commentLocationPage } from './threadBadges';
 
@@ -25,7 +25,7 @@ export function commentLinkPage(reviewId: number, commentId: number, conversatio
   if (conversation.description?.id === commentId) return { page: review, found: true };
   const thread = threadsOf(conversation.comments).find(({ root, replies }) => root.id === commentId || replies.some((reply) => reply.id === commentId));
   if (!thread) return { page: review, found: false };
-  if (isLineThread(thread)) return { page: commentLocationPage(reviewId, thread.root), found: true };
+  if (isFileThread(thread)) return { page: commentLocationPage(reviewId, thread.root), found: true };
   const reply = thread.root.id === commentId ? {} : { focusReply: commentId };
   return { page: { ...review, tab: 'conversation', focusThread: thread.root.id, ...reply }, found: true };
 }

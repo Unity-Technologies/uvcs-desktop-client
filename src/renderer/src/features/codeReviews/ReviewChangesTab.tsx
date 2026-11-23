@@ -18,7 +18,8 @@ import { EntryFlagContext } from '../diff/entryFlag';
 import { useReviewThreads } from './conversation/useReviewThreads';
 import { pluralize } from '../../lib/text';
 import { commentsByFile, commentsPanelCounts, commentsPanelThreads, initialCommentsFilter, NO_COMMENTS_SEARCH, NO_FOLDED_FILES, unfoldedFor, type FoldedFiles, shownCommentsFilter, steppedThread, type CommentsFilter, type CommentsSearch } from './inline/commentsPanel';
-import { isLineThread, type LineThread } from './inline/fileThreads';
+import { isFileThread, type FileThread } from './inline/fileThreads';
+import { imagePinNumbers, ImagePinNumbersContext } from './inline/imagePins';
 import { reviewFileFlag } from './inline/reviewFileFlag';
 import { ReviewCommentsContext, showInConversation, threadDiffRequest, type ReviewComments, type ThreadFocus } from './inline/reviewComments';
 import { ReviewCommentsPanel } from './inline/ReviewCommentsPanel';
@@ -48,6 +49,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const user = usePlaceUser();
   const toggleDetails = useDetailsPaneStore((state) => state.toggleHidden);
   const threads = useReviewThreads(review);
+  const pinNumbers = useMemo(() => imagePinNumbers(threads ?? []), [threads]);
   const { reviewedUpTo, newIds, settled: checkpointSettled } = useReviewCheckpoint(review);
   const seq = useRef(1);
   const [focus, setFocus] = useState<ThreadFocus | null>(page.focusThread === undefined ? null : { threadId: page.focusThread, seq: seq.current });
@@ -71,7 +73,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   const tab = useRef<HTMLDivElement>(null);
   useCommentsPanelStart(threads === undefined ? null : all.length, tab);
 
-  const goToThread = (thread: LineThread, inChangeset?: number): void => {
+  const goToThread = (thread: FileThread, inChangeset?: number): void => {
     seq.current += 1;
     setFocus({ threadId: thread.root.id, seq: seq.current });
     setFolded((current) => unfoldedFor(current, thread));
@@ -81,7 +83,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
   // The focus as last set, for a pick to compare with outside a state updater, which must stay pure.
   const latestFocus = useRef(focus);
   latestFocus.current = focus;
-  const selectThread = useCallback((thread: LineThread): void => {
+  const selectThread = useCallback((thread: FileThread): void => {
     const next = selectedInPlace(latestFocus.current, thread.root.id, seq.current + 1);
     if (next === latestFocus.current) return;
     seq.current = next.seq;
@@ -105,7 +107,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
     if (asked === undefined || (asked.threadId !== undefined && !threads)) return;
     setAsked(undefined);
     const thread = threads?.find((candidate) => candidate.root.id === asked.threadId);
-    if (thread && isLineThread(thread)) {
+    if (thread && isFileThread(thread)) {
       goToThread(thread, asked.changesetId);
     } else if (asked.changesetId !== undefined || asked.changesets !== undefined) {
       seq.current += 1;
@@ -131,6 +133,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
 
   return (
     <ReviewCommentsContext.Provider value={comments}>
+      <ImagePinNumbersContext.Provider value={pinNumbers}>
       <EntryAnnotatorContext.Provider value={ReviewFileAnnotator}>
         <EntryFlagContext.Provider value={fileFlag}>
           <DiffFocusRequestContext.Provider value={request}>
@@ -172,6 +175,7 @@ export function ReviewChangesTab({ review, page, diffTarget }: ReviewChangesTabP
           </DiffFocusRequestContext.Provider>
         </EntryFlagContext.Provider>
       </EntryAnnotatorContext.Provider>
+      </ImagePinNumbersContext.Provider>
     </ReviewCommentsContext.Provider>
   );
 }

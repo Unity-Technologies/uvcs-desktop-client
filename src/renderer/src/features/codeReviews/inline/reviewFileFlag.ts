@@ -4,7 +4,7 @@ import { pluralize } from '../../../lib/text';
 import type { EntryFlag } from '../../diff/entryFlag';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { fileThreadCount } from './fileAnnotation';
-import { anchorPath, isLineThread, reviewDiffViewOf } from './fileThreads';
+import { anchorPath, isFileThread, reviewDiffViewOf } from './fileThreads';
 
 /**
  * The review's files with comments, in the Changes tab's list (`EntryFlagContext`): a comment icon by each one's status
@@ -28,11 +28,11 @@ export function reviewFileFlag(threads: readonly ReviewThread[], review: CodeRev
   };
 }
 
-/** The threads on lines, by the path they name as a diff names its files (`anchorPath`). */
+/** The threads on files, by the path they name as a diff names its files (`anchorPath`). */
 function threadsByPath(threads: readonly ReviewThread[]): Map<string, ReviewThread[]> {
   const byPath = new Map<string, ReviewThread[]>();
   for (const thread of threads) {
-    if (!isLineThread(thread)) continue;
+    if (!isFileThread(thread)) continue;
     const path = anchorPath(thread.root.anchor);
     const onPath = byPath.get(path);
     if (onPath) onPath.push(thread);

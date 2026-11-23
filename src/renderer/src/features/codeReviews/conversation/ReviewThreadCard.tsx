@@ -3,7 +3,8 @@ import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
 import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
+import { useContext, useReducer, useState, type MouseEvent, type ReactNode } from 'react';
+import { ImagePinNumbersContext } from '../inline/imagePins';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
@@ -103,7 +104,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
   return (
-    <CommentedFileContext.Provider value={thread.root.anchor.kind === 'line' ? thread.root.anchor.path : null}>
+    <CommentedFileContext.Provider value={thread.root.anchor.kind === 'review' ? null : thread.root.anchor.path}>
       <section
         className={styles.thread}
         data-folded={folded}
@@ -176,7 +177,8 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
  * the row's whole width. As a card, anywhere on it goes to the thread, and its words are the way there by keyboard.
  */
 export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerpt }: Omit<ThreadSummaryCardProps, 'reviewId'>) {
-  const header = threadHeaderOf({ thread, place: 'fileGroup', folded: true, foldable: false, hides: false, seesHowApplied: onSeeApplied !== undefined, showsAnswer: false, inContext: false });
+  const pinNumber = useContext(ImagePinNumbersContext).get(thread.root.id);
+  const header = threadHeaderOf({ thread, place: 'fileGroup', folded: true, foldable: false, hides: false, seesHowApplied: onSeeApplied !== undefined, showsAnswer: false, inContext: false, pinNumber });
   const author = excerpt?.author ?? thread.root.author;
   return (
     <section className={styles.row} data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
@@ -226,8 +228,10 @@ interface ThreadHeaderProps {
 
 function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onToggle, onSeeApplied, onSeeAnswer }: ThreadHeaderProps) {
   const { root } = thread;
+  const pinNumber = useContext(ImagePinNumbersContext).get(root.id);
   const header = threadHeaderOf({
     thread,
+    pinNumber,
     place: inCode ? 'code' : cardOpens ? 'panel' : 'conversation',
     folded,
     foldable: onToggle !== undefined,
@@ -238,7 +242,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
     inContext: inCode?.inContext === true,
   });
   const { location, earlierTag, pill } = header;
-  const anchor = root.anchor.kind === 'line' ? root.anchor : null;
+  const anchor = root.anchor.kind === 'review' ? null : root.anchor;
 
   return (
     <div className={styles.threadHeader}>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { earlierRevisions, placeEarlier, reviewDiffViewOf, threadsOfFile, writtenIn, type LineThread, type ShownFile } from './fileThreads';
+import { earlierRevisions, imageThreadsOfFile, placeEarlier, reviewDiffViewOf, threadsOfFile, writtenIn, type LineThread, type ShownFile } from './fileThreads';
 
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/task' };
 const CHANGESET_REVIEW: CodeReviewTarget = { kind: 'changeset', changesetId: 8 };
@@ -162,5 +162,32 @@ describe('earlierRevisions', () => {
   it('names each earlier version once', () => {
     const { earlier } = threadsOfFile(threadsOf([onLine(1, 20, 5), onLine(2, 20, 9), onLine(3, 25, 1)]), BRANCH, WHOLE, PLAYER);
     expect(earlierRevisions(earlier)).toEqual([20, 25]);
+  });
+});
+
+describe('imageThreadsOfFile', () => {
+  const HERO: ShownFile = { path: 'Art/Hero.png', originalRevision: 10, modifiedRevision: 30 };
+  const onImage = (id: number, revisionId: number, fields: Partial<ReviewComment> = {}): ReviewComment =>
+    comment(id, { anchor: { kind: 'image', revisionId, itemId: 7, path: '/Art/Hero.png', spot: { x: id, y: 2 } }, ...fields });
+
+  it('places the threads on a revision a side shows at their spot, and leaves the rest earlier', () => {
+    const threads = threadsOf([onImage(1, 30), onImage(2, 10), onImage(3, 20), onLine(4, 30, 3)]);
+    const { placed, earlier } = imageThreadsOfFile(threads, BRANCH, WHOLE, HERO);
+    expect(placed.map(({ thread, side, spot }) => [thread.root.id, side, spot])).toEqual([
+      [1, 'additions', { x: 1, y: 2 }],
+      [2, 'deletions', { x: 2, y: 2 }],
+    ]);
+    expect(earlier.map(({ thread, revisionId }) => [thread.root.id, revisionId])).toEqual([[3, 20]]);
+  });
+
+  it("shows in a changeset's diff only the threads written there, as on lines", () => {
+    const threads = threadsOf([onImage(1, 30, { changesetId: 12 }), onImage(2, 30, { changesetId: 13 })]);
+    const { placed } = imageThreadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 12 }, HERO);
+    expect(placed.map(({ thread }) => thread.root.id)).toEqual([1]);
+  });
+
+  it('finds the threads of an image by the path it moved from', () => {
+    const threads = threadsOf([onImage(1, 30)]);
+    expect(imageThreadsOfFile(threads, BRANCH, WHOLE, { ...HERO, path: 'Art/Heroes/Hero.png', oldPath: 'Art/Hero.png' }).placed).toHaveLength(1);
   });
 });

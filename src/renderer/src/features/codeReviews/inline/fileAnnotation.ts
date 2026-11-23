@@ -3,7 +3,7 @@ import type { DiffEntry } from '@shared/domain/diff';
 import type { FileComments } from './fileComments';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { threadsOfFile, type EarlierThread, type ReviewDiffView, type ShownFile } from './fileThreads';
+import { imageThreadsOfFile, threadsOfFile, type EarlierThread, type ReviewDiffView, type ShownFile } from './fileThreads';
 import type { ThreadFocus } from './reviewComments';
 
 /**
@@ -25,8 +25,10 @@ export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRe
  * branch's list too, though only its changeset's diff shows it (`placeEarlier`), a rare case not worth reading versions for.
  */
 export function fileThreadCount(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): number {
-  const { placed, earlier } = threadsOfFile(threads, review, view, comparedFile(entry));
-  return placed.length + earlier.length;
+  const file = comparedFile(entry);
+  const onLines = threadsOfFile(threads, review, view, file);
+  const onImage = imageThreadsOfFile(threads, review, view, file);
+  return onLines.placed.length + onLines.earlier.length + onImage.placed.length + onImage.earlier.length;
 }
 
 /** Whether a file shows anything of its threads: some at their lines, or outdated ones. */
