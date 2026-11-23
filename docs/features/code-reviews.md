@@ -286,7 +286,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   settled pills' do. A settled
   thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
-  tab stop). Every card with a header band folds the same way from its chevron: open change requests and questions,
+  tab stop). Every card with a header band folds the same way from its chevron, and in the conversation from anywhere on the band ("Foldable lines"): open change requests and questions,
   which start whole, and plain comments on a line too (`foldsByHand`: how a card starts and whether it folds are
   apart; `threadCardFold`). Folded, in the conversation and in the code, its first comment's menu sits at the end of
   the folded line, under the pointer, where the comment shown whole has it (`FirstCommentMenu`): the same entries,
@@ -574,8 +574,8 @@ one read serves both), say what was checked in when (`reviewRounds`).
   font and gray, the link color and an underline under the pointer, a chip's card and its click (it opens in the
   review's Changes). A dot parts it from the time after it, whose number it would otherwise run into ("at 9 · 5
   minutes ago"). A chip's fill, and the link color at rest, read as badges and drew the eye from the verdict. The
-  round's line folds through a button laid over it (`.roundToggle`), since the changeset, a link, can't sit inside a
-  button; the time and the changeset sit above it with their own tooltip and card. Named only from the branch's own
+  round's line folds as every foldable line does ("Foldable lines", under "The conversation"); the changeset keeps its
+  own card and click. Named only from the branch's own
   changesets (`ownBranchChangesets`): the previous review's, kept on screen while this one's are read, would name
   another branch's. Nothing is written to the server and the status popover says nothing of it: the server has no
   field for it (its note of a status holds only the comment), and inferring it costs no read.
@@ -587,13 +587,17 @@ one read serves both), say what was checked in when (`reviewRounds`).
   Rework required by you · 5 requests applied, 2 questions answered" (`RoundMarker`, `roundText`), counting every thread
   started in it, as one more event. Rounds are numbered only among others (`roundName`, `roundCountOf`): a review's
   only round reads "**Reviewed** by Alvaro · 1 request applied", its status bold where the name would be, since a lone
-  "Round 1" hints at rounds that never came; a second round numbers both. Its mark on the rail is the status that
-  closed it (Reviewed's thumbs-up, Rework required's flag, in their colors), and while folded what the reviewer said
-  with it shows under the line, folded past
-  four lines (`roundLineComment`), so the verdict and its words read at a glance; a click on its line shows what it held
-  under it, at the timeline's own indent, ending with the status's own event, and folds it back. A round where nothing is open
-  starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded
-  (`roundIsOpen`, `roundHolding`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
+  "Round 1" hints at rounds that never came; a second round numbers both. Folded, the line is the verdict: its mark on the rail is the
+  status that closed it (Reviewed's thumbs-up, Rework required's flag, in their colors), with its time, and what the
+  reviewer said with it shows under the line, folded past
+  four lines (`roundLineComment`), so the verdict and its words read at a glance. A click on its line shows what it held
+  under it, at the timeline's own indent, ending with the status's own event, and folds it back. Unfolded, the line
+  heads what the round held, with no verdict and no time: "**Round 1** · Ana's review · 5 requests applied", a review's
+  only round "**Vio's review** · 1 request applied", the user's own "your review" (`roundText`), its mark the same
+  status in gray. The status's own event at its end says the verdict, in color, with its time: repeated on top, with a
+  time newer than the events under it, the round read as reviewed twice, its times out of order. A round where nothing is open
+  starts folded, one with something open unfolded, and the round holding the thread the page goes to unfolds, even
+  one folded by hand, a click on its line still folding it (`roundIsOpen`, `roundHolding`, `roundChoiceForgotten`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
   reviewer's. Then, for a reviewer, the **New since your last review** line (`SinceLine`, `sinceText`): one more event on the
   rail, an accent dot breathing quietly (`--keyframes-heartbeat`, still under reduced motion), the words and their day,
   a hairline, and **See the changes →** at the end; the rail stays as it is (an accent segment read as a second rail).
@@ -601,6 +605,13 @@ one read serves both), say what was checked in when (`reviewRounds`).
   their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
   check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
   moves the line, never the page.
+- **Foldable lines** (`FoldableLine`): a round's line, a batch of check-ins and a run of reviewer changes fold with a
+  click anywhere on them, their time and avatar too, while a link or a button inside (a changeset) keeps its own click
+  (`rowTakesClick`, `clickedOutsideControls`); their chevron always ends them, after the time, and is the way to fold by
+  keyboard, named by the line's words. A thread's band folds the same way in the conversation, its chevron leading, as a
+  file's header does; in the code only its chevron folds it, since a click on a card there picks the thread. The
+  chevron is the line's one tab stop. A chevron before the time, or a click that folded only on the chevron or the words, made lines that look alike
+  behave differently.
 - **The layout holds while the page is open** (`ConversationLayout`, `conversationLayoutOf`, `keptLayoutAfter`, kept
   by `useConversationLayout`): where each thread shows and whether each round starts folded are decided once, when
   who the user is, the conversation and the branch's changesets are read, each from the read the page started on
@@ -620,7 +631,7 @@ one read serves both), say what was checked in when (`reviewRounds`).
   (`TimelineEventRow`, `FoldedComment`), as a status can come with a wall of text.
 - **Check-ins** (`CheckinsEntry`, `CheckinsRow`): the branch's changesets checked in since the review was asked for,
   placed by date among what was said, one entry per run of one person's changesets with nothing said between them
-  ("Daniel checked in 3 changesets"), the words folding the list under them. They start
+  ("Daniel checked in 3 changesets"), its line folding the list under it. They start
   listed only under the "New since your last review" line, what a reviewer comes back to check; anywhere else folded to that line
   (`CheckinsEntry.startsOpen`): a long branch's first batch would push the conversation out of sight. Each changeset is named as a comment's chip names one (its icon and number,
   without the fill) with its comment's first line, and opens in Changes on it. Past five, the

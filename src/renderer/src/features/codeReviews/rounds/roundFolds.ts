@@ -1,12 +1,21 @@
-import type { ConversationBlock } from './reviewRounds';
+import type { ConversationBlock, RoundStatus } from './reviewRounds';
 
 /**
- * Whether a round shows what it held: a settled round starts folded and one with something open unfolded, each click
- * on its line turning that over (`toggled`); the round holding the thread the conversation went to is always unfolded,
- * so going to a thread never lands on a folded line.
+ * Whether a round shows what it held: as the user last chose with a click on its line (`chosen`), else a settled round
+ * folded and one with something open unfolded, as is the round holding the thread the conversation went to, so going to
+ * a thread never lands on a folded line. A choice, not a toggle: a round folded while it held the thread stays folded
+ * once the page goes elsewhere.
  */
-export function roundIsOpen(round: { number: number; folds: boolean }, toggled: ReadonlySet<number>, holdingPick: number | undefined): boolean {
-  return round.number === holdingPick || round.folds === toggled.has(round.number);
+export function roundIsOpen(round: { number: number; folds: boolean }, chosen: ReadonlyMap<number, boolean>, holdingPick: number | undefined): boolean {
+  return chosen.get(round.number) ?? (round.number === holdingPick || !round.folds);
+}
+
+/**
+ * A round's verdict on its line: folded, its status's color on the rail mark and its time; unfolded, neither (the mark
+ * in gray), as the status's own event at the round's end shows them once.
+ */
+export function roundVerdictOf(round: { status: RoundStatus; date: string }, open: boolean): { colorOf?: RoundStatus; date?: string } {
+  return open ? {} : { colorOf: round.status, date: round.date };
 }
 
 /**
@@ -17,10 +26,19 @@ export function roundLineComment(round: { comment: string }, open: boolean): str
   return !open && round.comment.trim() ? round.comment : undefined;
 }
 
-/** The rounds toggled after one more click on `number`'s line. */
-export function toggledRound(toggled: ReadonlySet<number>, number: number): Set<number> {
-  const next = new Set(toggled);
-  if (!next.delete(number)) next.add(number);
+/** The user's choices after a click on `number`'s line, shown `open` until then. */
+export function roundChosen(chosen: ReadonlyMap<number, boolean>, number: number, open: boolean): Map<number, boolean> {
+  return new Map(chosen).set(number, !open);
+}
+
+/**
+ * The user's choices once the conversation goes to a thread in `holdingPick`: its choice forgotten, so it unfolds again
+ * even when folded by hand; the same choices when the thread is after every round.
+ */
+export function roundChoiceForgotten(chosen: ReadonlyMap<number, boolean>, holdingPick: number | undefined): ReadonlyMap<number, boolean> {
+  if (holdingPick === undefined || !chosen.has(holdingPick)) return chosen;
+  const next = new Map(chosen);
+  next.delete(holdingPick);
   return next;
 }
 

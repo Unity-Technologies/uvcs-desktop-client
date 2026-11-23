@@ -1,12 +1,13 @@
 import { ChevronRight, X } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
-import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
+import { useReducer, useState, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
 import { suggestionNameOf } from '../suggestions/suggestionPreview';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
+import { rowTakesClick } from '../../../lib/clickedOutsideControls';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { Button } from '../../../ui/Button';
@@ -73,7 +74,8 @@ export interface ThreadInCode {
 /**
  * A comment and its replies as one card. A change request, a question or a comment on a line has a header band: its
  * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. Any card with
- * that band folds to it and its first words from its chevron (`foldsByHand`); a settled one starts folded
+ * that band folds to it and its first words from its chevron, and in the conversation from anywhere on the band
+ * (`foldsByHand`); a settled one starts folded
  * (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
@@ -160,7 +162,7 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
   return (
     // Anywhere on the card goes to it, as its first words do: what's inside that does something else (a pill) does that.
     // The buttons inside stay the way there by keyboard.
-    <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+    <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => rowTakesClick(event) && onOpen()}>
       <ThreadHeader reviewId={reviewId} thread={thread} folded cardOpens onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} excerpt={excerpt} />
@@ -178,7 +180,7 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
   const header = threadHeaderOf({ thread, place: 'fileGroup', folded: true, foldable: false, hides: false, seesHowApplied: onSeeApplied !== undefined, showsAnswer: false, inContext: false });
   const author = excerpt?.author ?? thread.root.author;
   return (
-    <section className={styles.row} data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+    <section className={styles.row} data-current={current || undefined} onClick={(event) => rowTakesClick(event) && onOpen()}>
       <span className={styles.rowAbout}>
         <Avatar user={author} size={16} tip={null} />
         <span className={styles.author}>
@@ -201,12 +203,6 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
       </button>
     </section>
   );
-}
-
-/** A click on the card itself, not on a control inside it, nor the end of a drag selecting its text to copy. */
-function clickedOutsideControls(event: MouseEvent): boolean {
-  if (window.getSelection()?.isCollapsed === false) return false;
-  return event.target instanceof Element && event.target.closest('button, a, input, textarea, select, label, [role="button"]') === null;
 }
 
 interface ThreadHeaderProps {
@@ -237,10 +233,14 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
     inContext: inCode?.inContext === true,
   });
   const { location, earlierTag, pill } = header;
+  const bandFolds = onToggle !== undefined && !inCode;
   const anchor = root.anchor.kind === 'review' ? null : root.anchor;
 
   return (
-    <div className={styles.threadHeader}>
+    // In the conversation, a foldable thread folds with a click anywhere on its band, as with its chevron; its file,
+    // pill and buttons keep their own clicks. Not in the code, where a click on a card picks the thread (`InlineThreads`):
+    // folding it too would undo what the reader meant to look at.
+    <div className={styles.threadHeader} data-folds={bandFolds ? '' : undefined} onClick={bandFolds ? (event) => rowTakesClick(event) && onToggle() : undefined}>
       <span className={styles.headerStart}>
         {header.foldToggle && (
           <button type="button" className={styles.foldToggle} aria-expanded={header.foldToggle.expanded} aria-label={header.foldToggle.label} onClick={onToggle}>

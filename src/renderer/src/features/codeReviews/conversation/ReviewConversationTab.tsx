@@ -27,7 +27,7 @@ import { CheckinsRow } from '../rounds/CheckinsRow';
 import { RoundMarker } from '../rounds/RoundMarker';
 import { conversationBlocksOf, roundCountOf, roundHolding, stepGroupsOf, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
 import { useConversationLayout } from '../rounds/useConversationLayout';
-import { opensAtSince, roundIsOpen, toggledRound } from '../rounds/roundFolds';
+import { opensAtSince, roundChoiceForgotten, roundChosen, roundIsOpen } from '../rounds/roundFolds';
 import { SinceLine } from '../rounds/SinceLine';
 import { placeInView } from '../../../lib/scrollPlacement';
 import { newChangesetsSpan } from '../../diff/branchChangesetRows';
@@ -71,7 +71,7 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   );
   // "How it was applied" steps through the threads where this page shows them, not where a fresh layout would.
   const steps = useMemo(() => stepGroupsOf(blocks), [blocks]);
-  const [toggledRounds, setToggledRounds] = useState<ReadonlySet<number>>(() => new Set());
+  const [roundChoices, setRoundChoices] = useState<ReadonlyMap<number, boolean>>(() => new Map());
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
 
   // The thread gone to: opened at (Show in conversation, from the code) or picked in Open. Lit, ringed, marked in Open.
@@ -84,6 +84,12 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
   const openItems = useMemo(() => openItemsOf(review.id, open, pick), [review.id, open, pick]);
 
   const pickedRound = pick && roundHolding(blocks, pick.threadId);
+  // Going to a thread unfolds its round again, even one folded by hand; a click on its line still folds it.
+  const [unfoldedFor, setUnfoldedFor] = useState(pick);
+  if (pick !== unfoldedFor) {
+    setUnfoldedFor(pick);
+    setRoundChoices((chosen) => roundChoiceForgotten(chosen, pickedRound));
+  }
   const roundCount = roundCountOf(blocks);
 
   // Elements are found within this conversation, never the document's: another view kept mounted, hidden, may show
@@ -125,11 +131,11 @@ export function ReviewConversationTab({ review, focusThread, focusReply, onPicke
       case 'round': {
         // The marker, then what the round held while unfolded, at the timeline's own indent. One keyed fragment per
         // round: a round inserted as a status is given keeps the others' entries mounted (an open "N more" stays open).
-        const open = roundIsOpen(block.round, toggledRounds, pickedRound);
+        const open = roundIsOpen(block.round, roundChoices, pickedRound);
         return (
           <Fragment key={`round-${block.round.number}`}>
             <li>
-              <RoundMarker round={block.round} roundCount={roundCount} user={user} open={open} onToggle={() => setToggledRounds((toggled) => toggledRound(toggled, block.round.number))} />
+              <RoundMarker round={block.round} roundCount={roundCount} user={user} open={open} onToggle={() => setRoundChoices((chosen) => roundChosen(chosen, block.round.number, open))} />
             </li>
             {open && block.entries.map(renderEntry)}
           </Fragment>
