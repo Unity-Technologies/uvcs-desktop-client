@@ -53,7 +53,7 @@ describe('a thread on a 3D model', () => {
     expect(hasThreadHeader(onPart)).toBe(true);
   });
 
-  it('names its file and the part it is on, with the part's whole path in the tooltip', () => {
+  it("names its file and the part it is on, with the part's whole path in the tooltip", () => {
     const tip = 'The part of the model it was written on: Car › Wheel_FL';
     expect(headerOf(onPart).location).toEqual({ folder: 'Art/', file: 'Car.fbx', writtenPlace: 'Wheel_FL', writtenPlaceTip: tip, linked: true, tip: 'Show in Changes', tipSub: 'Art/Car.fbx' });
     expect(headerOf(onPart, { place: 'panel' }).location).toMatchObject({ writtenPlace: 'Wheel_FL', tip: 'Art/Car.fbx, Wheel_FL' });

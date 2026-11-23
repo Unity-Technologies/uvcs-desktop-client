@@ -4,6 +4,7 @@ import { displayName } from '../../../lib/userName';
 import { anchorPath } from '../inline/fileThreads';
 import { rangeWordsInline } from '../../../lib/rangeWords';
 import type { ReviewThread } from './reviewThreads';
+import { partNameSaysNothing } from './partNameSaysNothing';
 
 /** What a thread's header says of it: its kind (none for a plain or general comment) and where it stands. */
 export interface ThreadBadges {
@@ -74,8 +75,9 @@ export function locationText(anchor: Pick<FileAnchor, 'path'>): { folder: string
 
 /**
  * Where in its file a comment was written, as the conversation says it apart from the file's link: its lines, "line
- * 42", "lines 42–48", what of an image, "point", "area", or of a 3D model, "point", "part": its pin shows where, with
- * who started it.
+ * 42", "lines 42–48", what of an image, "point", "area", or of a 3D model the part it's on, "point on Wheel" or a whole
+ * "Wheel" (`modelSpotText`): its pin shows where, with who started it. Coordinates go only in the tooltip
+ * (`writtenPlaceTip`).
  */
 export function writtenPlaceText(anchor: FileAnchor): string {
   switch (anchor.kind) {
@@ -84,21 +86,19 @@ export function writtenPlaceText(anchor: FileAnchor): string {
     case 'image':
       return imageSpotWords(anchor.spot);
     case 'model':
-      return modelSpotWords(anchor.spot);
+      return modelSpotText(anchor.spot);
   }
 }
 
-/** What hovering where a comment was written says of it: what of its file that place is; a part's name, too. */
+/** What hovering where a comment was written says of it: what of its file that place is, and where exactly. */
 export function writtenPlaceTip(anchor: FileAnchor): string {
   switch (anchor.kind) {
     case 'line':
       return anchor.firstLine === anchor.lastLine ? 'The line it was written on' : 'The lines it was written on';
     case 'image':
-      return `The ${imageSpotWords(anchor.spot)} of the image it was written on`;
-    case 'model': {
-      const part = anchor.spot.wholePart ? modelPartName(anchor.spot) : null;
-      return part ? `The part of the model it was written on: ${part}` : 'The point of the model it was written on';
-    }
+      return `The ${imageSpotWords(anchor.spot)} of the image it was written on, at ${imageSpotPlace(anchor.spot)}`;
+    case 'model':
+      return modelSpotTip(anchor.spot);
   }
 }
 
@@ -107,9 +107,33 @@ export function imageSpotWords(spot: ImageSpot): string {
   return spot.size ? 'area' : 'point';
 }
 
+/** An image's spot in whole pixels, "x 120, y 80", and an area's size, "40 × 30 pixels": an SVG's may have decimals. */
+function imageSpotPlace({ x, y, size }: ImageSpot): string {
+  const at = `x ${Math.round(x)}, y ${Math.round(y)}`;
+  return size ? `${at}, ${Math.round(size.width)} × ${Math.round(size.height)} pixels` : at;
+}
+
 /** "part" for a comment on a whole part of a 3D model, "point" for one on a point of its surface. */
 export function modelSpotWords(spot: ModelSpot): string {
   return spot.wholePart ? 'part' : 'point';
+}
+
+/**
+ * A model's spot named by its part, so comments on one model read apart: "point on Wheel", or a whole part "Wheel".
+ * Only "point" or "part" when the location names no part (another client's, or one whose hints `cm`'s length dropped)
+ * or its name is one an exporter gave (`partNameSaysNothing`). The name is the location's own: no file is read.
+ */
+function modelSpotText(spot: ModelSpot): string {
+  const name = modelPartName(spot);
+  if (name === null || partNameSaysNothing(name)) return modelSpotWords(spot);
+  return spot.wholePart ? name : `point on ${name}`;
+}
+
+/** A model's spot in full: the part's whole path from the root, "Car › Wheel", which its name alone may not tell apart. */
+function modelSpotTip(spot: ModelSpot): string {
+  const path = spot.node?.path.join(' › ');
+  if (spot.wholePart) return path ? `The part of the model it was written on: ${path}` : 'The part of the model it was written on';
+  return path ? `The point of the model it was written on, in ${path}` : 'The point of the model it was written on';
 }
 
 /** The name of the part a spot of a model is on: the last of its names from the root; none when it names no part. */
