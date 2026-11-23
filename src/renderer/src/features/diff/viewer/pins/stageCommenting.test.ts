@@ -24,12 +24,19 @@ describe('commentKeyAction', () => {
 });
 
 describe('stageClickOf', () => {
-  it('marks a spot on the version comments are written on while marking', () => {
-    expect(stageClickOf(true, 'after')).toEqual({ marks: 'after' });
+  const plain = { altKey: false };
+
+  it('marks a point on the version comments are written on while marking', () => {
+    expect(stageClickOf(true, 'after', plain)).toEqual({ marks: 'after', wholePart: false });
   });
 
-  it('is the stage’s own click otherwise', () => {
-    expect(stageClickOf(false, 'after')).toBe('stage');
-    expect(stageClickOf(true, null)).toBe('stage');
+  it('marks the whole part with Alt (Option) held', () => {
+    expect(stageClickOf(true, 'after', { altKey: true })).toEqual({ marks: 'after', wholePart: true });
+  });
+
+  it('is the stage’s own click otherwise, Alt held or not', () => {
+    expect(stageClickOf(false, 'after', plain)).toBe('stage');
+    expect(stageClickOf(false, 'after', { altKey: true })).toBe('stage');
+    expect(stageClickOf(true, null, plain)).toBe('stage');
   });
 });
