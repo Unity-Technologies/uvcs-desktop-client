@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commentKeyAction, stageClickOf } from './stageCommenting';
+import { commentKeyAction, leaveCommentCommandOf, stageClickOf } from './stageCommenting';
 
 const idle = { commenting: false, commentable: true, opened: false };
 
@@ -20,6 +20,24 @@ describe('commentKeyAction', () => {
 
   it('Esc goes on with nothing to stop or close', () => {
     expect(commentKeyAction('leaveComment', idle)).toBeNull();
+  });
+});
+
+describe('leaveCommentCommandOf', () => {
+  it('closes the card open wherever the keyboard is, as Esc on the stage does', () => {
+    expect(leaveCommentCommandOf({ ...idle, opened: true }, true)).toEqual({ action: 'closeCard', label: "Close the comment's card" });
+  });
+
+  it('stops marking a spot first', () => {
+    expect(leaveCommentCommandOf({ ...idle, commenting: true, opened: true }, true)).toEqual({ action: 'stopCommenting', label: 'Stop commenting' });
+  });
+
+  it('is none with nothing to stop or close: Esc stays whatever else takes it', () => {
+    expect(leaveCommentCommandOf(idle, true)).toBeNull();
+  });
+
+  it('is none while the diff is hidden (the review on its conversation)', () => {
+    expect(leaveCommentCommandOf({ ...idle, opened: true }, false)).toBeNull();
   });
 });
 
