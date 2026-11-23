@@ -33,6 +33,20 @@
   font-size: var(--text-sm);
 }
 
+/* What a model comment is on, the point or its whole part: a row of its own under the kind, introduced by "On", so
+   the two switches never read as one choice. */
+.about {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.aboutLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
 /* A model comment's part, named in its switch: cut short rather than widening the card. */
 .partName {
   max-width: 12em;

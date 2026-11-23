@@ -40,19 +40,24 @@ export function NewModelCommentCard({ spot, onSent }: NewModelCommentCardProps) 
       <div className={styles.card}>
         <div className={styles.header}>
           <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} />
-          {about && (
+        </div>
+        {about && (
+          <div className={styles.about}>
+            <span className={styles.aboutLabel} aria-hidden>
+              On
+            </span>
             <SegmentedControl<ModelCommentAbout>
               small
               value={about.about}
-              label="What the comment is about"
+              label="What the comment is on"
               segments={[
                 { value: 'point', label: <><Dot size={12} aria-hidden />Point</>, title: 'This point of the surface' },
                 { value: 'part', label: <><Box size={12} aria-hidden /><span className={styles.partName}>{about.partName}</span></>, title: `The whole part: ${about.partName}` },
               ]}
               onChange={(picked) => moveTo(spot.key, spotAbout(spot.comment.spot, picked))}
             />
-          )}
-        </div>
+          </div>
+        )}
         <CommentComposer
           fieldClassName={styles.field}
           draftKey={commentDraftKey(placeId(place), 'reviewLineComment', spot.key)}
