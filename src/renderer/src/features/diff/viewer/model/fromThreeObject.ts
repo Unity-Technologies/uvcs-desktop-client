@@ -28,8 +28,11 @@ export function fromThreeObject(root: Object3D, animations: AnimationClip[], fac
     if (object.type === 'AmbientLight') return;
     const index = nodes.length;
     indexOf.set(object, index);
+    const name = nameOf(object);
+    const fileName = fileNameOf(object);
     nodes.push({
-      name: nameOf(object),
+      name,
+      ...(fileName !== undefined && fileName !== name && { fileName }),
       parent,
       kind: kindOf(object),
       position: object.position.toArray(),
@@ -53,6 +56,12 @@ export function fromThreeObject(root: Object3D, animations: AnimationClip[], fac
 function nameOf(object: Object3D): string {
   const original: unknown = object.userData.originalName;
   return typeof original === 'string' ? original : object.name;
+}
+
+/** The name GLTFLoader read from the file, kept aside as it renames the node (`ModelNode.fileName`). */
+function fileNameOf(object: Object3D): string | undefined {
+  const fileName: unknown = object.userData.name;
+  return typeof fileName === 'string' ? fileName : undefined;
 }
 
 function kindOf(object: Object3D): ModelNodeKind {

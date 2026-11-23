@@ -360,7 +360,8 @@ docs/features/code-reviews.md "Comments on 3D models"):
 - **Pins** (`ModelPin`): a spot (`ModelSpot`: a point in the file's own space, and the part it's on with the point in
   that part's space) on a version, drawn by `ModelCommentsOverlay` over the canvas in the bubble every pin shares
   (`PinBubble`). Each is placed on its part as that version draws it now (`pinPlacesOf`, `placedSpot`: the part found
-  by its names, `nodeOfSpot`, same-named siblings told apart by the point), so it follows the part to where another
+  by its names as the file writes them, `nodeNamesOf`, which a glTF's loader renames apart, `ModelNode.fileName`;
+  same-named siblings told apart by the point, `nodeOfSpot`), so it follows the part to where another
   version has it, and while a take plays; a point on a skinned mesh follows its node, not the skin. A part another
   version hasn't leaves the pin at its point (`partGone`). Where the point shows is projected as the version's pane
   draws it (`ModelRenderer.screenPointOf`, `projectedPoint`) after every frame drawn (`onFrameDrawn`): a turn, a glide,

@@ -1,7 +1,6 @@
 import { Group } from 'three';
 import { describe, expect, it } from 'vitest';
-import { fromThreeObject } from './fromThreeObject';
-import type { ModelFileFacts } from './parsedModel';
+import { fromThreeObject, type ModelFileFacts } from './fromThreeObject';
 
 const FACTS = { format: 'glb', textures: [], materials: [], images: [], unitScale: 1, upAxis: 'y', axisConversion: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], exportedFrom: null, frameRate: null } as unknown as ModelFileFacts;
 

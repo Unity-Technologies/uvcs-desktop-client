@@ -9,10 +9,13 @@ import { worldMatricesOf } from './modelSpaces';
 import type { ModelNode, ParsedModel } from './parsedModel';
 import type { Vector } from './orbitCamera';
 
-/** A node's names from the model's root down to it, the root's own left out, as a spot names its part. */
-export function nodeNamesOf(nodes: readonly Pick<ModelNode, 'name' | 'parent'>[], index: number): string[] {
+/**
+ * A node's names from the model's root down to it, the root's own left out, as a spot names its part: as the file
+ * writes them (`fileName`), which another client reads, not as a loader renamed them.
+ */
+export function nodeNamesOf(nodes: readonly Pick<ModelNode, 'name' | 'fileName' | 'parent'>[], index: number): string[] {
   const names: string[] = [];
-  for (let i = index; i >= 0 && nodes[i]!.parent >= 0; i = nodes[i]!.parent) names.unshift(nodes[i]!.name);
+  for (let i = index; i >= 0 && nodes[i]!.parent >= 0; i = nodes[i]!.parent) names.unshift(nodes[i]!.fileName ?? nodes[i]!.name);
   return names;
 }
 
@@ -24,7 +27,7 @@ export function nodeNamesOf(nodes: readonly Pick<ModelNode, 'name' | 'parent'>[]
 export function nodeOfSpot(model: Pick<ParsedModel, 'nodes'>, spot: ModelSpot): number | null {
   if (!spot.node) return null;
   const path = spot.node.path;
-  const candidates = model.nodes.flatMap((node, index) => (node.name === path.at(-1) && sameNames(nodeNamesOf(model.nodes, index), path) ? [index] : []));
+  const candidates = model.nodes.flatMap((node, index) => ((node.fileName ?? node.name) === path.at(-1) && sameNames(nodeNamesOf(model.nodes, index), path) ? [index] : []));
   if (candidates.length <= 1) return candidates[0] ?? null;
   const local = spot.node.local;
   if (!local) return candidates[0]!;
