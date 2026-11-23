@@ -57,6 +57,15 @@ export function sharingModifiers(shortcuts: readonly string[]): string[] {
   return [first, ...rest.map((shortcut) => shortcut.split('+').at(-1)!)];
 }
 
+/**
+ * A click with a modifier held, as a hint writes it: ⌥-click on macOS, Alt-click elsewhere. A modifier-click binds no
+ * key, so it isn't registered as a shortcut: the label of what it goes with names it (`shortcutRegistry.ts`'s
+ * Shift-click, `modelComment`'s Alt-click).
+ */
+export function modifierClick(modifier: 'alt' | 'shift' | 'mod', mac = isMac): string {
+  return `${keyName(modifier, mac)}-click`;
+}
+
 function keyName(key: string, mac: boolean): string {
   const name = (mac ? MAC_NAMES : OTHER_NAMES)[key] ?? SHARED_NAMES[key];
   return name ?? (key.length === 1 ? key.toUpperCase() : capitalize(key));
