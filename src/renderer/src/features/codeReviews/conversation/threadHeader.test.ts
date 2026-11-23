@@ -31,12 +31,12 @@ describe('a thread on an image', () => {
   });
 
   it('names its file and the area it is on, in the conversation and under its file', () => {
-    expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', writtenPlace: 'area', writtenPlaceTip: 'The area of the image it was written on', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
+    expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', writtenPlace: 'area', writtenPlaceTip: 'A 3 × 4 pixel area of the image at x 1, y 2', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
     expect(headerOf(onArea, { place: 'fileGroup' }).writtenPlace).toBe('area');
   });
 
   it("says in the tooltip that it was written on an area of the image, not a line, wherever it names the place", () => {
-    const tip = 'The area of the image it was written on';
+    const tip = 'A 3 × 4 pixel area of the image at x 1, y 2';
     expect(headerOf(onArea).location?.writtenPlaceTip).toBe(tip);
     expect(headerOf(onArea, { place: 'panel' }).location?.writtenPlaceTip).toBe(tip);
     expect(headerOf(onArea, { place: 'fileGroup' }).writtenPlaceTip).toBe(tip);
@@ -53,10 +53,22 @@ describe('a thread on a 3D model', () => {
     expect(hasThreadHeader(onPart)).toBe(true);
   });
 
-  it('names its file and the part it is on, with the part named in the tooltip', () => {
-    const tip = 'The part of the model it was written on: Wheel_FL';
-    expect(headerOf(onPart).location).toEqual({ folder: 'Art/', file: 'Car.fbx', writtenPlace: 'part', writtenPlaceTip: tip, linked: true, tip: 'Show in Changes', tipSub: 'Art/Car.fbx' });
-    expect(headerOf(onPart, { place: 'fileGroup' })).toMatchObject({ writtenPlace: 'part', writtenPlaceTip: tip });
+  it("names its file and the part it is on, with the part's whole path in the tooltip", () => {
+    const tip = 'The whole part Car › Wheel_FL';
+    expect(headerOf(onPart).location).toEqual({ folder: 'Art/', file: 'Car.fbx', writtenPlace: 'on Wheel_FL', writtenPlaceTip: tip, linked: true, tip: 'Show in Changes', tipSub: 'Art/Car.fbx' });
+    expect(headerOf(onPart, { place: 'panel' }).location).toMatchObject({ writtenPlace: 'on Wheel_FL', tip: 'Art/Car.fbx, on Wheel_FL' });
+    expect(headerOf(onPart, { place: 'fileGroup' })).toMatchObject({ writtenPlace: 'on Wheel_FL', writtenPlaceTip: tip });
+  });
+
+  it('says its place names a part, which can be long, so a row cuts it before who wrote it', () => {
+    expect(headerOf(onPart, { place: 'fileGroup' }).writtenPlaceNamesPart).toBe(true);
+  });
+
+  it("says its place names no part when it reads only \"point\" or \"part\", as a line's never does", () => {
+    const unnamed = threadOf(comment(1, { anchor: { kind: 'model', revisionId: 30, itemId: 24, path: '/Art/Car.fbx', spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'mesh_0'] } } } }));
+    expect(headerOf(unnamed, { place: 'fileGroup' }).writtenPlaceNamesPart).toBe(false);
+    expect(headerOf(plainOnLine, { place: 'fileGroup' }).writtenPlaceNamesPart).toBe(false);
+    expect(headerOf(general).writtenPlaceNamesPart).toBe(false);
   });
 });
 

@@ -957,7 +957,8 @@ button.earlierTag:hover {
 
 /*
  * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
- * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s).
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). A place naming a model's part
+ * ("point on Wheel") can be as long as an artist made it: it gives way first instead (`.rowPlace[data-names-part]`).
  */
 .rowAbout {
   display: flex;
@@ -991,6 +992,15 @@ button.earlierTag:hover {
   min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/*
+ * A place naming a model's part (`writtenPlaceNamesPart`): at most half the row, and cut before who wrote it, its
+ * weight orders of magnitude above the author's, so a long part name never leaves the row without its author.
+ */
+.rowPlace[data-names-part] {
+  max-width: 50%;
+  flex-shrink: 1000000000000;
 }
 
 /* "·" between who, where and how many replies: drawn, not read aloud. */
