@@ -904,11 +904,11 @@ An image of a review's diff takes comments on a point or an area of it, as code 
 knows nothing of reviews, docs/features/diff.md "Comments on images").
 
 - **Where it's stored.** `cm codereview comment add --location=image:x,y` for a point, `image:x,y,w,h` for an area, on
-  the revision the diff comments on, as lines are (`addImageCommentArgs`, `imageLocationOption`, `imageCommentAt`).
+  the revision the diff comments on, as lines are (`addImageCommentArgs`, `imageLocationOption`, `spotCommentAt`).
   `cm` stores the text as given and doesn't read it; every client reads it alike (`commentedImageSpotOf`): the image's
   own pixels from its top-left corner, x right and y down; an SVG's numbers may have decimals; what follows a `;` is a
   hint a client may ignore. The app writes whole pixels. `ReviewCommentAnchor`'s `image` kind holds it (`ImageSpot`);
-  a thread on a file, its lines or its image, is a `FileThread`.
+  a thread on a file, its lines, its image or its model, is a `FileThread`.
 - **Pins.** Each thread shows as a speech bubble holding the avatar of who started it, its tip on the point, or on the
   top-left corner of the area it outlines (`reviewImagePinsOf`, `ImageCommentsOverlay`): who wrote there, as a line's
   marker shows, the shape of a comment on a canvas as design tools draw it. Numbers were tried and dropped: an avatar
@@ -923,7 +923,7 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   side its revision shows (Split's After pane; Onion, Diffs and Swipe lay both over each other), gliding with the
   zoom.
 - **A thread** opens beside its pin on a click, one at a time: the conversation's card as a line's thread shows it in
-  the code (`ImageThreadCard`), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
+  the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
   below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
   nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the
   conversation opens it and brings it into view at the zoom shown (`transformShowing`): the whole area when it fits, else its
@@ -961,7 +961,8 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
 - **Where it's stored.** `cm codereview comment add --location=model:x,y,z[;node=<path>][;local=x,y,z][;part][;view=dx,dy,dz,d]`
   on the revision the diff comments on (`addModelCommentArgs`, `modelLocationOption`; the grammar is in
   `modelCommentLocation.ts`). The point is in the file's own units and axes, so every client places it alike from the
-  file; the rest are hints a client may ignore: the part's names from the root (`node`, each percent-encoded), the point
+  file; the rest are hints a client may ignore: the part's names from the root down, the root itself (the file or its scene) not named, so `Car/Wheel` is a
+  top-level `Car`'s child (`node`, each percent-encoded), the point
   in that part's space (`local`), the whole part (`part`), the camera it was written from (`view`). Past `cm`'s 1,024
   characters the hints go, the camera first, then `local`, then the part (`modelLocation`); the point always stays.
   Numbers keep eight significant digits, never an exponent (`locationNumber`). `ReviewCommentAnchor`'s `model` kind

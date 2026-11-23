@@ -9,7 +9,8 @@ import type { ModelPoint, ModelSpot, ModelSpotNode, ModelSpotView } from '@share
  * - `x,y,z`, the only part every reader needs: the point on the surface, in the file's own units and axes, before any
  *   import scale or axis turn a viewer applies, so any client computes the same point from the file.
  * - `node`: the part it's on, its names from the file's root down to it joined by `/`, each name percent-encoded
- *   (a `/` in a name too). Same-named siblings share a path; the point tells them apart.
+ *   (a `/` in a name too). The root itself (the file, or a glTF's scene) isn't named: `Car/Wheel` is the wheel under a
+ *   top-level `Car`. Same-named siblings share a path; the point tells them apart.
  * - `local`: the point in that part's own space, which places it on the part wherever the part is now (another version,
  *   a take playing) without reading the version it was written on.
  * - `part`: the comment is about the whole part, not the point. A reader that ignores it shows a point.
