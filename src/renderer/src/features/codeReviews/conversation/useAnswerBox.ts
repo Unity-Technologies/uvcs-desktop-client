@@ -40,7 +40,9 @@ export function useAnswerBox(thread: ReviewThread, user: string | undefined): An
   // hidden but mounted, follows at once; a view its `Activity` hides runs it again once shown, and catches up.
   useEffect(() => {
     const focused = boxRef.current?.contains(document.activeElement) ?? false;
-    setBox((current) => nextAnswerBox(current, previousDrafts.current, drafts, discardable, focused));
+    // Read now: the updater runs on the next render, after the ref below already holds these drafts.
+    const previous = previousDrafts.current;
+    setBox((current) => nextAnswerBox(current, previous, drafts, discardable, focused));
     previousDrafts.current = drafts;
   }, [drafts, discardable]);
 
