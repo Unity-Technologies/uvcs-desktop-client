@@ -1,8 +1,9 @@
-/* Over the viewport, under the stage's floating controls. Only its marks take the pointer: the image under it pans. */
+/* Over the viewport and the swipe divider (a card open over it reads whole), under the stage's floating controls and
+   pills. Only its marks take the pointer: the image under it pans. */
 .overlay {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   pointer-events: none;
 }
 
