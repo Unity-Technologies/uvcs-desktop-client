@@ -52,8 +52,9 @@ const anchorsByModel = new WeakMap<object, WeakMap<ModelSpot, SkinAnchor | null>
 
 /**
  * The anchor of a spot on a node's reshaped meshes: the one nearest the spot's point at rest (`local`, in the node's
- * space, which a take bending or morphing the mesh doesn't move). None for a rigid part, or a spot that doesn't say where on its
- * part it is: its node's matrix places it (`placedSpot`). Reads every triangle of the meshes once per spot and model.
+ * space, which a take bending or morphing the mesh doesn't move). None for a rigid part, or a spot that doesn't say
+ * where on its part it is: its node's matrix places it (`placedSpot`). Reads every triangle of the meshes once per spot
+ * and model.
  */
 export function skinAnchorOfSpot(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, spot: ModelSpot): SkinAnchor | null {
   let anchors = anchorsByModel.get(model);
