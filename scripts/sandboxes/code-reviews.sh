@@ -220,9 +220,9 @@ checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
 models 2
 checkin "$(text car 'Taller cabin, front wheels forward, no spoiler; the sign lower')"
 # Written in that changeset's diff, where both versions show (Split, Swipe, Onion, Diffs): a rear wheel, which stayed.
-on_review --path=/Assets/Models/Car.glb --changeset="cs:$(changeset /main/task-2210)" --location="model:-1.3,0.36,0.82;node=Car/Wheel;local=0,0,0;part" --type=Question -c="The front wheels moved: should the rear ones follow?" >/dev/null
+on_review --path=/Assets/Models/Car.glb --changeset="cs:$(changeset /main/task-2210)" --location="model:-1.3,0.36,0.95;node=Car/Wheel;local=0,0,0.13;part" --type=Question -c="The front wheels moved: should the rear ones follow?" >/dev/null
 on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.87,0;node=Car/Body;local=1.5,0.25,0;view=0.707107,0.565685,0.424264,4" --type=Change -c="This edge of the hood looks too sharp." >/dev/null
-on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.36,-0.82;node=Car/Wheel;local=0,0,0;part" --type=Change -c="The front wheels look too small for the body now." >/dev/null
+on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.36,-0.95;node=Car/Wheel;local=0,0,-0.13;part" --type=Change -c="The front wheels look too small for the body now." >/dev/null
 ROOF=$(on_review --path=/Assets/Models/Car.glb --location="model:-0.25,1.42,0;node=Car/Body;local=-0.25,0.8,0" --type=Question -c="Is the roof meant to be this high now?")
 cm cr comment reply "$ROOF" -c="Yes: the driver sits higher in this one." >/dev/null
 on_review --path=/Assets/Models/Car.glb --location="model:-0.1,0.62,0.9;node=Car/Door_L/Door_Panel;local=-0.55,0,0.04;part" --type=Change -c="The door should open wider: play DoorOpen." >/dev/null
