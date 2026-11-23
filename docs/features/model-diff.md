@@ -381,8 +381,13 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point
   under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion
   shows there), a click on nothing marks nothing, and a drag still turns the model. A click marks a point; with Alt
-  held (Option on a Mac) it marks the whole part (`stageClickOf`), which the shortcut's label says in the platform's
-  words (`modifierClick`). What it writes is
+  held (Option on a Mac) it marks the whole part (`stageClickOf`), which the comment button's tooltip and the
+  shortcut's label say in the platform's words (`modifierClick`). Meanwhile the part under the pointer on that version
+  lights up as a comment's part does, its name beside the cursor as the comment's card will give it, with the
+  Alt-click's hint (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`): nothing over empty space, a pin, a card or a
+  button, nor while a drag turns the model, nor while Diffs by look compares; it goes once commenting stops or the
+  pointer leaves the stage. Picking reads the GPU, so it runs at most once a frame however fast the pointer moves
+  (`useCommentHover`); what's lit is the part hovered, else a comment's (`litWhileCommenting`). What it writes is
   `spotOfPick`/`spotOfHit`: the point where the part rests (a take playing moves the part, not where on it the comment
   is; on a skinned mesh it bends the skin, so the hit is carried to rest by the same place on the same triangle,
   `restPointOfHit`), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along

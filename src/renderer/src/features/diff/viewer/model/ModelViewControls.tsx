@@ -4,6 +4,7 @@ import { Bone, Box, Focus, Grid3x3, Image, Palette, Shapes } from 'lucide-react'
 import { hotkey } from '../../../../lib/shortcutRegistry';
 import { StageButton, StageControls, StageSeparator } from '../image/StageControls';
 import { CommentPinIcon } from '../pins/CommentPinIcon';
+import { commentButtonLabel } from './commentHover';
 import type { DrawMode } from './modelRenderer';
 import { clickedSurface, materialsButtonLabel, surfaceButtonDisabledReason, surfaceButtonOn, type SurfaceLook } from './surfaceLook';
 
@@ -34,7 +35,7 @@ export function ModelViewControls({ drawMode, onDrawMode, surface, onSurface, ma
         <>
           <StageButton
             icon={<CommentPinIcon />}
-            label={comment.active ? 'Stop commenting' : 'Comment: click a point of the model'}
+            label={commentButtonLabel(comment.active)}
             shortcut={hotkey('modelComment')}
             active={comment.active}
             onClick={comment.onToggle}
