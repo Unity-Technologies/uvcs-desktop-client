@@ -93,7 +93,7 @@ export function useReviewSpotAnnotations<Spot, Thread extends FileThread, Thread
     const open = (key: string | null): void => setOpened(key === null ? null : { path: file.path, key });
     const topSide = topSideOf(file);
     const side = spotCommentSide(file);
-    const pins = kind.pinsOf({ threads: spotThreads, spots, inCode, focusThreadId: inCode ? focus?.threadId : shownWhileHidden, topSide });
+    const pins = kind.pinsOf({ threads: spotThreads, spots, inCode, focusThreadId: shownWhileHidden, topSide });
     const threadOfPin = (key: string) => {
       const threadId = pinThreadId(key);
       return threadId === null ? null : spotThreadOf(spotThreads, threadId);
