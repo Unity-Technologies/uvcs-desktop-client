@@ -368,7 +368,7 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   draws it (`ModelRenderer.screenPointOf`, `projectedPoint`) after every frame drawn (`onFrameDrawn`): a turn, a glide,
   a take, a resize move the bubbles without React rendering for each frame. Off its pane or behind the camera, a bubble
   hides. Once the view is still (`SETTLE_MS`), a pin whose point something else is drawn in front of, picked under its
-  tip (`hiddenBehind`), shows faded and smaller, still there to click. The opened pin's card sits beside it
+  tip (`hiddenBehind`), eases to faded and smaller, still there to click, and back once it's in view. The opened pin's card sits beside it
   (`pinCardPlacement`), following it; the wheel over a card scrolls the card, never zooms (`isOnStageControl`).
 - **Marking a spot**: where the place takes comments (`takesModelComments`: the version it comments on shows), the
   stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point

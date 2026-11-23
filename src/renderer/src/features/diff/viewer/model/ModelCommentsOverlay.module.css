@@ -8,16 +8,25 @@
   overflow: hidden;
 }
 
-/* Placed each frame by the overlay (`ModelCommentsOverlay`): no transition, or it would lag behind the model. */
+/* Off its pane or behind the camera: hidden at once. */
 .bubble[data-off-screen] {
   visibility: hidden;
+}
+
+/* Fading behind the model and back eases in, rather than snapping once the view settles (`SETTLE_MS`). Only opacity
+   and scale move: the position (`translate`) follows the model every frame and must never lag. */
+.bubble {
+  /* Scaled about its tip, so the tip stays on the point while it shrinks or grows back. */
+  transform-origin: 0 100%;
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    scale var(--duration-normal) var(--ease-out);
 }
 
 /* Something else is drawn in front of its point: faded and smaller, still there to click, its tip where it was. */
 .bubble[data-behind]:not(:hover, :focus-visible, [data-selected], [data-writing]) {
   opacity: 0.45;
   scale: 0.75;
-  transform-origin: 0 100%;
 }
 
 /* The opened pin's card, over everything on the stage but its controls' column, which it keeps clear of
