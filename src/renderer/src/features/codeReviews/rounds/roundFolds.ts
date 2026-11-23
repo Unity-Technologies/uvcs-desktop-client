@@ -1,12 +1,13 @@
 import type { ConversationBlock } from './reviewRounds';
 
 /**
- * Whether a round shows what it held: a settled round starts folded and one with something open unfolded, each click
- * on its line turning that over (`toggled`); the round holding the thread the conversation went to is always unfolded,
- * so going to a thread never lands on a folded line.
+ * Whether a round shows what it held: a settled round starts folded and one with something open unfolded, as does the
+ * round holding the thread the conversation went to, so going to a thread never lands on a folded line; each click on
+ * its line turns that over (`toggled`), that round's too.
  */
 export function roundIsOpen(round: { number: number; folds: boolean }, toggled: ReadonlySet<number>, holdingPick: number | undefined): boolean {
-  return round.number === holdingPick || round.folds === toggled.has(round.number);
+  const startsOpen = round.number === holdingPick || !round.folds;
+  return startsOpen !== toggled.has(round.number);
 }
 
 /**
@@ -21,6 +22,17 @@ export function roundLineComment(round: { comment: string }, open: boolean): str
 export function toggledRound(toggled: ReadonlySet<number>, number: number): Set<number> {
   const next = new Set(toggled);
   if (!next.delete(number)) next.add(number);
+  return next;
+}
+
+/**
+ * The rounds toggled once the conversation goes to a thread in `holdingPick`: its clicks forgotten, so it unfolds again
+ * even when folded by hand; the same set when the thread is after every round.
+ */
+export function untoggledRound(toggled: ReadonlySet<number>, holdingPick: number | undefined): ReadonlySet<number> {
+  if (holdingPick === undefined || !toggled.has(holdingPick)) return toggled;
+  const next = new Set(toggled);
+  next.delete(holdingPick);
   return next;
 }
 
