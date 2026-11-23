@@ -1,6 +1,6 @@
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
-import type { NewLineComment, ReviewComment, ReviewEventChange } from '@shared/domain/reviewConversation';
+import type { NewImageComment, NewLineComment, ReviewComment, ReviewEventChange } from '@shared/domain/reviewConversation';
 import { api } from '../../../api/client';
 import { runVoidAction } from '../../../app/operations/runOperation';
 import { isAffectedByCodeReviews, isAffectedByTakingPartInReview } from '../../../app/refresh/refreshScopes';
@@ -19,6 +19,11 @@ export function addReviewComment(place: Place, reviewId: number, text: string): 
 /** A change request, a question or a comment on a line of the review's diff. */
 export function addLineComment(place: Place, reviewId: number, comment: NewLineComment, text: string): Promise<boolean> {
   return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnLine(place, reviewId, comment, text), isAffectedByTakingPartInReview);
+}
+
+/** A change request, a question or a comment on a point or an area of an image of the review's diff. */
+export function addImageComment(place: Place, reviewId: number, comment: NewImageComment, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnImage(place, reviewId, comment, text), isAffectedByTakingPartInReview);
 }
 
 export function replyToComment(place: Place, comment: Pick<ReviewComment, 'guid'>, text: string): Promise<boolean> {

@@ -1,4 +1,4 @@
-import type { LineThread } from './fileThreads';
+import type { ImageThread, LineThread } from './fileThreads';
 
 /**
  * What a thread written on an earlier version of the file says of it in the code: placed at its line, unchanged since,
@@ -10,4 +10,13 @@ export function earlierTagOf(thread: LineThread, outdated: boolean): { label: st
   const several = thread.root.anchor.lastLine > thread.root.anchor.firstLine;
   if (outdated) return { label: 'Outdated', tip: `Written on ${where}: ${several ? 'its lines' : 'its line'} changed since` };
   return { label: 'Earlier version', tip: `Written on ${where}: ${several ? "these lines haven't" : "this line hasn't"} changed since` };
+}
+
+/**
+ * What a thread written on an earlier version of an image says of it at its pin: "Earlier version", the spot it's on
+ * kept, as an image has no lines to follow and what's there now may differ.
+ */
+export function imageEarlierTagOf(thread: ImageThread): { label: string; tip: string } {
+  const where = thread.root.changesetId === undefined ? 'an earlier version of this image' : `the image as changeset ${thread.root.changesetId} left it`;
+  return { label: 'Earlier version', tip: `Written on ${where}: what's here may have changed since` };
 }

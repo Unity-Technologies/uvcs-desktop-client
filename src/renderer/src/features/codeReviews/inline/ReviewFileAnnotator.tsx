@@ -24,6 +24,8 @@ import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
 import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
+import { useReviewImageAnnotations } from './useReviewImageAnnotations';
+import { ImageAnnotationsContext } from '../../diff/viewer/image/imageAnnotations';
 import { suggestLineLabel } from '../suggestions/suggestButton';
 
 const NO_REVISIONS: number[] = [];
@@ -153,8 +155,15 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     return { rows, render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow, bands, lineAction };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow, spots, lineAction]);
 
-  const controls = hasComments(fileComments) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
-  return <DiffAnnotationsContext.Provider value={annotations}>{children({ controls })}</DiffAnnotationsContext.Provider>;
+  // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
+  const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
+
+  const controls = (hasComments(fileComments) || onImage.hasThreads) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
+  return (
+    <DiffAnnotationsContext.Provider value={annotations}>
+      <ImageAnnotationsContext.Provider value={onImage.annotations}>{children({ controls })}</ImageAnnotationsContext.Provider>
+    </DiffAnnotationsContext.Provider>
+  );
 }
 
 const NO_KEYS: readonly string[] = [];

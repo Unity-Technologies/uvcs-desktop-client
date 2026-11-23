@@ -83,9 +83,14 @@
   border-style: dashed;
 }
 
-.area[data-selected],
-.area[data-writing] {
+.area[data-selected] {
   border-color: var(--accent);
+}
+
+/* The area a comment is being written on stays drawn as it was dragged, so the reviewer sees what they're commenting. */
+.area[data-writing] {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
 }
 
 .card {
@@ -104,12 +109,12 @@
   position: absolute;
   inset: 0;
   pointer-events: auto;
-  cursor: crosshair;
+  cursor: var(--cursor-add-comment);
 }
 
 .dragArea {
   position: absolute;
-  border: 1.5px dashed var(--accent);
+  border: 2px solid var(--accent);
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
 }
