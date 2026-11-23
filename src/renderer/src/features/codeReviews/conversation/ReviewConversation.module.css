@@ -957,7 +957,8 @@ button.earlierTag:hover {
 
 /*
  * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
- * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s).
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). Who started it keeps its first
+ * letters, and a long place (a model's part) is cut at half the row (`.rowPlace`).
  */
 .rowAbout {
   display: flex;
@@ -971,7 +972,7 @@ button.earlierTag:hover {
 
 .rowAbout .author {
   overflow: hidden;
-  min-width: 0;
+  min-width: 3em;
   font-size: var(--text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -986,9 +987,14 @@ button.earlierTag:hover {
   flex-shrink: 10000;
 }
 
+/*
+ * Short ("line 42", "point") it stays whole while the author's name gives way; a model's part name can be long, so it
+ * takes at most half the row and is cut there, leaving room for who wrote it.
+ */
 .rowPlace {
   overflow: hidden;
   min-width: 0;
+  max-width: 50%;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
