@@ -1,7 +1,7 @@
 // Where each comment's pin is on the versions shown, worked out once per set of pins and versions: the node its part is
 // in that version (`nodeOfSpot`), whose matrix, as drawn, places it every frame (`placedSpot`), a take's pose included.
 
-import { Matrix4 } from 'three';
+import { Box3, Matrix4 } from 'three';
 import type { ModelPin } from './modelAnnotations';
 import type { ModelScene } from './modelScene';
 import { viewerSpaceOf } from './modelSpaces';
@@ -28,6 +28,8 @@ export interface PinPlace {
   nodeKey: string | null;
   /** The part it names isn't in this version: it shows at its point. */
   partGone: boolean;
+  /** The corners of the box its whole part fills as drawn now (a comment on a part); none for one on a point. */
+  partCorners: () => Vector[] | null;
 }
 
 /** Each pin's place on the version it's on; none for a pin on a version not shown. */
@@ -41,7 +43,8 @@ export function pinPlacesOf(pins: readonly ModelPin[], versions: Record<Side, Dr
     const viewerSpace = viewerSpaceOf(version.model);
     const nodeWorld = (): Matrix4 => object!.matrixWorld;
     const placeable = object ? node : null;
-    return [{ pin, nodeKey, point: () => placedSpot(pin.spot, placeable, nodeWorld, viewerSpace).point, partGone: placedSpot(pin.spot, node, () => new Matrix4(), viewerSpace).partGone }];
+    const partCorners = (): Vector[] | null => (pin.spot.wholePart && object ? boxCorners(new Box3().setFromObject(object)) : null);
+    return [{ pin, nodeKey, point: () => placedSpot(pin.spot, placeable, nodeWorld, viewerSpace).point, partGone: placedSpot(pin.spot, node, () => new Matrix4(), viewerSpace).partGone, partCorners }];
   });
 }
 
@@ -55,4 +58,10 @@ export function spotOfHit(version: DrawnVersion, hit: { key: string | null; poin
   const node = index >= 0 && version.scene.objects.has(hit.key!) ? index : null;
   const nodeWorld = (): Matrix4 => version.scene.objects.get(hit.key!)!.matrixWorld;
   return spotOfPick(version.model, { point: hit.point, node, camera }, nodeWorld, viewerSpaceOf(version.model), wholePart);
+}
+
+function boxCorners(box: Box3): Vector[] | null {
+  if (box.isEmpty()) return null;
+  const { min, max } = box;
+  return [0, 1, 2, 3, 4, 5, 6, 7].map((corner): Vector => [corner & 1 ? max.x : min.x, corner & 2 ? max.y : min.y, corner & 4 ? max.z : min.z]);
 }

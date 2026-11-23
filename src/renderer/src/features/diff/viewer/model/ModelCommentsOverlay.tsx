@@ -8,7 +8,7 @@ import { useLayoutEffect, useMemo, useRef, type PointerEvent as ReactPointerEven
 import type { ModelSpot } from '@shared/domain/reviewConversation';
 import { followDrag, isDragButton } from '../image/pointerDrag';
 import { PinBubble } from '../pins/PinBubble';
-import { PIN_CARD_WIDTH, pinCardPlacement } from '../pins/pinPlacement';
+import { boundsOf, PIN_CARD_WIDTH, pinCardPlacement } from '../pins/pinPlacement';
 import pinStyles from '../pins/CommentPins.module.css';
 import type { ModelAnnotations } from './modelAnnotations';
 import { hiddenBehind } from './modelProjection';
@@ -67,7 +67,9 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       if (!card.current || !box) return;
       card.current.toggleAttribute('data-off-screen', !at);
       if (!at) return;
-      const placement = pinCardPlacement({ x: at.x, y: at.y, width: 0, height: 0 }, { width: box.clientWidth, height: box.clientHeight });
+      // A part comment's card leaves its part in view too, as it lights up while the card is open.
+      const corners = opened.partCorners()?.flatMap((corner) => renderer.screenPointOf(opened.pin.side, corner) ?? []) ?? [];
+      const placement = pinCardPlacement({ x: at.x, y: at.y, width: 0, height: 0 }, { width: box.clientWidth, height: box.clientHeight }, boundsOf(corners));
       Object.assign(card.current.style, { left: `${placement.left}px`, maxHeight: `${placement.maxHeight}px`, top: 'top' in placement ? `${placement.top}px` : '', bottom: 'bottom' in placement ? `${placement.bottom}px` : '' });
     };
     // What hides each point, picked under its bubble's tip once the view is still: something nearer on its version.

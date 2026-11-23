@@ -39,6 +39,15 @@ describe('pinPlacesOf', () => {
     expect(place!.point()[1]).toBeCloseTo(3.6);
   });
 
+  it("gives the box a part comment's part fills, and none for a comment on a point", () => {
+    const after = drawn(CAR);
+    const onPart = pin({ spot: { point: { x: 0, y: 1.6, z: 0 }, node: { path: ['Car', 'Body'], local: { x: 0, y: 0.6, z: 0 } }, wholePart: true } });
+    const corners = pinPlacesOf([onPart], { before: null, after })[0]!.partCorners()!;
+    expect(corners).toHaveLength(8);
+    expect(Math.max(...corners.map((corner) => corner[0]))).toBeCloseTo(2);
+    expect(pinPlacesOf([pin({})], { before: null, after })[0]!.partCorners()).toBeNull();
+  });
+
   it('places a pin whose part is gone at its point, and says so', () => {
     const noBody = drawn(testModel({ nodes: [{ name: 'Car' }] }));
     const [place] = pinPlacesOf([pin({})], { before: null, after: noBody });

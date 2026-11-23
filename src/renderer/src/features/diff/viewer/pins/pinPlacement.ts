@@ -59,11 +59,28 @@ export const PIN_CARD_WIDTH = 360;
 const STAGE_CONTROLS_ROOM = 52;
 
 /**
- * Where the card of a pin at `rect` goes in a viewer's stage (`cardPlacement`, its bubble included: `pinBounds`),
- * never under the stage's floating controls at its right edge (`StageControls`).
+ * Where the card of a pin at `rect` goes in a viewer's stage (`cardPlacement`, its bubble included: `pinBounds`, and
+ * what else it's about: `about`, a model's part on screen), never under the stage's floating controls at its right
+ * edge (`StageControls`).
  */
-export function pinCardPlacement(rect: ScreenRect, viewport: Size): CardPlacement {
-  return cardPlacement(pinBounds(rect), { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, PIN_CARD_WIDTH);
+export function pinCardPlacement(rect: ScreenRect, viewport: Size, about: ScreenRect | null = null): CardPlacement {
+  const bounds = pinBounds(rect);
+  return cardPlacement(about ? unionOf(bounds, about) : bounds, { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, PIN_CARD_WIDTH);
+}
+
+/** The box around two boxes. */
+export function unionOf(a: ScreenRect, b: ScreenRect): ScreenRect {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
+}
+
+/** The box around points on screen; none for no points. */
+export function boundsOf(points: readonly { x: number; y: number }[]): ScreenRect | null {
+  if (points.length === 0) return null;
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  return { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
 }
 
 function clamp(value: number, min: number, max: number): number {

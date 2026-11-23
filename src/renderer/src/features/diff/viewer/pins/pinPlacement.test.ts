@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardPlacement, pinBounds, pinCardPlacement } from './pinPlacement';
+import { boundsOf, cardPlacement, pinBounds, pinCardPlacement } from './pinPlacement';
 
 describe('cardPlacement', () => {
   const VIEWPORT = { width: 1000, height: 600 };
@@ -40,5 +40,19 @@ describe('pinCardPlacement', () => {
   it("leaves the stage's floating controls at its right edge clear", () => {
     // 1000 wide, 52 of it the controls': a card right of a pin at 600 would reach 984, under them; it goes left.
     expect(pinCardPlacement({ x: 600, y: 100, width: 0, height: 0 }, { width: 1000, height: 600 })).toMatchObject({ left: 228 });
+  });
+});
+
+describe('pinCardPlacement beside what the pin is about', () => {
+  it("goes below a model's part, not just below its bubble, when neither side of the part has room", () => {
+    const placement = pinCardPlacement({ x: 500, y: 100, width: 0, height: 0 }, { width: 1000, height: 800 }, { x: 300, y: 80, width: 400, height: 150 });
+    expect(placement).toMatchObject({ top: 242 });
+  });
+});
+
+describe('boundsOf', () => {
+  it('boxes the points, and nothing for none', () => {
+    expect(boundsOf([{ x: 10, y: 5 }, { x: 2, y: 9 }])).toEqual({ x: 2, y: 5, width: 8, height: 4 });
+    expect(boundsOf([])).toBeNull();
   });
 });
