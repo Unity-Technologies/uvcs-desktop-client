@@ -368,7 +368,7 @@ docs/features/code-reviews.md "Comments on 3D models"):
   a take, a resize move the bubbles without React rendering for each frame. Off its pane or behind the camera, a bubble
   hides. Once the view is still (`SETTLE_MS`), a pin whose point something else is drawn in front of, picked under its
   tip (`hiddenBehind`), shows faded and smaller, still there to click. The opened pin's card sits beside it
-  (`pinCardPlacement`), following it.
+  (`pinCardPlacement`), following it; the wheel over a card scrolls the card, never zooms (`isOnStageControl`).
 - **Marking a spot**: where the place takes comments (`takesModelComments`: the version it comments on shows), the
   stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point
   under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion

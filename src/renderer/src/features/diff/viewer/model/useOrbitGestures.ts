@@ -100,6 +100,8 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
     };
 
     const onWheel = (event: WheelEvent): void => {
+      // A card over the model (a comment's) scrolls its own content.
+      if (isOnStageControl(event)) return;
       event.preventDefault();
       stopCoasting();
       if (event.timeStamp - zoomPoint.at > ZOOM_POINT_MS) zoomPoint = { at: event.timeStamp, point: zoomPointAt(...local(event)) };
