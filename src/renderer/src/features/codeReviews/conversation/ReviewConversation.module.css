@@ -720,25 +720,42 @@ button.pill:hover {
   gap: var(--space-3);
 }
 
-.eventRunToggle {
+/* A timeline line that folds what's under it (`FoldableLine`): a click anywhere on it folds, so the whole line answers
+   the pointer; its chevron ends it, after the time, on every line alike. */
+.foldableLine {
+  cursor: pointer;
+}
+
+.foldableLine:hover {
+  color: var(--text-primary);
+}
+
+.foldChevron {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
   padding: 0;
   border: none;
+  border-radius: var(--radius-sm);
   background: none;
+  color: var(--text-tertiary);
+}
+
+.foldableLine:hover .foldChevron {
   color: var(--text-secondary);
 }
 
-.eventRunToggle:hover {
-  color: var(--accent-text);
+.foldChevron:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
 }
 
-.eventRunToggle > svg {
+.foldChevron > svg {
   transition: transform var(--duration-fast) var(--ease-out);
 }
 
-.eventRunToggle[aria-expanded='true'] > svg {
+.foldChevron[aria-expanded='true'] > svg {
   transform: rotate(90deg);
 }
 
