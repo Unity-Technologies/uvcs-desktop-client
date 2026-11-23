@@ -919,10 +919,12 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   top-left corner of the area it outlines (`reviewImagePinsOf`, `ImageCommentsOverlay`): who wrote there, as a line's
   marker shows, the shape of a comment on a canvas as design tools draw it. Numbers were tried and dropped: an avatar
   says more, and the Comments panel and the conversation name it "point" or "area" beside its file
-  (`writtenPlaceText`), its pixels only in the tooltip, rounded: "at x 120, y 80, 40 × 30 pixels" (`writtenPlaceTip`). The bubble is always white with a soft shadow (`--image-pin-rim`,
-  `--image-pin-shadow`), so it reads over any image; where the thread stands is a mark on it, never a color the image
-  could swallow: an Open-colored dot while open, faded once settled, an accent ring around the avatar when selected
-  (a state border, then a bubble filled with the state's color, each vanished over an image of that color); an area is a border, never a fill, so the image reads as it is, and it shows only while its
+  (`writtenPlaceText`), its pixels only in the tooltip, rounded: "A 40 × 30 pixel area of the image at x 1, y 2"
+  (`writtenPlaceTip`). The bubble is always white with a soft shadow (`--image-pin-rim`, `--image-pin-shadow`), so it
+  reads over any image; where the thread stands is a mark on it, never a color the image could swallow: an
+  Open-colored dot while open, faded once settled, an accent ring around the avatar when selected (a state border,
+  then a bubble filled with the state's color, each vanished over an image of that color); an area is a border, never
+  a fill, so the image reads as it is, and it shows only while its
   bubble is pointed at, its card open, or it's being written (its thread staying selected once the card closes
   doesn't keep it), as design tools do: every area drawn at
   once hid the image under their outlines. In every image mode, on the
@@ -977,14 +979,16 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
   holds it (`ModelSpot`); other clients read it as a comment on the file until they learn it.
 - **Pins** are the image's bubble (`PinBubble`, `reviewModelPinsOf`): who started it, an open dot, faded once settled,
   ringed when selected. The Comments panel and the conversation name the place by its part, so comments on one model
-  read apart: "point on Wheel", or a whole part "Wheel" (`writtenPlaceText`). The name is the last of the location's
-  `node` path; no file is read and no `cm` command runs. With no `node` hint (another client's, or one past the length
-  limit), or a name an exporter gave ("Mesh", "mesh_0", "Object_12", "polySurface3", "Cube.001":
-  `partNameSaysNothing`), it says only "point" or "part". The tooltip gives the part's whole path, "Car › Wheel"
-  (`writtenPlaceTip`). A comment on a part lights the part up only on demand: its bubble
-  pointed at or focused, its card open, or while it's written (`litCommentPart`).
+  read apart: "point on Wheel", or a whole part "part Wheel", its kind first as a line's "line 42"
+  (`writtenPlaceText`). The name is the last of the location's `node` path; no file is read and no `cm` command runs.
+  With no `node` hint (another client's, or one past the length limit), an empty name, or a name an exporter gave
+  ("Mesh", "mesh_0", "Object_12", "polySurface3", Maya's "pCylinder3", Blender's "Cube.001"; a bare "Plane" reads as
+  written: `partNameSaysNothing`), it says only "point" or "part". The tooltip gives the part's whole path, empty names
+  left out: "A point on Car › Wheel", "All of Car › Wheel" (`writtenPlaceTip`). A comment on a part lights the part
+  up only on demand: its bubble pointed at or focused, its card open, or while it's written (`litCommentPart`).
 - **On an earlier version** a pin shows on its part as the version shown has it (`local`), dashed and tagged "Earlier
-  version"; when that part is gone, at its point, the tag saying so (`modelEarlierTagOf`). No earlier version is read.
+  version"; when that part is gone, at its point, the tag saying so by the part's name, "Wheel isn't in this version"
+  (`modelEarlierTagOf`). No earlier version is read.
 - **Writing.** The stage's comment button, or **C** (`modelComment`): a ring lies on the surface under the pointer
   with the part's name beside the cursor, and with Shift held the whole part lights up instead (`hoveredPartOf`,
   `hoverLabelOf`; docs/features/model-diff.md "Comments on the model"); a click marks a point (`spotOfHit`), a Shift-click the whole part

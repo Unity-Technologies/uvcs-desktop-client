@@ -76,7 +76,7 @@ export function locationText(anchor: Pick<FileAnchor, 'path'>): { folder: string
 /**
  * Where in its file a comment was written, as the conversation says it apart from the file's link: its lines, "line
  * 42", "lines 42–48", what of an image, "point", "area", or of a 3D model the part it's on, "point on Wheel" or a whole
- * "Wheel" (`modelSpotText`): its pin shows where, with who started it. Coordinates go only in the tooltip
+ * "part Wheel" (`modelSpotText`): its pin shows where, with who started it. Coordinates go only in the tooltip
  * (`writtenPlaceTip`).
  */
 export function writtenPlaceText(anchor: FileAnchor): string {
@@ -96,7 +96,7 @@ export function writtenPlaceTip(anchor: FileAnchor): string {
     case 'line':
       return anchor.firstLine === anchor.lastLine ? 'The line it was written on' : 'The lines it was written on';
     case 'image':
-      return `The ${imageSpotWords(anchor.spot)} of the image it was written on, at ${imageSpotPlace(anchor.spot)}`;
+      return imageSpotTip(anchor.spot);
     case 'model':
       return modelSpotTip(anchor.spot);
   }
@@ -107,10 +107,10 @@ export function imageSpotWords(spot: ImageSpot): string {
   return spot.size ? 'area' : 'point';
 }
 
-/** An image's spot in whole pixels, "x 120, y 80", and an area's size, "40 × 30 pixels": an SVG's may have decimals. */
-function imageSpotPlace({ x, y, size }: ImageSpot): string {
-  const at = `x ${Math.round(x)}, y ${Math.round(y)}`;
-  return size ? `${at}, ${Math.round(size.width)} × ${Math.round(size.height)} pixels` : at;
+/** An image's spot in whole pixels, as an SVG's may have decimals: "A 40 × 30 pixel area of the image at x 1, y 2". */
+function imageSpotTip({ x, y, size }: ImageSpot): string {
+  const at = `at x ${Math.round(x)}, y ${Math.round(y)}`;
+  return size ? `A ${Math.round(size.width)} × ${Math.round(size.height)} pixel area of the image ${at}` : `A point of the image ${at}`;
 }
 
 /** "part" for a comment on a whole part of a 3D model, "point" for one on a point of its surface. */
@@ -119,26 +119,33 @@ export function modelSpotWords(spot: ModelSpot): string {
 }
 
 /**
- * A model's spot named by its part, so comments on one model read apart: "point on Wheel", or a whole part "Wheel".
- * Only "point" or "part" when the location names no part (another client's, or one whose hints `cm`'s length dropped)
- * or its name is one an exporter gave (`partNameSaysNothing`). The name is the location's own: no file is read.
+ * A model's spot named by its part, so comments on one model read apart: "point on Wheel", or a whole part "part
+ * Wheel", its kind first as a line's "line 42". Only "point" or "part" when the location names no part (another
+ * client's, or one whose hints `cm`'s length dropped) or its name is one an exporter gave (`partNameSaysNothing`).
+ * The name is the location's own: no file is read.
  */
 function modelSpotText(spot: ModelSpot): string {
   const name = modelPartName(spot);
-  if (name === null || partNameSaysNothing(name)) return modelSpotWords(spot);
-  return spot.wholePart ? name : `point on ${name}`;
+  const words = modelSpotWords(spot);
+  if (name === null || partNameSaysNothing(name)) return words;
+  return spot.wholePart ? `${words} ${name}` : `${words} on ${name}`;
 }
 
-/** A model's spot in full: the part's whole path from the root, "Car › Wheel", which its name alone may not tell apart. */
+/**
+ * A model's spot in full: the part's whole path from the root, "A point on Car › Wheel", which its name alone may not
+ * tell apart. Names the file left empty are left out of it.
+ */
 function modelSpotTip(spot: ModelSpot): string {
-  const path = spot.node?.path.join(' › ');
-  if (spot.wholePart) return path ? `The part of the model it was written on: ${path}` : 'The part of the model it was written on';
-  return path ? `The point of the model it was written on, in ${path}` : 'The point of the model it was written on';
+  const named = spot.node?.path.filter((name) => name.trim() !== '') ?? [];
+  const path = named.join(' › ');
+  if (spot.wholePart) return path ? `All of ${path}` : 'A part of the model';
+  return path ? `A point on ${path}` : 'A point on the model';
 }
 
-/** The name of the part a spot of a model is on: the last of its names from the root; none when it names no part. */
+/** The name of the part a spot of a model is on: the last of its names from the root; none when it names no part, or names it with nothing. */
 export function modelPartName(spot: ModelSpot): string | null {
-  return spot.node?.path.at(-1) ?? null;
+  const name = spot.node?.path.at(-1);
+  return name === undefined || name.trim() === '' ? null : name;
 }
 
 /**
