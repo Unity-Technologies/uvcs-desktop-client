@@ -7,7 +7,6 @@ import type { CommentFieldHandle } from '../../../components/commentEditor/comme
 import { useCommentDraftStore } from '../../../components/commentDraftStore';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
 import { Button } from '../../../ui/Button';
-import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
 import { refusalShown, suggestButtonOf, suggestRequestOutcome, type SuggestRefusal } from '../suggestions/suggestButton';
@@ -15,26 +14,11 @@ import { useReplacedLines } from '../suggestions/useReplacedLines';
 import { useSuggestionInsert } from '../suggestions/useSuggestionInsert';
 import { CommentComposer } from '../conversation/CommentComposer';
 import { addLineComment } from '../conversation/reviewCommentOperations';
-import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
-import { threadKindName } from '../conversation/threadBadges';
 import { conversationReadAt, conversationReadSince } from '../conversation/useReviewConversation';
-import { focusOnRequest, LINE_COMMENT_KINDS, lineCommentLabel, lineCommentWords, type NewLineCommentSpot } from './newLineComment';
+import { focusOnRequest, lineCommentLabel, lineCommentWords, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
+import { CommentKindSwitch } from './CommentKindSwitch';
 import styles from './NewLineCommentCard.module.css';
-
-const KIND_SEGMENTS = LINE_COMMENT_KINDS.map((kind) => {
-  const name = threadKindName({ kind });
-  const Icon = THREAD_KIND_ICONS[name];
-  return {
-    value: kind,
-    label: (
-      <>
-        <Icon size={12} aria-hidden />
-        {name}
-      </>
-    ),
-  };
-});
 
 interface NewLineCommentCardProps {
   spot: NewLineCommentSpot;
@@ -100,7 +84,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
     <CommentedFileContext.Provider value={spot.path}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <SegmentedControl small value={kind} segments={KIND_SEGMENTS} onChange={(picked) => setKind(spot.key, picked)} label="Comment kind" />
+          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} />
           <Tooltip content={suggest.tip}>
             <Button size="small" variant="ghost" className={styles.suggest} icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={suggestAtCaret}>
               Suggest change
