@@ -66,19 +66,29 @@ describe('litWhileCommenting', () => {
   const hovered = { side: 'after' as const, key: '0/0/1' };
   const comment = { side: 'after' as const, key: '0/0/0' };
 
-  it('lights the part under the pointer over a comment’s part', () => {
-    expect(litWhileCommenting(hovered, comment)).toBe(hovered);
+  it('lights the part under the pointer only while Shift aims a click at all of it', () => {
+    expect(litWhileCommenting(hovered, true, comment)).toBe(hovered);
+  });
+
+  it('lights nothing while a click would mark a point, not even a comment’s part: the light says what a click takes', () => {
+    expect(litWhileCommenting(hovered, false, comment)).toBeNull();
   });
 
   it('lights the comment’s part with nothing under the pointer', () => {
-    expect(litWhileCommenting(null, comment)).toBe(comment);
-    expect(litWhileCommenting(null, null)).toBeNull();
+    expect(litWhileCommenting(null, false, comment)).toBe(comment);
+    expect(litWhileCommenting(null, true, null)).toBeNull();
   });
 });
 
 describe('hoverLabelOf', () => {
-  it('names the part, and the click for all of it', () => {
-    expect(hoverLabelOf({ side: 'after', key: '0/0/1', name: 'Wheel' })).toEqual({ name: 'Wheel', hint: 'Shift-click for the whole part' });
+  const wheel = { side: 'after' as const, key: '0/0/1', name: 'Wheel' };
+
+  it('names the point a click marks, and how to take the whole part', () => {
+    expect(hoverLabelOf(wheel, false)).toEqual({ name: 'Point on Wheel', hint: 'Shift for the whole part' });
+  });
+
+  it('names the whole part while Shift is held', () => {
+    expect(hoverLabelOf(wheel, true)).toEqual({ name: 'Whole Wheel', hint: 'Click to comment on all of it' });
   });
 });
 
