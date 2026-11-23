@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { segmentAfterKey } from './segmentKeys';
+import { segmentAfterKey, segmentPickOfClick, type SegmentPick } from './segmentKeys';
 import styles from './SegmentedControl.module.css';
 
 interface Segment<Value extends string> {
@@ -14,7 +14,8 @@ interface SegmentedControlProps<Value extends string> {
   /** The checked segment; none until one is picked (the first one is then the Tab stop, as in a native radio group). */
   value: Value | undefined;
   segments: Segment<Value>[];
-  onChange: (value: Value) => void;
+  /** `pick` says how: a choice beside a text can give the focus back to it after a click (a new comment's kind). */
+  onChange: (value: Value, pick: SegmentPick) => void;
   /** Fills the width it is given, sharing it equally between the segments. */
   stretch?: boolean;
   /** Smaller and quieter, for a choice that sits inside a card rather than leading a view (a new comment's kind). */
@@ -36,7 +37,7 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
     );
     if (next === null) return;
     event.preventDefault();
-    onChange(next);
+    onChange(next, 'keys');
     controlRef.current?.querySelector<HTMLButtonElement>(`[data-value="${next}"]`)?.focus();
   };
 
@@ -54,7 +55,7 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
           data-tip-shortcut={segment.shortcut}
           aria-label={segment.title}
           className={styles.segment}
-          onClick={() => onChange(segment.value)}
+          onClick={(event) => onChange(segment.value, segmentPickOfClick(event.detail))}
         >
           {segment.label}
         </button>
