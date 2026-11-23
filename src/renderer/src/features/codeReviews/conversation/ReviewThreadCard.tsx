@@ -77,7 +77,8 @@ type Answering = 'reply' | 'discard' | null;
 /**
  * A comment and its replies as one card. A change request, a question or a comment on a line has a header band: its
  * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. Any card with
- * that band folds to it and its first words from its chevron (`foldsByHand`); a settled one starts folded
+ * that band folds to it and its first words from its chevron, and in the conversation from anywhere on the band
+ * (`foldsByHand`); a settled one starts folded
  * (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
@@ -233,12 +234,14 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
     inContext: inCode?.inContext === true,
   });
   const { location, earlierTag, pill } = header;
+  const bandFolds = onToggle !== undefined && !inCode;
   const anchor = root.anchor.kind === 'review' ? null : root.anchor;
 
   return (
-    // A foldable thread folds with a click anywhere on its band, as with its chevron; its file, pill and buttons keep
-    // their own clicks.
-    <div className={styles.threadHeader} data-folds={onToggle ? '' : undefined} onClick={onToggle && ((event) => rowTakesClick(event) && onToggle())}>
+    // In the conversation, a foldable thread folds with a click anywhere on its band, as with its chevron; its file,
+    // pill and buttons keep their own clicks. Not in the code, where a click on a card picks the thread (`InlineThreads`):
+    // folding it too would undo what the reader meant to look at.
+    <div className={styles.threadHeader} data-folds={bandFolds ? '' : undefined} onClick={bandFolds ? (event) => rowTakesClick(event) && onToggle() : undefined}>
       <span className={styles.headerStart}>
         {header.foldToggle && (
           <button type="button" className={styles.foldToggle} aria-expanded={header.foldToggle.expanded} aria-label={header.foldToggle.label} onClick={onToggle}>

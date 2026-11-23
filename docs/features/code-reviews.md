@@ -286,7 +286,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   settled pills' do. A settled
   thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
-  tab stop). Every card with a header band folds the same way from its chevron: open change requests and questions,
+  tab stop). Every card with a header band folds the same way from its chevron, and in the conversation from anywhere on the band ("Foldable lines"): open change requests and questions,
   which start whole, and plain comments on a line too (`foldsByHand`: how a card starts and whether it folds are
   apart; `threadCardFold`). Folded, in the conversation and in the code, its first comment's menu sits at the end of
   the folded line, under the pointer, where the comment shown whole has it (`FirstCommentMenu`): the same entries,
@@ -599,8 +599,9 @@ one read serves both), say what was checked in when (`reviewRounds`).
 - **Foldable lines** (`FoldableLine`): a round's line, a batch of check-ins and a run of reviewer changes fold with a
   click anywhere on them, their time and avatar too, while a link or a button inside (a changeset) keeps its own click
   (`rowTakesClick`, `clickedOutsideControls`); their chevron always ends them, after the time, and is the way to fold by
-  keyboard, named by the line's words. A thread's band folds the same way, its chevron leading, as a file's header
-  does. A chevron before the time, or a click that folded only on the chevron or the words, made lines that look alike
+  keyboard, named by the line's words. A thread's band folds the same way in the conversation, its chevron leading, as a
+  file's header does; in the code only its chevron folds it, since a click on a card there picks the thread. The
+  chevron is the line's one tab stop. A chevron before the time, or a click that folded only on the chevron or the words, made lines that look alike
   behave differently.
 - **The layout holds while the page is open** (`ConversationLayout`, `conversationLayoutOf`, `keptLayoutAfter`, kept
   by `useConversationLayout`): where each thread shows and whether each round starts folded are decided once, when
