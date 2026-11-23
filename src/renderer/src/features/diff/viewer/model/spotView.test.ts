@@ -33,4 +33,10 @@ describe('viewOfSpot', () => {
     expect(close(view.target)).toEqual([0, 1, -1]);
     expect(Math.abs(view.yaw)).toBeCloseTo(Math.PI);
   });
+
+  it('stands back far enough to show a good part of the model around the point, not a close-up of its surface', () => {
+    const view = viewOfSpot([0, 2, 0], undefined, CENTIMETRES_Z_UP, FRONT, MODEL, 1.5);
+    // The model is 3.5 m across: a third of it in view, at least.
+    expect(view.distance).toBeGreaterThan(1.5);
+  });
 });

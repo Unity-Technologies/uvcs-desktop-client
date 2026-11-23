@@ -8,8 +8,8 @@ import type { ModelSpotView } from '@shared/domain/reviewConversation';
 import { diagonalOf, MIN_DISTANCE, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
 import { regionView } from './regionView';
 
-/** The region a point is framed as, as a share of the model: a part of it shows around the point. */
-const AROUND_POINT_SHARE = 0.04;
+/** The region a point is framed as, as a share of the model: the point with a good part of the model around it, to place it by. */
+const AROUND_POINT_SHARE = 0.3;
 /** Short of straight up or down, as the hand's orbit stops (`orbited`): the camera never turns over. */
 const MAX_PITCH = (89 * Math.PI) / 180;
 
