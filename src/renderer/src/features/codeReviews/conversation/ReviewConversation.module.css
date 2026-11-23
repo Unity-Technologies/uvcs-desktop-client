@@ -957,8 +957,8 @@ button.earlierTag:hover {
 
 /*
  * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
- * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). Who started it keeps its first
- * letters, and a long place (a model's part) is cut at half the row (`.rowPlace`).
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). A long place (a model's part) is
+ * cut at half the row (`.rowPlace`), leaving the rest to who started it.
  */
 .rowAbout {
   display: flex;
@@ -972,7 +972,7 @@ button.earlierTag:hover {
 
 .rowAbout .author {
   overflow: hidden;
-  min-width: 3em;
+  min-width: 0;
   font-size: var(--text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
