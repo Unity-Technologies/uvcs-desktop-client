@@ -93,30 +93,34 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
   }, [renderer, places, opened, modelSize]);
 
   return (
-    <div ref={overlay} className={styles.overlay}>
-      {places.map((place) => (
-        <ModelPinBubble
-          key={place.pin.key}
-          place={place}
-          selected={place.pin.key === annotations.selected || place.pin.key === annotations.opened}
-          bubbleRef={(element) => {
-            if (element) bubbles.current.set(place.pin.key, element);
-            else bubbles.current.delete(place.pin.key);
-          }}
-          onOpen={() => annotations.onOpen(place.pin.key === annotations.opened ? null : place.pin.key)}
-          onPointed={onPointed}
-          onDragTo={(x, y) => {
-            const spot = spotAt(x, y, place.pin.side, place.pin.spot.wholePart === true);
-            if (spot) annotations.moveComment(place.pin.key, spot);
-          }}
-        />
-      ))}
+    <>
+      <div ref={overlay} className={styles.overlay}>
+        {places.map((place) => (
+          <ModelPinBubble
+            key={place.pin.key}
+            place={place}
+            selected={place.pin.key === annotations.selected || place.pin.key === annotations.opened}
+            bubbleRef={(element) => {
+              if (element) bubbles.current.set(place.pin.key, element);
+              else bubbles.current.delete(place.pin.key);
+            }}
+            onOpen={() => annotations.onOpen(place.pin.key === annotations.opened ? null : place.pin.key)}
+            onPointed={onPointed}
+            onDragTo={(x, y) => {
+              const spot = spotAt(x, y, place.pin.side, place.pin.spot.wholePart === true);
+              if (spot) annotations.moveComment(place.pin.key, spot);
+            }}
+          />
+        ))}
+      </div>
       {opened && (
-        <div ref={card} className={pinStyles.card} data-no-pan="" style={{ width: PIN_CARD_WIDTH }}>
-          {annotations.renderCard(opened.pin.key, { partGone: opened.partGone })}
+        <div className={styles.cardLayer}>
+          <div ref={card} className={pinStyles.card} data-no-pan="" style={{ width: PIN_CARD_WIDTH }}>
+            {annotations.renderCard(opened.pin.key, { partGone: opened.partGone })}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

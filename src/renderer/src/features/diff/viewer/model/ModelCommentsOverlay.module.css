@@ -20,6 +20,16 @@
   transform-origin: 0 100%;
 }
 
-.overlay > [data-off-screen] {
+/* The opened pin's card, over everything on the stage but its controls' column, which it keeps clear of
+   (`pinCardPlacement`): the swipe's divider, the take bar and the changes panel would otherwise draw over it. */
+.cardLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cardLayer > [data-off-screen] {
   visibility: hidden;
 }
