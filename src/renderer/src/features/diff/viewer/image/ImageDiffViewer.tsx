@@ -15,6 +15,7 @@
 import { ImageOff } from 'lucide-react';
 import { useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { keyTakenByText } from '../../../../lib/textEntry';
+import { useKeptElement } from '../../../../lib/useKeptElement';
 import type { FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
@@ -73,6 +74,10 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
   // The pair compared for Differences stays in the worker for the next tolerance, as long as this viewer shows it.
   useEffect(() => forgetComparedImages, []);
   const stageRef = useRef<HTMLDivElement>(null);
+  // The focusable pane, which takes the focus from a comment's card hiding with it.
+  const paneRef = useRef<HTMLDivElement>(null);
+  // Where an opened pin's card shows: over the whole stage, so Split's narrow pane doesn't cut it off.
+  const [cardLayer, keepCardLayer] = useKeptElement<HTMLDivElement>();
 
   const view = imagePairView(oldState, newState);
   const oldImage = view.kind === 'painted' ? view.old : null;
@@ -147,11 +152,13 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
             images={imagesOn(sides, shownImages)}
             commenting={isCommenting && annotations.commentsOn !== null && sides.includes(annotations.commentsOn)}
             onCommented={() => setCommenting(false)}
+            cardLayer={cardLayer}
+            stage={paneRef}
           />
         );
 
   return (
-    <div className={styles.pane} tabIndex={0} onKeyDown={onKeyDown}>
+    <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown}>
       {view.kind === 'painted' && view.unpainted && (
         <DiffNotice tone="info" icon={<ImageOff size={13} />}>
           {unpaintedNotice(view.unpainted.side, view.unpainted.problem)}
@@ -190,6 +197,8 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
             {mode === 'swipe' && <SwipeMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} overlay={overlay} />}
           </>
         )}
+
+        {annotations && <div ref={keepCardLayer} className={styles.cardLayer} />}
 
         {/* Resized image: the anchor toggle asks how the two sizes align. Hidden when sizes match — it would do nothing. */}
         <ZoomControls
