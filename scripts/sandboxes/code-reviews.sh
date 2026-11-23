@@ -13,7 +13,7 @@
 # holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. An
 # image holds comments on a point and on an area (`--location=image:…`): open, answered, and one on its earlier
 # version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment on a
-line and one on an area. Two more reviews have
+# line and one on an area. Two more reviews have
 # no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
 # can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
