@@ -44,6 +44,22 @@ describe('a thread on an image', () => {
   });
 });
 
+describe('a thread on a 3D model', () => {
+  const onPart = threadOf(
+    comment(1, { kind: 'changeRequest', anchor: { kind: 'model', revisionId: 30, itemId: 24, path: '/Art/Car.fbx', spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Wheel_FL'] }, wholePart: true } } }),
+  );
+
+  it('has a header band, as one on a line', () => {
+    expect(hasThreadHeader(onPart)).toBe(true);
+  });
+
+  it('names its file and the part it is on, with the part named in the tooltip', () => {
+    const tip = 'The part of the model it was written on: Wheel_FL';
+    expect(headerOf(onPart).location).toEqual({ folder: 'Art/', file: 'Car.fbx', writtenPlace: 'part', writtenPlaceTip: tip, linked: true, tip: 'Show in Changes', tipSub: 'Art/Car.fbx' });
+    expect(headerOf(onPart, { place: 'fileGroup' })).toMatchObject({ writtenPlace: 'part', writtenPlaceTip: tip });
+  });
+});
+
 describe('hasThreadHeader', () => {
   it('gives a header to a thread on a line, a change request and a question, and none to a comment on the whole review', () => {
     expect(hasThreadHeader(plainOnLine)).toBe(true);

@@ -1,6 +1,6 @@
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
-import type { FileAnchor, ImageSpot, ReviewCommentAnchor } from '@shared/domain/reviewConversation';
+import type { FileAnchor, ImageSpot, ModelSpot, ReviewCommentAnchor } from '@shared/domain/reviewConversation';
 import type { ReviewThread } from '../conversation/reviewThreads';
 
 /**
@@ -36,12 +36,15 @@ export interface ShownFile {
 
 export type LineAnchor = Extract<ReviewCommentAnchor, { kind: 'line' }>;
 export type ImageAnchor = Extract<ReviewCommentAnchor, { kind: 'image' }>;
-/** A thread on a file: its root comment is anchored to its lines, or to a spot of its image. */
+export type ModelAnchor = Extract<ReviewCommentAnchor, { kind: 'model' }>;
+/** A thread on a file: its root comment is anchored to its lines, a spot of its image, or a spot of its 3D model. */
 export type FileThread = ReviewThread & { root: ReviewThread['root'] & { anchor: FileAnchor } };
 /** A thread on a line: its root comment is anchored to one. */
 export type LineThread = ReviewThread & { root: ReviewThread['root'] & { anchor: LineAnchor } };
 /** A thread on a point or an area of an image. */
 export type ImageThread = ReviewThread & { root: ReviewThread['root'] & { anchor: ImageAnchor } };
+/** A thread on a point or a part of a 3D model. */
+export type ModelThread = ReviewThread & { root: ReviewThread['root'] & { anchor: ModelAnchor } };
 
 /** A side of a diff, as Pierre names them. */
 export type ThreadSide = 'deletions' | 'additions';
@@ -87,6 +90,22 @@ export interface ImageThreads {
   earlier: { thread: ImageThread; revisionId: number }[];
 }
 
+/** A thread on a spot of a 3D model a side of the diff shows. */
+export interface PlacedModelThread {
+  thread: ModelThread;
+  side: ThreadSide;
+  spot: ModelSpot;
+}
+
+/**
+ * The threads on a 3D model shown in a diff: those on a side's revision, at their spot, and those on an earlier version,
+ * placed by the part they're on as it is now.
+ */
+export interface ModelThreads {
+  placed: PlacedModelThread[];
+  earlier: { thread: ModelThread; revisionId: number }[];
+}
+
 /**
  * The threads a file's diff shows, in `view`:
  * - on a line of a revision either side shows, at that line: the newer side's, or the older one's (a file the review
@@ -105,6 +124,12 @@ export function threadsOfFile(threads: readonly ReviewThread[], review: CodeRevi
 /** The threads on spots of an image a file's diff shows, in `view`, as `threadsOfFile` finds those on lines. */
 export function imageThreadsOfFile(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, file: ShownFile): ImageThreads {
   const { onSides, earlier } = threadsOnRevisions(threads, review, view, file, isImageThread);
+  return { placed: onSides.map(({ thread, side }) => ({ thread, side, spot: thread.root.anchor.spot })), earlier };
+}
+
+/** The threads on spots of a 3D model a file's diff shows, in `view`, as `threadsOfFile` finds those on lines. */
+export function modelThreadsOfFile(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, file: ShownFile): ModelThreads {
+  const { onSides, earlier } = threadsOnRevisions(threads, review, view, file, isModelThread);
   return { placed: onSides.map(({ thread, side }) => ({ thread, side, spot: thread.root.anchor.spot })), earlier };
 }
 
@@ -152,7 +177,11 @@ export function isImageThread(thread: ReviewThread): thread is ImageThread {
   return thread.root.anchor.kind === 'image';
 }
 
-/** Whether a thread is on a file, its lines or its image, rather than on the whole review. */
+export function isModelThread(thread: ReviewThread): thread is ModelThread {
+  return thread.root.anchor.kind === 'model';
+}
+
+/** Whether a thread is on a file, its lines, its image or its 3D model, rather than on the whole review. */
 export function isFileThread(thread: ReviewThread): thread is FileThread {
   return thread.root.anchor.kind !== 'review';
 }

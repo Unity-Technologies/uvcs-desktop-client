@@ -1,4 +1,4 @@
-import type { FileAnchor, ImageSpot, ReviewComment, ReviewCommentKind } from '@shared/domain/reviewConversation';
+import type { FileAnchor, ImageSpot, ModelSpot, ReviewComment, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import type { PageOf } from '../../../app/navigation/pages';
 import { displayName } from '../../../lib/userName';
 import { anchorPath } from '../inline/fileThreads';
@@ -74,21 +74,47 @@ export function locationText(anchor: Pick<FileAnchor, 'path'>): { folder: string
 
 /**
  * Where in its file a comment was written, as the conversation says it apart from the file's link: its lines, "line
- * 42", "lines 42–48", or what of an image, "point", "area": its pin shows where, with who started it.
+ * 42", "lines 42–48", what of an image, "point", "area", or of a 3D model, "point", "part": its pin shows where, with
+ * who started it.
  */
 export function writtenPlaceText(anchor: FileAnchor): string {
-  return anchor.kind === 'line' ? rangeWordsInline(anchor) : imageSpotWords(anchor.spot);
+  switch (anchor.kind) {
+    case 'line':
+      return rangeWordsInline(anchor);
+    case 'image':
+      return imageSpotWords(anchor.spot);
+    case 'model':
+      return modelSpotWords(anchor.spot);
+  }
 }
 
-/** What hovering where a comment was written says of it: what of its file that place is. */
+/** What hovering where a comment was written says of it: what of its file that place is; a part's name, too. */
 export function writtenPlaceTip(anchor: FileAnchor): string {
-  if (anchor.kind === 'line') return anchor.firstLine === anchor.lastLine ? 'The line it was written on' : 'The lines it was written on';
-  return `The ${imageSpotWords(anchor.spot)} of the image it was written on`;
+  switch (anchor.kind) {
+    case 'line':
+      return anchor.firstLine === anchor.lastLine ? 'The line it was written on' : 'The lines it was written on';
+    case 'image':
+      return `The ${imageSpotWords(anchor.spot)} of the image it was written on`;
+    case 'model': {
+      const part = anchor.spot.wholePart ? modelPartName(anchor.spot) : null;
+      return part ? `The part of the model it was written on: ${part}` : 'The point of the model it was written on';
+    }
+  }
 }
 
 /** "point" for a point of an image, "area" for an area. */
 export function imageSpotWords(spot: ImageSpot): string {
   return spot.size ? 'area' : 'point';
+}
+
+/** "part" for a comment on a whole part of a 3D model, "point" for one on a point of its surface. */
+export function modelSpotWords(spot: ModelSpot): string {
+  return spot.wholePart ? 'part' : 'point';
+}
+
+/** The name of the part a spot of a model is on: the last of its names from the root; none when it names no part. */
+export function modelPartName(spot: ModelSpot): string | null {
+  return spot.node?.path.at(-1) ?? null;
 }
 
 /**

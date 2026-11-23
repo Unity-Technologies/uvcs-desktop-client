@@ -96,6 +96,11 @@ describe('fileThreadCount', () => {
     const onImage = onPlayer(9, 30, { anchor: { kind: 'image', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { x: 1, y: 1 } } });
     expect(fileThreadCount(threadsOf([onPlayer(1, 30), onImage]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
   });
+
+  it('counts the threads on the model with those on lines', () => {
+    const onModel = onPlayer(9, 30, { anchor: { kind: 'model', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { point: { x: 1, y: 1, z: 1 } } } });
+    expect(fileThreadCount(threadsOf([onPlayer(1, 30), onModel]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
+  });
 });
 
 describe('openedOnSend', () => {

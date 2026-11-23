@@ -73,12 +73,16 @@ export interface CommentedRevision {
 }
 
 /**
- * Where a comment is: the whole review, or one revision of a file: its lines (one line, or a range of them) or a spot
- * of the image it is.
+ * Where a comment is: the whole review, or one revision of a file: its lines (one line, or a range of them), a spot
+ * of the image it is, or a spot of the 3D model it is.
  */
-export type ReviewCommentAnchor = { kind: 'review' } | ({ kind: 'line' } & CommentedRevision & LineRange) | ({ kind: 'image'; spot: ImageSpot } & CommentedRevision);
+export type ReviewCommentAnchor =
+  | { kind: 'review' }
+  | ({ kind: 'line' } & CommentedRevision & LineRange)
+  | ({ kind: 'image'; spot: ImageSpot } & CommentedRevision)
+  | ({ kind: 'model'; spot: ModelSpot } & CommentedRevision);
 
-/** An anchor on a file: its lines, or a spot of its image. */
+/** An anchor on a file: its lines, a spot of its image, or a spot of its 3D model. */
 export type FileAnchor = Exclude<ReviewCommentAnchor, { kind: 'review' }>;
 
 export interface ReviewComment {

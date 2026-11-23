@@ -2,7 +2,7 @@ import { otherRepository } from '@shared/domain/repository';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { imageThreadsOfFile, threadsOfFile, type EarlierThread, type ReviewDiffView, type ShownFile } from './fileThreads';
+import { imageThreadsOfFile, modelThreadsOfFile, threadsOfFile, type EarlierThread, type ReviewDiffView, type ShownFile } from './fileThreads';
 import type { ThreadFocus } from './reviewComments';
 
 /**
@@ -19,15 +19,15 @@ export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRe
 }
 
 /**
- * How many threads a file of the review's diff holds in `view` (`threadsOfFile`), for its row's mark in the list. Read
+ * How many threads a file of the review's diff holds in `view` (on lines, `threadsOfFile`; on its image or model), for its row's mark in the list. Read
  * from the threads alone, as the list reads no file: an outdated one written in one changeset's diff counts in the whole
  * branch's list too, though only its changeset's diff shows it (`placeEarlier`), a rare case not worth reading versions for.
  */
 export function fileThreadCount(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): number {
   const file = comparedFile(entry);
   const onLines = threadsOfFile(threads, review, view, file);
-  const onImage = imageThreadsOfFile(threads, review, view, file);
-  return onLines.placed.length + onLines.earlier.length + onImage.placed.length + onImage.earlier.length;
+  const onSpots = [imageThreadsOfFile(threads, review, view, file), modelThreadsOfFile(threads, review, view, file)];
+  return onLines.placed.length + onLines.earlier.length + onSpots.reduce((count, { placed, earlier }) => count + placed.length + earlier.length, 0);
 }
 
 

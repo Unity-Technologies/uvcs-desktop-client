@@ -38,6 +38,11 @@ describe('changeRequestsOf', () => {
     expect(changeRequestsOf(43, conversation)[0]?.location).toEqual({ path: '/Art/Banner.png' });
   });
 
+  it('gives a request on a 3D model its file, with no lines', () => {
+    const conversation = conversationOf(comment(1, { anchor: { kind: 'model', revisionId: 30, itemId: 24, path: '/Art/Car.fbx', spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Wheel_FL'] }, wholePart: true } } }));
+    expect(changeRequestsOf(43, conversation)[0]?.location).toEqual({ path: '/Art/Car.fbx' });
+  });
+
   it('gives a request on the whole review no location, and reads a conversation once', () => {
     const conversation = conversationOf(comment(1, { anchor: { kind: 'review' } }));
 

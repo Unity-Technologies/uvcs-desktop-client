@@ -135,6 +135,22 @@ describe('writtenPlaceText', () => {
   });
 });
 
+describe('a comment on a 3D model', () => {
+  const onModel = { kind: 'model', revisionId: 30, itemId: 24, path: '/Art/Car.fbx' } as const;
+  const onPoint = { ...onModel, spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Body'] } } };
+  const onPart = { ...onModel, spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Wheel_FL'] }, wholePart: true as const } };
+
+  it('names where it was written: a point of its surface, or a whole part', () => {
+    expect(writtenPlaceText(onPoint)).toBe('point');
+    expect(writtenPlaceText(onPart)).toBe('part');
+  });
+
+  it("says in the tooltip it's on the model, and names the part", () => {
+    expect(writtenPlaceTip(onPoint)).toBe('The point of the model it was written on');
+    expect(writtenPlaceTip(onPart)).toBe('The part of the model it was written on: Wheel_FL');
+  });
+});
+
 describe('writtenPlaceTip', () => {
   it('says the place is the line or the lines it was written on', () => {
     expect(writtenPlaceTip({ ...ON_LINE, firstLine: 42, lastLine: 42 })).toBe('The line it was written on');
