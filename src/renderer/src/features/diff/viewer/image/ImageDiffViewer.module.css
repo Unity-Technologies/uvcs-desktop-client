@@ -31,3 +31,14 @@
   flex: 1;
   min-height: 0;
 }
+
+/* The opened pin's card, over every pane of the stage (`stageCardPlacement`): in Split a card beside a pin in a
+   narrow pane reaches over the other one rather than being cut off at the divider. Under the floating controls and
+   pills, which it keeps clear of. */
+.cardLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}

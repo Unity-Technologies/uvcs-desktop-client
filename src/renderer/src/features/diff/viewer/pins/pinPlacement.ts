@@ -27,28 +27,33 @@ const CARD_MARGIN = 8;
 /** The least room a card takes below or above its spot: less, and it would show only its header. */
 const MIN_CARD_ROOM = 200;
 
-/** Where a card goes in the viewport: its left edge, and its top or its bottom edge, its height capped to the room. */
-export type CardPlacement = { left: number; maxHeight: number } & ({ top: number } | { bottom: number });
+/**
+ * Where a card goes in the viewport: its left edge and its width (narrower than asked where the viewport is), and its
+ * top or its bottom edge, its height capped to the room.
+ */
+export type CardPlacement = { left: number; width: number; maxHeight: number } & ({ top: number } | { bottom: number });
 
 /**
  * Where a card beside a pin or an area goes, never over what it's about where there's room elsewhere: to the right,
  * its top level with the spot's; else on the left; else below the spot, or above it, whichever has more room; over it
- * only when none has. `viewport` is the room cards may take: the stage's floating controls are left out of it.
+ * only when none has. `viewport` is the room cards may take: the stage's floating controls are left out of it. A
+ * viewport narrower than the card narrows it, within its margins: past its edge the card would be cut off.
  */
 export function cardPlacement(target: ScreenRect, viewport: Size, cardWidth: number): CardPlacement {
+  const width = Math.max(Math.min(cardWidth, viewport.width - CARD_MARGIN * 2), 0);
   const fullHeight = Math.max(viewport.height - CARD_MARGIN * 2, 0);
   const levelTop = clamp(target.y, CARD_MARGIN, Math.max(CARD_MARGIN, viewport.height - CARD_MARGIN - Math.min(fullHeight, MIN_CARD_ROOM)));
-  const beside = { top: levelTop, maxHeight: Math.max(viewport.height - CARD_MARGIN - levelTop, 0) };
+  const beside = { width, top: levelTop, maxHeight: Math.max(viewport.height - CARD_MARGIN - levelTop, 0) };
   const right = target.x + target.width + CARD_GAP;
-  if (right + cardWidth <= viewport.width - CARD_MARGIN) return { left: right, ...beside };
-  const left = target.x - CARD_GAP - cardWidth;
+  if (right + width <= viewport.width - CARD_MARGIN) return { left: right, ...beside };
+  const left = target.x - CARD_GAP - width;
   if (left >= CARD_MARGIN) return { left, ...beside };
-  const centered = clamp(target.x, CARD_MARGIN, Math.max(CARD_MARGIN, viewport.width - cardWidth - CARD_MARGIN));
+  const centered = clamp(target.x, CARD_MARGIN, Math.max(CARD_MARGIN, viewport.width - width - CARD_MARGIN));
   const below = target.y + target.height + CARD_GAP;
   const roomBelow = viewport.height - CARD_MARGIN - below;
   const roomAbove = target.y - CARD_GAP - CARD_MARGIN;
-  if (roomBelow >= MIN_CARD_ROOM && roomBelow >= roomAbove) return { left: centered, top: below, maxHeight: roomBelow };
-  if (roomAbove >= MIN_CARD_ROOM) return { left: centered, bottom: viewport.height - target.y + CARD_GAP, maxHeight: roomAbove };
+  if (roomBelow >= MIN_CARD_ROOM && roomBelow >= roomAbove) return { left: centered, width, top: below, maxHeight: roomBelow };
+  if (roomAbove >= MIN_CARD_ROOM) return { left: centered, width, bottom: viewport.height - target.y + CARD_GAP, maxHeight: roomAbove };
   return { left: centered, ...beside };
 }
 
@@ -66,6 +71,26 @@ const STAGE_CONTROLS_ROOM = 52;
 export function pinCardPlacement(rect: ScreenRect, viewport: Size, about: ScreenRect | null = null): CardPlacement {
   const bounds = pinBounds(rect);
   return cardPlacement(about ? unionOf(bounds, about) : bounds, { width: viewport.width - STAGE_CONTROLS_ROOM, height: viewport.height }, PIN_CARD_WIDTH);
+}
+
+/**
+ * Where the card of a pin at `rect` in one of the stage's panes (`pane`, its box on the stage: Split's two halves, or
+ * the whole stage) goes over the whole stage (`pinCardPlacement`): a narrow pane's card may reach over the other pane,
+ * rather than being cut off at its edge.
+ */
+export function stageCardPlacement(rect: ScreenRect, pane: ScreenRect, stage: Size): CardPlacement {
+  return pinCardPlacement({ ...rect, x: rect.x + pane.x, y: rect.y + pane.y }, stage);
+}
+
+/** A card's place as the style of its element: its edges and sizes, in pixels. */
+export function cardStyleOf(placement: CardPlacement): { left: string; width: string; maxHeight: string; top: string; bottom: string } {
+  return {
+    left: `${placement.left}px`,
+    width: `${placement.width}px`,
+    maxHeight: `${placement.maxHeight}px`,
+    top: 'top' in placement ? `${placement.top}px` : '',
+    bottom: 'bottom' in placement ? `${placement.bottom}px` : '',
+  };
 }
 
 /** The box around two boxes. */

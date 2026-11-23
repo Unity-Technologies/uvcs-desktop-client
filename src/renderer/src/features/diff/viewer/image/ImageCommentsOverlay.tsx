@@ -4,6 +4,7 @@
 
 import { useRef, useState } from 'react';
 import type { ImageSpot } from '@shared/domain/reviewConversation';
+import { useKeptElement } from '../../../../lib/useKeptElement';
 import { PinBubble } from '../pins/PinBubble';
 import { PinCard } from '../pins/PinCard';
 import type { ScreenRect } from '../pins/pinPlacement';
@@ -26,10 +27,13 @@ interface ImageCommentsOverlayProps {
   commenting: boolean;
   /** A spot was marked, or the gesture ended off the image. */
   onCommented: () => void;
+  /** The layer over the whole stage the opened pin's card shows in: Split's narrow pane would cut it off. */
+  cardLayer: HTMLElement | null;
 }
 
-export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, images, commenting, onCommented }: ImageCommentsOverlayProps) {
-  const { transform, viewport, animated } = panZoom;
+export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, images, commenting, onCommented, cardLayer }: ImageCommentsOverlayProps) {
+  const { transform, animated } = panZoom;
+  const [pane, keepPane] = useKeptElement<HTMLDivElement>();
   const offsetOf = (side: ImageSide): Point | null => {
     const image = images[side];
     return image ? anchoredOffset(frame, image, anchor) : null;
@@ -44,7 +48,7 @@ export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, imag
   const commentImage = commentSide && images[commentSide];
   const commentOffset = commentSide && offsetOf(commentSide);
   return (
-    <div className={styles.overlay} data-gliding={animated || undefined}>
+    <div ref={keepPane} className={styles.overlay} data-gliding={animated || undefined}>
       {shown.map(({ pin, rect, offset, image }) => (
         <PinMark
           key={pin.key}
@@ -65,7 +69,11 @@ export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, imag
           }
         />
       ))}
-      {opened && viewport && <PinCard rect={opened.rect} viewport={viewport}>{annotations.renderCard(opened.pin.key)}</PinCard>}
+      {opened && (
+        <PinCard rect={opened.rect} pane={pane} layer={cardLayer}>
+          {annotations.renderCard(opened.pin.key)}
+        </PinCard>
+      )}
       {commenting && commentImage && commentOffset && (
         <CommentGesture
           onMarked={(start, end) => {

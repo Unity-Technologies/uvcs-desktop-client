@@ -8,7 +8,7 @@ import { useLayoutEffect, useMemo, useRef, type PointerEvent as ReactPointerEven
 import type { ModelSpot } from '@shared/domain/reviewConversation';
 import { followDrag, isDragButton } from '../image/pointerDrag';
 import { PinBubble } from '../pins/PinBubble';
-import { boundsOf, PIN_CARD_WIDTH, pinCardPlacement } from '../pins/pinPlacement';
+import { boundsOf, cardStyleOf, pinCardPlacement } from '../pins/pinPlacement';
 import pinStyles from '../pins/CommentPins.module.css';
 import type { ModelAnnotations } from './modelAnnotations';
 import { depthOfHit, hiddenBehind, type Projector, type ScreenPoint } from './modelProjection';
@@ -88,7 +88,7 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       // A part comment's card leaves its part in view too, as it lights up while the card is open.
       const corners = opened.partCorners()?.flatMap((corner) => projectors[opened.pin.side]?.(corner) ?? []) ?? [];
       const placement = pinCardPlacement({ x: at.x, y: at.y, width: 0, height: 0 }, { width: box.clientWidth, height: box.clientHeight }, boundsOf(corners));
-      Object.assign(card.current.style, { left: `${placement.left}px`, maxHeight: `${placement.maxHeight}px`, top: 'top' in placement ? `${placement.top}px` : '', bottom: 'bottom' in placement ? `${placement.bottom}px` : '' });
+      Object.assign(card.current.style, cardStyleOf(placement));
     };
     // What hides each point, picked under its bubble's tip on its own version once the view is still: something nearer.
     const markHidden = (): void => {
@@ -137,7 +137,7 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       </div>
       {opened && (
         <div className={styles.cardLayer}>
-          <div ref={card} className={pinStyles.card} data-no-pan="" style={{ width: PIN_CARD_WIDTH }}>
+          <div ref={card} className={pinStyles.card} data-no-pan="">
             {annotations.renderCard(opened.pin.key, { partGone: opened.partGone })}
           </div>
         </div>
