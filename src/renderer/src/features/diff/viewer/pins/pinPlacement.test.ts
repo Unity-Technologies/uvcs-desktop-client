@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, cardPlacement, cardStyleOf, pinBounds, pinCardPlacement, PIN_CARD_WIDTH, PIN_SIZE, roomBesideCard, stageCardPlacement } from './pinPlacement';
+import { boundsOf, cardPlacement, cardStyleOf, pinBounds, pinCardPlacement, keptCardPlacement, PIN_CARD_WIDTH, PIN_SIZE, roomBesideCard, stageCardPlacement } from './pinPlacement';
 
 describe('cardPlacement', () => {
   const VIEWPORT = { width: 1000, height: 600 };
@@ -113,6 +113,37 @@ describe('roomBesideCard', () => {
       const card = { x: placement.left, y: 'top' in placement ? placement.top : 0, width: placement.width, height: 1 };
       expect(card.x >= point.x + PIN_SIZE || card.y > point.y).toBe(true);
     }
+  });
+});
+
+describe('keptCardPlacement', () => {
+  // A card right of a pin at (100, 100): its box from 142 to 502 across, 70 to 270 down.
+  const PIN = { x: 100, y: 100, width: 0, height: 0 };
+  const HELD = { placement: pinCardPlacement(PIN, { width: 1000, height: 600 }), box: { x: 142, y: 70, width: 360, height: 200 } };
+  const fresh = (pin: { x: number; y: number; width: number; height: number }) => pinCardPlacement(pin, { width: 1000, height: 600 });
+
+  it('stays where it was while a take sways the pin a little under a still camera: no wobble', () => {
+    const swayed = { x: 96, y: 112, width: 0, height: 0 };
+    expect(keptCardPlacement(HELD, fresh(swayed), pinBounds(swayed), false)).toBe(HELD.placement);
+  });
+
+  it('follows the pin once the take would bring the pin under it', () => {
+    const under = { x: 200, y: 150, width: 0, height: 0 };
+    expect(keptCardPlacement(HELD, fresh(under), pinBounds(under), false)).toEqual(fresh(under));
+  });
+
+  it('follows the pin once the take carries it far from the card, where the card would point at nothing', () => {
+    const far = { x: 100, y: 500, width: 0, height: 0 };
+    expect(keptCardPlacement(HELD, fresh(far), pinBounds(far), false)).toEqual(fresh(far));
+  });
+
+  it('follows the pin whenever the view moves: a turn, a zoom, a resize', () => {
+    const swayed = { x: 96, y: 112, width: 0, height: 0 };
+    expect(keptCardPlacement(HELD, fresh(swayed), pinBounds(swayed), true)).toEqual(fresh(swayed));
+  });
+
+  it('is placed afresh when there is none held yet', () => {
+    expect(keptCardPlacement(null, fresh(PIN), pinBounds(PIN), false)).toEqual(fresh(PIN));
   });
 });
 
