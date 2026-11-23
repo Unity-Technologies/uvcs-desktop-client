@@ -156,7 +156,9 @@ describe('pinPlacesOf, a skinned mesh', () => {
       pinPlacesOf(pins, { before: null, after });
       return reads();
     };
-    expect(restReadsFor(tipPins(10))).toBe(restReadsFor(tipPins(1)));
+    // Placed once: the box's 36 vertices, three coordinates each, each on one bone.
+    expect(restReadsFor(tipPins(1))).toBe(108);
+    expect(restReadsFor(tipPins(10))).toBe(108);
   });
 
   it('anchors again only the pin whose spot changed: dragging one leaves the others be', () => {
@@ -165,7 +167,10 @@ describe('pinPlacesOf, a skinned mesh', () => {
     const dragged = pin({ key: 'new:1', spot: { ...onAntennaTip.spot } });
     pinPlacesOf([still, dragged], { before: null, after });
     const moved = { ...dragged, spot: { point: { x: 0, y: 1.5, z: 0.1 }, node: { path: ['Antenna'], local: { x: 0, y: 1.5, z: 0.1 } } } };
+    const restReads = countPositionReads(after.model);
     const { calls } = countCalls(Triangle.prototype, 'closestPointToPoint', () => pinPlacesOf([still, moved], { before: null, after }));
+    // The part isn't placed at rest again: it was for the first set.
+    expect(restReads()).toBe(0);
     // The box's 12 triangles, scanned once, for the one pin moved.
     expect(calls).toBe(12);
   });
