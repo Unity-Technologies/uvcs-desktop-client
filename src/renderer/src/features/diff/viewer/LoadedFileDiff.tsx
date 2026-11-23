@@ -100,7 +100,7 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   useEffect(() => {
     if (!ask) return;
     takeAsk(ask.key);
-    setOverride({ versionsKey, representation: ask.representation });
+    setOverride({ versionsKey, representation: ask.representation === 'rendered' ? rendered : 'text' });
   }, [ask?.key]);
   const representation = shownRepresentation(representations[extension] ?? rendered, override, versionsKey);
   const chooseRepresentation = (value: Representation): void => {
@@ -153,9 +153,9 @@ export function LoadedFileDiff({ place, contents, fileName, identicalDescription
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
   useShortcut(hotkey('editFile'), () => buffer.editor.current?.focus(), editable);
 
-  const otherWay = twoRepresentations ? otherRepresentationNotice(representation === 'text' ? 'text' : 'image', representationComments) : null;
+  const otherWay = twoRepresentations ? otherRepresentationNotice(representation === 'text' ? 'text' : 'rendered', rendered, representationComments) : null;
   const otherWayNotice = otherWay && (
-    <DiffNotice tone="info" icon={<MessageSquare size={13} />} action={<Button size="small" onClick={() => chooseRepresentation(otherWay.showing)}>{otherWay.action}</Button>}>
+    <DiffNotice tone="info" icon={<MessageSquare size={13} />} action={<Button size="small" onClick={() => chooseRepresentation(otherWay.showing === 'rendered' ? rendered : 'text')}>{otherWay.action}</Button>}>
       {otherWay.text}
     </DiffNotice>
   );

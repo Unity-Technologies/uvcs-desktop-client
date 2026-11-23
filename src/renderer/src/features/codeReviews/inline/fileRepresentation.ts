@@ -28,8 +28,8 @@ interface FileCommentsSummary {
 export function fileCommentsSummaryOf({ fileComments, imageThreadIds, focus, reviewId }: FileCommentsInput): FileCommentsSummary {
   const onText = fileComments ? fileComments.lines.reduce((count, line) => count + line.threads.length, 0) + fileComments.outdated.length : 0;
   const onImage = imageThreadIds.size;
-  const focusedOn: CommentedRepresentation | null = focus === null ? null : holdsThread(fileComments, focus.threadId) ? 'text' : imageThreadIds.has(focus.threadId) ? 'image' : null;
+  const focusedOn: CommentedRepresentation | null = focus === null ? null : holdsThread(fileComments, focus.threadId) ? 'text' : imageThreadIds.has(focus.threadId) ? 'rendered' : null;
   const asked = focus !== null && !focus.inPlace && focusedOn !== null ? { representation: focusedOn, key: `${reviewId}:${focus.seq}` } : null;
   const hidden = onText > 0 && onImage > 0 ? 'both' : onText > 0 ? 'code' : onImage > 0 ? 'image' : null;
-  return { representation: { onText, onImage, asked }, hidden };
+  return { representation: { onText, onRendered: onImage, asked }, hidden };
 }
