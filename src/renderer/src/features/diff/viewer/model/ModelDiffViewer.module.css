@@ -37,10 +37,9 @@
   cursor: grabbing;
 }
 
-/* Marking a comment's spot: the pointer is the comment's bubble with a plus, as on an image. A drag still turns. */
-/* Commenting: the comment cursor, drawn up and to the right of its hot spot so the ring lying on the surface where a
-   click marks a point (`setCommentAim`) shows whole, its tip on the ring's edge; the same with Shift held, so it never
-   jumps. */
+/* Marking a comment's spot: the comment's bubble with a plus, as on an image (a drag still turns), drawn up and to the
+   right of its hot spot so the ring lying on the surface where a click marks a point (`setCommentAim`) shows whole, its
+   tip on the ring's edge; the same with Shift held, so it never jumps. */
 .stage[data-commenting],
 .stage[data-commenting]:active {
   cursor: var(--cursor-aim-comment);
