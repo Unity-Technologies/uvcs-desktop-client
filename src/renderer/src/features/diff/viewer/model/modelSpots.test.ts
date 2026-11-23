@@ -32,6 +32,12 @@ const close = (vector: Vector) => vector.map((value) => Number(value.toFixed(6))
 const closePoint = ({ x, y, z }: { x: number; y: number; z: number }) => close([x, y, z]);
 
 describe('nodeNamesOf', () => {
+  it("names a node by the file's own names, not those a loader gave it (GLTFLoader's Wheel_1)", () => {
+    const renamed = { ...CAR, nodes: CAR.nodes.map((node, i) => (i === 4 ? { ...node, name: 'Wheel_1', fileName: 'Wheel' } : node)) };
+    expect(nodeNamesOf(renamed.nodes, 4)).toEqual(['Car', 'Wheel']);
+    expect(nodeOfSpot(renamed, { point: { x: 150, y: -90, z: 30 }, node: { path: ['Car', 'Wheel'], local: { x: 0, y: 0, z: 0 } } })).toBe(4);
+  });
+
   it("names a node from under the model's root down to it", () => {
     expect(nodeNamesOf(CAR.nodes, 0)).toEqual([]);
     expect(nodeNamesOf(CAR.nodes, 2)).toEqual(['Car', 'Body']);
