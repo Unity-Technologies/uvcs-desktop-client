@@ -1,0 +1,36 @@
+// What the comment keys and a click do on a stage that takes comments, an image's or a model's: the same rules for
+// both, so the two viewers only switch on the answer.
+
+/** The state a stage's comment keys and clicks depend on. */
+export interface StageCommenting {
+  /** The pointer marks a comment's spot (C or the stage's comment button). */
+  commenting: boolean;
+  /** The stage takes comments now: the version they're written on shows. */
+  commentable: boolean;
+  /** A comment's card is open. */
+  opened: boolean;
+}
+
+/** What a comment key does: start or stop marking a spot, close the card open, or nothing (the key goes on). */
+export type CommentKeyAction = 'startCommenting' | 'stopCommenting' | 'closeCard' | null;
+
+/**
+ * C starts or stops marking a comment's spot where the stage takes comments. Esc stops marking, else closes the card
+ * open, else is left to whatever holds the stage (a page going back).
+ */
+export function commentKeyAction(command: 'comment' | 'leaveComment', state: StageCommenting): CommentKeyAction {
+  if (command === 'comment') {
+    if (!state.commentable) return null;
+    return state.commenting ? 'stopCommenting' : 'startCommenting';
+  }
+  if (state.commenting) return 'stopCommenting';
+  return state.opened ? 'closeCard' : null;
+}
+
+/**
+ * What a click on the stage does: while marking, it marks a spot on the version comments are written on (`commentsOn`)
+ * and stops marking, whether or not it hits anything; otherwise it's the stage's own click (picking a part).
+ */
+export function stageClickOf<Side>(commenting: boolean, commentsOn: Side | null): { marks: Side } | 'stage' {
+  return commenting && commentsOn !== null ? { marks: commentsOn } : 'stage';
+}

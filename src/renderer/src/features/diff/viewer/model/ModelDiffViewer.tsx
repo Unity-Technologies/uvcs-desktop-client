@@ -35,6 +35,7 @@ import { viewerSpaceOf } from './modelSpaces';
 import { viewOfSpot } from './spotView';
 import type { Side } from './viewLayout';
 import { modelCommandOf } from './modelKeys';
+import { commentKeyAction, stageClickOf } from '../pins/stageCommenting';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
 import { fileMaterialChanges } from './materials/fileMaterialChanges';
@@ -274,10 +275,11 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const onClick = useCallback(
     (x: number, y: number) => {
       // Commenting, a click marks a point of the version that takes comments; one on nothing marks nothing.
-      if (isCommenting && annotations?.commentsOn) {
+      const click = stageClickOf(isCommenting, annotations?.commentsOn ?? null);
+      if (click !== 'stage') {
         setCommenting(false);
-        const spot = spotAt(x, y, annotations.commentsOn, false);
-        if (spot) annotations.addComment(spot);
+        const spot = spotAt(x, y, click.marks, false);
+        if (spot) annotations?.addComment(spot);
         return;
       }
       const hit = renderer?.pick(x, y);
@@ -312,18 +314,17 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     // What's typed in a comment's card over the model is the card's: F, 0 and C are letters there.
     if (keyTakenByText(event.nativeEvent)) return;
     const command = modelCommandOf(event.nativeEvent);
-    if (!command || (command === 'comment' && !commentable)) return;
-    if (command === 'leaveComment') {
-      // Esc stops marking a comment's spot, else closes the card open.
-      if (!isCommenting && !annotations?.opened) return;
+    if (!command) return;
+    if (command === 'comment' || command === 'leaveComment') {
+      const action = commentKeyAction(command, { commenting: isCommenting, commentable, opened: annotations?.opened != null });
+      if (!action) return;
       event.preventDefault();
-      if (isCommenting) setCommenting(false);
-      else annotations?.onOpen(null);
+      if (action === 'closeCard') annotations?.onOpen(null);
+      else setCommenting(action === 'startCommenting');
       return;
     }
     event.preventDefault();
-    if (command === 'comment') setCommenting(!isCommenting);
-    else if (command === 'frameAll') camera.frameWhole();
+    if (command === 'frameAll') camera.frameWhole();
     else frameShown();
   };
 

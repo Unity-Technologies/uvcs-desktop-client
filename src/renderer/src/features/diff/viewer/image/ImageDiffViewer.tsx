@@ -41,6 +41,7 @@ import type { CachedHeatmap } from './useHeatmap';
 import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
 import { stageCommandOf } from './zoomKeys';
+import { commentKeyAction } from '../pins/stageCommenting';
 import { ImageAnnotationsContext, takesComments, type ImageSide } from './imageAnnotations';
 import { ImageCommentsOverlay } from './ImageCommentsOverlay';
 import { revealedRect, spotInFrame } from './imageSpotGeometry';
@@ -106,23 +107,23 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
     panZoom.showRect(panZoom.viewport ? revealedRect(rect, panZoom.viewport, panZoom.transform.scale) : rect);
   }, [revealSeq, frame]);
 
-  // The stage's keys while it has the focus (`stageCommandOf`); none typed in a comment's card over it. Esc stops
-  // marking a comment's spot, else closes the card open.
+  // The stage's keys while it has the focus (`stageCommandOf`, `commentKeyAction`); none typed in a comment's card
+  // over it.
   const onKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (keyTakenByText(event.nativeEvent)) return;
       const command = stageCommandOf(event.nativeEvent);
-      if (command === 'leaveComment') {
-        if (!isCommenting && !annotations?.opened) return;
+      if (!command) return;
+      if (command === 'comment' || command === 'leaveComment') {
+        const action = commentKeyAction(command, { commenting: isCommenting, commentable, opened: annotations?.opened != null });
+        if (!action) return;
         event.preventDefault();
-        if (isCommenting) setCommenting(false);
-        else annotations?.onOpen(null);
+        if (action === 'closeCard') annotations?.onOpen(null);
+        else setCommenting(action === 'startCommenting');
         return;
       }
-      if (!command || (command === 'comment' && !commentable)) return;
       event.preventDefault();
-      if (command === 'comment') setCommenting(!isCommenting);
-      else panZoom[command]();
+      panZoom[command]();
     },
     [panZoom, annotations, commentable, isCommenting],
   );
