@@ -4,7 +4,8 @@ import type { ImageAnnotations } from '../../diff/viewer/image/imageAnnotations'
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { topSideOf } from './fileComments';
 import { imageThreadsOfFile, type ReviewDiffView, type ShownFile } from './fileThreads';
-import { ImageThreadCard } from './ImageThreadCard';
+import { imageEarlierTagOf } from './earlierTag';
+import { SpotThreadCard } from './SpotThreadCard';
 import { newSpotComment, newSpotCommentsIn, spotCommentAt, spotCommentSide, type NewImageCommentSpot } from './newSpotComment';
 import { useNewImageCommentsStore } from './newImageCommentsStore';
 import { NewImageCommentCard } from './NewImageCommentCard';
@@ -73,7 +74,7 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
         const spot = spotOfPin(key);
         if (spot) return <NewImageCommentCard spot={spot} onSent={() => open(null)} />;
         const found = threadOfPin(key);
-        return found && <ImageThreadCard comments={comments} thread={found.thread} earlier={found.earlier} onClose={() => open(null)} />;
+        return found && <SpotThreadCard comments={comments} thread={found.thread} earlier={found.earlier ? imageEarlierTagOf(found.thread) : undefined} onClose={() => open(null)} />;
       },
       commentsOn: side && imageSideOf(side),
       addComment: (spot: ImageSpot) => {
