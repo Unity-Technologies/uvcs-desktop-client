@@ -4,7 +4,7 @@ import { RelativeTime } from '../../../ui/RelativeTime';
 import { REVIEW_STATUS_ICONS } from '../reviewStatusIcons';
 import { FoldableLine } from '../conversation/FoldableLine';
 import type { ReviewRound } from './reviewRounds';
-import { roundLineComment } from './roundFolds';
+import { roundLineComment, roundVerdictOf } from './roundFolds';
 import { roundText } from './roundText';
 import conversation from '../conversation/ReviewConversation.module.css';
 import styles from './ReviewRounds.module.css';
@@ -39,8 +39,9 @@ export function RoundMarker({
   const Mark = REVIEW_STATUS_ICONS[round.status];
   const { bold, rest, changeset, counts, label, dotBeforeTime } = roundText(round, user, roundCount, open);
   const comment = roundLineComment(round, open);
+  const verdict = roundVerdictOf(round, open);
   return (
-    <div className={conversation.event} data-icon={open ? undefined : round.status}>
+    <div className={conversation.event} data-icon={verdict.colorOf}>
       <span className={conversation.eventIcon}>
         <Mark size={14} aria-hidden />
       </span>
@@ -67,7 +68,7 @@ export function RoundMarker({
               ·
             </span>
           )}
-          {!open && <RelativeTime date={round.date} />}
+          {verdict.date !== undefined && <RelativeTime date={verdict.date} />}
         </FoldableLine>
         {comment && (
           <div className={`${conversation.eventComment} ${conversation.markdown}`}>

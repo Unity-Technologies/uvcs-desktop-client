@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationBlock } from './reviewRounds';
-import { opensAtSince, roundChoiceForgotten, roundChosen, roundIsOpen, roundLineComment } from './roundFolds';
+import { opensAtSince, roundChoiceForgotten, roundChosen, roundIsOpen, roundLineComment, roundVerdictOf } from './roundFolds';
 
 const NONE: ReadonlyMap<number, boolean> = new Map();
 
@@ -56,6 +56,18 @@ describe('roundChoiceForgotten', () => {
 
     expect([...roundChoiceForgotten(chosen, 1)]).toEqual([[2, false]]);
     expect(roundChoiceForgotten(chosen, undefined)).toBe(chosen);
+  });
+});
+
+describe('roundVerdictOf', () => {
+  const round = { status: 'Reviewed' as const, date: '2026-11-09T16:40:00+01:00' };
+
+  it("colors a folded round's mark by its status and dates it", () => {
+    expect(roundVerdictOf(round, false)).toEqual({ colorOf: 'Reviewed', date: '2026-11-09T16:40:00+01:00' });
+  });
+
+  it("leaves an unfolded round's mark gray and undated: the status's own event says both", () => {
+    expect(roundVerdictOf(round, true)).toEqual({});
   });
 });
 

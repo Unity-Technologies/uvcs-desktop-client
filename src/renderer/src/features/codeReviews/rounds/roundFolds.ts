@@ -1,4 +1,4 @@
-import type { ConversationBlock } from './reviewRounds';
+import type { ConversationBlock, RoundStatus } from './reviewRounds';
 
 /**
  * Whether a round shows what it held: as the user last chose with a click on its line (`chosen`), else a settled round
@@ -8,6 +8,14 @@ import type { ConversationBlock } from './reviewRounds';
  */
 export function roundIsOpen(round: { number: number; folds: boolean }, chosen: ReadonlyMap<number, boolean>, holdingPick: number | undefined): boolean {
   return chosen.get(round.number) ?? (round.number === holdingPick || !round.folds);
+}
+
+/**
+ * A round's verdict on its line: folded, its status's color on the rail mark and its time; unfolded, neither (the mark
+ * in gray), as the status's own event at the round's end shows them once.
+ */
+export function roundVerdictOf(round: { status: RoundStatus; date: string }, open: boolean): { colorOf?: RoundStatus; date?: string } {
+  return open ? {} : { colorOf: round.status, date: round.date };
 }
 
 /**
