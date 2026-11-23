@@ -13,8 +13,6 @@ interface CommentHoverOptions {
   element: RefObject<HTMLElement | null>;
   /** The label beside the cursor: placed here as the pointer moves, without React rendering for each move. */
   label: RefObject<HTMLElement | null>;
-  /** The dot on the point a click marks, at the cursor's hot spot: placed with the label. */
-  dot: RefObject<HTMLElement | null>;
   /** What draws the model: when it moved (`moves`) and each frame it drew (`onFrameDrawn`). */
   renderer: Pick<ModelRenderer, 'moves' | 'onFrameDrawn'> | null;
   /** Commenting, and the stage takes comments: hovering shows nothing otherwise. */
@@ -28,7 +26,7 @@ interface CommentHoverOptions {
  * enabled, off the stage, over a stage control (a pin, a card, a button), or while a button is held (a drag orbits).
  * Turned on with the pointer already over the model (C), it picks at once.
  */
-export function useCommentHover({ element, label, dot, renderer, enabled, partAt }: CommentHoverOptions): { hovered: HoveredPart | null; wholePart: boolean; placeLabel: () => void } {
+export function useCommentHover({ element, label, renderer, enabled, partAt }: CommentHoverOptions): { hovered: HoveredPart | null; wholePart: boolean; placeLabel: () => void } {
   const [hovered, setHovered] = useState<HoveredPart | null>(null);
   // Shift held: a click comments on the whole part. Followed from the keys too, so pressing or letting go of Shift
   // changes the light and the label at once, the pointer still.
@@ -42,12 +40,10 @@ export function useCommentHover({ element, label, dot, renderer, enabled, partAt
   const placeLabel = useCallback(() => {
     const stage = element.current;
     const shown = label.current;
-    if (!stage || !pointer.current) return;
-    if (dot.current) dot.current.style.transform = `translate(${pointer.current.x}px, ${pointer.current.y}px)`;
-    if (!shown) return;
+    if (!stage || !shown || !pointer.current) return;
     const { left, top } = hoverLabelPlacement(pointer.current, { width: shown.offsetWidth, height: shown.offsetHeight }, { width: stage.clientWidth, height: stage.clientHeight });
     shown.style.transform = `translate(${left}px, ${top}px)`;
-  }, [element, label, dot]);
+  }, [element, label]);
 
   useEffect(() => {
     if (!enabled) return;

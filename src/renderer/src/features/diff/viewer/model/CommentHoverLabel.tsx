@@ -21,7 +21,3 @@ export function CommentHoverLabel({ part, wholePart, ref }: CommentHoverLabelPro
   );
 }
 
-/** The point a click marks, on the surface under the cursor's hot spot; placed by `useCommentHover`. */
-export function CommentHoverDot({ ref }: { ref: Ref<HTMLDivElement> }) {
-  return <div ref={ref} className={styles.dot} aria-hidden="true" />;
-}

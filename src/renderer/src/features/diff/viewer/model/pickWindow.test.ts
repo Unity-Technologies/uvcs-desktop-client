@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickedAt, pickWindowAt } from './pickWindow';
+import { normalAt, pickedAt, pickWindowAt } from './pickWindow';
 
 describe('pickWindowAt', () => {
   it("centres the window on the pane's centre when the pointer is there", () => {
@@ -18,10 +18,24 @@ describe('pickWindowAt', () => {
 
 describe('pickedAt', () => {
   it('reads the mesh by its place plus one, and the point of its surface', () => {
-    expect(pickedAt(new Float32Array([1.5, -2, 0.25, 3]))).toEqual({ mesh: 2, point: [1.5, -2, 0.25] });
+    expect(pickedAt(new Float32Array([1.5, -2, 0.25, 3]))).toEqual({ mesh: 2, point: [1.5, -2, 0.25], normal: null });
+  });
+
+  it('reads the surface’s direction from the second pixel', () => {
+    expect(pickedAt(new Float32Array([1.5, -2, 0.25, 3]), new Float32Array([0, 0, 3, 0]))?.normal).toEqual([0, 0, 1]);
   });
 
   it('reads nothing where nothing was drawn', () => {
     expect(pickedAt(new Float32Array(4))).toBeNull();
+  });
+});
+
+describe('normalAt', () => {
+  it('is the surface’s direction the pass wrote, made unit long', () => {
+    expect(normalAt(new Float32Array([0, 2, 0, 0]))).toEqual([0, 1, 0]);
+  });
+
+  it('is none where the pass wrote none', () => {
+    expect(normalAt(new Float32Array([0, 0, 0, 0]))).toBeNull();
   });
 });
