@@ -259,7 +259,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const scenes = useMemo(() => ({ before: sceneBefore, after: sceneAfter }), [sceneBefore, sceneAfter]);
 
   // A pin gone to (from the Comments panel, the conversation): the camera glides to show it (`viewOfSpot`), once per
-  // time, as soon as the pair is framed.
+  // time (`revealed`), as soon as the pair is framed and the pins hold it.
   const revealed = useRef<number | null>(null);
   const reveal = annotations?.reveal ?? null;
   useEffect(() => {
@@ -270,7 +270,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
     if (!pin || !place || !version) return;
     revealed.current = reveal.seq;
     camera.frameView(viewOfSpot(place.point(), pin.spot.view, viewerSpaceOf(version.model), camera.currentView(), bounds, camera.paneAspect()));
-  }, [reveal?.seq, framing, versions]);
+  }, [reveal?.seq, framing, versions, annotations?.pins, bounds, camera]);
 
   const onClick = useCallback(
     (x: number, y: number) => {
