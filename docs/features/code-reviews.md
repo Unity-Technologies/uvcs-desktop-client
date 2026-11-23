@@ -981,8 +981,8 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
   holds it (`ModelSpot`); other clients read it as a comment on the file until they learn it.
 - **Pins** are the image's bubble (`PinBubble`, `reviewModelPinsOf`): who started it, an open dot, faded once settled,
   ringed when selected. The Comments panel and the conversation name the place by its part, so comments on one model
-  read apart: "point on Wheel", or a whole part "part Wheel", its kind first as a line's "line 42"
-  (`writtenPlaceText`). The name is the last of the location's `node` path; no file is read and no `cm` command runs.
+  read apart: "point on Wheel", or a whole part "on Wheel", the part alone (`writtenPlaceText`). The name is the last
+  of the location's `node` path; no file is read and no `cm` command runs.
   With no `node` hint (another client's, or one past the length limit), an empty name, or a name an exporter gave
   ("Mesh", "mesh_0", "Object_12", "polySurface3", Maya's "pCylinder3", Blender's "Cube.001"; a bare "Plane" reads as
   written: `partNameSaysNothing`), it says only "point" or "part". The tooltip gives the part's whole path, empty names

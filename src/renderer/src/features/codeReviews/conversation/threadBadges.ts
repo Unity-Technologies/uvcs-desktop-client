@@ -75,8 +75,8 @@ export function locationText(anchor: Pick<FileAnchor, 'path'>): { folder: string
 
 /**
  * Where in its file a comment was written, as the conversation says it apart from the file's link: its lines, "line
- * 42", "lines 42–48", what of an image, "point", "area", or of a 3D model the part it's on, "point on Wheel" or a whole
- * "part Wheel" (`modelSpotText`): its pin shows where, with who started it. Coordinates go only in the tooltip
+ * 42", "lines 42–48", what of an image, "point", "area", or of a 3D model the part it's on, "point on Wheel" or, for a
+ * whole part, "on Wheel" (`modelSpotText`): its pin shows where, with who started it. Coordinates go only in the tooltip
  * (`writtenPlaceTip`).
  */
 export function writtenPlaceText(anchor: FileAnchor): string {
@@ -119,8 +119,8 @@ export function modelSpotWords(spot: ModelSpot): string {
 }
 
 /**
- * A model's spot named by its part, so comments on one model read apart: "point on Wheel", or a whole part "part
- * Wheel", its kind first as a line's "line 42". Only "point" or "part" when the location names no part (another
+ * A model's spot named by its part, so comments on one model read apart: "point on Wheel", or a whole part "on Wheel",
+ * the part alone. Only "point" or "part" when the location names no part (another
  * client's, or one whose hints `cm`'s length dropped) or its name is one an exporter gave (`partNameSaysNothing`).
  * The name is the location's own: no file is read.
  */
@@ -128,7 +128,7 @@ function modelSpotText(spot: ModelSpot): string {
   const name = tellingPartName(spot);
   const words = modelSpotWords(spot);
   if (name === null) return words;
-  return spot.wholePart ? `${words} ${name}` : `${words} on ${name}`;
+  return spot.wholePart ? `on ${name}` : `${words} on ${name}`;
 }
 
 /** The name of the part a model's spot is on when it tells a reader something: none for no name or an exporter's. */
