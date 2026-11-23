@@ -338,11 +338,14 @@ export class ModelRenderer {
     return projectorOf(this.view, this.bounds, pane.viewport, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
   }
 
-  /** A version's pane on the canvas, in CSS pixels from its top left; none for a version the layout doesn't draw. */
+  /**
+   * Where a version shows on the canvas, in CSS pixels from its top left: its pane, or in Swipe its side of the divider
+   * (`scissor`: both draw over the whole canvas). None for a version the layout doesn't draw.
+   */
   paneRectOf(side: Side): Rect | null {
     const pane = this.layout().panes.find((candidate) => candidate.side === side);
     if (!pane || !this.sides[side]) return null;
-    return paneOnCanvas(pane.viewport, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
+    return paneOnCanvas(pane.scissor, { width: this.width, height: this.height, pixelRatio: this.pixelRatio });
   }
 
   /** Where the camera is, in the viewer's space. */
