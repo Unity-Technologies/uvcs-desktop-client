@@ -263,7 +263,7 @@ describe('initialCommentsFilter', () => {
 
 describe('emptyCommentsText', () => {
   it('tells a review with no comments on its code from one with nothing left to answer', () => {
-    expect(emptyCommentsText('all', { open: 0, new: 0, all: 0 }).title).toBe('No comments on the code yet');
+    expect(emptyCommentsText('all', { open: 0, new: 0, all: 0 }).title).toBe('No comments on the changes yet');
     expect(emptyCommentsText('open', { open: 0, new: 0, all: 3 }).title).toBe('Nothing left to answer');
   });
 });

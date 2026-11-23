@@ -210,7 +210,7 @@ export function commentsFilterChoices(counts: Record<CommentsFilter, number>, ne
   return [
     { value: 'open', label: `Open ${counts.open}`, title: 'Change requests to apply or discard, and questions to answer' },
     ...(newIds ? [{ value: 'new' as const, label: `New ${counts.new}`, title: 'Applied, answered, discarded or said by others since your last review' }] : []),
-    { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
+    { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the changes' },
   ];
 }
 
@@ -232,9 +232,9 @@ export function initialCommentsFilter(threads: readonly ReviewThread[], newIds: 
 
 /** What the panel says when its filter lists nothing. */
 export function emptyCommentsText(filter: CommentsFilter, counts: Record<CommentsFilter, number>): { title: string; description?: string } {
-  if (counts.all === 0) return { title: 'No comments on the code yet' };
+  if (counts.all === 0) return NO_COMMENTS_YET;
   if (filter === 'new') return { title: 'Nothing new since your last review' };
-  return filter === 'open' ? { title: 'Nothing left to answer', description: 'Every change request is applied or discarded, and every question answered.' } : { title: 'No comments on the code yet' };
+  return filter === 'open' ? { title: 'Nothing left to answer', description: 'Every change request is applied or discarded, and every question answered.' } : NO_COMMENTS_YET;
 }
 
 /**
@@ -351,3 +351,6 @@ function compareAnchors(a: FileAnchor, b: FileAnchor): number {
 function compareLines(a: LineRange, b: LineRange): number {
   return a.lastLine - b.lastLine || a.firstLine - b.firstLine;
 }
+
+/** A review whose files nobody commented on: what to comment on, as text files and images both take comments. */
+const NO_COMMENTS_YET = { title: 'No comments on the changes yet', description: 'Comment on lines of a file, or on a point or an area of an image.' };
