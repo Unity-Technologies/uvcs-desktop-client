@@ -363,7 +363,13 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   (`PinBubble`). Each is placed on its part as that version draws it now (`pinPlacesOf`, `placedSpot`: the part found
   by its names as the file writes them, `nodeNamesOf`, which a glTF's loader renames apart, `ModelNode.fileName`;
   same-named siblings told apart by the point, `nodeOfSpot`), so it follows the part to where another
-  version has it, and while a take plays; a point on a skinned mesh follows its node, not the skin. A part another
+  version has it, and while a take plays. A point on a skinned mesh follows the skin, since a take bends it by its
+  bones and leaves its node where it is: the pin is anchored, once per pin and version, on the mesh's triangle nearest
+  its point at rest (`skinAnchorOfSpot`, from `local`, so comments written before follow too), by where in it the point
+  is, and each frame is that mix of the triangle's three corners as the skeleton bends them (`drawnAnchorPoint`, three's
+  `getVertexPosition`): three vertices a pin, whatever the mesh's size. A triangle rather than the nearest vertex: on a
+  low-poly part the nearest corner can be far from the point, and an offset kept from it turns wrong as the bones turn
+  it. A part another
   version hasn't leaves the pin at its point (`partGone`). Where the point shows is projected as the version's pane
   draws it (`ModelRenderer.screenProjectorOf`, `projectorOf`) after every frame drawn (`onFrameDrawn`): a turn, a
   glide, a take, a resize move the bubbles without React rendering for each frame. Off its pane or behind the camera, a
@@ -376,7 +382,8 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion
   shows there), a click on nothing marks nothing, and a drag still turns the model. What it writes is
   `spotOfPick`/`spotOfHit`: the point where the part rests (a take playing moves the part, not where on it the comment
-  is), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along
+  is; on a skinned mesh it bends the skin, so the hit is carried to rest by the same place on the same triangle,
+  `restPointOfHit`), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along
   the surface, picked again under the pointer. **Esc** (`modelCommentLeave`) stops, or closes the card open. Keys typed
   in a card (F, 0, C) stay the card's (`keyTakenByText`).
 - **A part lit up**: a comment on a whole part lights its part (the view's own emphasis, the rest faded) while its

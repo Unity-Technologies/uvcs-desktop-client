@@ -1,7 +1,8 @@
 // Where each comment's pin is on the versions shown, worked out once per set of pins and versions: the node its part is
-// in that version (`nodeOfSpot`), whose matrix, as drawn, places it every frame (`placedSpot`), a take's pose included.
+// in that version (`nodeOfSpot`), whose matrix, as drawn, places it every frame (`placedSpot`), a take's pose included;
+// on a skinned mesh, the triangle it's on (`skinAnchorOfSpot`), whose corners, as the skeleton bends them, place it.
 
-import { Box3, Matrix4 } from 'three';
+import { Box3, Matrix4, Vector3, type SkinnedMesh } from 'three';
 import type { ModelPin } from './modelAnnotations';
 import type { ModelScene } from './modelScene';
 import { viewerSpaceOf } from './modelSpaces';
@@ -11,6 +12,7 @@ import type { ModelSummary } from './modelSummary';
 import type { Vector } from './orbitCamera';
 import type { ParsedModel } from './parsedModel';
 import type { Side } from './viewLayout';
+import { drawnAnchorPoint, restPointOfHit, skinAnchorOfSpot, type SkinAnchor } from './skinAnchors';
 
 /** A version as drawn: its file, what it holds, and its scene. */
 export interface DrawnVersion {
@@ -44,8 +46,28 @@ export function pinPlacesOf(pins: readonly ModelPin[], versions: Record<Side, Dr
     const nodeWorld = (): Matrix4 => object!.matrixWorld;
     const placeable = object ? node : null;
     const partCorners = (): Vector[] | null => (pin.spot.wholePart && object ? boxCorners(new Box3().setFromObject(object)) : null);
-    return [{ pin, nodeKey, point: () => placedSpot(pin.spot, placeable, nodeWorld, viewerSpace).point, partGone: placedSpot(pin.spot, node, () => new Matrix4(), viewerSpace).partGone, partCorners }];
+    const skin = placeable === null ? null : skinOf(version, placeable, pin.spot);
+    const point = skin ? () => drawnAnchorPoint(skin.anchor, skin.mesh).toArray() as Vector : () => placedSpot(pin.spot, placeable, nodeWorld, viewerSpace).point;
+    return [{ pin, nodeKey, point, partGone: placedSpot(pin.spot, node, () => new Matrix4(), viewerSpace).partGone, partCorners }];
   });
+}
+
+/**
+ * The anchor of a spot on a skinned part, and the mesh as drawn that bends it; none for a rigid part. The skeleton is
+ * brought up to where its bones are now, as each frame drawn brings it: a pin read before the first frame (a reveal
+ * gliding to it) is then where its bones are, not at the origin.
+ */
+function skinOf(version: DrawnVersion, node: number, spot: ModelSpot): { anchor: SkinAnchor; mesh: SkinnedMesh } | null {
+  const anchor = skinAnchorOfSpot(version.model, node, spot.node?.local);
+  if (!anchor) return null;
+  const mesh = drawnSkinnedMesh(version, anchor.mesh);
+  mesh.skeleton.update();
+  return { anchor, mesh };
+}
+
+/** A skinned mesh as the version's scene draws it (`buildModelScene` makes it a `SkinnedMesh`, typed as a mesh). */
+function drawnSkinnedMesh(version: DrawnVersion, mesh: number): SkinnedMesh {
+  return version.scene.meshes[mesh]!.solid as unknown as SkinnedMesh;
 }
 
 /** A pin gone to, and where it is on the version it's on: what the camera glides to show. */
@@ -70,14 +92,17 @@ export function revealedPin(reveal: { key: string; seq: number } | null, reveale
 
 /**
  * The spot a pick on a version marks (`spotOfPick`): the point hit on the mesh of the node `key` names, as that node is
- * drawn now, and the camera then. None where nothing was hit.
+ * drawn now (on a skinned mesh, the same place on it with the skin at rest: `restPointOfHit`), and the camera then.
+ * None where nothing was hit.
  */
 export function spotOfHit(version: DrawnVersion, hit: { key: string | null; point: Vector | null }, camera: Vector, wholePart: boolean): ModelSpot | null {
   if (!hit.point) return null;
   const index = hit.key === null ? -1 : version.summary.nodes.findIndex((node) => node.key === hit.key);
   const node = index >= 0 && version.scene.objects.has(hit.key!) ? index : null;
   const nodeWorld = (): Matrix4 => version.scene.objects.get(hit.key!)!.matrixWorld;
-  return spotOfPick(version.model, { point: hit.point, node, camera }, nodeWorld, viewerSpaceOf(version.model), wholePart);
+  const atRest = node === null ? null : restPointOfHit(version.model, node, new Vector3(...hit.point), (mesh) => drawnSkinnedMesh(version, mesh));
+  const pick = { point: hit.point, node, camera, ...(atRest && { restInFile: atRest.toArray() as Vector }) };
+  return spotOfPick(version.model, pick, nodeWorld, viewerSpaceOf(version.model), wholePart);
 }
 
 function boxCorners(box: Box3): Vector[] | null {
