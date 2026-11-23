@@ -15,7 +15,8 @@
 # version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment on a
 # line and one on an area. A car (code-reviews/reviewModels.ts: a GLB whose four wheels share a name, with a take that
 # opens its door) holds comments on 3D models (`--location=model:…`): an open point with the camera it was written from,
-# a whole wheel, an answered question, the door the take moves, and two on its first version: a wheel the second moved
+# a whole wheel, an answered question, the door the take moves, a rear wheel in the reshaping changeset's own diff
+# (where both versions show), and two on its first version: a wheel the second moved
 # forward, and the spoiler it dropped. An OBJ signpost, code or model, holds a comment on a line and one on its board.
 # Two more reviews have
 # no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
@@ -218,6 +219,8 @@ checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
 # newest versions.
 models 2
 checkin "$(text car 'Taller cabin, front wheels forward, no spoiler; the sign lower')"
+# Written in that changeset's diff, where both versions show (Split, Swipe, Onion, Diffs): a rear wheel, which stayed.
+on_review --path=/Assets/Models/Car.glb --changeset="cs:$(changeset /main/task-2210)" --location="model:-1.3,0.36,0.82;node=Car/Wheel;local=0,0,0;part" --type=Question -c="The front wheels moved: should the rear ones follow?" >/dev/null
 on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.87,0;node=Car/Body;local=1.5,0.25,0;view=0.707107,0.565685,0.424264,4" --type=Change -c="This edge of the hood looks too sharp." >/dev/null
 on_review --path=/Assets/Models/Car.glb --location="model:1.5,0.36,-0.82;node=Car/Wheel;local=0,0,0;part" --type=Change -c="The front wheels look too small for the body now." >/dev/null
 ROOF=$(on_review --path=/Assets/Models/Car.glb --location="model:-0.25,1.42,0;node=Car/Body;local=-0.25,0.8,0" --type=Question -c="Is the roof meant to be this high now?")
