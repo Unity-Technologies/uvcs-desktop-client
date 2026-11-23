@@ -1,28 +1,15 @@
 import { createContext, type ReactNode } from 'react';
 import type { ImageSpot } from '@shared/domain/reviewConversation';
+import type { CommentPin } from '../pins/commentPin';
 
 /** The revision of an image a pin is on: the diff's older side, or its newer one. */
 export type ImageSide = 'old' | 'new';
 
 /**
- * A comment's pin on an image: a speech bubble holding the avatar of who started it, its tip at a point, or at the top-left
- * corner of an area it outlines.
+ * A comment's pin on an image (`CommentPin`): its tip at a point, or at the top-left corner of an area it outlines, on
+ * the side whose image shows it. A movable one's area's corners reshape it too.
  */
-export interface ImagePin {
-  key: string;
-  side: ImageSide;
-  spot: ImageSpot;
-  /** Who started it, whose avatar the bubble holds; none for a comment being written, which shows a plus. */
-  author: string | null;
-  /** The marker's tooltip, and what a screen reader hears. */
-  tip: string;
-  /** Something there is still open: the Open color, as a line's marker; a quiet gray once settled. */
-  emphasized: boolean;
-  /** Written on an earlier version of the image, which may show something else there now: drawn dashed. */
-  earlier: boolean;
-  /** Its spot can still change (a comment being written): its bubble drags it, its area's corners reshape it. */
-  movable: boolean;
-}
+export type ImagePin = CommentPin<ImageSpot> & { side: ImageSide };
 
 /**
  * What a place adds to an image's diff without the diff knowing what it adds (a review's comments, docs/features/
