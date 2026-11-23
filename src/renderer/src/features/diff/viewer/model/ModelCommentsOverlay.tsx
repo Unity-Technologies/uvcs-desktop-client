@@ -18,7 +18,7 @@ import type { Side } from './viewLayout';
 import styles from './ModelCommentsOverlay.module.css';
 
 /** How long the view stays still before what hides each pin's point is looked for: a pick per pin, never per frame. */
-const SETTLE_MS = 150;
+const SETTLE_MS = 80;
 
 /** How far the pointer moves, in pixels, before a press on a comment being written drags it. */
 const DRAG_THRESHOLD = 4;
