@@ -2,17 +2,10 @@ import type { ImageSpot, NewImageComment } from '@shared/domain/reviewConversati
 import { topSideOf } from './fileComments';
 import type { ReviewDiffView, ShownFile, ThreadSide } from './fileThreads';
 import { DEFAULT_LINE_COMMENT_KIND } from './newLineComment';
+import type { NewSpotComment } from './newSpotCommentsStore';
 
 /** A comment being written on a point or an area of an image of a review's diff: where it goes and what it is so far. */
-export interface NewImageCommentSpot {
-  /** Names it among the review's (`newImageCommentSpot`), its pin, and its draft. */
-  key: string;
-  reviewId: number;
-  /** The file's, as the diff names it: what finds it again once the file's newest revision changed. */
-  path: string;
-  side: ThreadSide;
-  comment: NewImageComment;
-}
+export type NewImageCommentSpot = NewSpotComment<ImageSpot> & { comment: NewImageComment };
 
 /**
  * The comment a spot of a review's image takes: on the revision the diff comments on, as lines do (`lineCommentAt`):
