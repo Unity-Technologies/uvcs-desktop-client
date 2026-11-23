@@ -3,7 +3,6 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import { fileCommentsOf } from './fileComments';
 import type { ShownFile } from './fileThreads';
-import { commentsToggleLabel } from './commentsToggle';
 import { fileCommentsSummaryOf } from './fileRepresentation';
 
 const ICON: ShownFile = { path: 'Art/Icon.svg', originalRevision: 10, modifiedRevision: 30 };
@@ -43,13 +42,5 @@ describe('fileCommentsSummaryOf', () => {
     expect(hidden(null, [7])).toBe('image');
     expect(hidden(FILE_COMMENTS, [7])).toBe('both');
     expect(hidden(null, [])).toBeNull();
-  });
-});
-
-describe('commentsToggleLabel', () => {
-  it('says which way it goes, and where', () => {
-    expect(commentsToggleLabel(true, 'code')).toBe('Hide comments in the code');
-    expect(commentsToggleLabel(false, 'image')).toBe('Show comments on the image');
-    expect(commentsToggleLabel(true, 'both')).toBe('Hide comments');
   });
 });

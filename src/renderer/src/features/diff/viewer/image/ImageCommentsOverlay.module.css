@@ -116,18 +116,16 @@
 .area {
   opacity: 0;
   transition: opacity var(--duration-fast) var(--ease-out);
-}
-
-.area:has(+ .pin:hover),
-.area[data-opened],
-.area[data-writing] {
-  opacity: 1;
-}
-
-.area {
   border: 1.5px solid var(--border-comment);
   border-radius: var(--radius-sm);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg-surface) 70%, transparent);
+}
+
+.area:has(+ .pin:hover),
+.area:has(+ .pin:focus-visible),
+.area[data-opened],
+.area[data-writing] {
+  opacity: 1;
 }
 
 .area[data-emphasized] {

@@ -936,13 +936,14 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   press off the image marks nothing), and the card opens beside it (`NewImageCommentCard`): its kind, then the editor,
   as on lines, with no Suggest change. Esc (`imageCommentLeave`) or the button leaves the mode. Until it's sent, its bubble drags it
   (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window
-  lives (`useNewImageCommentsStore`), by file and spot, on the revision shown, as one on lines is. Once posted it stays
+  lives (`useNewImageCommentsStore`), by file, named by a serial so moving it changes nothing else, on the revision shown, as one on lines is. Once posted it stays
   where it was written: `cm codereview comment edit` changes a comment's text only.
 - **Hidden.** The header's comment button hides the pins, to look at the image alone; one gone to still shows.
 - **An SVG** shows as code or as the image it draws (docs/features/diff.md "Images written as text"): comments on its
   lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
   comments are on the image", Show image: `otherRepresentationNotice`), and going to a comment shows the view it's on, for that
-  file only (`representationCommentsOf`, `RepresentationCommentsContext`).
+  file only (`fileCommentsSummaryOf`, `RepresentationCommentsContext`; taken once, `askToTake`, and shown for that file alone,
+  `shownRepresentation`).
 - **Not yet**: EXIF orientation (a rotated JPEG's comments are in the pixels as shown, not as stored); an SVG's spots in
   its own units (they're in the pixels it's drawn at, `decodedSize`, which an SVG declaring more than 16 MP, or no
   size, is drawn at scaled: another client reading its viewBox's units would misplace them); and a pin moved once
