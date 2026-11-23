@@ -1,5 +1,5 @@
 import type { ReviewThread } from './reviewThreads';
-import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceText, type ThreadBadges, type ThreadKindName } from './threadBadges';
+import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceText, writtenPlaceTip, type ThreadBadges, type ThreadKindName } from './threadBadges';
 
 /**
  * Where a thread's card is: the conversation's timeline, the code of the Changes tab (`ThreadInCode`), or the Comments
@@ -39,6 +39,8 @@ export interface HeaderLocation {
   file: string;
   /** "line 42", "area", apart from the file: where in it the thread was written, which an outdated comment's line no longer is. */
   writtenPlace: string;
+  /** What hovering the place says it is (`writtenPlaceTip`): "The line it was written on". */
+  writtenPlaceTip: string;
   linked: boolean;
   /** The text's tooltip, the whole path and place; a link's says where it goes, the path under it. */
   tip: string;
@@ -79,6 +81,8 @@ export interface ThreadHeaderView {
    * the code a thread can sit rows below its line, or away from it once outdated.
    */
   writtenPlace: string | null;
+  /** What hovering it says (`writtenPlaceTip`); null with no place. */
+  writtenPlaceTip: string | null;
   pill: HeaderPill | null;
   hides: boolean;
 }
@@ -100,6 +104,8 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
   const badges = threadBadges(thread);
   const inCode = place === 'code';
   const underFile = place === 'fileGroup';
+  const anchor = thread.root.anchor.kind === 'review' ? null : thread.root.anchor;
+  const namesPlace = (underFile || inCode) && anchor !== null;
   return {
     foldToggle: foldable ? { expanded: !folded, label: folded ? 'Show the thread' : 'Fold the thread' } : null,
     // In the code, the thread is at its line: its location would name where the user already is. Under its file's
@@ -107,7 +113,8 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     location: inCode || underFile ? null : locationOf(thread, place === 'panel'),
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
-    writtenPlace: (underFile || inCode) && thread.root.anchor.kind !== 'review' ? writtenPlaceText(thread.root.anchor) : null,
+    writtenPlace: namesPlace ? writtenPlaceText(anchor) : null,
+    writtenPlaceTip: namesPlace ? writtenPlaceTip(anchor) : null,
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };
@@ -117,8 +124,9 @@ function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation 
   if (root.anchor.kind === 'review') return null;
   const { folder, file } = locationText(root.anchor);
   const writtenPlace = writtenPlaceText(root.anchor);
+  const placeTip = writtenPlaceTip(root.anchor);
   // The panel's card goes to the thread: its file and line only name where, whole in the tooltip.
-  return cardOpens ? { folder, file, writtenPlace, linked: false, tip: `${folder}${file}, ${writtenPlace}` } : { folder, file, writtenPlace, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
+  return cardOpens ? { folder, file, writtenPlace, writtenPlaceTip: placeTip, linked: false, tip: `${folder}${file}, ${writtenPlace}` } : { folder, file, writtenPlace, writtenPlaceTip: placeTip, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
 }
 
 /** How the pill looks: the thread's kind (its icon) and where it stands, or, for a plain comment, that it is one. */

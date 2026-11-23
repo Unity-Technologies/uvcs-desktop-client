@@ -31,7 +31,7 @@ describe('a thread on an image', () => {
   });
 
   it('names its file and the area it is on, in the conversation and under its file', () => {
-    expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', writtenPlace: 'area', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
+    expect(headerOf(onArea).location).toEqual({ folder: 'Art/', file: 'Hero.png', writtenPlace: 'area', writtenPlaceTip: 'The area of the image it was written on', linked: true, tip: 'Show in Changes', tipSub: 'Art/Hero.png' });
     expect(headerOf(onArea, { place: 'fileGroup' }).writtenPlace).toBe('area');
   });
 
@@ -67,11 +67,11 @@ describe('foldsByHand', () => {
 describe('threadHeaderOf', () => {
   describe('where the card is', () => {
     it('names the file in the conversation as a link to it in Changes, the line apart', () => {
-      expect(headerOf(changeRequest).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', writtenPlace: 'line 11', linked: true, tip: 'Show in Changes', tipSub: 'Assets/Scripts/SwitchFlow.cs' });
+      expect(headerOf(changeRequest).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', writtenPlace: 'line 11', writtenPlaceTip: 'The line it was written on', linked: true, tip: 'Show in Changes', tipSub: 'Assets/Scripts/SwitchFlow.cs' });
     });
 
     it('names the file in the Comments panel as text, its card going to the thread, whole in its tooltip', () => {
-      expect(headerOf(changeRequest, { place: 'panel' }).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', writtenPlace: 'line 11', linked: false, tip: 'Assets/Scripts/SwitchFlow.cs, line 11' });
+      expect(headerOf(changeRequest, { place: 'panel' }).location).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs', writtenPlace: 'line 11', writtenPlaceTip: 'The line it was written on', linked: false, tip: 'Assets/Scripts/SwitchFlow.cs, line 11' });
     });
 
     it('names no file under the file\'s name in the Comments panel', () => {

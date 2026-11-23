@@ -80,6 +80,12 @@ export function writtenPlaceText(anchor: FileAnchor): string {
   return anchor.kind === 'line' ? rangeWordsInline(anchor) : imageSpotWords(anchor.spot);
 }
 
+/** What hovering where a comment was written says of it: what of its file that place is. */
+export function writtenPlaceTip(anchor: FileAnchor): string {
+  if (anchor.kind === 'line') return anchor.firstLine === anchor.lastLine ? 'The line it was written on' : 'The lines it was written on';
+  return `The ${imageSpotWords(anchor.spot)} of the image it was written on`;
+}
+
 /** "point" for a point of an image, "area" for an area. */
 export function imageSpotWords(spot: ImageSpot): string {
   return spot.size ? 'area' : 'point';
