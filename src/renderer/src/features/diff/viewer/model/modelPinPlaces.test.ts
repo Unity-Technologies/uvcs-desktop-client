@@ -4,6 +4,7 @@ import { countCalls } from '@shared/testing/countCalls';
 import type { ModelPin } from './modelAnnotations';
 import { buildModelScene } from './modelScene';
 import { nodeNamesOf } from './modelSpots';
+import { viewerSpaceOf } from './modelSpaces';
 import { pinPlacesOf, revealedPin, spotOfHit } from './modelPinPlaces';
 import { modelSummary } from './modelSummary';
 import { parseModel } from './parseModel';
@@ -68,20 +69,26 @@ describe('pinPlacesOf', () => {
 
 /**
  * A car's roof antenna, 2 m tall, skinned to two bones: its lower half to `Base`, at its foot, and its upper half to
- * `Tip`, halfway up, so turning `Tip` bends the top over as a sway does.
+ * `Tip`, halfway up, so turning `Tip` bends the top over as a sway does. `inCentimeters`: written as 3ds Max writes
+ * it, in centimeters with Z up, its own Y still along its length.
  */
-function antenna(): ParsedModel {
+function antenna({ inCentimeters = false } = {}): ParsedModel {
+  const unit = inCentimeters ? 100 : 1;
   const model = testModel({
+    ...(inCentimeters && { unitScale: 0.01, upAxis: 'z' as const }),
     nodes: [
       { name: 'Base', kind: 'bone' },
-      { name: 'Tip', parent: 'Base', kind: 'bone', position: [0, 1, 0] },
-      { name: 'Antenna', kind: 'skinnedMesh', mesh: { size: [0.2, 2, 0.2], center: [0, 1, 0], bones: ['Base', 'Tip'] } },
+      { name: 'Tip', parent: 'Base', kind: 'bone', position: [0, unit, 0] },
+      { name: 'Antenna', kind: 'skinnedMesh', mesh: { size: [0.2 * unit, 2 * unit, 0.2 * unit], center: [0, unit, 0], bones: ['Base', 'Tip'] } },
     ],
   });
   const { position, skinIndex } = model.meshes[0]!.attributes;
-  for (let vertex = 0; vertex < position.length / 3; vertex++) skinIndex![vertex * 4] = position[vertex * 3 + 1]! > 1 ? 1 : 0;
+  for (let vertex = 0; vertex < position.length / 3; vertex++) skinIndex![vertex * 4] = position[vertex * 3 + 1]! > unit ? 1 : 0;
   return model;
 }
+
+/** A point in the file's space as the viewer draws it. */
+const inViewer = (model: ParsedModel, point: Vector): Vector => close(new Vector3(...point).applyMatrix4(viewerSpaceOf(model)).toArray() as Vector);
 
 /** Turns the antenna's `Tip` a quarter turn about Z, bending its top to -X, and places it as a frame does. */
 function sway(version: ReturnType<typeof drawn>): void {
@@ -153,6 +160,16 @@ describe('pinPlacesOf, a skinned mesh', () => {
     expect(calls).toBe(12);
   });
 
+  it("follows the skin of a model in centimeters with Z up, carried into the viewer's units and axes", () => {
+    const model = antenna({ inCentimeters: true });
+    const after = drawn(model);
+    const onTip = pin({ spot: { point: { x: 0, y: 200, z: 0 }, node: { path: ['Antenna'], local: { x: 0, y: 200, z: 0 } } } });
+    const [place] = pinPlacesOf([onTip], { before: null, after });
+    expect(close(place!.point())).toEqual(inViewer(model, [0, 200, 0]));
+    sway(after);
+    expect(close(place!.point())).toEqual(inViewer(model, [-100, 100, 0]));
+  });
+
   describe('a glTF, whose skinned mesh its node places nothing of', () => {
     // GLTFLoader reads `self.URL`, and its FileLoader reports progress with `ProgressEvent`: globals a page has and Node hasn't.
     beforeEach(() => {
@@ -177,6 +194,27 @@ describe('pinPlacesOf, a skinned mesh', () => {
       after.scene.root.updateMatrixWorld(true);
       expect(close(place!.point())).toEqual([0.5, 1.8, 0]);
     });
+
+    it("writes a point hit mid-pose in the file's units where it rests, and places it back under the hit", async () => {
+      const read = await parseModel({ bytes: new TextEncoder().encode(skinnedGltf()), format: 'gltf' });
+      if (read.kind !== 'parsed') throw new Error('Not parsed');
+      const after = drawn(read.model);
+      const body = read.model.meshes[0]!;
+      // The hips bow a quarter turn: the top corner swings down from 1.8 m up to 1 m up.
+      const hips = after.scene.objects.get(after.summary.nodes[body.skin!.bones[0]!]!.key)!;
+      hips.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 2);
+      hips.updateMatrix();
+      after.scene.root.updateMatrixWorld(true);
+      const solid = after.scene.meshes[0]!.solid as unknown as SkinnedMesh;
+      const hit = solid.getVertexPosition(SKINNED_TOP_CORNER, new Vector3()).applyMatrix4(solid.matrixWorld).toArray() as Vector;
+      expect(close(hit)[1]).toBeCloseTo(1);
+      const spot = spotOfHit(after, { key: after.summary.nodes[body.node]!.key, point: hit }, [0, 1, 5], false)!;
+      // Where it rests, in the file's space (the loader's meters), and in the body's own (centimeters, Z up).
+      expect(closePoint(spot.point)).toEqual([0, 1.8, 0]);
+      expect(spot.node!.local).toEqual({ x: expect.closeTo(0, 3), y: expect.closeTo(0, 3), z: expect.closeTo(180, 3) });
+      const [place] = pinPlacesOf([pin({ spot })], { before: null, after });
+      expect(close(place!.point())).toEqual(close(hit));
+    });
   });
 });
 
@@ -196,6 +234,15 @@ describe('spotOfHit', () => {
     expect(closePoint(spot.node!.local!)).toEqual([0, 2, 0]);
     // The camera stays as its author saw the bent antenna.
     expect(spot.view).toEqual({ direction: { x: 0, y: 0, z: 1 }, distance: 5 });
+  });
+
+  it("writes a point hit mid-pose on a skinned mesh in centimeters with Z up where it rests, in the file's units", () => {
+    const model = antenna({ inCentimeters: true });
+    const after = drawn(model);
+    sway(after);
+    const spot = spotOfHit(after, { key: 'Antenna', point: inViewer(model, [-100, 100, 0]) }, inViewer(model, [-100, 100, 500]), false)!;
+    expect(closePoint(spot.point)).toEqual([0, 200, 0]);
+    expect(closePoint(spot.node!.local!)).toEqual([0, 200, 0]);
   });
 
   it('marks nothing where nothing was hit', () => {
