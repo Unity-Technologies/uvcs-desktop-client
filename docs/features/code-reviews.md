@@ -668,9 +668,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **Lines a comment is on.** One line or a range of them, of one revision (`ReviewCommentAnchor`, `LineRange`). `cm`
   stores where a comment is as text, counted from 0 (`{location}`; `commentedLinesOf`): `11` is line 12, `lines:11-17`
   lines 12 to 18 (written by `cm codereview comment add --line=12-18`; `lineOption`), `-1` no line (a comment on the
-  review, or on a whole file). `{line}` names a range's first line only, so it isn't read. Anything else is a location
-  another client writes with `--location` (a point of an image, `image:120,80`): the app reads it, and a comment on a
-  whole file, as a comment on the review for now. A thread on a range sits under its last line, as GitHub's do, and its
+  review, or on a whole file). `{line}` names a range's first line only, so it isn't read. A point or an area of an
+  image is `image:…` (see "Comments on images"). Any other location a client writes with `--location` (a point of a 3D
+  model), and a comment on a whole file, reads as a comment on the review for now. A thread on a range sits under its last line, as GitHub's do, and its
   outline runs from its first (`PlacedThread.firstLine`, `LineBand.firstLineNumber`, `rangeBox`), on out of view when
   an end is past the rows a big file renders (`LineBox.outside`, `renderedEdgeOf`); a folded region inside it unfolds
   (`rangeLinesOf`). It names its lines as "lines 12–18" (`rangeWords`): its header, its marker, See in
@@ -853,7 +853,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   in the gutter (a click on a number, Shift+click or a drag for a range, as for a link): the newer side's (context
   lines too), or a deleted file's, which `cm` comments on its last revision; never the older side of a changed file,
   nor a removed line in unified layout, which the reviewed revision doesn't hold (`lineCommentAt`). Files under an
-  xlink and directories take none, as they hold no thread (`isCommentable`); images, binaries and 3D models wait for
+  xlink and directories take none, as they hold no thread (`isCommentable`); images take theirs on the image (see
+  "Comments on images"), and binaries and 3D models wait for
   their viewers' own way in. Two ways in, both the diff's `lineAction` (`ChangedLines`): a "+" by the line under the
   pointer, lines with threads included (a new change request isn't always a reply), on the lines selected when it's
   one of them ("Comment on lines 40–52", `lineActionTargetAt`), and "Comment on line 42" first in the code's menu, on
@@ -895,3 +896,48 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   as its tabs do; never stacked, both tabs staying mounted as they were left, so Back leaves the review).
 - A line a thread is on is never hidden in a folded unchanged region: the diff unfolds it (`DiffAnnotations`,
   docs/features/diff.md "Rows under lines").
+
+## Comments on images
+
+An image of a review's diff takes comments on a point or an area of it, as code takes them on a line or a range
+(`ImageAnnotations`, given to the image viewer by `ReviewFileAnnotator` through `useReviewImageAnnotations`; the diff
+knows nothing of reviews, docs/features/diff.md "Comments on images").
+
+- **Where it's stored.** `cm codereview comment add --location=image:x,y` for a point, `image:x,y,w,h` for an area, on
+  the revision the diff comments on, as lines are (`addImageCommentArgs`, `imageLocationOption`, `imageCommentAt`).
+  `cm` stores the text as given and doesn't read it; every client reads it alike (`commentedImageSpotOf`): the image's
+  own pixels from its top-left corner, x right and y down; an SVG's numbers may have decimals; what follows a `;` is a
+  hint a client may ignore. The app writes whole pixels. `ReviewCommentAnchor`'s `image` kind holds it (`ImageSpot`);
+  a thread on a file, its lines or its image, is a `FileThread`.
+- **Pins.** Each thread shows as a speech bubble holding the avatar of who started it, its tip on the point, or on the
+  top-left corner of the area it outlines (`reviewImagePinsOf`, `ImageCommentsOverlay`): who wrote there, as a line's
+  marker shows, the shape of a comment on a canvas as design tools draw it. Numbers were tried and dropped: an avatar
+  says more, and the Comments panel and the conversation name it "point" or "area" beside its file
+  (`writtenPlaceText`). The bubble's border says where it stands: the Open color while open, quiet once settled, the
+  accent when selected; an area is a border, never a fill, so the image reads as it is. In every image mode, on the
+  side its revision shows (Split's After pane; Onion, Diffs and Swipe lay both over each other), gliding with the
+  zoom.
+- **A thread** opens beside its pin on a click, one at a time: the conversation's card as a line's thread shows it in
+  the code (`ImageThreadCard`), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
+  below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
+  nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the
+  conversation opens it and brings it into view at the zoom shown (`transformShowing`): the reviewer keeps the zoom
+  they chose.
+- **On an earlier version** (written on a revision neither side shows), a thread's pin goes at its spot on the side
+  comments go on, dashed, its card tagged "Earlier version" (`imageEarlierTagOf`): an image has no lines to follow, and
+  what's there may have changed. No "outdated" for images, nor See in context: a pixel comparison to tell whether the
+  spot changed is a later step.
+- **Writing.** The stage's comment button, or **C** (`imageComment`), turns the pointer into a speech bubble with a
+  plus (`--cursor-add-comment`); a click marks a point, a drag an area, outlined as it's drawn (`spotOfGesture`, a
+  press off the image marks nothing), and the card opens beside it (`NewImageCommentCard`): its kind, then the editor,
+  as on lines, with no Suggest change. Esc or the button leaves the mode. Until it's sent, its bubble drags it
+  (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window
+  lives (`useNewImageCommentsStore`), by file and spot, on the revision shown, as one on lines is. Once posted it stays
+  where it was written: `cm codereview comment edit` changes a comment's text only.
+- **Hidden.** The header's comment button hides the pins, to look at the image alone; one gone to still shows.
+- **An SVG** shows as code or as the image it draws (docs/features/diff.md "Images written as text"): comments on its
+  lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
+  comments are on the image", Show image: `otherRepresentationNotice`), and going to a comment shows the view it's on
+  (`representationCommentsOf`, `RepresentationCommentsContext`).
+- **Not yet**: EXIF orientation (a rotated JPEG's comments are in the pixels as shown, not as stored), and a pin moved
+  once posted (it needs `cm codereview comment edit` to take a location).
