@@ -8,7 +8,7 @@ import { imageSpotWords } from '../conversation/threadBadges';
 import { conversationReadAt, conversationReadSince } from '../conversation/useReviewConversation';
 import { CommentKindSwitch } from './CommentKindSwitch';
 import { lineCommentWords } from './newLineComment';
-import type { NewImageCommentSpot } from './newImageComment';
+import type { NewImageCommentSpot } from './newSpotComment';
 import { useNewImageCommentsStore } from './newImageCommentsStore';
 import styles from './NewLineCommentCard.module.css';
 

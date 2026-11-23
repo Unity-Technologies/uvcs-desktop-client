@@ -1,17 +1,6 @@
 import { create } from 'zustand';
 import type { LineCommentKind } from '@shared/domain/reviewConversation';
-import type { ThreadSide } from './fileThreads';
-
-/** A comment being written on a spot of a review's diff (a point or an area of an image, a point or a part of a model). */
-export interface NewSpotComment<Spot> {
-  /** Names it among the review's, its pin, and its draft: made with a serial, never from its spot, which moves. */
-  key: string;
-  reviewId: number;
-  /** The file's, as the diff names it: what finds it again once the file's newest revision changed. */
-  path: string;
-  side: ThreadSide;
-  comment: { revisionId: number; spot: Spot; kind: LineCommentKind; changesetId?: number };
-}
+import type { NewSpotComment } from './newSpotComment';
 
 export interface NewSpotComments<Draft extends NewSpotComment<unknown>> {
   /** The comments being written, in every review of the window, oldest first. */

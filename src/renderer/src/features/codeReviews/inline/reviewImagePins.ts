@@ -2,7 +2,7 @@ import type { ImagePin, ImageSide } from '../../diff/viewer/image/imageAnnotatio
 import { imageEarlierTagOf } from './earlierTag';
 import type { ImageThread, ImageThreads, ThreadSide } from './fileThreads';
 import { markerTip } from './markerTip';
-import type { NewImageCommentSpot } from './newImageComment';
+import type { NewImageCommentSpot } from './newSpotComment';
 import { newCommentPinKey, threadPinKey } from './reviewPins';
 
 /** The image a review thread's side of the diff shows. */

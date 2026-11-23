@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import { imageThreadsOfFile, type ShownFile } from './fileThreads';
-import { newImageCommentSpot } from './newImageComment';
+import { newSpotComment } from './newSpotComment';
 import { reviewImagePinsOf } from './reviewImagePins';
 import { newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, spotThreadIdsOf, spotThreadOf, threadPinKey } from './reviewPins';
 
@@ -52,7 +52,7 @@ describe('reviewImagePinsOf', () => {
   });
 
   it('pins each comment being written, with no one yet', () => {
-    const spot = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 4, y: 4, size: { width: 9, height: 9 } } }, 1);
+    const spot = newSpotComment('image', 41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 4, y: 4, size: { width: 9, height: 9 } } }, 1);
     const pins = reviewImagePinsOf({ threads: { placed: [], earlier: [] }, spots: [spot], inCode: false, focusThreadId: undefined, topSide: 'additions' });
     expect(pins).toEqual([{ key: newCommentPinKey(spot.key), side: 'new', spot: spot.comment.spot, author: null, tip: 'New comment: drag to move it', emphasized: false, earlier: false, movable: true }]);
   });

@@ -5,7 +5,7 @@ import type { ReviewThread } from '../conversation/reviewThreads';
 import { topSideOf } from './fileComments';
 import { imageThreadsOfFile, type ReviewDiffView, type ShownFile } from './fileThreads';
 import { ImageThreadCard } from './ImageThreadCard';
-import { imageCommentAt, imageCommentSide, newImageCommentSpot, newImageCommentsIn, type NewImageCommentSpot } from './newImageComment';
+import { newSpotComment, newSpotCommentsIn, spotCommentAt, spotCommentSide, type NewImageCommentSpot } from './newSpotComment';
 import { useNewImageCommentsStore } from './newImageCommentsStore';
 import { NewImageCommentCard } from './NewImageCommentCard';
 import type { ReviewComments } from './reviewComments';
@@ -25,7 +25,7 @@ interface ReviewImageInput {
 /**
  * A review's comments on an image of its diff, for the image viewer (`ImageAnnotationsContext`): a pin per thread
  * (`reviewImagePinsOf`), one card open beside its pin, a thread gone to opened and brought into view, and a click or a
- * drag starting a comment on the revision the diff comments on (`imageCommentAt`), kept while the window lives
+ * drag starting a comment on the revision the diff comments on (`spotCommentAt`), kept while the window lives
  * (`useNewImageCommentsStore`). None for a file that takes no comments.
  */
 export function useReviewImageAnnotations({ comments, threads, view, file, inCode }: ReviewImageInput): ReviewImageAnnotations {
@@ -36,7 +36,7 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
   const review = comments?.review;
   const imageThreads = useMemo(() => (threads && review && view ? imageThreadsOfFile(threads, review.target, view, file) : null), [threads, review, fileKey]);
   const threadIds = useMemo(() => spotThreadIdsOf(imageThreads), [imageThreads]);
-  const spots = useMemo(() => (review && view && threads ? newImageCommentsIn(allSpots, review.id, view, file) : NO_SPOTS), [allSpots, review, threads !== undefined, fileKey]);
+  const spots = useMemo(() => (review && view && threads ? newSpotCommentsIn(allSpots, review.id, view, file) : NO_SPOTS), [allSpots, review, threads !== undefined, fileKey]);
 
   // The card open, per file: going to another file closes it.
   const [opened, setOpened] = useState<{ path: string; key: string } | null>(null);
@@ -53,7 +53,7 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
     if (!comments || !view || !imageThreads) return null;
     const open = (key: string | null): void => setOpened(key === null ? null : { path: file.path, key });
     const topSide = topSideOf(file);
-    const side = imageCommentSide(file);
+    const side = spotCommentSide(file);
     const pins = reviewImagePinsOf({ threads: imageThreads, spots, inCode, focusThreadId: focus?.threadId, topSide });
     const threadOfPin = (key: string) => {
       const threadId = pinThreadId(key);
@@ -77,9 +77,9 @@ export function useReviewImageAnnotations({ comments, threads, view, file, inCod
       },
       commentsOn: side && imageSideOf(side),
       addComment: (spot: ImageSpot) => {
-        const at = imageCommentAt(view, file, spot);
+        const at = spotCommentAt(view, file, spot);
         if (!at) return;
-        const started = startSpot((serial) => newImageCommentSpot(comments.review.id, file.path, topSide, at, serial));
+        const started = startSpot((serial) => newSpotComment('image', comments.review.id, file.path, topSide, at, serial));
         open(newCommentPinKey(started.key));
       },
       moveComment: (key, spot) => {
