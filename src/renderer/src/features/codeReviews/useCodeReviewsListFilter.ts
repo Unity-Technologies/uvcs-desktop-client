@@ -14,7 +14,7 @@ export function useCodeReviewsListFilter(): CodeReviewFilter {
   const people = useDebouncedValue(useCodeReviewsViewStore((state) => state.people), PICKING_PAUSE_MS);
   const status = useCodeReviewsViewStore((state) => state.status);
   const kind = useCodeReviewsViewStore((state) => state.kind);
-  const mergeRequestState = useCodeReviewsViewStore((state) => state.mergeRequestState);
+  const mergeRequestStates = useCodeReviewsViewStore((state) => state.mergeRequestStates);
   const reviewers = useDebouncedValue(useCodeReviewsViewStore((state) => state.reviewers), PICKING_PAUSE_MS);
-  return codeReviewsListQuery({ since, people, status, kind, mergeRequestState, reviewers });
+  return codeReviewsListQuery({ since, people, status, kind, mergeRequestStates, reviewers });
 }

@@ -326,11 +326,17 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   reviews** alone (`matchesKind`), narrowed locally from the same read: switching it runs no command. With Code reviews
   alone the State chip hides and its state is left out of the read (`stateUnderKind`, `showsStateChip`): a code
   review has no state.
-- **The State chip** (the store's `state`, `MergeRequestStateFilter`): **Active**, where it rests, keeps the code
-  reviews and the merge requests still to merge; **Merged** and **Closed** one state; **All** everything.
-  Merged and Closed are the server's (`where mergerequeststatus = 'Merged'`, `codeReviewsQuery`); Active and All ask
-  for no state and share one query key, Active narrowing locally (`matchesState`): `cm find` takes one state per
-  query. An older version's remembered filters have no state and read as Active.
+- **The State chip** (the store's `mergeRequestStates`, `MergeRequestStatesChip`, `mergeRequestStatesFilter.ts`) ticks
+  any mix of **Draft**, **Open**, **Merged** and **Closed**, each with its glyph in its color, the menu staying open
+  so the list shows each change. It rests on Draft and Open (`STILL_TO_MERGE`), the merge requests still to merge, and
+  is highlighted on any other mix (`isFilteringStates`). Its label names the states ticked ("Draft or open",
+  "Merged") or says "Any state" with all four (`statesChipLabel`); its icon stays the plain merge request glyph. The last
+  state ticked can't be unticked (`toggledState`): a chip with none would show nothing. A code review has no state and
+  shows while Draft or Open is ticked: it is still under way, as they are (`matchesStates`). Merged alone or Closed
+  alone is the server's (`where mergerequeststatus = 'Merged'`, `serverStateOf`); every other mix asks for no state,
+  shares one query key and narrows locally: `cm find` takes one state per query, and Draft or Open alone must keep the
+  code reviews. An older version's one choice (Active, Merged, Closed, All) reads as the states it showed
+  (`restoredStates`).
 - **Waiting for me** (`waitingForMe`): a reviewer waits on a code review or an **Open** merge request, never a draft,
   a merged or a closed one; an author's rework waits on a code review or a merge request still to merge. The sidebar's
   count follows.
@@ -348,7 +354,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   show or add). A code review of a branch has the
   last two; of a changeset or a shelve, its reviewers only. The description stays on the page: reading it is the
   conversation's read, too much for a selection.
-- **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
+- **An empty list** under Draft or open (the State chip at rest) that read only merged or closed requests says none match, with Clear filters, rather
   than none yet (`isNarrowed`).
 
 ## Its number

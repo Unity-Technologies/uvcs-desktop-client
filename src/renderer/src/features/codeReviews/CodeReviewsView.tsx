@@ -33,26 +33,20 @@ import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { CLEARED_CODE_REVIEW_FILTERS, type MergeRequestStateFilter, type ReviewKindFilter, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
+import { CLEARED_CODE_REVIEW_FILTERS, type ReviewKindFilter, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { reviewNoun } from './mergeRequestState';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { waitingCount } from './waitingForMe';
-import { isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesState, matchesWaiting, showsStateChip, stateUnderKind, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
+import { isNarrowed, matchesKind, matchesOpenedByMe, matchesReviewers, matchesWaiting, showsStateChip, statesUnderKind, openedByMeCount, openedChipLabel, reviewFilterTexts, waitingChipLabel } from './codeReviewFilters';
 import { ToggleChip } from '../../ui/ToggleChip';
+import { MergeRequestStatesChip } from './MergeRequestStatesChip';
+import { isFilteringStates, matchesStates } from './mergeRequestStatesFilter';
 
 const ownerOf = (review: CodeReview): string => review.owner;
 const itself = (name: string): string => name;
-
-/** The State chip's choices: Active (the code reviews and merge requests still to merge) is where it rests. */
-const STATE_CHOICES: { value: MergeRequestStateFilter; label: string }[] = [
-  { value: 'active', label: 'Active' },
-  { value: 'merged', label: 'Merged' },
-  { value: 'closed', label: 'Closed' },
-  { value: 'all', label: 'All' },
-];
 
 /** The Kind chip's choices: both kinds together is where it rests. */
 const KIND_CHOICES: { value: ReviewKindFilter; label: string }[] = [
@@ -66,8 +60,8 @@ export function CodeReviewsView() {
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
   const { text: search, people, since, status, kind, reviewers, waitingForMe, openedByMe, update } = filters;
-  // Code reviews alone have no state: the State chip hides and its state is left out (`stateUnderKind`).
-  const mergeRequestState = stateUnderKind(kind, filters.mergeRequestState);
+  // Code reviews alone have no state: the State chip hides and its states are left out (`statesUnderKind`).
+  const mergeRequestStates = statesUnderKind(kind, filters.mergeRequestStates);
   const me = usePlaceUser();
   const [selection, setSelection] = useViewSelection('codeReviews');
   const { data: reviews, isPending, isFetching, error } = useCodeReviews(useCodeReviewsListFilter());
@@ -82,13 +76,13 @@ export function CodeReviewsView() {
         (review) =>
           matchesPeople(people, me, review.owner) &&
           matchesKind(review, kind) &&
-          matchesState(review, mergeRequestState) &&
+          matchesStates(review, mergeRequestStates) &&
           matchesReviewers(review, reviewers, me) &&
           matchesWaiting(review, waitingForMe, me) &&
           matchesOpenedByMe(review, openedByMe, me) &&
           matchesWordFilter(reviewFilterTexts(review), search),
       ),
-    [reviews, people, me, kind, mergeRequestState, reviewers, waitingForMe, openedByMe, search],
+    [reviews, people, me, kind, mergeRequestStates, reviewers, waitingForMe, openedByMe, search],
   );
   // The reviews read that wait for the user: Waiting for me counts them.
   const waiting = useMemo(() => waitingCount(reviews ?? [], me), [reviews, me]);
@@ -162,12 +156,10 @@ export function CodeReviewsView() {
               choices={KIND_CHOICES}
             />
             {showsStateChip(kind) && (
-              <ChoiceChip<MergeRequestStateFilter>
-                value={filters.mergeRequestState}
-                onChange={(value) => update({ mergeRequestState: value })}
-                icon={<GitPullRequest size={13} />}
-                neutralValue="active"
-                choices={STATE_CHOICES}
+              <MergeRequestStatesChip
+                states={filters.mergeRequestStates}
+                onChange={(value) => update({ mergeRequestStates: value })}
+                active={isFilteringStates(filters.mergeRequestStates)}
               />
             )}
             <ChoiceChip<StatusFilter>
