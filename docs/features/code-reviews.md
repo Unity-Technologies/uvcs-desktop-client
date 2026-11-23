@@ -588,7 +588,7 @@ one read serves both), say what was checked in when (`reviewRounds`).
   status in gray. The status's own event at its end says the verdict, in color, with its time: repeated on top, with a
   time newer than the events under it, the round read as reviewed twice, its times out of order. A round where nothing is open
   starts folded, one with something open unfolded, and the round holding the thread the page goes to unfolds, even
-  one folded by hand, a click on its line still folding it (`roundIsOpen`, `roundHolding`, `untoggledRound`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
+  one folded by hand, a click on its line still folding it (`roundIsOpen`, `roundHolding`, `roundChoiceForgotten`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
   reviewer's. Then, for a reviewer, the **New since your last review** line (`SinceLine`, `sinceText`): one more event on the
   rail, an accent dot breathing quietly (`--keyframes-heartbeat`, still under reduced motion), the words and their day,
   a hairline, and **See the changes →** at the end; the rail stays as it is (an accent segment read as a second rail).

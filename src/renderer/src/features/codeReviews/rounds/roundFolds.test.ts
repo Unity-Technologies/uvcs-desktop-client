@@ -1,44 +1,61 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationBlock } from './reviewRounds';
-import { opensAtSince, roundIsOpen, roundLineComment, toggledRound, untoggledRound } from './roundFolds';
+import { opensAtSince, roundChoiceForgotten, roundChosen, roundIsOpen, roundLineComment } from './roundFolds';
+
+const NONE: ReadonlyMap<number, boolean> = new Map();
+
+/** The choices after clicking a round's line, as shown `open`. */
+function click(chosen: ReadonlyMap<number, boolean>, round: { number: number; folds: boolean }, holdingPick?: number): Map<number, boolean> {
+  return roundChosen(chosen, round.number, roundIsOpen(round, chosen, holdingPick));
+}
 
 describe('roundIsOpen', () => {
+  const settled = { number: 1, folds: true };
+  const withOpen = { number: 2, folds: false };
+
   it('starts a settled round folded and one with something open unfolded', () => {
-    expect(roundIsOpen({ number: 1, folds: true }, new Set(), undefined)).toBe(false);
-    expect(roundIsOpen({ number: 2, folds: false }, new Set(), undefined)).toBe(true);
+    expect(roundIsOpen(settled, NONE, undefined)).toBe(false);
+    expect(roundIsOpen(withOpen, NONE, undefined)).toBe(true);
   });
 
   it('turns a round over with each click on its line', () => {
-    const once = toggledRound(new Set(), 1);
+    const once = click(NONE, settled);
 
-    expect(roundIsOpen({ number: 1, folds: true }, once, undefined)).toBe(true);
-    expect(roundIsOpen({ number: 1, folds: true }, toggledRound(once, 1), undefined)).toBe(false);
-    expect(roundIsOpen({ number: 2, folds: false }, toggledRound(new Set(), 2), undefined)).toBe(false);
+    expect(roundIsOpen(settled, once, undefined)).toBe(true);
+    expect(roundIsOpen(settled, click(once, settled), undefined)).toBe(false);
+    expect(roundIsOpen(withOpen, click(NONE, withOpen), undefined)).toBe(false);
   });
 
   it('unfolds the round holding the thread gone to', () => {
-    expect(roundIsOpen({ number: 1, folds: true }, new Set(), 1)).toBe(true);
+    expect(roundIsOpen(settled, NONE, 1)).toBe(true);
   });
 
   it('still folds the round holding the thread gone to with a click on its line', () => {
-    expect(roundIsOpen({ number: 1, folds: true }, toggledRound(new Set(), 1), 1)).toBe(false);
-    expect(roundIsOpen({ number: 2, folds: false }, toggledRound(new Set(), 2), 2)).toBe(false);
+    expect(roundIsOpen(settled, click(NONE, settled, 1), 1)).toBe(false);
+    expect(roundIsOpen(withOpen, click(NONE, withOpen, 2), 2)).toBe(false);
+  });
+
+  it('keeps a round folded while it held the thread folded once the page goes to a thread elsewhere', () => {
+    const held = { number: 2, folds: true };
+    const folded = click(NONE, held, 2);
+
+    expect(roundIsOpen(held, roundChoiceForgotten(folded, 3), 3)).toBe(false);
+    expect(roundIsOpen(held, folded, undefined)).toBe(false);
   });
 });
 
-describe('untoggledRound', () => {
+describe('roundChoiceForgotten', () => {
   it('unfolds a round folded by hand again when the page goes to a thread in it', () => {
-    const folded = toggledRound(new Set(), 1);
-    const goneTo = untoggledRound(folded, 1);
+    const folded = click(NONE, { number: 1, folds: false });
 
-    expect(roundIsOpen({ number: 1, folds: true }, goneTo, 1)).toBe(true);
+    expect(roundIsOpen({ number: 1, folds: false }, roundChoiceForgotten(folded, 1), 1)).toBe(true);
   });
 
-  it("leaves the other rounds' clicks as they were, and all of them when the thread is after every round", () => {
-    const toggled = toggledRound(toggledRound(new Set(), 1), 2);
+  it("leaves the other rounds' choices as they were, and all of them when the thread is after every round", () => {
+    const chosen = new Map([[1, true], [2, false]]);
 
-    expect([...untoggledRound(toggled, 1)]).toEqual([2]);
-    expect(untoggledRound(toggled, undefined)).toBe(toggled);
+    expect([...roundChoiceForgotten(chosen, 1)]).toEqual([[2, false]]);
+    expect(roundChoiceForgotten(chosen, undefined)).toBe(chosen);
   });
 });
 
