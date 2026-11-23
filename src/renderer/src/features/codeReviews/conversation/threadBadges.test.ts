@@ -141,20 +141,20 @@ describe('a comment on a 3D model', () => {
   const onPointOf = (...path: string[]) => ({ ...onModel, spot: { point, node: { path } } });
   const onPartOf = (...path: string[]) => ({ ...onModel, spot: { point, node: { path }, wholePart: true as const } });
 
-  it('names the part a point is on, and a whole part by its name', () => {
+  it('names the part a point is on, and a whole part, as a line is named: its kind, then its name', () => {
     expect(writtenPlaceText(onPointOf('Wheel'))).toBe('point on Wheel');
-    expect(writtenPlaceText(onPartOf('Wheel'))).toBe('Wheel');
+    expect(writtenPlaceText(onPartOf('Wheel'))).toBe('part Wheel');
   });
 
   it('names a nested part by its own name, the last of its path', () => {
     expect(writtenPlaceText(onPointOf('Car', 'Door_L', 'Door_Panel'))).toBe('point on Door_Panel');
-    expect(writtenPlaceText(onPartOf('Car', 'Door_L', 'Door_Panel'))).toBe('Door_Panel');
+    expect(writtenPlaceText(onPartOf('Car', 'Door_L', 'Door_Panel'))).toBe('part Door_Panel');
   });
 
   it('names a part as the file names it, whatever characters it holds', () => {
     // The location stores names percent-encoded; the reader (`commentedModelSpotOf`) decodes them.
     expect(writtenPlaceText(onPointOf('Root/A', 'Wheel; FL=1'))).toBe('point on Wheel; FL=1');
-    expect(writtenPlaceText(onPartOf('車', '車輪'))).toBe('車輪');
+    expect(writtenPlaceText(onPartOf('車', '車輪'))).toBe('part 車輪');
     expect(writtenPlaceText(onPointOf('Car', '🚗'))).toBe('point on 🚗');
   });
 
@@ -169,14 +169,22 @@ describe('a comment on a 3D model', () => {
   });
 
   it("says in the tooltip which part, by its whole path, even when its own name says nothing", () => {
-    expect(writtenPlaceTip(onPointOf('Car', 'Wheel'))).toBe('The point of the model it was written on, in Car › Wheel');
-    expect(writtenPlaceTip(onPartOf('Car', 'Wheel_FL'))).toBe('The part of the model it was written on: Car › Wheel_FL');
-    expect(writtenPlaceTip(onPartOf('Car', 'mesh_0'))).toBe('The part of the model it was written on: Car › mesh_0');
+    expect(writtenPlaceTip(onPointOf('Car', 'Wheel'))).toBe('A point on Car › Wheel');
+    expect(writtenPlaceTip(onPartOf('Car', 'Wheel_FL'))).toBe('All of Car › Wheel_FL');
+    expect(writtenPlaceTip(onPartOf('Car', 'mesh_0'))).toBe('All of Car › mesh_0');
   });
 
   it('says in the tooltip only that it is on the model when no part is named', () => {
-    expect(writtenPlaceTip({ ...onModel, spot: { point } })).toBe('The point of the model it was written on');
-    expect(writtenPlaceTip({ ...onModel, spot: { point, wholePart: true } })).toBe('The part of the model it was written on');
+    expect(writtenPlaceTip({ ...onModel, spot: { point } })).toBe('A point on the model');
+    expect(writtenPlaceTip({ ...onModel, spot: { point, wholePart: true } })).toBe('A part of the model');
+  });
+
+  it('leaves names the file left empty out of the path, and names no part when none is left', () => {
+    expect(writtenPlaceTip(onPointOf('', 'Car', ' ', 'Wheel'))).toBe('A point on Car › Wheel');
+    expect(writtenPlaceTip(onPointOf('', ' '))).toBe('A point on the model');
+    expect(writtenPlaceTip(onPartOf(''))).toBe('A part of the model');
+    expect(writtenPlaceText(onPointOf('Car', ''))).toBe('point');
+    expect(writtenPlaceText(onPartOf('Car', ' '))).toBe('part');
   });
 });
 
@@ -188,13 +196,13 @@ describe('writtenPlaceTip', () => {
 
   it('says the place is the point or the area of the image it was written on, never a line', () => {
     const onImage = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png' } as const;
-    expect(writtenPlaceTip({ ...onImage, spot: { x: 120, y: 80 } })).toBe('The point of the image it was written on, at x 120, y 80');
-    expect(writtenPlaceTip({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } })).toBe('The area of the image it was written on, at x 1, y 2, 30 × 10 pixels');
+    expect(writtenPlaceTip({ ...onImage, spot: { x: 120, y: 80 } })).toBe('A point of the image at x 120, y 80');
+    expect(writtenPlaceTip({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } })).toBe('A 30 × 10 pixel area of the image at x 1, y 2');
   });
 
   it('rounds the place of a point or an area of an SVG, whose numbers may have decimals', () => {
     const onSvg = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Logo.svg' } as const;
-    expect(writtenPlaceTip({ ...onSvg, spot: { x: 12.4, y: 7.6, size: { width: 30.5, height: 9.49 } } })).toBe('The area of the image it was written on, at x 12, y 8, 31 × 9 pixels');
+    expect(writtenPlaceTip({ ...onSvg, spot: { x: 12.4, y: 7.6, size: { width: 30.5, height: 9.49 } } })).toBe('A 31 × 9 pixel area of the image at x 12, y 8');
   });
 });
 
