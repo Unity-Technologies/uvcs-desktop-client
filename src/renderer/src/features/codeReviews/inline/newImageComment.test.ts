@@ -21,16 +21,16 @@ describe('imageCommentAt', () => {
 });
 
 describe('newImageCommentSpot', () => {
-  it('starts a change request, named by its review, file and spot', () => {
-    const point = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 1, y: 2 } });
-    const area = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 1, y: 2, size: { width: 3, height: 4 } } });
-    expect(point.comment.kind).toBe('changeRequest');
-    expect(point.key).not.toBe(area.key);
+  it('starts a change request, named by its serial, whatever spot it moves to', () => {
+    const first = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 1, y: 2 } }, 1);
+    const second = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 1, y: 2 } }, 2);
+    expect(first.comment.kind).toBe('changeRequest');
+    expect(first.key).not.toBe(second.key);
   });
 });
 
 describe('newImageCommentsIn', () => {
-  const spot = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 29, spot: { x: 1, y: 2 } });
+  const spot = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 29, spot: { x: 1, y: 2 } }, 1);
 
   it("keeps the review's comments on the file, on the revision shown now", () => {
     expect(newImageCommentsIn([spot], 41, WHOLE, HERO)).toEqual([{ ...spot, comment: { ...spot.comment, revisionId: 30 } }]);

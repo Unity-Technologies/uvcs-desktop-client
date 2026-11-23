@@ -34,11 +34,12 @@ function commentedRevisionOf(file: ShownFile): number {
   return topSideOf(file) === 'additions' ? file.modifiedRevision : file.originalRevision;
 }
 
-/** A comment started on a spot of an image: a change request, as on lines (`DEFAULT_LINE_COMMENT_KIND`). */
-export function newImageCommentSpot(reviewId: number, path: string, side: ThreadSide, at: Omit<NewImageComment, 'kind'>): NewImageCommentSpot {
-  const { x, y, size } = at.spot;
-  const where = size ? `${x},${y},${size.width},${size.height}` : `${x},${y}`;
-  return { key: `${reviewId}:${at.changesetId ?? ''}:${path}:image:${where}`, reviewId, path, side, comment: { ...at, kind: DEFAULT_LINE_COMMENT_KIND } };
+/**
+ * A comment started on a spot of an image: a change request, as on lines (`DEFAULT_LINE_COMMENT_KIND`). Named by the
+ * `serial` the window gave it, not by its spot, which moves while it's written.
+ */
+export function newImageCommentSpot(reviewId: number, path: string, side: ThreadSide, at: Omit<NewImageComment, 'kind'>, serial: number): NewImageCommentSpot {
+  return { key: `${reviewId}:${path}:image:${serial}`, reviewId, path, side, comment: { ...at, kind: DEFAULT_LINE_COMMENT_KIND } };
 }
 
 /**

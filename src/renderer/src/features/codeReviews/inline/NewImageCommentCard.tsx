@@ -14,7 +14,7 @@ import styles from './NewLineCommentCard.module.css';
 
 interface NewImageCommentCardProps {
   spot: NewImageCommentSpot;
-  /** Sent and read back: the new thread's pin is to open in its place. */
+  /** Sent and read back: its card closes, the new thread's pin standing where it was written. */
   onSent: () => void;
 }
 

@@ -3,7 +3,7 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
 import { imageThreadsOfFile, type ShownFile } from './fileThreads';
 import { newImageCommentSpot } from './newImageComment';
-import { newCommentPinKey, pinThreadId, reviewImagePinsOf, threadPinKey } from './reviewImagePins';
+import { imageThreadIdsOf, imageThreadOf, newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, reviewImagePinsOf, threadPinKey } from './reviewImagePins';
 
 const HERO: ShownFile = { path: 'Art/Hero.png', originalRevision: 10, modifiedRevision: 30 };
 
@@ -51,7 +51,7 @@ describe('reviewImagePinsOf', () => {
   });
 
   it('pins each comment being written, with no one yet', () => {
-    const spot = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 4, y: 4, size: { width: 9, height: 9 } } });
+    const spot = newImageCommentSpot(41, 'Art/Hero.png', 'additions', { revisionId: 30, spot: { x: 4, y: 4, size: { width: 9, height: 9 } } }, 1);
     const pins = reviewImagePinsOf({ threads: { placed: [], earlier: [] }, spots: [spot], inCode: false, focusThreadId: undefined, topSide: 'additions' });
     expect(pins).toEqual([{ key: newCommentPinKey(spot.key), side: 'new', spot: spot.comment.spot, author: null, tip: 'New comment: drag to move it', emphasized: false, earlier: false, movable: true }]);
   });
@@ -61,5 +61,41 @@ describe('pinThreadId', () => {
   it("reads a thread's pin back, and nothing else", () => {
     expect(pinThreadId(threadPinKey(42))).toBe(42);
     expect(pinThreadId(newCommentPinKey('41::a'))).toBeNull();
+  });
+});
+
+describe('the threads of an image', () => {
+  const threads = imageThreadsOfFile(threadsOf([onImage(1, 30), onImage(2, 20)]), { kind: 'branch', branch: '/main/task' }, { kind: 'whole' }, HERO);
+
+  it('finds a thread, and whether it is on an earlier version', () => {
+    expect(imageThreadOf(threads, 1)?.earlier).toBe(false);
+    expect(imageThreadOf(threads, 2)?.earlier).toBe(true);
+    expect(imageThreadOf(threads, 9)).toBeNull();
+    expect([...imageThreadIdsOf(threads)]).toEqual([1, 2]);
+    expect(imageThreadIdsOf(null).size).toBe(0);
+  });
+
+  it('reveals the pin of a thread gone to, once', () => {
+    expect(pinRevealedBy({ threadId: 2, seq: 5 }, threads, undefined)).toEqual({ key: 'thread:2', seq: 5 });
+    expect(pinRevealedBy({ threadId: 2, seq: 5 }, threads, 5)).toBeNull();
+  });
+
+  it('reveals none for a thread picked in place, or of another file', () => {
+    expect(pinRevealedBy({ threadId: 2, seq: 6, inPlace: true }, threads, 5)).toBeNull();
+    expect(pinRevealedBy({ threadId: 9, seq: 6 }, threads, 5)).toBeNull();
+    expect(pinRevealedBy(null, threads, 5)).toBeNull();
+  });
+});
+
+describe('openedPin', () => {
+  const pins = pinsOf([onImage(1, 30)]);
+
+  it("is the pin opened in this file while it's there", () => {
+    expect(openedPin(pins, { path: 'Art/Hero.png', key: 'thread:1' }, 'Art/Hero.png')).toBe('thread:1');
+  });
+
+  it('is none in another file, or once its pin is gone', () => {
+    expect(openedPin(pins, { path: 'Art/Sky.png', key: 'thread:1' }, 'Art/Hero.png')).toBeNull();
+    expect(openedPin(pins, { path: 'Art/Hero.png', key: 'thread:7' }, 'Art/Hero.png')).toBeNull();
   });
 });

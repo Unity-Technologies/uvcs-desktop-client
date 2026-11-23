@@ -3,13 +3,13 @@ import type { ImageSpot } from '@shared/domain/reviewConversation';
 import type { ImageAnnotations } from '../../diff/viewer/image/imageAnnotations';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { topSideOf } from './fileComments';
-import { imageThreadsOfFile, type ImageThreads, type ReviewDiffView, type ShownFile } from './fileThreads';
+import { imageThreadsOfFile, type ReviewDiffView, type ShownFile } from './fileThreads';
 import { ImageThreadCard } from './ImageThreadCard';
-import { imageCommentAt, imageCommentSide, newImageCommentSpot, newImageCommentsIn } from './newImageComment';
+import { imageCommentAt, imageCommentSide, newImageCommentSpot, newImageCommentsIn, type NewImageCommentSpot } from './newImageComment';
 import { useNewImageCommentsStore } from './newImageCommentsStore';
 import { NewImageCommentCard } from './NewImageCommentCard';
 import type { ReviewComments } from './reviewComments';
-import { imageSideOf, newCommentPinKey, pinThreadId, reviewImagePinsOf, threadPinKey } from './reviewImagePins';
+import { imageSideOf, imageThreadIdsOf, imageThreadOf, newCommentPinKey, openedPin, pinRevealedBy, pinThreadId, reviewImagePinsOf, threadPinKey } from './reviewImagePins';
 
 interface ReviewImageInput {
   comments: ReviewComments | null;
@@ -29,80 +29,72 @@ interface ReviewImageInput {
  */
 export function useReviewImageAnnotations({ comments, threads, view, file, inCode }: ReviewImageInput): ReviewImageAnnotations {
   const allSpots = useNewImageCommentsStore((state) => state.spots);
-  const openSpot = useNewImageCommentsStore((state) => state.open);
+  const startSpot = useNewImageCommentsStore((state) => state.start);
   const moveSpot = useNewImageCommentsStore((state) => state.moveTo);
   const fileKey = JSON.stringify([view, file]);
   const review = comments?.review;
   const imageThreads = useMemo(() => (threads && review && view ? imageThreadsOfFile(threads, review.target, view, file) : null), [threads, review, fileKey]);
-  const spots = useMemo(() => (review && view && threads ? newImageCommentsIn(allSpots, review.id, view, file) : []), [allSpots, review, threads !== undefined, fileKey]);
+  const threadIds = useMemo(() => imageThreadIdsOf(imageThreads), [imageThreads]);
+  const spots = useMemo(() => (review && view && threads ? newImageCommentsIn(allSpots, review.id, view, file) : NO_SPOTS), [allSpots, review, threads !== undefined, fileKey]);
 
   // The card open, per file: going to another file closes it.
   const [opened, setOpened] = useState<{ path: string; key: string } | null>(null);
-  const openedKey = opened?.path === file.path ? opened.key : null;
-  const open = (key: string | null): void => setOpened(key === null ? null : { path: file.path, key });
-
-  // Gone to (from the Comments panel, the keys, the conversation): its pin opens and comes into view, once per time.
+  // Gone to: its pin opens and comes into view, once per time (`pinRevealedBy`).
   const focus = comments?.focus ?? null;
   const [reveal, setReveal] = useState<{ key: string; seq: number } | null>(null);
-  if (focus && imageThreads && holdsThread(imageThreads, focus.threadId) && reveal?.seq !== focus.seq && !focus.inPlace) {
-    const key = threadPinKey(focus.threadId);
-    setReveal({ key, seq: focus.seq });
-    setOpened({ path: file.path, key });
+  const revealed = pinRevealedBy(focus, imageThreads, reveal?.seq);
+  if (revealed) {
+    setReveal(revealed);
+    setOpened({ path: file.path, key: revealed.key });
   }
 
-  if (!comments || !view || !imageThreads) return NO_IMAGE_ANNOTATIONS;
-  const topSide = topSideOf(file);
-  const pins = reviewImagePinsOf({ threads: imageThreads, spots, inCode, focusThreadId: focus?.threadId, topSide });
-  const reviewId = comments.review.id;
-  const side = imageCommentSide(file);
-  const annotations: ImageAnnotations = {
-    pins,
-    opened: pins.some((pin) => pin.key === openedKey) ? openedKey : null,
-    selected: focus ? threadPinKey(focus.threadId) : null,
-    onOpen: (key) => {
-      open(key);
-      const threadId = key === null ? null : pinThreadId(key);
-      const thread = threadId === null ? undefined : threadOf(imageThreads, threadId);
-      if (thread) comments.selectThread(thread);
-    },
-    renderCard: (key) => {
-      const spot = spots.find((candidate) => newCommentPinKey(candidate.key) === key);
-      if (spot) return <NewImageCommentCard spot={spot} onSent={() => open(null)} />;
+  const annotations = useMemo((): ImageAnnotations | null => {
+    if (!comments || !view || !imageThreads) return null;
+    const open = (key: string | null): void => setOpened(key === null ? null : { path: file.path, key });
+    const topSide = topSideOf(file);
+    const side = imageCommentSide(file);
+    const pins = reviewImagePinsOf({ threads: imageThreads, spots, inCode, focusThreadId: focus?.threadId, topSide });
+    const threadOfPin = (key: string) => {
       const threadId = pinThreadId(key);
-      const thread = threadId === null ? undefined : threadOf(imageThreads, threadId);
-      const earlier = imageThreads.earlier.some((entry) => entry.thread.root.id === threadId);
-      return thread ? <ImageThreadCard comments={comments} thread={thread} earlier={earlier} onClose={() => open(null)} /> : null;
-    },
-    commentsOn: side && imageSideOf(side),
-    addComment: (spot: ImageSpot) => {
-      const at = imageCommentAt(view, file, spot);
-      if (!at) return;
-      const started = newImageCommentSpot(reviewId, file.path, topSide, at);
-      openSpot(started);
-      open(newCommentPinKey(started.key));
-    },
-    moveComment: (key, spot) => {
-      const moved = spots.find((candidate) => newCommentPinKey(candidate.key) === key);
-      if (moved) moveSpot(moved.key, spot);
-    },
-    reveal,
-  };
-  return { annotations, threadCount: imageThreads.placed.length + imageThreads.earlier.length, holds: (threadId) => holdsThread(imageThreads, threadId) };
+      return threadId === null ? null : imageThreadOf(imageThreads, threadId);
+    };
+    const spotOfPin = (key: string) => spots.find((candidate) => newCommentPinKey(candidate.key) === key);
+    return {
+      pins,
+      opened: openedPin(pins, opened, file.path),
+      selected: focus ? threadPinKey(focus.threadId) : null,
+      onOpen: (key) => {
+        open(key);
+        const found = key === null ? null : threadOfPin(key);
+        if (found) comments.selectThread(found.thread);
+      },
+      renderCard: (key) => {
+        const spot = spotOfPin(key);
+        if (spot) return <NewImageCommentCard spot={spot} onSent={() => open(null)} />;
+        const found = threadOfPin(key);
+        return found && <ImageThreadCard comments={comments} thread={found.thread} earlier={found.earlier} onClose={() => open(null)} />;
+      },
+      commentsOn: side && imageSideOf(side),
+      addComment: (spot: ImageSpot) => {
+        const at = imageCommentAt(view, file, spot);
+        if (!at) return;
+        const started = startSpot((serial) => newImageCommentSpot(comments.review.id, file.path, topSide, at, serial));
+        open(newCommentPinKey(started.key));
+      },
+      moveComment: (key, spot) => {
+        const moved = spotOfPin(key);
+        if (moved) moveSpot(moved.key, spot);
+      },
+      reveal,
+    };
+  }, [comments, view, imageThreads, spots, inCode, focus, opened, reveal, fileKey, startSpot, moveSpot]);
+  return { annotations, threadIds };
 }
 
-/** The image's annotations, how many threads it has (the header's button hiding them shows only then), and which. */
+/** The image's annotations, and its threads' ids: where the header's button hides comments from, and a thread gone to. */
 interface ReviewImageAnnotations {
   annotations: ImageAnnotations | null;
-  threadCount: number;
-  holds: (threadId: number) => boolean;
+  threadIds: ReadonlySet<number>;
 }
 
-const NO_IMAGE_ANNOTATIONS: ReviewImageAnnotations = { annotations: null, threadCount: 0, holds: () => false };
-
-function threadOf(threads: ImageThreads, threadId: number) {
-  return [...threads.placed, ...threads.earlier].find((entry) => entry.thread.root.id === threadId)?.thread;
-}
-
-function holdsThread(threads: ImageThreads, threadId: number): boolean {
-  return threadOf(threads, threadId) !== undefined;
-}
+const NO_SPOTS: readonly NewImageCommentSpot[] = [];

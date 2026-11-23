@@ -7,7 +7,7 @@ import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type L
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, hasComments, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
+import { comparedFile, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
@@ -27,7 +27,7 @@ import { useFileVersionTexts } from './useFileVersionTexts';
 import { useReviewImageAnnotations } from './useReviewImageAnnotations';
 import { ImageAnnotationsContext } from '../../diff/viewer/image/imageAnnotations';
 import { RepresentationCommentsContext } from '../../diff/viewer/representationComments';
-import { representationCommentsOf } from './fileRepresentation';
+import { fileCommentsSummaryOf } from './fileRepresentation';
 import { suggestLineLabel } from '../suggestions/suggestButton';
 
 const NO_REVISIONS: number[] = [];
@@ -160,15 +160,12 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
   const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
 
-  // A file shown either as code or as an image (an SVG): its threads on lines in one, on spots in the other.
-  const onText = fileComments ? fileThreadsShown(fileComments) : 0;
-  const focusedOn = focus === null ? null : holdsThread(fileComments, focus.threadId) ? 'text' : onImage.holds(focus.threadId) ? 'image' : null;
-  const representationComments = useMemo(
-    () => representationCommentsOf({ onText, onImage: onImage.threadCount, focus, focusedOn }),
-    [onText, onImage.threadCount, focus, focusedOn],
-  );
+  // Where the file's comments are, and, for a file shown either as code or as an image (an SVG), which view a thread
+  // gone to is on.
+  const summary = useMemo(() => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, focus }), [fileComments, onImage.threadIds, focus]);
+  const representationComments = summary.representation;
 
-  const controls = (hasComments(fileComments) || onImage.threadCount > 0) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
+  const controls = summary.hidden && <CommentsInCodeButton shown={inCode} onChange={setInCode} place={summary.hidden} />;
   return (
     <DiffAnnotationsContext.Provider value={annotations}>
       <ImageAnnotationsContext.Provider value={onImage.annotations}>
@@ -245,7 +242,3 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
   );
 }
 
-/** How many threads a file's code shows: at their lines, and outdated above it. */
-function fileThreadsShown(comments: FileComments): number {
-  return comments.lines.reduce((count, line) => count + line.threads.length, 0) + comments.outdated.length;
-}
