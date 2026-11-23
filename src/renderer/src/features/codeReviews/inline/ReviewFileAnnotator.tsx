@@ -10,8 +10,7 @@ import { ReviewCommentsContext } from './reviewComments';
 import { comparedFile, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
-import { modelThreadsOfFile, reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
-import { spotThreadIdsOf } from './reviewPins';
+import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
 import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
@@ -26,7 +25,9 @@ import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
 import { useReviewImageAnnotations } from './useReviewImageAnnotations';
+import { useReviewModelAnnotations } from './useReviewModelAnnotations';
 import { ImageAnnotationsContext } from '../../diff/viewer/image/imageAnnotations';
+import { ModelAnnotationsContext } from '../../diff/viewer/model/modelAnnotations';
 import { RepresentationCommentsContext } from '../../diff/viewer/representationComments';
 import { fileCommentsSummaryOf } from './fileRepresentation';
 import { suggestLineLabel } from '../suggestions/suggestButton';
@@ -41,8 +42,9 @@ const NO_REVISIONS: number[] = [];
  * comments on takes a new comment (`lineCommentAt`), from the "+" in its gutter or the code's menu, written under it
  * (`NewLineCommentCard`), kept while the window lives (`useNewLineCommentsStore`).
  * One on an earlier version is seen in context in a dialog (`ReviewComments.seeInContext`), which leaves this diff as
- * it is. An image's comments are pins on it (`useReviewImageAnnotations`, through `ImageAnnotationsContext`), and a
- * file shown either as code or as an image (an SVG) says where its comments are (`fileCommentsSummaryOf`).
+ * it is. An image's comments are pins on it (`useReviewImageAnnotations`, through `ImageAnnotationsContext`), a 3D
+ * model's too (`useReviewModelAnnotations`, `ModelAnnotationsContext`), and a file shown either as code or as what it
+ * draws (an SVG, an OBJ) says where its comments are (`fileCommentsSummaryOf`).
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
   const comments = useContext(ReviewCommentsContext);
@@ -162,13 +164,14 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
   const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
 
-  const modelThreadIds = useMemo(() => spotThreadIdsOf(threads && comments && view ? modelThreadsOfFile(threads, comments.review.target, view, file) : null), [threads, comments?.review.target, fileKey]);
+  // A model's, pins on it: read only by the model viewer.
+  const onModel = useReviewModelAnnotations({ comments, threads, view, file, inCode });
 
   // Where the file's comments are, and, for a file shown either as code or as what it draws (an SVG, an OBJ), which
   // view a thread gone to is on.
   const summary = useMemo(
-    () => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, modelThreadIds, focus, reviewId: comments?.review.id ?? 0 }),
-    [fileComments, onImage.threadIds, modelThreadIds, focus, comments?.review.id],
+    () => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, modelThreadIds: onModel.threadIds, focus, reviewId: comments?.review.id ?? 0 }),
+    [fileComments, onImage.threadIds, onModel.threadIds, focus, comments?.review.id],
   );
   const representationComments = summary.representation;
 
@@ -176,7 +179,9 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   return (
     <DiffAnnotationsContext.Provider value={annotations}>
       <ImageAnnotationsContext.Provider value={onImage.annotations}>
-        <RepresentationCommentsContext.Provider value={representationComments}>{children({ controls })}</RepresentationCommentsContext.Provider>
+        <ModelAnnotationsContext.Provider value={onModel.annotations}>
+          <RepresentationCommentsContext.Provider value={representationComments}>{children({ controls })}</RepresentationCommentsContext.Provider>
+        </ModelAnnotationsContext.Provider>
       </ImageAnnotationsContext.Provider>
     </DiffAnnotationsContext.Provider>
   );

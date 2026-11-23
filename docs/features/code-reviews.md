@@ -951,3 +951,33 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   its own units (they're in the pixels it's drawn at, `decodedSize`, which an SVG declaring more than 16 MP, or no
   size, is drawn at scaled: another client reading its viewBox's units would misplace them); and a pin moved once
   posted (it needs `cm codereview comment edit` to take a location).
+
+## Comments on 3D models
+
+A 3D model of a review's diff takes comments on a point of its surface or on a whole part, as an image takes them on a
+point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAnnotator` through
+`useReviewModelAnnotations`; the diff knows nothing of reviews, docs/features/model-diff.md "Comments on the model").
+
+- **Where it's stored.** `cm codereview comment add --location=model:x,y,z[;node=<path>][;local=x,y,z][;part][;view=dx,dy,dz,d]`
+  on the revision the diff comments on (`addModelCommentArgs`, `modelLocationOption`; the grammar is in
+  `modelCommentLocation.ts`). The point is in the file's own units and axes, so every client places it alike from the
+  file; the rest are hints a client may ignore: the part's names from the root (`node`, each percent-encoded), the point
+  in that part's space (`local`), the whole part (`part`), the camera it was written from (`view`). Past `cm`'s 1,024
+  characters the hints go, the camera first, then `local`, then the part (`modelLocation`); the point always stays.
+  Numbers keep eight significant digits, never an exponent (`locationNumber`). `ReviewCommentAnchor`'s `model` kind
+  holds it (`ModelSpot`); other clients read it as a comment on the file until they learn it.
+- **Pins** are the image's bubble (`PinBubble`, `reviewModelPinsOf`): who started it, an open dot, faded once settled,
+  ringed when selected. The Comments panel and the conversation name the place "point" or "part", the part's name in
+  the tooltip (`writtenPlaceText`, `writtenPlaceTip`). A comment on a part lights the part up only on demand: its bubble
+  pointed at or focused, its card open, or while it's written (`litCommentPart`).
+- **On an earlier version** a pin shows on its part as the version shown has it (`local`), dashed and tagged "Earlier
+  version"; when that part is gone, at its point, the tag saying so (`modelEarlierTagOf`). No earlier version is read.
+- **Writing.** The stage's comment button, or **C** (`modelComment`): a click marks a point (`spotOfHit`), and the card
+  (`NewModelCommentCard`) offers its kind, then what it's about, "Point" or the part by its name (`modelCommentAboutOf`,
+  `spotAbout`), then the editor. Before it's sent its bubble drags along the surface. It's kept while the window lives
+  (`useNewModelCommentsStore`), named by a serial. A drag still turns the model: a box drawn in 3D would mean something
+  else from every angle, so a whole part is what an image's area is here.
+- **Going to it** glides the camera to the view its author had, else facing the point with part of the model around it
+  (`viewOfSpot`), and opens its card.
+- **Hidden.** The header's comment button hides the pins ("Hide comments on the model", `commentsToggleLabel`); one gone
+  to still shows. An OBJ shows as its code or its model: each view says how many comments the other holds.

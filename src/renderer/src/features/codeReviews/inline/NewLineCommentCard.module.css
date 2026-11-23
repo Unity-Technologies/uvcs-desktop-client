@@ -32,3 +32,11 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
+
+/* A model comment's part, named in its switch: cut short rather than widening the card. */
+.partName {
+  max-width: 12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
