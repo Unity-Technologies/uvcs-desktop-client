@@ -2,7 +2,7 @@
 // opened pin's card beside it, and, while commenting, the surface a click or a drag marks a new comment's spot on.
 // Positions are worked out in `imageSpotGeometry`; this maps them to the screen and follows the view's glide.
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import type { ImageSpot } from '@shared/domain/reviewConversation';
 import { useKeptElement } from '../../../../lib/useKeptElement';
 import { PinBubble } from '../pins/PinBubble';
@@ -29,9 +29,11 @@ interface ImageCommentsOverlayProps {
   onCommented: () => void;
   /** The layer over the whole stage the opened pin's card shows in: Split's narrow pane would cut it off. */
   cardLayer: HTMLElement | null;
+  /** The viewer's focusable pane, which takes the focus from a card hiding with it. */
+  stage: RefObject<HTMLElement | null>;
 }
 
-export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, images, commenting, onCommented, cardLayer }: ImageCommentsOverlayProps) {
+export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, images, commenting, onCommented, cardLayer, stage }: ImageCommentsOverlayProps) {
   const { transform, animated } = panZoom;
   const [pane, keepPane] = useKeptElement<HTMLDivElement>();
   const offsetOf = (side: ImageSide): Point | null => {
@@ -70,7 +72,7 @@ export function ImageCommentsOverlay({ annotations, panZoom, frame, anchor, imag
         />
       ))}
       {opened && (
-        <PinCard rect={opened.rect} pane={pane} layer={cardLayer}>
+        <PinCard rect={opened.rect} pane={pane} layer={cardLayer} stage={stage}>
           {annotations.renderCard(opened.pin.key)}
         </PinCard>
       )}

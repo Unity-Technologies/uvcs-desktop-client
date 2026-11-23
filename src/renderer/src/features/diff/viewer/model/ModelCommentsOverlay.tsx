@@ -4,12 +4,12 @@
 // never for each frame. Once the view stops moving, a pin whose point something else is drawn in front of shows
 // faded and smaller (`hiddenBehind`), still there to click.
 
-import { useLayoutEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { useLayoutEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import type { ModelSpot } from '@shared/domain/reviewConversation';
 import { followDrag, isDragButton } from '../image/pointerDrag';
 import { setCardHidden } from '../pins/hideCard';
 import { PinBubble } from '../pins/PinBubble';
-import { boundsOf, cardStyleOf, keptCardPlacement, pinCardPlacement, pinTargetOf, viewKeyOf, type HeldCard } from '../pins/pinPlacement';
+import { boundsOf, cardStyleOf, keptCardPlacement, pinCardPlacement, pinTargetOf, viewKeyOf, type HeldCard, type ScreenRect } from '../pins/pinPlacement';
 import pinStyles from '../pins/CommentPins.module.css';
 import type { ModelAnnotations } from './modelAnnotations';
 import { depthOfHit, hiddenBehind, type Projector, type ScreenPoint } from './modelProjection';
@@ -43,9 +43,11 @@ interface ModelCommentsOverlayProps {
   spotAt: (x: number, y: number, side: Side, wholePart: boolean) => ModelSpot | null;
   /** The pin pointed at or focused, whose part may light up; none when none is. */
   onPointed: (key: string | null) => void;
+  /** The viewer's focusable pane, which takes the focus from a card hiding with it. */
+  stage: RefObject<HTMLElement | null>;
 }
 
-export function ModelCommentsOverlay({ annotations, renderer, versions, modelSize, spotAt, onPointed }: ModelCommentsOverlayProps) {
+export function ModelCommentsOverlay({ annotations, renderer, versions, modelSize, spotAt, onPointed, stage }: ModelCommentsOverlayProps) {
   const places = useMemo(() => pinPlacesOf(annotations.pins, versions), [annotations.pins, versions]);
   const overlay = useRef<HTMLDivElement>(null);
   const bubbles = useRef(new Map<string, HTMLButtonElement>());
@@ -88,7 +90,7 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       const box = overlay.current;
       const element = card.current;
       if (!element || !box) return;
-      setCardHidden(element, !at);
+      setCardHidden(element, !at, stage.current);
       if (!at) return;
       // A part comment's card leaves its part in view too, as it lights up while the card is open.
       const corners = opened.partCorners()?.flatMap((corner) => projectors[opened.pin.side]?.(corner) ?? []) ?? [];
@@ -96,10 +98,17 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       const about = boundsOf(corners);
       const next = pinCardPlacement(pin, { width: box.clientWidth, height: box.clientHeight }, about);
       const placement = keptCardPlacement(held, next, pinTargetOf(pin, about), view !== heldInView);
-      if (placement !== held?.placement) Object.assign(element.style, cardStyleOf(placement));
-      held = { placement, box: { x: element.offsetLeft, y: element.offsetTop, width: element.offsetWidth, height: element.offsetHeight } };
+      if (placement !== held?.placement) {
+        Object.assign(element.style, cardStyleOf(placement));
+        held = { placement, box: boxOf(element) };
+      }
       heldInView = view;
     };
+    // The card's box is measured once it's placed, and again only when what's in it changes its size (a reply typed).
+    const resizes = new ResizeObserver(() => {
+      if (held && card.current) held = { ...held, box: boxOf(card.current) };
+    });
+    if (card.current) resizes.observe(card.current);
     // What hides each point, picked under its bubble's tip on its own version once the view is still: something nearer.
     const markHidden = (): void => {
       const camera = renderer.cameraPosition();
@@ -114,9 +123,10 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
     const stop = renderer.onFrameDrawn(place);
     return () => {
       stop();
+      resizes.disconnect();
       window.clearTimeout(settle);
     };
-  }, [renderer, places, opened, modelSize]);
+  }, [renderer, places, opened, modelSize, stage]);
 
   return (
     <>
@@ -154,6 +164,11 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
       )}
     </>
   );
+}
+
+/** Where an element sits in its offset parent, and its size. */
+function boxOf(element: HTMLElement): ScreenRect {
+  return { x: element.offsetLeft, y: element.offsetTop, width: element.offsetWidth, height: element.offsetHeight };
 }
 
 interface ModelPinBubbleProps {

@@ -73,6 +73,8 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
   // The pair compared for Differences stays in the worker for the next tolerance, as long as this viewer shows it.
   useEffect(() => forgetComparedImages, []);
   const stageRef = useRef<HTMLDivElement>(null);
+  // The focusable pane, which takes the focus from a comment's card hiding with it.
+  const paneRef = useRef<HTMLDivElement>(null);
   // Where an opened pin's card shows: over the whole stage, so Split's narrow pane doesn't cut it off.
   const [cardLayer, keepCardLayer] = useKeptElement<HTMLDivElement>();
 
@@ -153,11 +155,12 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
             commenting={isCommenting && annotations.commentsOn !== null && sides.includes(annotations.commentsOn)}
             onCommented={() => setCommenting(false)}
             cardLayer={cardLayer}
+            stage={paneRef}
           />
         );
 
   return (
-    <div className={styles.pane} tabIndex={0} onKeyDown={onKeyDown}>
+    <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown}>
       {view.kind === 'painted' && view.unpainted && (
         <DiffNotice tone="info" icon={<ImageOff size={13} />}>
           {unpaintedNotice(view.unpainted.side, view.unpainted.problem)}

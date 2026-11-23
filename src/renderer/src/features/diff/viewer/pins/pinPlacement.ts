@@ -135,14 +135,6 @@ export function viewKeyOf(view: CameraView, panes: readonly (ScreenRect | null)[
   return JSON.stringify([view.target, view.yaw, view.pitch, view.distance, panes.map((pane) => pane && [pane.x, pane.y, pane.width, pane.height])]);
 }
 
-/**
- * Whether a card being hidden (its pin out of view) hands the focus to its stage: when it holds it, as a hidden card
- * can't take keys, and they'd go nowhere. The stage keeps its own keys working (zoom, C), and the card's text stays.
- */
-export function focusLeavesHiddenCard(hidden: boolean, focusInCard: boolean): boolean {
-  return hidden && focusInCard;
-}
-
 /** A card's place as the style of its element: its edges and sizes, in pixels. */
 export function cardStyleOf(placement: CardPlacement): { left: string; width: string; maxHeight: string; top: string; bottom: string } {
   return {
