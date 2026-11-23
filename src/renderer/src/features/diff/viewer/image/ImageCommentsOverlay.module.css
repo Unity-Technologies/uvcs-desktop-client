@@ -110,7 +110,20 @@
   cursor: nesw-resize;
 }
 
-/* An area: a border, never a fill, so the image under it reads as it is (as a commented line is outlined). */
+/* An area: a border, never a fill, so the image under it reads as it is (as a commented line is outlined). Only its
+   bubble shows until it's pointed at, opened or selected, or being written: every area drawn at once hid the image
+   under their outlines. */
+.area {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.area:has(+ .pin:hover),
+.area[data-selected],
+.area[data-writing] {
+  opacity: 1;
+}
+
 .area {
   border: 1.5px solid var(--border-comment);
   border-radius: var(--radius-sm);
