@@ -1,7 +1,6 @@
 import type { CommentedRepresentation, RepresentationComments } from '../../diff/viewer/representationComments';
 import { holdsThread, type FileComments } from './fileComments';
 import type { ThreadFocus } from './reviewComments';
-import type { CommentsPlace } from './commentsToggle';
 
 interface FileCommentsInput {
   /** The threads its code shows (at lines, outdated, still placed); none for a file whose code shows none. */
@@ -18,13 +17,13 @@ interface FileCommentsInput {
 interface FileCommentsSummary {
   /** For a file shown either as code or as what it draws, an image or a model (`RepresentationCommentsContext`). */
   representation: RepresentationComments;
-  /** Where the header's button hides comments from; none for a file with no comments. */
-  hidden: CommentsPlace | null;
+  /** The file has comments, in its code or on what it draws: its header shows the button that hides them. */
+  hasComments: boolean;
 }
 
 /**
  * What a review's comments on one file decide beyond where each goes: how many its code and what it draws (its image or
- * its model) hold, and so where the header's button hides them from; and, for a file shown either way (an SVG, an
+ * its model) hold, and so whether the header shows the button that hides them; and, for a file shown either way (an SVG, an
  * OBJ), the view a thread gone to from
  * elsewhere is on (one picked in place, `ThreadFocus.inPlace`, is on screen already and asks for nothing).
  */
@@ -34,12 +33,6 @@ export function fileCommentsSummaryOf({ fileComments, imageThreadIds, modelThrea
   const onRenderedThread = (threadId: number) => imageThreadIds.has(threadId) || modelThreadIds.has(threadId);
   const focusedOn: CommentedRepresentation | null = focus === null ? null : holdsThread(fileComments, focus.threadId) ? 'text' : onRenderedThread(focus.threadId) ? 'rendered' : null;
   const asked = focus !== null && !focus.inPlace && focusedOn !== null ? { representation: focusedOn, key: `${reviewId}:${focus.seq}` } : null;
-  return { representation: { onText, onRendered, asked }, hidden: hiddenFrom(onText, imageThreadIds.size, modelThreadIds.size) };
+  return { representation: { onText, onRendered, asked }, hasComments: onText + onRendered > 0 };
 }
 
-function hiddenFrom(onText: number, onImage: number, onModel: number): CommentsPlace | null {
-  const onRendered = onImage + onModel;
-  if (onText > 0) return onRendered > 0 ? 'both' : 'code';
-  if (onModel > 0) return 'model';
-  return onImage > 0 ? 'image' : null;
-}

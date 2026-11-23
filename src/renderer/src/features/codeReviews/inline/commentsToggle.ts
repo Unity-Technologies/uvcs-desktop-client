@@ -1,17 +1,14 @@
-/** Where a file's comments show: in its code, on its image or its 3D model, or both (an SVG, an OBJ, shown either way). */
-export type CommentsPlace = 'code' | 'image' | 'model' | 'both';
+/**
+ * What the header's comments button reaches: in a review's diff, every file's comments, code, images and models alike
+ * (`useReviewCommentsStore.inCode`, one setting for every review); in the comment dialog, the one thread in its code.
+ */
+export type CommentsToggleReach = 'everyFile' | 'thisCode';
 
-/** What the header's button says it does: hide or show the comments, where they are. */
-export function commentsToggleLabel(shown: boolean, place: CommentsPlace): string {
+/**
+ * What the header's button says it does: hide or show the comments, and how far that goes. A review's says "in every
+ * file": "on the model" read as this file only, and the comments of every other file went with it.
+ */
+export function commentsToggleLabel(shown: boolean, reach: CommentsToggleReach): string {
   const verb = shown ? 'Hide comments' : 'Show comments';
-  switch (place) {
-    case 'code':
-      return `${verb} in the code`;
-    case 'image':
-      return `${verb} on the image`;
-    case 'model':
-      return `${verb} on the model`;
-    case 'both':
-      return verb;
-  }
+  return reach === 'everyFile' ? `${verb} in every file` : `${verb} in the code`;
 }
