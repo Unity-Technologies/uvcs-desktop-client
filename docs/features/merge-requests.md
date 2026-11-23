@@ -354,7 +354,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   show or add). A code review of a branch has the
   last two; of a changeset or a shelve, its reviewers only. The description stays on the page: reading it is the
   conversation's read, too much for a selection.
-- **An empty list** under Draft and Open that read only merged or closed requests says none match, with Clear filters, rather
+- **An empty list** under Draft or open (the State chip at rest) that read only merged or closed requests says none match, with Clear filters, rather
   than none yet (`isNarrowed`).
 
 ## Its number

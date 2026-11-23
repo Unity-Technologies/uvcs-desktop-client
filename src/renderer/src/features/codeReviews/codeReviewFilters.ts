@@ -35,7 +35,7 @@ export function codeReviewsQuery({ since, people, status, mergeRequestStates, re
 
 /**
  * What Merge requests' list is read with, from the view's chips: `codeReviewsQuery` under the state the Kind chip leaves
- * (`stateUnderKind`). The view and the sidebar's count (`useCodeReviewsListFilter`) both read with it, so they share one
+ * (`statesUnderKind`). The view and the sidebar's count (`useCodeReviewsListFilter`) both read with it, so they share one
  * query key and one `cm find review`.
  */
 export function codeReviewsListQuery({ kind, mergeRequestStates, ...filters }: CodeReviewsQueryFilters & { kind: ReviewKindFilter }, today = new Date()): CodeReviewFilter {

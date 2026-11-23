@@ -1,3 +1,4 @@
+import { sameFilterValue } from '../../lib/viewFilters';
 import { MERGE_REQUEST_STATES, type CodeReviewSummary, type MergeRequestState } from '@shared/domain/codeReview';
 
 /**
@@ -71,5 +72,5 @@ export function restoredStates(remembered: unknown): MergeRequestStates {
 
 /** Whether the chip has other states ticked than where it rests, which highlights it. */
 export function isFilteringStates(states: MergeRequestStates): boolean {
-  return states.length !== STILL_TO_MERGE.length || states.some((state, index) => state !== STILL_TO_MERGE[index]);
+  return !sameFilterValue(states, STILL_TO_MERGE);
 }

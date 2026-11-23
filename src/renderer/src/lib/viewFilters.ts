@@ -69,7 +69,7 @@ export function isFiltering<Filters extends ViewFilters>(filters: Filters, clear
 }
 
 /** Whether a filter holds its cleared value: a list (the states ticked) by its items, in order; anything else as it is. */
-function sameFilterValue(value: unknown, cleared: unknown): boolean {
+export function sameFilterValue(value: unknown, cleared: unknown): boolean {
   if (Array.isArray(value) && Array.isArray(cleared)) return value.length === cleared.length && value.every((item, index) => item === cleared[index]);
   return value === cleared;
 }
