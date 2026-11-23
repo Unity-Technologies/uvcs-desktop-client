@@ -182,7 +182,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   );
   const representationComments = summary.representation;
 
-  const controls = summary.hidden && <CommentsInCodeButton shown={inCode} onChange={setInCode} place={summary.hidden} />;
+  const controls = summary.hasComments && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
   return (
     <DiffAnnotationsContext.Provider value={annotations}>
       <ImageAnnotationsContext.Provider value={onImage.annotations}>

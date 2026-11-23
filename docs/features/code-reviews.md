@@ -755,7 +755,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
 - **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides the
-  threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding some
+  threads from the code, and the pins from every image and model, in every file at once (its tooltip says only which way it
+  goes, Hide or Show comments, the same for code, images and models: `commentsToggleLabel`; "in every file" and "on the
+  model" read as more than a show-or-hide switch): each line holding some
   keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments there are,
   as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is open
   (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
@@ -942,7 +944,8 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window
   lives (`useNewImageCommentsStore`), by file, named by a serial so moving it changes nothing else, on the revision shown, as one on lines is. Once posted it stays
   where it was written: `cm codereview comment edit` changes a comment's text only.
-- **Hidden.** The header's comment button hides the pins, to look at the image alone, the one selected included; one
+- **Hidden.** The header's comment button hides the pins, the one selected included, and the comments of every other file with them (see "Hidden" under
+  lines), to look at the image alone; one
   gone to while they're hidden shows, as a line of code opens (`threadShownWhileHidden`).
 - **An SVG** shows as code or as the image it draws (docs/features/diff.md "Images written as text"): comments on its
   lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
@@ -985,5 +988,5 @@ point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAn
   else from every angle, so a whole part is what an image's area is here.
 - **Going to it** glides the camera to the view its author had, else facing the point with part of the model around it
   (`viewOfSpot`), and opens its card.
-- **Hidden.** The header's comment button hides the pins ("Hide comments on the model", `commentsToggleLabel`), the
-  one selected included; one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.
+- **Hidden.** The header's comment button hides the pins, the one selected included, and the comments of every other
+  file with them (see "Hidden" under lines); one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.

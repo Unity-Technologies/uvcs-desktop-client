@@ -38,18 +38,18 @@ describe('fileCommentsSummaryOf', () => {
     expect(fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: new Set([7]), modelThreadIds: NONE, focus: { threadId: 99, seq: 3 }, reviewId: 41 }).representation.asked).toBeNull();
   });
 
-  it('hides comments from where they are: the code, the image, both, or nowhere', () => {
-    const hidden = (fileComments: typeof FILE_COMMENTS | null, ids: number[]) => fileCommentsSummaryOf({ fileComments, imageThreadIds: new Set(ids), modelThreadIds: NONE, focus: null, reviewId: 41 }).hidden;
-    expect(hidden(FILE_COMMENTS, [])).toBe('code');
-    expect(hidden(null, [7])).toBe('image');
-    expect(hidden(FILE_COMMENTS, [7])).toBe('both');
-    expect(hidden(null, [])).toBeNull();
+  it('shows the button that hides comments when the code or the image holds some', () => {
+    const hasComments = (fileComments: typeof FILE_COMMENTS | null, ids: number[]) => fileCommentsSummaryOf({ fileComments, imageThreadIds: new Set(ids), modelThreadIds: NONE, focus: null, reviewId: 41 }).hasComments;
+    expect(hasComments(FILE_COMMENTS, [])).toBe(true);
+    expect(hasComments(null, [7])).toBe(true);
+    expect(hasComments(FILE_COMMENTS, [7])).toBe(true);
+    expect(hasComments(null, [])).toBe(false);
   });
 
-  it("counts a 3D model's threads as what the file draws, asks for its view, and hides comments from it", () => {
+  it("counts a 3D model's threads as what the file draws, asks for its view, and shows the button that hides comments", () => {
     const onModel = fileCommentsSummaryOf({ fileComments: FILE_COMMENTS, imageThreadIds: NONE, modelThreadIds: new Set([8, 9]), focus: { threadId: 9, seq: 5 }, reviewId: 41 });
     expect(onModel.representation).toEqual({ onText: 2, onRendered: 2, asked: { representation: 'rendered', key: '41:5' } });
-    expect(onModel.hidden).toBe('both');
-    expect(fileCommentsSummaryOf({ fileComments: null, imageThreadIds: NONE, modelThreadIds: new Set([8]), focus: null, reviewId: 41 }).hidden).toBe('model');
+    expect(onModel.hasComments).toBe(true);
+    expect(fileCommentsSummaryOf({ fileComments: null, imageThreadIds: NONE, modelThreadIds: new Set([8]), focus: null, reviewId: 41 }).hasComments).toBe(true);
   });
 });

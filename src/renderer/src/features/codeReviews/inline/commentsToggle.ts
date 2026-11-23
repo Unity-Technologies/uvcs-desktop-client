@@ -1,17 +1,8 @@
-/** Where a file's comments show: in its code, on its image or its 3D model, or both (an SVG, an OBJ, shown either way). */
-export type CommentsPlace = 'code' | 'image' | 'model' | 'both';
-
-/** What the header's button says it does: hide or show the comments, where they are. */
-export function commentsToggleLabel(shown: boolean, place: CommentsPlace): string {
-  const verb = shown ? 'Hide comments' : 'Show comments';
-  switch (place) {
-    case 'code':
-      return `${verb} in the code`;
-    case 'image':
-      return `${verb} on the image`;
-    case 'model':
-      return `${verb} on the model`;
-    case 'both':
-      return verb;
-  }
+/**
+ * What the header's comments button says it does: hide or show the comments, in the same words for code, images and
+ * models. Where the setting reaches (every file of every review, `useReviewCommentsStore.inCode`; the comment dialog's
+ * one thread) is left out: "in every file" and "on the model" both read as more than a show-or-hide switch.
+ */
+export function commentsToggleLabel(shown: boolean): string {
+  return shown ? 'Hide comments' : 'Show comments';
 }
