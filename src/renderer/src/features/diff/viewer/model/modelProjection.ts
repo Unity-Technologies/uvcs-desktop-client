@@ -20,13 +20,14 @@ export interface CanvasMetrics {
   pixelRatio: number;
 }
 
-/** Where a point of the viewer's space shows on the canvas; none behind the camera. */
+/** Where a point of the viewer's space shows on the canvas; none behind the camera or off its pane. */
 export type Projector = (point: Vector) => ScreenPoint | null;
 
 /**
  * Where points (the viewer's space) show in a pane (`viewport`: canvas pixels from the bottom left, as WebGL and the
- * layout count), seen through `view`; none behind the camera, which would show them mirrored in front. The camera is
- * built once for every point: a frame projects each pin with one per pane.
+ * layout count), seen through `view`; none behind the camera, which would show them mirrored in front, nor off the
+ * pane, which in Split is over the other version. The camera is built once for every point: a frame projects each pin
+ * with one per pane.
  */
 export function projectorOf(view: OrbitView, bounds: BoundsLike, viewport: Rect, canvas: CanvasMetrics): Projector {
   const camera = new PerspectiveCamera(FIELD_OF_VIEW, viewport.width / Math.max(viewport.height, 1));
@@ -42,6 +43,8 @@ export function projectorOf(view: OrbitView, bounds: BoundsLike, viewport: Rect,
     // Three's cameras look down their -Z: a point at 0 or more is level with the camera or behind it.
     if (seen.set(...point).applyMatrix4(camera.matrixWorldInverse).z >= 0) return null;
     const ndc = seen.set(...point).project(camera);
+    // Off the pane: in Split the canvas goes on past it, into the other version's pane.
+    if (Math.abs(ndc.x) > 1 || Math.abs(ndc.y) > 1) return null;
     const x = (viewport.x + ((ndc.x + 1) / 2) * viewport.width) / canvas.pixelRatio;
     const y = canvas.height - (viewport.y + ((ndc.y + 1) / 2) * viewport.height) / canvas.pixelRatio;
     return { x, y, depth: camera.position.distanceTo(seen.set(...point)) };
