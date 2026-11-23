@@ -25,7 +25,7 @@ describe('commentKeyAction', () => {
 
 describe('leaveCommentCommandOf', () => {
   it('closes the card open wherever the keyboard is, as Esc on the stage does', () => {
-    expect(leaveCommentCommandOf({ ...idle, opened: true }, true)).toEqual({ action: 'closeCard', label: 'Close the comment' });
+    expect(leaveCommentCommandOf({ ...idle, opened: true }, true)).toEqual({ action: 'closeCard', label: "Close the comment's card" });
   });
 
   it('stops marking a spot first', () => {
