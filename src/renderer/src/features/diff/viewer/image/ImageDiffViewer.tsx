@@ -13,7 +13,8 @@
 // diff, saying why.
 
 import { ImageOff } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { keyTakenByText } from '../../../../lib/textEntry';
 import type { FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
@@ -33,13 +34,18 @@ import { OnionSkinMode } from './OnionSkinMode';
 import { PixelInspector } from './PixelInspector';
 import { MAX_TOLERANCE } from './pixelComparison';
 import { SideBySideMode } from './SideBySideMode';
-import { ImageLayer, Viewport, World } from './stage';
+import { BOTH_SIDES, ImageLayer, Viewport, World } from './stage';
 import { SwipeMode } from './SwipeMode';
-import { useDecodedImage } from './useDecodedImage';
+import { useDecodedImage, type DecodedImage } from './useDecodedImage';
 import type { CachedHeatmap } from './useHeatmap';
 import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
-import { zoomCommandOf } from './zoomKeys';
+import { stageCommandOf } from './zoomKeys';
+import { ImageAnnotationsContext, takesComments, type ImageSide } from './imageAnnotations';
+import { ImageCommentsOverlay } from './ImageCommentsOverlay';
+import { spotInFrame } from './imageSpotGeometry';
+import { anchoredOffset } from './composedFrame';
+import type { StageOverlay } from './stage';
 import styles from './ImageDiffViewer.module.css';
 
 interface ImageDiffViewerProps {
@@ -83,15 +89,40 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
   const decoding = view.kind === 'loading';
   const spin = useSpinDelay(decoding);
 
-  // Keyboard zoom on the focused stage (`zoomCommandOf`).
+  // A review's comments on the image (`ImageAnnotationsContext`): its pins, and marking a new one's spot.
+  const annotations = useContext(ImageAnnotationsContext);
+  const shownImages = { old: oldImage, new: newImage };
+  const commentable = takesComments(annotations, shownImages);
+  const [commenting, setCommenting] = useState(false);
+  const isCommenting = commenting && commentable;
+
+  // A pin gone to (from the Comments panel, the conversation) comes into view, at the zoom shown.
+  const revealSeq = annotations?.reveal?.seq;
+  useEffect(() => {
+    const pin = annotations?.pins.find((candidate) => candidate.key === annotations.reveal?.key);
+    const image = pin && shownImages[pin.side];
+    if (!pin || !image || !frame) return;
+    panZoom.showRect(spotInFrame(pin.spot, anchoredOffset(frame, image, anchor)));
+  }, [revealSeq, frame]);
+
+  // The stage's keys while it has the focus (`stageCommandOf`); none typed in a comment's card over it. Esc stops
+  // marking a comment's spot, else closes the card open.
   const onKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      const command = zoomCommandOf(event.nativeEvent);
-      if (!command) return;
+      if (keyTakenByText(event.nativeEvent)) return;
+      if (event.key === 'Escape' && (isCommenting || annotations?.opened)) {
+        event.preventDefault();
+        if (isCommenting) setCommenting(false);
+        else annotations?.onOpen(null);
+        return;
+      }
+      const command = stageCommandOf(event.nativeEvent);
+      if (!command || (command === 'comment' && !commentable)) return;
       event.preventDefault();
-      panZoom[command]();
+      if (command === 'comment') setCommenting(!isCommenting);
+      else panZoom[command]();
     },
-    [panZoom],
+    [panZoom, annotations, commentable, isCommenting],
   );
 
   // No version paints: too large reads as any image too large to preview; otherwise the binary diff, saying why.
@@ -102,6 +133,21 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
     return <EmptyState title="Binary file" description={undecodedDescription(original, modified, view.problem)} />;
   }
   if (decoding || !frame) return spin ? <CenteredSpinner /> : null;
+
+  const overlay: StageOverlay | undefined =
+    annotations === null
+      ? undefined
+      : (sides) => (
+          <ImageCommentsOverlay
+            annotations={annotations}
+            panZoom={panZoom}
+            frame={frame}
+            anchor={isDiff ? anchor : 'center'}
+            images={imagesOn(sides, shownImages)}
+            commenting={isCommenting && annotations.commentsOn !== null && sides.includes(annotations.commentsOn)}
+            onCommented={() => setCommenting(false)}
+          />
+        );
 
   return (
     <div className={styles.pane} tabIndex={0} onKeyDown={onKeyDown}>
@@ -117,14 +163,15 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
               {oldImage && <ImageLayer image={oldImage} frame={frame} side="old" />}
               {newImage && <ImageLayer image={newImage} frame={frame} side="new" />}
             </World>
+            {overlay?.(BOTH_SIDES)}
           </Viewport>
         )}
         {isDiff && oldImage && newImage && (
           <>
             {mode === 'onion' && (
-              <OnionSkinMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} blend={blend} onBlendChange={setBlend} />
+              <OnionSkinMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} blend={blend} onBlendChange={setBlend} overlay={overlay} />
             )}
-            {mode === 'sideBySide' && <SideBySideMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} />}
+            {mode === 'sideBySide' && <SideBySideMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} overlay={overlay} />}
             {mode === 'differences' && (
               <DifferencesMode
                 oldImage={oldImage}
@@ -136,14 +183,20 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
                 onToleranceChange={setImageTolerance}
                 cache={heatmapCache}
                 onStats={setStats}
+                overlay={overlay}
               />
             )}
-            {mode === 'swipe' && <SwipeMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} />}
+            {mode === 'swipe' && <SwipeMode oldImage={oldImage} newImage={newImage} frame={frame} panZoom={panZoom} anchor={anchor} overlay={overlay} />}
           </>
         )}
 
         {/* Resized image: the anchor toggle asks how the two sizes align. Hidden when sizes match — it would do nothing. */}
-        <ZoomControls panZoom={panZoom} anchor={isDiff && sizesDiffer ? anchor : null} onAnchorChange={setImageAnchor} />
+        <ZoomControls
+          panZoom={panZoom}
+          anchor={isDiff && sizesDiffer ? anchor : null}
+          onAnchorChange={setImageAnchor}
+          comment={commentable ? { active: isCommenting, onToggle: () => setCommenting(!isCommenting) } : null}
+        />
         <PixelInspector oldImage={oldImage} newImage={newImage} frame={frame} anchor={anchor} panZoom={panZoom} stageRef={stageRef} />
         <ImageInfoStrip
           old={oldImage && { image: oldImage, bytes: original.size }}
@@ -154,4 +207,9 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
       </div>
     </div>
   );
+}
+
+/** The images a viewport showing `sides` holds, by side. */
+function imagesOn(sides: readonly ImageSide[], images: Record<ImageSide, DecodedImage | null>): Partial<Record<ImageSide, DecodedImage>> {
+  return Object.fromEntries(sides.flatMap((side) => (images[side] ? [[side, images[side]]] : [])));
 }

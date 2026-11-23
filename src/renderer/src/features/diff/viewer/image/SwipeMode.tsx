@@ -5,7 +5,7 @@
 
 import { useRef, useState } from 'react';
 import type { AnchorMode, Size } from './composedFrame';
-import { ImageLayer, SideChip, Viewport, World } from './stage';
+import { BOTH_SIDES, ImageLayer, SideChip, Viewport, World, type StageOverlay } from './stage';
 import { CENTERED_SPLIT, SwipeDivider } from './SwipeDivider';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
@@ -20,9 +20,11 @@ interface SwipeModeProps {
   frame: Size;
   panZoom: PanZoom;
   anchor: AnchorMode;
+  /** What a place draws over each viewport, for the sides it shows (`ImageCommentsOverlay`). */
+  overlay?: StageOverlay;
 }
 
-export function SwipeMode({ oldImage, newImage, frame, panZoom, anchor }: SwipeModeProps) {
+export function SwipeMode({ oldImage, newImage, frame, panZoom, anchor, overlay }: SwipeModeProps) {
   /** Divider position as a fraction of the viewport width. */
   const [split, setSplit] = useState(CENTERED_SPLIT);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,7 @@ export function SwipeMode({ oldImage, newImage, frame, panZoom, anchor }: SwipeM
         <SwipeDivider split={split} onSplitChange={setSplit} container={containerRef} knobHidden={knobHidden} />
         <SideChip side="old" />
         <SideChip side="new" corner="right" />
+        {overlay?.(BOTH_SIDES)}
       </Viewport>
     </div>
   );

@@ -1,7 +1,7 @@
 import '../../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../../../lib/shortcuts';
-import { zoomCommandOf } from './zoomKeys';
+import { stageCommandOf, zoomCommandOf } from './zoomKeys';
 
 /** A key as a US layout types it: digits by their position. */
 const press = (key: string, modifiers: Partial<PressedKey> = {}): PressedKey => ({
@@ -27,5 +27,16 @@ describe('zoomCommandOf', () => {
     expect(zoomCommandOf(press('1', { metaKey: true }), true)).toBeNull();
     expect(zoomCommandOf(press('0', { ctrlKey: true }), false)).toBeNull();
     expect(zoomCommandOf(press('-', { altKey: true }), true)).toBeNull();
+  });
+});
+
+describe('stageCommandOf', () => {
+  it('comments with C, and zooms with the zoom keys', () => {
+    expect(['c', '+', '0', 'x'].map((key) => stageCommandOf(press(key), true))).toEqual(['comment', 'zoomIn', 'zoomToFit', null]);
+  });
+
+  it('leaves ⌘C to copy', () => {
+    expect(stageCommandOf(press('c', { metaKey: true }), true)).toBeNull();
+    expect(stageCommandOf(press('c', { ctrlKey: true }), false)).toBeNull();
   });
 });

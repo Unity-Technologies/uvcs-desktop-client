@@ -1,0 +1,126 @@
+/* Over the viewport, under the stage's floating controls. Only its marks take the pointer: the image under it pans. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pin,
+.area {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* The world glides when the controls zoom (`PanZoom.animated`): the marks glide on the same curve, as one with it. */
+.overlay[data-gliding] .pin,
+.overlay[data-gliding] .area {
+  transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out);
+}
+
+/* A marker as a line's is (LineMarkers): a small round pill, the thread's number in it, centered on its point. */
+.pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  padding: 0 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pin:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.pin:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+}
+
+/* Something there still waits for an answer: the color a review's Open pill has. */
+.pin[data-emphasized] {
+  border-color: color-mix(in srgb, var(--status-changed) 60%, transparent);
+  color: var(--status-changed);
+}
+
+.pin[data-earlier] {
+  border-style: dashed;
+}
+
+/* The thread selected, its card open, or a comment being written there: the accent, as its card and line are. */
+.pin[data-selected],
+.pin[data-writing] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* An area: a border, never a fill, so the image under it reads as it is (as a commented line is outlined). */
+.area {
+  border: 1.5px solid var(--border-comment);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg-surface) 70%, transparent);
+}
+
+.area[data-emphasized] {
+  border-color: var(--status-changed);
+}
+
+.area[data-earlier] {
+  border-style: dashed;
+}
+
+.area[data-selected],
+.area[data-writing] {
+  border-color: var(--accent);
+}
+
+.card {
+  position: absolute;
+  z-index: 2;
+  overflow: auto;
+  pointer-events: auto;
+  cursor: auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+/* While commenting, the whole viewport takes the pointer: a click marks a point, a drag an area. */
+.gesture {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.dragArea {
+  position: absolute;
+  border: 1.5px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .overlay[data-gliding] .pin,
+  .overlay[data-gliding] .area {
+    transition: none;
+  }
+}
