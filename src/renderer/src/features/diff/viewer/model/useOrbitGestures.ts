@@ -1,8 +1,8 @@
 // The model stage's pointer, as Unity's Scene view takes it: drag to orbit (Alt+drag too, Unity's habit), drag with
 // the right or middle button or with Shift to pan, each coasting a little once let go (`TURN_FLING`, `SHORT_FLING`);
 // scroll or pinch to zoom at the pointer (a wheel's notches glide: `dollyGlide`); double-click to orbit around the
-// point clicked. A press that doesn't move is a click: it picks the part under it (with Alt held, commenting, it marks
-// the whole part: `stageClickOf`).
+// point clicked. A press that doesn't move is a click (`pressIsClick`): it picks the part under it (with Shift held,
+// commenting, it marks the whole part: `stageClickOf`).
 
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { SHORT_FLING, type FlingFeel } from '../../../../lib/fling';
@@ -10,6 +10,7 @@ import { browserFrameClock } from '../../../../lib/frameClock';
 import { isDiscreteWheel, wheelZoomFactor } from '../../../../lib/wheelZoom';
 import { followDrag, isOnStageControl } from '../image/pointerDrag';
 import type { StageClickModifiers } from '../pins/stageCommenting';
+import { pressIsClick, pressPans } from './stagePress';
 import type { ModelRenderer } from './modelRenderer';
 import { ViewCoast } from './viewCoast';
 import { dollied, orbited, panned, pointOnRay, workingDepth, type OrbitView, type Vector } from './orbitCamera';
@@ -20,8 +21,6 @@ import { dollied, orbited, panned, pointOnRay, workingDepth, type OrbitView, typ
  */
 const TURN_FLING: FlingFeel = { maxSpeed: 1, tauMinMs: 50, tauMaxMs: 90, tauPerSpeedMs: 40 };
 
-/** A press that moves less than this, in pixels, is a click. */
-const CLICK_SLOP = 4;
 /** The point zoomed towards is looked for once per this long: a scroll fires many wheel events, picking costs a raycast. */
 const ZOOM_POINT_MS = 150;
 
@@ -34,7 +33,7 @@ interface OrbitGestures {
   onDollyStep: (point: Vector | null, factor: number) => void;
   /** The centre of what is shown: a pan that grabs nothing moves it with the pointer (`workingDepth`). */
   modelCentre: () => Vector | null;
-  /** A click: what is under the pointer, in CSS pixels of the element, and the modifiers held (Alt: a whole part). */
+  /** A click: what is under the pointer, in CSS pixels of the element, and the modifiers held (Shift: a whole part). */
   onClick: (x: number, y: number, modifiers: StageClickModifiers) => void;
 }
 
@@ -70,7 +69,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
 
     const onPointerDown = (event: PointerEvent): void => {
       if (isOnStageControl(event)) return;
-      const pans = event.button === 1 || event.button === 2 || (event.button === 0 && event.shiftKey);
+      const pans = pressPans(event.button, event.shiftKey);
       if (!pans && event.button !== 0) return;
       event.preventDefault();
       stopCoasting();
@@ -95,7 +94,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
           latest.current.onView(pans ? panned(current, dx, dy, target.clientHeight, panDepth) : orbited(current, dx, dy));
         },
         () => {
-          if (travelled < CLICK_SLOP && !pans) latest.current.onClick(...local(event), { altKey: event.altKey });
+          if (pressIsClick(event.button, travelled)) latest.current.onClick(...local(event), { shiftKey: event.shiftKey });
           else inertia.release();
         },
       );

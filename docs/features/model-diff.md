@@ -271,7 +271,8 @@ only what changes:
   following resizes). The shared framing stays: it is what lets sizes compare.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
-  - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
+  - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans; a press that stays put is a click
+    (`pressIsClick`). A pan moves what it grabbed exactly
     with the pointer: what was under it, else the model's centre (`workingDepth`); panning at the orbit target's depth
     crawled once the target was zoomed close in front of the model. Let go moving, either coasts a little
     (`ViewCoast`: the Branch Explorer's inertia, `SHORT_FLING` for a pan, the much softer `TURN_FLING` for a turn), and
@@ -380,11 +381,12 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
 - **Marking a spot**: where the place takes comments (`takesModelComments`: the version it comments on shows), the
   stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point
   under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion
-  shows there), a click on nothing marks nothing, and a drag still turns the model. A click marks a point; with Alt
-  held (Option on a Mac) it marks the whole part (`stageClickOf`), which the comment button's tooltip and the
-  shortcut's label say in the platform's words (`modifierClick`). Meanwhile the part under the pointer on that version
+  shows there), a click on nothing marks nothing, and a drag still turns the model. A click marks a point; with Shift
+  held, the whole part (`stageClickOf`; a Shift press that stays put is a click, a Shift-drag still pans:
+  `pressIsClick`), as the comment button's tooltip, the shortcut's label and the hover's hint say. Shift, not Alt: many
+  Linux desktops take an Alt-click or Alt-drag to move the window. Meanwhile the part under the pointer on that version
   lights up as a comment's part does, its name beside the cursor as the comment's card will give it, with the
-  Alt-click's hint (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`): nothing over empty space, a pin, a card or a
+  Shift-click's hint (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`): nothing over empty space, a pin, a card or a
   button, nor while a drag turns the model, nor while Diffs by look compares; it goes once commenting stops or the
   pointer leaves the stage. Picking reads the GPU, so it runs at most once a frame however fast the pointer moves
   (`useCommentHover`); what's lit is the part hovered, else a comment's (`litWhileCommenting`). What it writes is

@@ -1,4 +1,3 @@
-import '../../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { commentButtonLabel, hoverLabelOf, hoverLabelPlacement, hoveredPartOf, litWhileCommenting, partNameOf, sameHoveredPart, type NamedVersion } from './commentHover';
 
@@ -78,19 +77,15 @@ describe('litWhileCommenting', () => {
 });
 
 describe('hoverLabelOf', () => {
-  const wheel = { side: 'after' as const, key: '0/0/1', name: 'Wheel' };
-
-  it('names the part, and the click for all of it in the platform’s words', () => {
-    expect(hoverLabelOf(wheel, true)).toEqual({ name: 'Wheel', hint: '⌥-click for the whole part' });
-    expect(hoverLabelOf(wheel, false)).toEqual({ name: 'Wheel', hint: 'Alt-click for the whole part' });
+  it('names the part, and the click for all of it', () => {
+    expect(hoverLabelOf({ side: 'after', key: '0/0/1', name: 'Wheel' })).toEqual({ name: 'Wheel', hint: 'Shift-click for the whole part' });
   });
 });
 
 describe('commentButtonLabel', () => {
-  it('says what a click and an Alt-click mark, or how to stop', () => {
-    expect(commentButtonLabel(false, true)).toBe('Comment: click a point of the model, ⌥-click a whole part');
-    expect(commentButtonLabel(false, false)).toBe('Comment: click a point of the model, Alt-click a whole part');
-    expect(commentButtonLabel(true, false)).toBe('Stop commenting');
+  it('says what a click and a Shift-click mark, in the hint’s words, or how to stop', () => {
+    expect(commentButtonLabel(false)).toBe('Comment: click for a point, Shift-click for the whole part');
+    expect(commentButtonLabel(true)).toBe('Stop commenting');
   });
 });
 

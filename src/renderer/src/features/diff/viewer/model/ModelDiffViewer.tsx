@@ -284,7 +284,7 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
 
   const onClick = useCallback(
     (x: number, y: number, modifiers: StageClickModifiers) => {
-      // Commenting, a click marks a point of the version that takes comments, an Alt-click its whole part; one on
+      // Commenting, a click marks a point of the version that takes comments, a Shift-click its whole part; one on
       // nothing marks nothing.
       const click = stageClickOf(isCommenting, annotations?.commentsOn ?? null, modifiers);
       if (click !== 'stage') {

@@ -1,8 +1,7 @@
 // While commenting on a model, the part under the pointer lights up and its name shows beside the cursor, so a click
-// is aimed at what it will mark, and Alt-click (⌥-click) at a whole part. The viewer (`useCommentHover`) only picks and
+// is aimed at what it will mark, and Shift-click at the whole part. The viewer (`useCommentHover`) only picks and
 // draws what this decides.
 
-import { modifierClick } from '../../../../lib/shortcuts';
 import type { ModelNode } from './parsedModel';
 import { nodeNamesOf } from './modelSpots';
 import type { Side } from './viewLayout';
@@ -64,13 +63,13 @@ export function litWhileCommenting(hovered: LitNode | null, comment: LitNode | n
 }
 
 /** The words beside the cursor: the part's name, and how to comment on all of it. */
-export function hoverLabelOf(part: HoveredPart, mac?: boolean): { name: string; hint: string } {
-  return { name: part.name, hint: `${modifierClick('alt', mac)} for the whole part` };
+export function hoverLabelOf(part: HoveredPart): { name: string; hint: string } {
+  return { name: part.name, hint: 'Shift-click for the whole part' };
 }
 
-/** The words of the stage's comment button: what a click and an Alt-click (⌥-click) mark, or how to stop. */
-export function commentButtonLabel(active: boolean, mac?: boolean): string {
-  return active ? 'Stop commenting' : `Comment: click a point of the model, ${modifierClick('alt', mac)} a whole part`;
+/** The words of the stage's comment button: what a click and a Shift-click mark, or how to stop. */
+export function commentButtonLabel(active: boolean): string {
+  return active ? 'Stop commenting' : 'Comment: click for a point, Shift-click for the whole part';
 }
 
 /** How far the label sits from the cursor's hot spot, right and down: clear of the comment cursor drawn there. */
