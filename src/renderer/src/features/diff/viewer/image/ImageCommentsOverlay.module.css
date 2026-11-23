@@ -1,0 +1,200 @@
+/* Over the viewport and the swipe divider (a card open over it reads whole), under the stage's floating controls and
+   pills. Only its marks take the pointer: the image under it pans. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pin,
+.area {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* The world glides when the controls zoom (`PanZoom.animated`): the marks glide on the same curve, as one with it. */
+.overlay[data-gliding] .pin,
+.overlay[data-gliding] .corner,
+.overlay[data-gliding] .area {
+  transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out);
+}
+
+/* A speech bubble, its tip (the bottom-left corner, square) on the point: the avatar of who started the thread inside,
+   as a line's marker shows who wrote there (LineMarkers). Always white with a soft shadow, so it reads over any image,
+   light or dark; where the thread stands is a mark on it, never a color the image could swallow: a dot while open,
+   faded once settled, an accent ring around the avatar when selected. */
+.pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* PIN_SIZE (imageSpotGeometry), which places cards clear of it. */
+  width: 30px;
+  height: 30px;
+  margin-top: -30px;
+  padding: 0;
+  border: 2px solid var(--image-pin-rim);
+  border-radius: var(--radius-full) var(--radius-full) var(--radius-full) 0;
+  background: var(--image-pin-rim);
+  box-shadow: 0 1px 4px var(--image-pin-shadow);
+  color: var(--text-secondary);
+  opacity: 0.8;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Pointed at, open, selected or being written, it shows whole. */
+.pin:hover,
+.pin[data-emphasized],
+.pin[data-selected],
+.pin[data-writing] {
+  opacity: 1;
+}
+
+.pin:hover {
+  z-index: 1;
+}
+
+.pin:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+/* Something there still waits for an answer: a dot in the color a review's Open pill has, as an unread badge. */
+.pin[data-emphasized]::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 11px;
+  height: 11px;
+  box-sizing: border-box;
+  border: 2px solid var(--image-pin-rim);
+  border-radius: var(--radius-full);
+  background: var(--status-changed);
+}
+
+/* Written on an earlier version: its edge dashed. */
+.pin[data-earlier] {
+  border-style: dashed;
+  border-color: var(--text-secondary);
+}
+
+/* Selected, its card open, pointed at, or a comment being written (a plus where the avatar will be): the accent shows
+   between the white edge and the avatar, as its card and line are outlined in it. */
+.pin:hover,
+.pin[data-selected],
+.pin[data-writing] {
+  background: var(--accent);
+}
+
+.pin[data-writing] {
+  color: var(--accent-contrast);
+}
+
+/* A comment being written moves by its bubble. */
+.pin[data-movable] {
+  cursor: move;
+  touch-action: none;
+}
+
+/* The corners of an area being written on: small squares that reshape it, each with the cursor of its diagonal. */
+.corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid var(--accent);
+  border-radius: 2px;
+  background: var(--bg-surface-raised);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.corner[data-corner='topLeft'],
+.corner[data-corner='bottomRight'] {
+  cursor: nwse-resize;
+}
+
+.corner[data-corner='topRight'],
+.corner[data-corner='bottomLeft'] {
+  cursor: nesw-resize;
+}
+
+/* An area: a border, never a fill, so the image under it reads as it is (as a commented line is outlined). Only its
+   bubble shows until it's pointed at, its card is open, or it's being written: every area drawn at once hid the image
+   under their outlines. Its thread staying selected once the card closes doesn't keep it drawn. */
+.area {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  border: 1.5px solid var(--border-comment);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg-surface) 70%, transparent);
+}
+
+.area:has(+ .pin:hover),
+.area:has(+ .pin:focus-visible),
+.area[data-opened],
+.area[data-writing] {
+  opacity: 1;
+}
+
+.area[data-emphasized] {
+  border-color: var(--status-changed);
+}
+
+.area[data-earlier] {
+  border-style: dashed;
+}
+
+.area[data-selected] {
+  border-color: var(--accent);
+}
+
+/* The area a comment is being written on stays drawn as it was dragged, so the reviewer sees what they're commenting. */
+.area[data-writing] {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.card {
+  position: absolute;
+  z-index: 2;
+  overflow: auto;
+  pointer-events: auto;
+  cursor: auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+/* While commenting, the whole viewport takes the pointer: a click marks a point, a drag an area. */
+.gesture {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: var(--cursor-add-comment);
+}
+
+.dragArea {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .overlay[data-gliding] .pin,
+  .overlay[data-gliding] .corner,
+  .overlay[data-gliding] .area,
+  .area {
+    transition: none;
+  }
+}

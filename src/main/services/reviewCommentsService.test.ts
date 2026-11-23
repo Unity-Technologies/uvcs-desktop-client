@@ -166,6 +166,18 @@ describe('writing on a review', () => {
     ]);
   });
 
+  it('adds a comment on a point or an area of an image, by its revision', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment add': '' });
+
+    await service.addOnImage(IN_WORKSPACE, 41, { revisionId: 812, spot: { x: 120, y: 80 }, kind: 'question' }, 'Too dark?');
+    await service.addOnImage(IN_WORKSPACE, 41, { revisionId: 812, spot: { x: 4, y: 6, size: { width: 30, height: 12 } }, kind: 'changeRequest', changesetId: 9 }, 'Crop this.');
+
+    expect(commands.map(({ via, args }) => [via, ...args.slice(5)])).toEqual([
+      ['query', '--revision=revid:812', '--location=image:120,80', '--type=Question'],
+      ['query', '--revision=revid:812', '--location=image:4,6,30,12', '--type=Change', '--changeset=cs:9'],
+    ]);
+  });
+
   it('replies to a comment', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = reviewComments({ 'codereview comment reply': answer });

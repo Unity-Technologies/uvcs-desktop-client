@@ -103,7 +103,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
   return (
-    <CommentedFileContext.Provider value={thread.root.anchor.kind === 'line' ? thread.root.anchor.path : null}>
+    <CommentedFileContext.Provider value={thread.root.anchor.kind === 'review' ? null : thread.root.anchor.path}>
       <section
         className={styles.thread}
         data-folded={folded}
@@ -238,7 +238,7 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
     inContext: inCode?.inContext === true,
   });
   const { location, earlierTag, pill } = header;
-  const anchor = root.anchor.kind === 'line' ? root.anchor : null;
+  const anchor = root.anchor.kind === 'review' ? null : root.anchor;
 
   return (
     <div className={styles.threadHeader}>

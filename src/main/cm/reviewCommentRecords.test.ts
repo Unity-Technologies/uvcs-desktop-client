@@ -45,10 +45,22 @@ describe('conversationOf', () => {
     expect(comments[0]).toMatchObject({ kind: 'comment', anchor: { kind: 'line', revisionId: 29, firstLine: 3, lastLine: 6 } });
   });
 
-  it("reads a comment on a whole file, or on a location another client writes, as the review's", () => {
+  it('places a comment on a point or an area of an image', () => {
+    const { comments } = conversationIn(
+      printed({ id: 1, type: 'question', revisionid: 30, itemid: 24, path: '/Assets/Art/Hero.png', location: 'image:120,80' }),
+      printed({ id: 2, type: 'change', revisionid: 30, itemid: 24, path: '/Assets/Art/Hero.png', location: 'image:10,20,64,32' }),
+    );
+
+    expect(comments.map((comment) => comment.anchor)).toEqual([
+      { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Hero.png', spot: { x: 120, y: 80 } },
+      { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Hero.png', spot: { x: 10, y: 20, size: { width: 64, height: 32 } } },
+    ]);
+  });
+
+  it("reads a comment on a whole file, or on a location of a kind it doesn't read, as the review's", () => {
     const { comments } = conversationIn(
       printed({ id: 1, type: 'comment', revisionid: 29, itemid: 23, path: '/Assets/Scripts/SwitchFlow.cs', location: -1 }),
-      printed({ id: 2, type: 'comment', revisionid: 30, itemid: 24, path: '/Assets/Art/Hero.png', location: 'image:120,80' }),
+      printed({ id: 2, type: 'comment', revisionid: 30, itemid: 24, path: '/Assets/Models/Hero.fbx', location: 'model:0.1,1.5,0' }),
     );
 
     expect(comments.map((comment) => comment.anchor)).toEqual([{ kind: 'review' }, { kind: 'review' }]);

@@ -1,5 +1,6 @@
 import { Maximize, Scan, SquareArrowUpLeft, SquareDot, ZoomIn, ZoomOut } from 'lucide-react';
 import { hotkey } from '../../../../lib/shortcutRegistry';
+import { CommentPinIcon } from './CommentPinIcon';
 import type { AnchorMode } from './composedFrame';
 import { StageButton, StageControls, StageSeparator, StageTextButton } from './StageControls';
 import { zoomLabel } from './viewTransform';
@@ -10,12 +11,26 @@ interface ZoomControlsProps {
   /** Shown only for revisions of different sizes: centered (the UVCS convention) or by their top-left corners (how canvases usually grow). */
   anchor: AnchorMode | null;
   onAnchorChange: (anchor: AnchorMode) => void;
+  /** Marking a comment's spot, on or off; none where the image takes no comments. */
+  comment?: { active: boolean; onToggle: () => void } | null;
 }
 
 /** The zoom cluster floating at the bottom right of the stage (the UVCS spot). */
-export function ZoomControls({ panZoom, anchor, onAnchorChange }: ZoomControlsProps) {
+export function ZoomControls({ panZoom, anchor, onAnchorChange, comment }: ZoomControlsProps) {
   return (
     <StageControls>
+      {comment && (
+        <>
+          <StageButton
+            icon={<CommentPinIcon />}
+            label={comment.active ? 'Stop commenting' : 'Comment: click a point or drag over an area'}
+            shortcut={hotkey('imageComment')}
+            active={comment.active}
+            onClick={comment.onToggle}
+          />
+          <StageSeparator />
+        </>
+      )}
       <StageTextButton tip="Zoom to fit" onClick={panZoom.zoomToFit}>
         {zoomLabel(panZoom.transform.scale)}
       </StageTextButton>

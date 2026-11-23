@@ -129,6 +129,17 @@
      blue tile (Atlassian's logo library). GitHub's mark is one color, the text's, so it takes no token. */
   --brand-jira-tile: #1868db;
   --brand-jira-mark: #ffffff;
+
+  /* What sets an image comment's bubble apart from the image under it (`ImageCommentsOverlay`), whatever its colors:
+     a thin white edge around its state's color, then a soft dark shadow, in both themes, as the image is the same in
+     both. A thin state border on the theme's surface vanished over an image of that color. */
+  --image-pin-rim: #ffffff;
+  --image-pin-shadow: rgba(0, 0, 0, 0.45);
+
+  /* The pointer marking a comment's spot on an image (`ImageCommentsOverlay`): the bubble a comment is drawn as
+     (`CommentPinIcon`), a plus in it, its square tip the point marked. Light's accent fill with a white rim and plus, so
+     it reads over any image in either theme; a cursor's image can't read tokens, so its colors are written out here. */
+  --cursor-add-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></svg>") 2 22, crosshair;
 }
 
 :root,

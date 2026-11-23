@@ -7,6 +7,7 @@ import { findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
 import {
   addCommentArgs,
+  addImageCommentArgs,
   addLineCommentArgs,
   applyChangeRequestArgs,
   descriptionArgs,
@@ -63,6 +64,11 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
     async addOnLine(place, reviewId, comment, text) {
       const at = cmPlace(place);
       await withTempFile(text, (textFile) => cm.query(addLineCommentArgs(reviewId, comment, textFile, at), at.options));
+    },
+
+    async addOnImage(place, reviewId, comment, text) {
+      const at = cmPlace(place);
+      await withTempFile(text, (textFile) => cm.query(addImageCommentArgs(reviewId, comment, textFile, at), at.options));
     },
 
     async reply(place, commentGuid, text, options) {

@@ -7,7 +7,7 @@ import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type L
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, hasComments, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
+import { comparedFile, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
@@ -24,6 +24,10 @@ import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
 import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
+import { useReviewImageAnnotations } from './useReviewImageAnnotations';
+import { ImageAnnotationsContext } from '../../diff/viewer/image/imageAnnotations';
+import { RepresentationCommentsContext } from '../../diff/viewer/representationComments';
+import { fileCommentsSummaryOf } from './fileRepresentation';
 import { suggestLineLabel } from '../suggestions/suggestButton';
 
 const NO_REVISIONS: number[] = [];
@@ -36,7 +40,8 @@ const NO_REVISIONS: number[] = [];
  * comments on takes a new comment (`lineCommentAt`), from the "+" in its gutter or the code's menu, written under it
  * (`NewLineCommentCard`), kept while the window lives (`useNewLineCommentsStore`).
  * One on an earlier version is seen in context in a dialog (`ReviewComments.seeInContext`), which leaves this diff as
- * it is.
+ * it is. An image's comments are pins on it (`useReviewImageAnnotations`, through `ImageAnnotationsContext`), and a
+ * file shown either as code or as an image (an SVG) says where its comments are (`fileCommentsSummaryOf`).
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
   const comments = useContext(ReviewCommentsContext);
@@ -153,8 +158,22 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     return { rows, render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow, bands, lineAction };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow, spots, lineAction]);
 
-  const controls = hasComments(fileComments) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
-  return <DiffAnnotationsContext.Provider value={annotations}>{children({ controls })}</DiffAnnotationsContext.Provider>;
+  // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
+  const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
+
+  // Where the file's comments are, and, for a file shown either as code or as an image (an SVG), which view a thread
+  // gone to is on.
+  const summary = useMemo(() => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, focus, reviewId: comments?.review.id ?? 0 }), [fileComments, onImage.threadIds, focus, comments?.review.id]);
+  const representationComments = summary.representation;
+
+  const controls = summary.hidden && <CommentsInCodeButton shown={inCode} onChange={setInCode} place={summary.hidden} />;
+  return (
+    <DiffAnnotationsContext.Provider value={annotations}>
+      <ImageAnnotationsContext.Provider value={onImage.annotations}>
+        <RepresentationCommentsContext.Provider value={representationComments}>{children({ controls })}</RepresentationCommentsContext.Provider>
+      </ImageAnnotationsContext.Provider>
+    </DiffAnnotationsContext.Provider>
+  );
 }
 
 const NO_KEYS: readonly string[] = [];
@@ -223,3 +242,4 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
     </InlineThreads>
   );
 }
+

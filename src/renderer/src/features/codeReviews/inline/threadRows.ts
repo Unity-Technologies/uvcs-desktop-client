@@ -1,3 +1,4 @@
+import type { ReviewThread } from '../conversation/reviewThreads';
 import type { ReviewComment, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import { listNames } from '../../../lib/text';
 import { displayName } from '../../../lib/userName';
@@ -20,7 +21,7 @@ export interface LineThreads {
 
 /** What a marker is drawn from: threads folded away, a line's or the outdated ones above the code. */
 export interface MarkedThreads {
-  threads: readonly Pick<PlacedThread, 'thread'>[];
+  threads: readonly { thread: ReviewThread }[];
 }
 
 /** The placed threads by line, each line once, the older side's first and then by line, as the diff reads. */

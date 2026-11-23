@@ -1,5 +1,5 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import type { ChangeRequestThread, LineRange, ReviewConversation } from '@shared/domain/reviewConversation';
+import type { ChangeRequestThread, FileAnchor, LineRange, ReviewConversation } from '@shared/domain/reviewConversation';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { changeRequestsNamedIn } from '@shared/applyChange';
 import type { CheckinMode } from '../../pendingChanges/checkinButton';
@@ -24,8 +24,8 @@ export interface ReviewChangeRequest {
   author: string;
   date: string;
   text: string;
-  /** The file and lines it was written on; none for one on the whole review. */
-  location?: { path: string } & LineRange;
+  /** The file it was written on, and its lines when on lines (not on an image); none for one on the whole review. */
+  location?: { path: string; lines?: LineRange };
   state: ChangeRequestState;
 }
 
@@ -48,7 +48,7 @@ export function changeRequestsOf(reviewId: number, conversation: ReviewConversat
         author: root.author,
         date: root.date,
         text: root.text,
-        ...(root.anchor.kind === 'line' && { location: { path: root.anchor.path, firstLine: root.anchor.firstLine, lastLine: root.anchor.lastLine } }),
+        ...(root.anchor.kind !== 'review' && { location: locationOf(root.anchor) }),
         state,
       },
     ];
@@ -169,7 +169,7 @@ export function changeRequestChip(request: ReviewChangeRequest | undefined, guid
     const label = `change request ${number}`;
     return { lead: LEAD, label, name: `Applies ${label}`, title, card: { title, meta: [] }, opens: { kind: 'find', guid } };
   }
-  const label = changeRequestLineText(request.text, request.location) || title;
+  const label = changeRequestLineText(request.text, request.location?.lines) || title;
   return {
     lead: LEAD,
     label,
@@ -189,4 +189,9 @@ function stateText(state: ChangeRequestState): string {
     case 'discarded':
       return 'Discarded';
   }
+}
+
+/** Where a change request on a file was written: the file, and its lines when it's on lines. */
+function locationOf(anchor: FileAnchor): NonNullable<ReviewChangeRequest['location']> {
+  return anchor.kind === 'line' ? { path: anchor.path, lines: { firstLine: anchor.firstLine, lastLine: anchor.lastLine } } : { path: anchor.path };
 }

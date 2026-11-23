@@ -926,6 +926,24 @@ most) and are painted from a blob URL that lives while it's shown (`useImageUrl`
 a 25 MB PNG, decoded again at every paint). The URL is revoked as the image changes, so what is painted is only ever
 the decode of the image's current URL (`shownDecodeState`): an `<img>` still given the one before fails to load.
 
+## Comments on images
+
+A place may draw over an image and take what the pointer marks on it without the image diff knowing what it is
+(`ImageAnnotationsContext`, as `DiffAnnotationsContext` adds rows under code; a review's comments,
+docs/features/code-reviews.md "Comments on images"):
+
+- **Pins** (`ImagePin`): a spot (`ImageSpot`, the image's own pixels) on the side whose image shows it, drawn by
+  `ImageCommentsOverlay` over every viewport of every mode (`StageOverlay`; Split's two panes each their side's), placed
+  from the composed frame (`anchoredOffset`) and the view (`spotOnScreen`), gliding with the zoom. One opens its card
+  beside it (`cardPlacement`).
+- **Marking a spot**: where the place takes comments (`commentsOn`, a side shown: `takesComments`), the stage's first
+  control and **C** (`stageCommandOf`) turn the pointer into the comment cursor; a click is a point, a drag an area
+  (`spotOfGesture`, `AREA_DRAG_THRESHOLD`). A pin still `movable` drags by its bubble and reshapes by its area's
+  corners (`movedSpot`, `resizedSpot`).
+- **Going to a pin** brings it into view at the zoom shown (`PanZoom.showRect`, `transformShowing`).
+- The stage's keys leave a card's text alone (`keyTakenByText`), and the wheel scrolls a card rather than panning
+  (`isOnStageControl`).
+
 ## Unity's texture formats
 
 TGA, TIFF, Photoshop (PSD and PSB), OpenEXR and Radiance HDR show in the image diff like any other image: every mode,
@@ -980,7 +998,10 @@ makes each into an image the browser paints before anything shows it (`usePainta
 
 An SVG reads as both (`toFileContent` ships its text and its image; past the text cap,
 only the image), so its diff shows rendered or as text, with a "Code | Image" switch in the header remembered per
-extension (`representations`, rendered by default). The text keeps every text feature (editing, discarding, the
+extension (`representations`, rendered by default). A place's comments on it (`RepresentationCommentsContext`) say
+how many the other view holds, with the switch to it (`otherRepresentationNotice`), and one gone to shows its own
+view, for that file while it shows, once (`askToTake`, `shownRepresentation`): the user's choice for the type stays as
+it was. The text keeps every text feature (editing, discarding, the
 comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`
 (no scripts, nothing fetched), and one declaring a huge size is drawn within 16 MP (`decodedSize`).
 

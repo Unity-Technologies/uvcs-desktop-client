@@ -263,7 +263,7 @@ describe('initialCommentsFilter', () => {
 
 describe('emptyCommentsText', () => {
   it('tells a review with no comments on its code from one with nothing left to answer', () => {
-    expect(emptyCommentsText('all', { open: 0, new: 0, all: 0 }).title).toBe('No comments on the code yet');
+    expect(emptyCommentsText('all', { open: 0, new: 0, all: 0 }).title).toBe('No comments on the changes yet');
     expect(emptyCommentsText('open', { open: 0, new: 0, all: 3 }).title).toBe('Nothing left to answer');
   });
 });
@@ -375,5 +375,20 @@ describe('New', () => {
 
   it('says when nothing is new', () => {
     expect(emptyCommentsText('new', { open: 0, new: 0, all: 3 }).title).toBe('Nothing new since your last review');
+  });
+});
+
+describe('threads on images in the panel', () => {
+  const onImage = (id: number, path: string, fields: Partial<ReviewComment> = {}) =>
+    comment(id, { anchor: { kind: 'image', revisionId: 1, itemId: 2, path, spot: { x: 10 - id, y: 0 } }, ...fields });
+
+  it('lists them with the threads on lines, by file, an image\'s in the order they were started', () => {
+    const threads = threadsOf([onImage(5, '/Art/Hero.png'), onLine(1, '/src/Player.cs', 9), onImage(3, '/Art/Hero.png'), comment(7)]);
+    expect(commentsPanelThreads(threads, 'all').map((thread) => thread.root.id)).toEqual([3, 5, 1]);
+  });
+
+  it('counts them under each filter', () => {
+    const threads = threadsOf([onImage(1, '/Art/Hero.png'), onImage(2, '/Art/Hero.png', { kind: 'comment' }), onLine(3, '/src/Player.cs', 2)]);
+    expect(commentsPanelCounts(threads)).toMatchObject({ open: 2, all: 3 });
   });
 });

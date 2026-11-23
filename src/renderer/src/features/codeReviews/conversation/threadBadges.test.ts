@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { answerOf, appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenLineText } from './threadBadges';
+import { answerOf, appliedPillTip, commentLocationPage, locationText, repliesText, replyAction, startsFolded, threadBadges, threadKindName, writtenPlaceText } from './threadBadges';
 import { threadsOf } from './reviewThreads';
 
 const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
@@ -71,7 +71,7 @@ describe('replyAction and threadKindName', () => {
 describe('a comment on a line', () => {
   it("reads as its file's path, as the diff names it; its line goes apart", () => {
     expect(locationText(ON_LINE)).toEqual({ folder: 'Assets/Scripts/', file: 'SwitchFlow.cs' });
-    expect(writtenLineText(ON_LINE)).toBe('line 11');
+    expect(writtenPlaceText(ON_LINE)).toBe('line 11');
   });
 
   it('reads a file at the top of the repository with no folder', () => {
@@ -122,9 +122,22 @@ describe('repliesText', () => {
   });
 });
 
-describe('writtenLineText', () => {
+describe('writtenPlaceText', () => {
   it('names the lines a comment was written on', () => {
-    expect(writtenLineText({ firstLine: 1962, lastLine: 1962 })).toBe('line 1962');
-    expect(writtenLineText({ firstLine: 12, lastLine: 18 })).toBe('lines 12–18');
+    expect(writtenPlaceText({ ...ON_LINE, firstLine: 1962, lastLine: 1962 })).toBe('line 1962');
+    expect(writtenPlaceText({ ...ON_LINE, firstLine: 12, lastLine: 18 })).toBe('lines 12–18');
+  });
+
+  it('names a comment on an image as on a point or an area of it', () => {
+    const onImage = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png' } as const;
+    expect(writtenPlaceText({ ...onImage, spot: { x: 120, y: 80 } })).toBe('point');
+    expect(writtenPlaceText({ ...onImage, spot: { x: 1, y: 2, size: { width: 30, height: 10 } } })).toBe('area');
+  });
+});
+
+describe('commentLocationPage on an image', () => {
+  it('opens the review on its Changes tab at the thread, in its image', () => {
+    const anchor = { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Hero.png', spot: { x: 1, y: 2 } } as const;
+    expect(commentLocationPage(41, { id: 9, anchor })).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Art/Hero.png', focusThread: 9 });
   });
 });

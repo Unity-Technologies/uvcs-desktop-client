@@ -1,6 +1,6 @@
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
-import type { ReviewCommentAnchor } from '@shared/domain/reviewConversation';
+import type { FileAnchor, ImageSpot, ReviewCommentAnchor } from '@shared/domain/reviewConversation';
 import type { ReviewThread } from '../conversation/reviewThreads';
 
 /**
@@ -35,8 +35,13 @@ export interface ShownFile {
 }
 
 export type LineAnchor = Extract<ReviewCommentAnchor, { kind: 'line' }>;
+export type ImageAnchor = Extract<ReviewCommentAnchor, { kind: 'image' }>;
+/** A thread on a file: its root comment is anchored to its lines, or to a spot of its image. */
+export type FileThread = ReviewThread & { root: ReviewThread['root'] & { anchor: FileAnchor } };
 /** A thread on a line: its root comment is anchored to one. */
 export type LineThread = ReviewThread & { root: ReviewThread['root'] & { anchor: LineAnchor } };
+/** A thread on a point or an area of an image. */
+export type ImageThread = ReviewThread & { root: ReviewThread['root'] & { anchor: ImageAnchor } };
 
 /** A side of a diff, as Pierre names them. */
 export type ThreadSide = 'deletions' | 'additions';
@@ -66,6 +71,22 @@ export interface FileThreads {
   earlier: EarlierThread[];
 }
 
+/** A thread on a spot of an image a side of the diff shows. */
+export interface PlacedImageThread {
+  thread: ImageThread;
+  side: ThreadSide;
+  spot: ImageSpot;
+}
+
+/**
+ * The threads on an image shown in a diff: those on a side's revision, at their spot, and those on an earlier version,
+ * whose spot may show something else now.
+ */
+export interface ImageThreads {
+  placed: PlacedImageThread[];
+  earlier: { thread: ImageThread; revisionId: number }[];
+}
+
 /**
  * The threads a file's diff shows, in `view`:
  * - on a line of a revision either side shows, at that line: the newer side's, or the older one's (a file the review
@@ -77,18 +98,36 @@ export interface FileThreads {
  * request never hides behind the mode it was written in.
  */
 export function threadsOfFile(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, file: ShownFile): FileThreads {
-  const placed: PlacedThread[] = [];
-  const earlier: EarlierThread[] = [];
+  const { onSides, earlier } = threadsOnRevisions(threads, review, view, file, isLineThread);
+  return { placed: onSides.map(({ thread, side }) => ({ thread, side, firstLine: thread.root.anchor.firstLine, line: thread.root.anchor.lastLine })), earlier };
+}
+
+/** The threads on spots of an image a file's diff shows, in `view`, as `threadsOfFile` finds those on lines. */
+export function imageThreadsOfFile(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, file: ShownFile): ImageThreads {
+  const { onSides, earlier } = threadsOnRevisions(threads, review, view, file, isImageThread);
+  return { placed: onSides.map(({ thread, side }) => ({ thread, side, spot: thread.root.anchor.spot })), earlier };
+}
+
+/** A file's threads of one kind (`isKind`) in `view`: those on a revision either side shows, and the rest, earlier. */
+function threadsOnRevisions<T extends FileThread>(
+  threads: readonly ReviewThread[],
+  review: CodeReviewTarget,
+  view: ReviewDiffView,
+  file: ShownFile,
+  isKind: (thread: ReviewThread) => thread is T,
+): { onSides: { thread: T; side: ThreadSide }[]; earlier: { thread: T; revisionId: number }[] } {
+  const onSides: { thread: T; side: ThreadSide }[] = [];
+  const earlier: { thread: T; revisionId: number }[] = [];
   for (const thread of threads) {
-    if (!isLineThread(thread) || !isOfFile(thread.root.anchor, file)) continue;
+    if (!isKind(thread) || !isOfFile(thread.root.anchor, file)) continue;
     const written = writtenIn(review, thread);
     if (view.kind === 'changeset' && !belongsToChangeset(thread, written, view.changesetId)) continue;
-    const { revisionId, firstLine, lastLine } = thread.root.anchor;
-    if (revisionId === file.modifiedRevision) placed.push({ thread, side: 'additions', firstLine, line: lastLine });
-    else if (revisionId === file.originalRevision) placed.push({ thread, side: 'deletions', firstLine, line: lastLine });
+    const { revisionId } = thread.root.anchor;
+    if (revisionId === file.modifiedRevision) onSides.push({ thread, side: 'additions' });
+    else if (revisionId === file.originalRevision) onSides.push({ thread, side: 'deletions' });
     else earlier.push({ thread, revisionId });
   }
-  return { placed, earlier };
+  return { onSides, earlier };
 }
 
 /**
@@ -109,13 +148,22 @@ export function isLineThread(thread: ReviewThread): thread is LineThread {
   return thread.root.anchor.kind === 'line';
 }
 
+export function isImageThread(thread: ReviewThread): thread is ImageThread {
+  return thread.root.anchor.kind === 'image';
+}
+
+/** Whether a thread is on a file, its lines or its image, rather than on the whole review. */
+export function isFileThread(thread: ReviewThread): thread is FileThread {
+  return thread.root.anchor.kind !== 'review';
+}
+
 /** The path a comment names, without its leading slash, as a diff names its files (`DiffEntry.path`). */
-export function anchorPath(anchor: Pick<LineAnchor, 'path'>): string {
+export function anchorPath(anchor: Pick<FileAnchor, 'path'>): string {
   return anchor.path.replace(/^\//, '');
 }
 
 /** Whether a comment is on the file: by its path then, the one it had, or the one it moved from. */
-function isOfFile(anchor: LineAnchor, file: ShownFile): boolean {
+function isOfFile(anchor: FileAnchor, file: ShownFile): boolean {
   const path = anchorPath(anchor);
   return path === file.path || path === file.oldPath;
 }

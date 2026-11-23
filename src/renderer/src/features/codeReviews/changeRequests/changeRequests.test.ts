@@ -30,7 +30,12 @@ describe('changeRequestsOf', () => {
       [2, { kind: 'applied', changesetId: 7 }],
       [3, { kind: 'discarded' }],
     ]);
-    expect(requests[0]).toMatchObject({ reviewId: 43, guid: comment(1).guid, author: 'ana', text: 'Request 1', location: { path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } });
+    expect(requests[0]).toMatchObject({ reviewId: 43, guid: comment(1).guid, author: 'ana', text: 'Request 1', location: { path: '/Assets/Scripts/SwitchFlow.cs', lines: { firstLine: 11, lastLine: 11 } } });
+  });
+
+  it('gives a request on an image its file, with no lines', () => {
+    const conversation = conversationOf(comment(1, { anchor: { kind: 'image', revisionId: 30, itemId: 24, path: '/Art/Banner.png', spot: { x: 1, y: 2 } } }));
+    expect(changeRequestsOf(43, conversation)[0]?.location).toEqual({ path: '/Art/Banner.png' });
   });
 
   it('gives a request on the whole review no location, and reads a conversation once', () => {

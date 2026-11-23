@@ -11,7 +11,7 @@ import { regionCounter, steppableRegions, steppedRegion } from './changedRegions
 import type { AnchorMode, Size } from './composedFrame';
 import type { DiffStats } from './imageInfo';
 import { countChangedPixels, MAX_TOLERANCE } from './pixelComparison';
-import { Pill, PillButton, PillLabel, PillValue, Viewport, World } from './stage';
+import { BOTH_SIDES, Pill, PillButton, PillLabel, PillValue, Viewport, World, type StageOverlay } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import { useHeatmap, type CachedHeatmap } from './useHeatmap';
 import type { PanZoom } from './usePanZoom';
@@ -29,9 +29,11 @@ interface DifferencesModeProps {
   /** The viewer's heatmap of the pair, kept across mode switches. */
   cache: { current: CachedHeatmap | null };
   onStats: (stats: DiffStats) => void;
+  /** What a place draws over the viewport (`ImageCommentsOverlay`). */
+  overlay?: StageOverlay;
 }
 
-export function DifferencesMode({ oldImage, newImage, frame, panZoom, anchor, tolerance, onToleranceChange, cache, onStats }: DifferencesModeProps) {
+export function DifferencesMode({ oldImage, newImage, frame, panZoom, anchor, tolerance, onToleranceChange, cache, onStats, overlay }: DifferencesModeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { heatmap, comparing } = useHeatmap({ oldImage, newImage, anchor, tolerance, cache });
   // The region stepped to, on the heatmap it was stepped on: a heatmap rendered anew starts over.
@@ -116,6 +118,7 @@ export function DifferencesMode({ oldImage, newImage, frame, panZoom, anchor, to
           <Spinner size={14} /> Comparing pixels…
         </div>
       )}
+      {overlay?.(BOTH_SIDES)}
     </Viewport>
   );
 }

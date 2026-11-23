@@ -1,4 +1,4 @@
-import type { LineRange, ReviewComment, ReviewCommentAnchor, ReviewCommentKind } from '@shared/domain/reviewConversation';
+import type { FileAnchor, ImageSpot, ReviewComment, ReviewCommentKind } from '@shared/domain/reviewConversation';
 import type { PageOf } from '../../../app/navigation/pages';
 import { displayName } from '../../../lib/userName';
 import { anchorPath } from '../inline/fileThreads';
@@ -63,18 +63,26 @@ export function threadKindName(root: Pick<ReviewComment, 'kind'>): ThreadKindNam
 }
 
 /**
- * What the file of a comment on a line reads: its folder, which gives way first in a narrow card, and its name, whole.
- * The line goes apart (`writtenLineText`).
+ * What the file of a comment on a file reads: its folder, which gives way first in a narrow card, and its name, whole.
+ * Where in it goes apart (`writtenPlaceText`).
  */
-export function locationText(anchor: Pick<Extract<ReviewCommentAnchor, { kind: 'line' }>, 'path'>): { folder: string; file: string } {
+export function locationText(anchor: Pick<FileAnchor, 'path'>): { folder: string; file: string } {
   const path = anchorPath(anchor);
   const slash = path.lastIndexOf('/');
   return { folder: path.slice(0, slash + 1), file: path.slice(slash + 1) };
 }
 
-/** The lines a comment was written on, as the conversation says them apart from its file's link: "line 42", "lines 42–48". */
-export function writtenLineText(anchor: LineRange): string {
-  return rangeWordsInline(anchor);
+/**
+ * Where in its file a comment was written, as the conversation says it apart from the file's link: its lines, "line
+ * 42", "lines 42–48", or what of an image, "point", "area": its pin shows where, with who started it.
+ */
+export function writtenPlaceText(anchor: FileAnchor): string {
+  return anchor.kind === 'line' ? rangeWordsInline(anchor) : imageSpotWords(anchor.spot);
+}
+
+/** "point" for a point of an image, "area" for an area. */
+export function imageSpotWords(spot: ImageSpot): string {
+  return spot.size ? 'area' : 'point';
 }
 
 /**
@@ -97,7 +105,7 @@ export function repliesText({ replies }: Pick<ReviewThread, 'replies'>): string 
  * the thread wherever the file has it: at its line, or above the code when written on an earlier version whose line
  * changed since.
  */
-export function commentLocationPage(reviewId: number, root: Pick<ReviewComment, 'id' | 'changesetId'> & { anchor: Extract<ReviewCommentAnchor, { kind: 'line' }> }): PageOf<'codeReview'> {
+export function commentLocationPage(reviewId: number, root: Pick<ReviewComment, 'id' | 'changesetId'> & { anchor: FileAnchor }): PageOf<'codeReview'> {
   const page: PageOf<'codeReview'> = { kind: 'codeReview', reviewId, tab: 'changes', focusPath: anchorPath(root.anchor), focusThread: root.id };
   return root.changesetId === undefined ? page : { ...page, focusChangeset: root.changesetId };
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, fileThreadCount, isCommentable, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
@@ -27,14 +27,6 @@ describe('isCommentable', () => {
 describe('comparedFile', () => {
   it("is the entry's path and revisions", () => {
     expect(comparedFile(ENTRY)).toEqual({ path: 'src/Player.cs', oldPath: undefined, originalRevision: 10, modifiedRevision: 30 });
-  });
-});
-
-describe('hasComments', () => {
-  it('is any thread at a line or outdated', () => {
-    expect(hasComments(null)).toBe(false);
-    expect(hasComments({ lines: [], outdated: [] })).toBe(false);
-    expect(hasComments({ lines: [], outdated: [{ thread: thread(1), revisionId: 20 }] })).toBe(true);
   });
 });
 
@@ -98,6 +90,11 @@ describe('fileThreadCount', () => {
   it('counts none on a file without threads, by its path or the one it moved from', () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/Other.cs' })).toBe(0);
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/game/Player.cs', oldPath: 'src/Player.cs' })).toBe(3);
+  });
+
+  it('counts the threads on the image with those on lines', () => {
+    const onImage = onPlayer(9, 30, { anchor: { kind: 'image', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { x: 1, y: 1 } } });
+    expect(fileThreadCount(threadsOf([onPlayer(1, 30), onImage]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
   });
 });
 

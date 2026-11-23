@@ -10,7 +10,10 @@
 # requests suggest changes (a ```suggestion fence, docs/features/code-reviews.md "Suggested changes"): a line replaced,
 # a line deleted, a line replaced by several, a line wrapped in a new condition, one in a file with Windows line ends,
 # three lines replaced by one (a comment on a range, `--line=A-B`), and one outdated, its line changed since; a question
-# holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. Two more reviews have
+# holds the same fence, which reads as code. A question on a range of lines goes outdated too, a line of it edited. An
+# image holds comments on a point and on an area (`--location=image:…`): open, answered, and one on its earlier
+# version, which a later check-in repainted. An SVG, which shows as its code or as the image it draws, holds a comment on a
+# line and one on an area. Two more reviews have
 # no comments: one of a changeset, one of a shelve. The workspace ends on the review's branch, where its suggestions
 # can be applied.
 # Usage: scripts/sandboxes/code-reviews.sh [repo-name [workspace-folder]]   → repo code-reviews@local, workspace /tmp/uvcs-code-reviews
@@ -23,6 +26,7 @@ case "$NAME/$FOLDER" in
   */*/* | *@* | *..* | */. | */-* | *[[:space:]]*) echo "Give names only (no server, no path): $NAME $FOLDER" >&2; exit 1 ;;
 esac
 REPO="$NAME@local"
+HERE=$(cd "$(dirname "$0")" && pwd)
 WK="/tmp/$FOLDER"
 TEXTS=$(mktemp -d)
 trap 'rm -rf "$TEXTS"' EXIT
@@ -39,6 +43,8 @@ text() { printf '%s\n' "$2" > "$TEXTS/$1"; echo "$TEXTS/$1"; }
 # cm detects edits by timestamp, so edits in the same second as the last checkin would be missed.
 w() { sleep 1; mkdir -p "$(dirname "$1")"; printf '%s\n' "$2" > "$1"; }
 checkin() { cm ci --all --private -commentsfile="$1" >/dev/null; }
+# The banner, a landscape each variant paints apart (its sun moved, its hills recolored): code-reviews/banner.py.
+banner() { sleep 1; mkdir -p "$(dirname "$2")"; python3 -I "$HERE/code-reviews/banner.py" "$1" "$2"; }
 changeset() { cm find "changeset where branch = '$1'" "order by changesetid desc" limit 1 --format={changesetid} --nototal; }
 on_review() { cm cr comment add "$REVIEW" --format={guid} "$@"; }
 
@@ -65,6 +71,7 @@ CS
 w Assets/Scripts/SwitchFlow.cs "$(switch_flow '        workspace.Update(target);')"
 w Assets/Scripts/LegacySwitch.cs "public class LegacySwitch { }"
 w README.md "# Code reviews"
+banner 0 Assets/Art/Banner.png
 checkin "$(text initial 'Initial project')"
 
 cm mkbr main/task-2210 -c="Switching keeps pending changes in \`SwitchFlow\`" >/dev/null
@@ -78,6 +85,11 @@ w Assets/Scripts/Retry.cs "public static class Retry
     public static void Times(int count, Action action) { for (var i = 0; i < count; i++) action(); }
 }"
 rm Assets/Scripts/LegacySwitch.cs
+banner 1 Assets/Art/Banner.png
+w Assets/Art/Icon.svg '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <rect x="8" y="8" width="80" height="80" rx="16" fill="#3b82f6"/>
+  <circle cx="48" cy="48" r="20" fill="#fbbf24"/>
+</svg>'
 checkin "$(text shelve 'Shelve, undo, switch, bring')"
 FIRST=$(changeset /main/task-2210)
 
@@ -156,6 +168,14 @@ suggest /Assets/Scripts/Retry.cs 3 'Would this read better?
     public static void Times(int count, Action action, Action onEach)
 ```' Question
 
+# Comments on the banner as the first changeset left it: a point, an area, one answered. The check-in below repaints it,
+# so they're on its earlier version.
+on_review --path=/Assets/Art/Banner.png --location=image:480,190 --type=Question -c="Is the sun meant to move this far?" >/dev/null
+SUN=$(on_review --path=/Assets/Art/Banner.png --location=image:0,360,960,240 --type=Change -c="The hills read too orange against the sky.")
+cm cr comment reply "$SUN" -c="Agreed, I'll make them purple." >/dev/null
+on_review --path=/Assets/Art/Icon.svg --line=3 --type=Question -c="Should the circle follow the brand yellow?" >/dev/null
+on_review --path=/Assets/Art/Icon.svg --location=image:8,8,80,80 --type=Change -c="Round these corners a bit more." >/dev/null
+
 cm cr -e "$REVIEW" --title="Switching with changes keeps them" >/dev/null
 cm cr review "$REVIEW" --rework-required -c="Two changes before it goes in." >/dev/null
 
@@ -181,6 +201,13 @@ w Assets/Tests/RetryTests.cs "public class RetryTests
     public void RunsTheActionTheTimesAsked() { }
 }"
 checkin "$(text test "Test Retry.Times [apply-change:${ELSEWHERE:0:8}]")"
+# The banner repainted: comments on its newest version, a point and an area, and one answered.
+banner 2 Assets/Art/Banner.png
+checkin "$(text banner "Purple hills [apply-change:${SUN:0:8}]")"
+on_review --path=/Assets/Art/Banner.png --location=image:630,190 --type=Comment -c="The sun sits well here now." >/dev/null
+on_review --path=/Assets/Art/Banner.png --location=image:500,390,320,130 --type=Change -c="Soften this hill's edge where it meets the far ridge." >/dev/null
+ASKED=$(on_review --path=/Assets/Art/Banner.png --location=image:880,70 --type=Question -c="Do we need this corner of sky?")
+cm cr comment reply "$ASKED" -c="Yes: the title goes there." >/dev/null
 # On the newest revision: a line replaced by one.
 suggest /Assets/Scripts/SwitchFlow.cs 15 'Say where it switched to:
 ```suggestion
