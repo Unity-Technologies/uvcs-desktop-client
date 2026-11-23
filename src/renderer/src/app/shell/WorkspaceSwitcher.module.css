@@ -3,7 +3,8 @@
   flex-direction: column;
   /* Wide enough for an editor and a terminal side by side in the actions below ("Open in Visual Studio Code",
      "Open in Windows Terminal"). */
-  width: 420px;
+  width: 460px;
+  max-width: calc(100vw - 24px);
   max-height: min(480px, calc(100vh - 80px));
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
