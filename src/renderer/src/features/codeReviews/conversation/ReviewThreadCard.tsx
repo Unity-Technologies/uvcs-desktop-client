@@ -236,7 +236,9 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
   const anchor = root.anchor.kind === 'review' ? null : root.anchor;
 
   return (
-    <div className={styles.threadHeader}>
+    // A foldable thread folds with a click anywhere on its band, as with its chevron; its file, pill and buttons keep
+    // their own clicks.
+    <div className={styles.threadHeader} data-folds={onToggle ? '' : undefined} onClick={onToggle && ((event) => rowTakesClick(event) && onToggle())}>
       <span className={styles.headerStart}>
         {header.foldToggle && (
           <button type="button" className={styles.foldToggle} aria-expanded={header.foldToggle.expanded} aria-label={header.foldToggle.label} onClick={onToggle}>

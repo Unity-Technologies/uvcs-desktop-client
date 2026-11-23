@@ -208,6 +208,11 @@
   font-size: var(--text-sm);
 }
 
+/* A foldable thread's band folds it with a click anywhere on it (`rowTakesClick`), as its chevron does. */
+.threadHeader[data-folds] {
+  cursor: pointer;
+}
+
 .foldToggle {
   display: inline-flex;
   flex: none;
