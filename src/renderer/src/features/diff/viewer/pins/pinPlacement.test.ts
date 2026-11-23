@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, cardPlacement, cardStyleOf, focusLeavesHiddenCard, pinBounds, pinCardPlacement, keptCardPlacement, PIN_CARD_WIDTH, stageCardPlacement, viewKeyOf } from './pinPlacement';
+import { boundsOf, cardPlacement, cardStyleOf, pinBounds, pinCardPlacement, keptCardPlacement, PIN_CARD_WIDTH, stageCardPlacement, viewKeyOf } from './pinPlacement';
 
 describe('cardPlacement', () => {
   const VIEWPORT = { width: 1000, height: 600 };
@@ -79,6 +79,11 @@ describe('stageCardPlacement', () => {
     expect(stageCardPlacement({ x: 0, y: 600, width: 0, height: 0 }, pane, STAGE)).not.toBeNull();
   });
 
+  it("reaches over Split's other pane from a pin near the left pane's divider, rather than being cut off there", () => {
+    const placement = stageCardPlacement({ x: 250, y: 100, width: 0, height: 0 }, { x: 0, y: 0, width: 300, height: 600 }, STAGE);
+    expect(placement!.left + placement!.width).toBeGreaterThan(300);
+  });
+
   it('narrows a card on a stage narrower than it, clear of the controls', () => {
     const placement = stageCardPlacement({ x: 50, y: 100, width: 0, height: 0 }, { x: 150, y: 0, width: 150, height: 600 }, { width: 300, height: 600 });
     expect(placement).toMatchObject({ left: 8, width: 232 });
@@ -143,17 +148,6 @@ describe('viewKeyOf', () => {
     const key = viewKeyOf(VIEW, PANES);
     expect(viewKeyOf(VIEW, [{ x: 0, y: 0, width: 500, height: 300 }, null])).not.toBe(key);
     expect(viewKeyOf(VIEW, [PANES[0]!, { x: 400, y: 0, width: 400, height: 300 }])).not.toBe(key);
-  });
-});
-
-describe('focusLeavesHiddenCard', () => {
-  it('hands the focus to the stage when a card holding it hides: a hidden card would swallow the keys typed next', () => {
-    expect(focusLeavesHiddenCard(true, true)).toBe(true);
-  });
-
-  it('leaves the focus where it is when the card shows, or when it hides without holding it', () => {
-    expect(focusLeavesHiddenCard(false, true)).toBe(false);
-    expect(focusLeavesHiddenCard(true, false)).toBe(false);
   });
 });
 
