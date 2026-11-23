@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardPlacement, cornerPoint, dragRect, movedSpot, pinBounds, resizedSpot, spotInFrame, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
+import { cardPlacement, cornerPoint, revealedRect, dragRect, movedSpot, pinBounds, resizedSpot, spotInFrame, spotOfGesture, spotOnScreen, transformShowing } from './imageSpotGeometry';
 
 const AT_TWICE = { scale: 2, x: 10, y: 20 };
 const NO_OFFSET = { x: 0, y: 0 };
@@ -138,5 +138,18 @@ describe('cornerPoint', () => {
 describe('dragRect', () => {
   it('outlines a drag whichever way it goes', () => {
     expect(dragRect({ x: 50, y: 10 }, { x: 20, y: 40 })).toEqual({ x: 20, y: 10, width: 30, height: 30 });
+  });
+});
+
+describe('revealedRect', () => {
+  const VIEWPORT = { width: 600, height: 400 };
+  const AREA = { x: 0, y: 360, width: 960, height: 240 };
+
+  it('brings a whole area into view when it fits at the zoom shown', () => {
+    expect(revealedRect(AREA, VIEWPORT, 0.5)).toBe(AREA);
+  });
+
+  it("brings an area's corner, where its bubble is, when it's bigger than the view", () => {
+    expect(revealedRect(AREA, VIEWPORT, 3.26)).toEqual({ x: 0, y: 360, width: 1, height: 1 });
   });
 });

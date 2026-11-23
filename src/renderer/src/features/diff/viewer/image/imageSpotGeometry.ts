@@ -107,6 +107,16 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/**
+ * What going to a pin brings into view (`transformShowing`), at the zoom shown: its whole area when it fits in the
+ * viewport, else its top-left corner, where its bubble is: an area wider or taller than the view, centered, left its
+ * bubble out of it.
+ */
+export function revealedRect(spot: Point & Size, viewport: Size, scale: number): Point & Size {
+  const fits = spot.width * scale <= viewport.width - SHOW_MARGIN * 2 && spot.height * scale <= viewport.height - SHOW_MARGIN * 2;
+  return fits ? spot : { x: spot.x, y: spot.y, width: 1, height: 1 };
+}
+
 /** A spot in the composed frame, its image placed at `offset`: a point is one pixel, so a view brought to it frames one. */
 export function spotInFrame(spot: ImageSpot, offset: Point): Point & Size {
   return { x: offset.x + spot.x, y: offset.y + spot.y, width: Math.max(1, spot.size?.width ?? 1), height: Math.max(1, spot.size?.height ?? 1) };

@@ -926,7 +926,8 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   the code (`ImageThreadCard`), its × closing it back to its pin, Esc too. It goes right of the pin, else left, else
   below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
   nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the
-  conversation opens it and brings it into view at the zoom shown (`transformShowing`): the reviewer keeps the zoom
+  conversation opens it and brings it into view at the zoom shown (`transformShowing`): the whole area when it fits, else its
+  corner with the bubble (`revealedRect`): the reviewer keeps the zoom
   they chose.
 - **On an earlier version** (written on a revision neither side shows), a thread's pin goes at its spot on the side
   comments go on, dashed, its card tagged "Earlier version" (`imageEarlierTagOf`): an image has no lines to follow, and

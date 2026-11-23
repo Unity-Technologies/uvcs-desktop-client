@@ -43,7 +43,7 @@ import { ZoomControls } from './ZoomControls';
 import { stageCommandOf } from './zoomKeys';
 import { ImageAnnotationsContext, takesComments, type ImageSide } from './imageAnnotations';
 import { ImageCommentsOverlay } from './ImageCommentsOverlay';
-import { spotInFrame } from './imageSpotGeometry';
+import { revealedRect, spotInFrame } from './imageSpotGeometry';
 import { anchoredOffset } from './composedFrame';
 import type { StageOverlay } from './stage';
 import styles from './ImageDiffViewer.module.css';
@@ -102,7 +102,8 @@ export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDif
     const pin = annotations?.pins.find((candidate) => candidate.key === annotations.reveal?.key);
     const image = pin && shownImages[pin.side];
     if (!pin || !image || !frame) return;
-    panZoom.showRect(spotInFrame(pin.spot, anchoredOffset(frame, image, anchor)));
+    const rect = spotInFrame(pin.spot, anchoredOffset(frame, image, anchor));
+    panZoom.showRect(panZoom.viewport ? revealedRect(rect, panZoom.viewport, panZoom.transform.scale) : rect);
   }, [revealSeq, frame]);
 
   // The stage's keys while it has the focus (`stageCommandOf`); none typed in a comment's card over it. Esc stops
