@@ -288,10 +288,10 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const reveal = annotations?.reveal ?? null;
   useEffect(() => {
     const shown = revealedPin(reveal, revealed.current, framing !== null, annotations?.pins ?? [], versions);
-    if (!shown || !reveal || !framing) return;
+    if (!shown || !reveal || !framing || !renderer) return;
     revealed.current = reveal.seq;
-    camera.frameView(viewOfSpot(shown.place.point(), shown.pin.spot.view, viewerSpaceOf(shown.version.model), camera.currentView(), framing, camera.paneAspect()));
-  }, [reveal?.seq, framing, versions, annotations?.pins, camera]);
+    camera.frameView(viewOfSpot(shown.place.point(), shown.pin.spot.view, viewerSpaceOf(shown.version.model), camera.currentView(), framing, renderer.paneSize()));
+  }, [reveal?.seq, framing, versions, annotations?.pins, camera, renderer]);
 
   const onClick = useCallback(
     (x: number, y: number, modifiers: StageClickModifiers) => {
