@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { anchoredPoint, nearestSkinAnchor, skinAnchorOfSpot, skinnedMeshesOn, type PlacedMesh } from './skinAnchors';
+import { anchoredPoint, nearestSkinAnchor, skinAnchorOfSpot, deformedMeshesOn, type PlacedMesh } from './skinAnchors';
 import { testModel } from './testing/testModels';
 
 /** Two triangles side by side on the ground: one from x 0 to 2, one from x 4 to 6. */
@@ -54,7 +54,7 @@ describe('skinAnchorOfSpot', () => {
   const crate = model.nodes.findIndex((node) => node.name === 'Crate');
 
   it("anchors a spot on a skinned part where its point is at rest, in the part's space", () => {
-    expect(skinnedMeshesOn(model, body)).toEqual([0]);
+    expect(deformedMeshesOn(model, body)).toEqual([0]);
     const anchor = skinAnchorOfSpot(model, body, { point: { x: 0, y: 6, z: 0 }, node: { path: ['Body'], local: { x: 0, y: 1, z: 0 } } })!;
     // The top of the box, 1 up from its node, which stands 5 up.
     const top = anchor.corners.map((vertex) => model.meshes[0]!.attributes.position[vertex * 3 + 1]! + 5);
@@ -62,7 +62,7 @@ describe('skinAnchorOfSpot', () => {
   });
 
   it('anchors nothing on a rigid part, or a spot that says not where on its part it is', () => {
-    expect(skinnedMeshesOn(model, crate)).toEqual([]);
+    expect(deformedMeshesOn(model, crate)).toEqual([]);
     expect(skinAnchorOfSpot(model, crate, { point: { x: 0, y: 0, z: 0 }, node: { path: ['Crate'], local: { x: 0, y: 0, z: 0 } } })).toBeNull();
     expect(skinAnchorOfSpot(model, body, { point: { x: 0, y: 6, z: 0 }, node: { path: ['Body'] } })).toBeNull();
   });

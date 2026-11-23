@@ -1,6 +1,7 @@
-// Where a comment's spot sits on a skinned mesh (a character, an antenna that sways). A take bends such a mesh by its
-// bones and leaves its node where it is, so a spot placed by its node's matrix (`placedSpot`) would stay in the air as
-// the surface moves away. Such a spot is anchored instead on the mesh's triangle nearest its point at rest, by where
+// Where a comment's spot sits on a mesh a take reshapes: a skinned one (a character, an antenna that sways), which a
+// take bends by its bones, or one with blendshapes (a face), which a take morphs. Either way the mesh's node stays
+// where it is, so a spot placed by its node's matrix (`placedSpot`) would stay in the air as the surface moves away.
+// Such a spot is anchored instead on the mesh's triangle nearest its point at rest, by where
 // in that triangle the point is (barycentric weights): wherever the skeleton bends the triangle's three corners, the
 // spot is that mix of them, still on the surface.
 //
@@ -9,13 +10,13 @@
 // it. The anchor needs nothing new stored: it is worked out from the spot's point at rest (`local`), so comments
 // written before still follow the skin.
 
-import { Matrix4, Triangle, Vector3, type SkinnedMesh } from 'three';
+import { Matrix4, Triangle, Vector3, type Mesh } from 'three';
 import { isSkinned, placedPositionsOf } from './meshPlacement';
 import { fileRestWorldOf } from './modelSpaces';
 import type { ModelPoint, ModelSpot } from '@shared/domain/reviewConversation';
 import type { ModelMesh, ParsedModel } from './parsedModel';
 
-/** A point on a skinned mesh: a triangle of it, and where in it. */
+/** A point on a mesh a take reshapes: a triangle of it, and where in it. */
 export interface SkinAnchor {
   /** The mesh, as an index in the model's meshes, which is its index in the scene's too (`ModelScene.meshes`). */
   mesh: number;
@@ -32,23 +33,26 @@ export interface PlacedMesh {
   index: Uint32Array | null;
 }
 
-/** The skinned meshes hanging on a node, as indices in the model's meshes: none for a rigid part. */
-export function skinnedMeshesOn(model: Pick<ParsedModel, 'meshes'>, node: number): number[] {
-  return model.meshes.flatMap((mesh, i) => (mesh.node === node && isSkinned(mesh) ? [i] : []));
+/**
+ * The meshes hanging on a node that a take reshapes (skinned, or with blendshapes), as indices in the model's meshes:
+ * none for a rigid part. A node holding both kinds anchors its spots on the reshaped ones: they're what a take moves.
+ */
+export function deformedMeshesOn(model: Pick<ParsedModel, 'meshes'>, node: number): number[] {
+  return model.meshes.flatMap((mesh, i) => (mesh.node === node && (isSkinned(mesh) || mesh.blendShapes.length > 0) ? [i] : []));
 }
 
 /**
- * What is worked out once per model and kept while the model lives: each node's skinned meshes at rest, and each
+ * What is worked out once per model and kept while the model lives: each node's reshaped meshes at rest, and each
  * spot's anchor (a spot is a comment's object, the same while the comment isn't moved). The pins are placed again
  * whenever any of them changes (a comment being written dragged over the model, `ModelCommentsOverlay`): without
- * these, every pointer move skinned the parts at rest again and scanned their triangles for every pin.
+ * these, every pointer move placed the parts at rest again and scanned their triangles for every pin.
  */
 const restMeshesByModel = new WeakMap<object, Map<number, PlacedMesh[]>>();
 const anchorsByModel = new WeakMap<object, WeakMap<ModelSpot, SkinAnchor | null>>();
 
 /**
- * The anchor of a spot on a node's skinned meshes: the one nearest the spot's point at rest (`local`, in the node's
- * space, which a take bending the skin doesn't move). None for a rigid part, or a spot that doesn't say where on its
+ * The anchor of a spot on a node's reshaped meshes: the one nearest the spot's point at rest (`local`, in the node's
+ * space, which a take bending or morphing the mesh doesn't move). None for a rigid part, or a spot that doesn't say where on its
  * part it is: its node's matrix places it (`placedSpot`). Reads every triangle of the meshes once per spot and model.
  */
 export function skinAnchorOfSpot(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, spot: ModelSpot): SkinAnchor | null {
@@ -66,24 +70,24 @@ function anchorOf(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, lo
 }
 
 /**
- * Where a point hit on a node's skinned meshes as they are drawn now (a take may bend them) sits with the skin at
- * rest, in the file's space: the same place on the same triangle. None for a rigid part: its node carries it.
+ * Where a point hit on a node's reshaped meshes as they are drawn now (a take may bend or morph them) sits with
+ * them at rest, in the file's space: the same place on the same triangle. None for a rigid part: its node carries it.
  */
-export function restPointOfHit(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, hit: Vector3, drawn: (mesh: number) => SkinnedMesh): Vector3 | null {
-  const meshes = skinnedMeshesOn(model, node);
+export function restPointOfHit(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number, hit: Vector3, drawn: (mesh: number) => Mesh): Vector3 | null {
+  const meshes = deformedMeshesOn(model, node);
   const anchor = meshes.length === 0 ? null : nearestSkinAnchor(drawnMeshesOf(model, meshes, drawn), hit);
   return anchor && anchoredPoint(anchor, restMeshesOn(model, node));
 }
 
 /**
- * The node's skinned meshes as the file has them at rest, its bones where the file puts them, in the file's own
+ * The node's reshaped meshes as the file has them at rest, its bones where the file puts them, in the file's own
  * space: placed once per node and model.
  */
 function restMeshesOn(model: Pick<ParsedModel, 'nodes' | 'meshes'>, node: number): PlacedMesh[] {
   let byNode = restMeshesByModel.get(model);
   if (!byNode) restMeshesByModel.set(model, (byNode = new Map()));
   let meshes = byNode.get(node);
-  if (!meshes) byNode.set(node, (meshes = placedAtRest(model, skinnedMeshesOn(model, node))));
+  if (!meshes) byNode.set(node, (meshes = placedAtRest(model, deformedMeshesOn(model, node))));
   return meshes;
 }
 
@@ -98,7 +102,7 @@ function placedAtRest(model: Pick<ParsedModel, 'nodes' | 'meshes'>, meshes: read
  * The meshes' vertices as they are drawn now, a take's pose and blendshapes included, in the viewer's space: what a
  * click on a posed mesh hit. `drawn` is each mesh as the scene draws it.
  */
-export function drawnMeshesOf(model: Pick<ParsedModel, 'meshes'>, meshes: readonly number[], drawn: (mesh: number) => SkinnedMesh): PlacedMesh[] {
+export function drawnMeshesOf(model: Pick<ParsedModel, 'meshes'>, meshes: readonly number[], drawn: (mesh: number) => Mesh): PlacedMesh[] {
   return meshes.map((mesh) => {
     const object = drawn(mesh);
     const count = model.meshes[mesh]!.attributes.position.length / 3;
@@ -153,7 +157,7 @@ export function anchoredPoint(anchor: SkinAnchor, meshes: readonly PlacedMesh[])
  * matrices of the last frame drawn), placed by the mesh. Three vertices read, whatever
  * the mesh's size: this runs for every pin, every frame.
  */
-export function drawnAnchorPoint(anchor: SkinAnchor, drawn: SkinnedMesh): Vector3 {
+export function drawnAnchorPoint(anchor: SkinAnchor, drawn: Mesh): Vector3 {
   const point = new Vector3();
   const corner = new Vector3();
   anchor.corners.forEach((vertex, i) => point.addScaledVector(drawn.getVertexPosition(vertex, corner), anchor.weights[i]!));
