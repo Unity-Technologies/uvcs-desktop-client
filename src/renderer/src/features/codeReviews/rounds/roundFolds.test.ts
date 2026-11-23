@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationBlock } from './reviewRounds';
-import { opensAtSince, roundIsOpen, roundLineComment, toggledRound } from './roundFolds';
+import { opensAtSince, roundIsOpen, roundLineComment, toggledRound, untoggledRound } from './roundFolds';
 
 describe('roundIsOpen', () => {
   it('starts a settled round folded and one with something open unfolded', () => {
@@ -16,9 +16,29 @@ describe('roundIsOpen', () => {
     expect(roundIsOpen({ number: 2, folds: false }, toggledRound(new Set(), 2), undefined)).toBe(false);
   });
 
-  it('keeps the round holding the thread gone to unfolded, whatever was clicked', () => {
+  it('unfolds the round holding the thread gone to', () => {
     expect(roundIsOpen({ number: 1, folds: true }, new Set(), 1)).toBe(true);
-    expect(roundIsOpen({ number: 2, folds: false }, toggledRound(new Set(), 2), 2)).toBe(true);
+  });
+
+  it('still folds the round holding the thread gone to with a click on its line', () => {
+    expect(roundIsOpen({ number: 1, folds: true }, toggledRound(new Set(), 1), 1)).toBe(false);
+    expect(roundIsOpen({ number: 2, folds: false }, toggledRound(new Set(), 2), 2)).toBe(false);
+  });
+});
+
+describe('untoggledRound', () => {
+  it('unfolds a round folded by hand again when the page goes to a thread in it', () => {
+    const folded = toggledRound(new Set(), 1);
+    const goneTo = untoggledRound(folded, 1);
+
+    expect(roundIsOpen({ number: 1, folds: true }, goneTo, 1)).toBe(true);
+  });
+
+  it("leaves the other rounds' clicks as they were, and all of them when the thread is after every round", () => {
+    const toggled = toggledRound(toggledRound(new Set(), 1), 2);
+
+    expect([...untoggledRound(toggled, 1)]).toEqual([2]);
+    expect(untoggledRound(toggled, undefined)).toBe(toggled);
   });
 });
 
