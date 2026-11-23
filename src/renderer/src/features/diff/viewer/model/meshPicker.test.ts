@@ -1,6 +1,6 @@
 import { BackSide, BoxGeometry, DoubleSide, FrontSide, Mesh, MeshBasicMaterial, MeshStandardMaterial, ShaderMaterial, type BufferGeometry, type Camera, type Scene, type WebGLRenderer } from 'three';
 import { describe, expect, it } from 'vitest';
-import { facesOf, MeshPicker } from './meshPicker';
+import { drawnTwinsOf, facesOf, MeshPicker, shownToPicking } from './meshPicker';
 
 describe('facesOf', () => {
   it("picks the faces the mesh's material draws: the front, the back or both", () => {
@@ -33,5 +33,27 @@ describe('MeshPicker.makePickable', () => {
     const other = new ShaderMaterial({ uniforms: { mesh: { value: 0 } } });
     draw(other, 1);
     expect(other.uniforms.mesh!.value).toBe(0);
+  });
+});
+
+describe('drawnTwinsOf', () => {
+  const twins = () => {
+    const geometry = new BoxGeometry();
+    const [solid, wire, heat, ghost] = [0, 1, 2, 3].map(() => new Mesh(geometry, new MeshBasicMaterial()));
+    for (const twin of [heat!, ghost!]) twin.visible = false;
+    return { solid: solid!, wire: wire!, heat: heat!, ghost: ghost! };
+  };
+
+  it("makes pickable every way a mesh is drawn: Diffs draws the version after as its heat twin, the one before as its ghost", () => {
+    const mesh = twins();
+    expect(drawnTwinsOf(mesh)).toEqual([mesh.solid, mesh.wire, mesh.heat, mesh.ghost]);
+  });
+
+  it('finds a mesh Diffs shows only as its heat, as the raycast does without a GPU picker', () => {
+    const mesh = twins();
+    mesh.solid.visible = mesh.wire.visible = false;
+    expect(shownToPicking(mesh)).toBe(false);
+    mesh.heat.visible = true;
+    expect(shownToPicking(mesh)).toBe(true);
   });
 });
