@@ -57,7 +57,9 @@ export function ModelCommentsOverlay({ annotations, renderer, versions, modelSiz
         bubble.toggleAttribute('data-off-screen', at === null);
         if (!at) continue;
         onScreen.set(pin.key, at);
-        bubble.style.transform = `translate(${at.x}px, ${at.y}px)`;
+        // `translate`, not `transform`: a pin behind the model is scaled down about its tip (`scale`, in the CSS), and
+        // CSS scales a `transform` with it, which would pull the bubble towards the overlay's corner.
+        bubble.style.translate = `${at.x}px ${at.y}px`;
       }
       placeCard(onScreen);
       window.clearTimeout(settle);
