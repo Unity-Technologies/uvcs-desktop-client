@@ -206,7 +206,8 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
   const litPin = annotations ? litCommentPart(annotations.pins, annotations.opened, pointedPin, lookDifferences) : null;
   const litPart = useMemo(() => (litPin ? (pinPlacesOf([litPin], versions)[0] ?? null) : null), [litPin, versions]);
   // Commenting, the pointer shows what a click marks (`hoveredPartOf`, `hoverLabelOf`): a ring lying on the surface
-  // at the point and the part's name beside it, or with Shift held, the whole part lit up.
+  // at the point and the part's name beside it, or with Shift held, the whole part lit up (named only in Diffs, whose
+  // colors say what changed).
   const hoverLabelRef = useRef<HTMLDivElement>(null);
   const commentsOn = annotations?.commentsOn ?? null;
   const partAt = useCallback(
@@ -215,9 +216,9 @@ export function ModelDiffViewer({ place, sources, original, modified, mode, sett
       const hit = renderer?.pick(x, y, commentsOn, true) ?? null;
       // Where a click would mark a point: the ring on the surface there (`aimRingPlacement`).
       renderer?.setCommentAim(commentsOn, hit?.point ? { point: hit.point, normal: hit.normal } : null);
-      return hoveredPartOf(hit, versions[commentsOn], lookDifferences);
+      return hoveredPartOf(hit, versions[commentsOn]);
     },
-    [renderer, commentsOn, versions, lookDifferences],
+    [renderer, commentsOn, versions],
   );
   const { hovered, wholePart, placeLabel } = useCommentHover({ element: stageRef, label: hoverLabelRef, renderer, enabled: isCommenting, partAt });
   const aimShown = aimShownWhileCommenting(hovered, wholePart);

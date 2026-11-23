@@ -34,11 +34,11 @@ export interface NamedVersion {
 /**
  * The part a pointer shows while commenting: the mesh under it on the version comments are written on (`pick` with
  * `only`), by the name a comment's card gives it (`modelPartName`: the last of its names from the root). None over
- * empty space, over a mesh the file names no part for, or while Diffs by look compares, where a part lit would compare
- * as a change (as `litCommentPart`).
+ * empty space, or over a mesh the file names no part for. In every mode: Diffs keeps the part from lighting up (its
+ * colors say what changed, and by look a part lit would compare as a change: `applyLook`), not from being named.
  */
-export function hoveredPartOf(hit: HoverHit | null, version: NamedVersion | null, comparesLooks: boolean): HoveredPart | null {
-  if (comparesLooks || !hit?.key || !version) return null;
+export function hoveredPartOf(hit: HoverHit | null, version: NamedVersion | null): HoveredPart | null {
+  if (!hit?.key || !version) return null;
   const name = partNameOf(version, hit.key);
   return name === null ? null : { side: hit.side, key: hit.key, name };
 }
@@ -66,8 +66,7 @@ export function litWhileCommenting(hovered: LitNode | null, wholePart: boolean, 
 
 /**
  * Whether the ring lies on the surface where a click would mark a point (`setCommentAim`): while a part is under the
- * pointer and Shift doesn't aim at all of it. Never under Diffs by look, where `hoveredPartOf` finds no part: drawn
- * into the version compared, the ring would compare as a change.
+ * pointer and Shift doesn't aim at all of it. Diffs by look draws it after the versions are compared (`aimRingPass`).
  */
 export function aimShownWhileCommenting(hovered: HoveredPart | null, wholePart: boolean): boolean {
   return hovered !== null && !wholePart;

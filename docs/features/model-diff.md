@@ -396,12 +396,14 @@ comment would sit on the `.meta`'s revision with a point in the model's space, w
   version: a ring lying on the surface at the point, the same size on screen at any distance and lifted a hair off it
   (`setCommentAim`, `showCommentAim`, `aimRingPlacement`, `aimShownWhileCommenting`), and "Point on Wheel" beside the
   cursor (the part's name as the comment's card will give it); or, with Shift held, the whole part lit up as a
-  comment's part is and "Whole Wheel"; pressing or letting go of Shift changes it at once, the pointer still
+  comment's part is and "Whole Wheel" (in Diffs only the words: its colors say what changed, and by look a part lit
+  would compare as a change); pressing or letting go of Shift changes it at once, the pointer still
   (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`). The comment cursor is drawn up and to the right of its hot
   spot, its tip on the ring's edge, so it covers nothing it marks (`--cursor-aim-comment`); with Shift, with no ring,
   it marks the hot spot with a dot of its own, in the same place, so it never jumps (`--cursor-aim-part`).
   A part is never lit while a click would mark a point, so the light never promises the whole part. Nothing over empty space, a pin, a card or a
-  button, nor while a button is held (`hoverPicks`: a drag turns the model), nor while Diffs by look compares; it
+  button, nor while a button is held (`hoverPicks`: a drag turns the model); in every mode, Diffs too, where the ring is
+  drawn after the versions are compared by look, so it never compares as a change (`aimRingPass`); it
   goes once commenting stops or the pointer leaves the stage. It lights as soon as commenting starts with the pointer
   over the model, and follows what moves under a still pointer (a turn's coast, a glide, flying, a take): each frame
   drawn asks again. Picking reads the GPU, so it runs at most once a frame, and only when the pointer moved a pixel or
