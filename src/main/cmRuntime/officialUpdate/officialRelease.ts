@@ -39,7 +39,7 @@ function textOf(value: unknown): string | null {
  * Whether the installer may download from `url`: over https, or from the site asked itself (`site`, a local fake site
  * in development: `UVCS_OFFICIAL_UPDATES_URL`). Never plain http elsewhere, nor a file or another scheme.
  */
-function isTrustedInstallerUrl(url: string, site: string): boolean {
+export function isTrustedInstallerUrl(url: string, site: string): boolean {
   try {
     const parsed = new URL(url);
     return parsed.protocol === 'https:' || parsed.origin === new URL(site).origin;
@@ -55,6 +55,12 @@ function isTrustedInstallerUrl(url: string, site: string): boolean {
  * Only an address `isTrustedInstallerUrl` takes is usable.
  */
 export function parseLastVersion(body: string, site: string): OfficialRelease | null {
+  const release = readLastVersion(body);
+  return release && isTrustedInstallerUrl(release.installerUrl, site) ? release : null;
+}
+
+/** The answer as the site gave it (`parseLastVersion` without the address check); null when there's nothing usable. */
+export function readLastVersion(body: string): OfficialRelease | null {
   let answer: unknown;
   try {
     answer = JSON.parse(body);
@@ -66,7 +72,7 @@ export function parseLastVersion(body: string, site: string): OfficialRelease | 
   const readableVersion = textOf(version);
   if (!readableVersion || !/^\d+(\.\d+)+$/.test(readableVersion)) return null;
   const installerUrl = textOf(installerUri) ?? textOf(downloadLink)?.replace('/download/', '/download/downloadinstaller/') ?? null;
-  return installerUrl && isTrustedInstallerUrl(installerUrl, site) ? { version: readableVersion, installerUrl } : null;
+  return installerUrl ? { version: readableVersion, installerUrl } : null;
 }
 
 /**
