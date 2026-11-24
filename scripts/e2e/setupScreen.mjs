@@ -129,7 +129,6 @@ async function launch(name, settings, extraEnv = {}, cmVersion = null) {
   mkdirSync(userData, { recursive: true });
   // `cm` runs in the home folder when nothing names another (`CmClient`), so it must be there.
   mkdirSync(join(folder, 'home'));
-  mkdirSync(join(folder, 'tmp'));
   writeFileSync(join(userData, 'settings.json'), JSON.stringify({ theme: 'light', ...settings }));
   if (cmVersion) writeFileSync(versionFile, cmVersion);
   const app = await electron.launch({
@@ -138,7 +137,7 @@ async function launch(name, settings, extraEnv = {}, cmVersion = null) {
     timeout: TIMEOUT_MS,
     env: {
       ...Object.fromEntries(Object.entries(process.env).filter(([variable]) => variable !== 'UVCS_CM_PATH')),
-      // An empty store, wherever this OS keeps it (`cmStoreFolder`).
+      // An empty store, wherever this OS keeps it (`cmStoreFolder`), and the installed one's update beside it.
       HOME: join(folder, 'home'),
       LOCALAPPDATA: join(folder, 'local'),
       XDG_DATA_HOME: join(folder, 'data'),
@@ -149,10 +148,6 @@ async function launch(name, settings, extraEnv = {}, cmVersion = null) {
       UVCS_FAKE_CM_SIGN_IN: join(folder, 'sign-in'),
       UVCS_FAKE_CM_VERSION_FILE: versionFile,
       PLASTIC_HOME: join(folder, 'plastic4'),
-      // The installed one's update downloads into the temporary folder: this launch's own.
-      TMPDIR: join(folder, 'tmp'),
-      TEMP: join(folder, 'tmp'),
-      TMP: join(folder, 'tmp'),
       UVCS_OFFICIAL_UPDATES_URL: officialSite.url,
       UVCS_FAKE_OFFICIAL_UPDATE_MS: '200',
       ...extraEnv,
