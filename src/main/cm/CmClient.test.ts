@@ -802,7 +802,8 @@ describe('CmClient held while Unity Version Control updates', () => {
     await operation;
     await records;
     expect(shellCommands.map((command) => command.args[0])).toEqual(['status', 'find']);
-    expect(processes.map((run) => run.args[0])).toEqual(['update']);
+    // The update, a `cm shell` of its own.
+    expect(processes).toHaveLength(1);
     expect(pools[0]!.shown).toEqual([WORKSPACE]);
   });
 

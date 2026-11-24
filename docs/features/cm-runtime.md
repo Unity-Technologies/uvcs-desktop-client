@@ -220,8 +220,12 @@ Settings' Update link, never on a timer. It isn't `cm`, so the server budget doe
    (`pkgutilCheck`) must say it's signed for distribution by a certificate Apple issued, notarized, and by a Developer
    ID Installer of `MAC_INSTALLER_TEAMS` (`Codice Software (BQ7R3Y4J72)`). Those are the signers of 11.0.16.10694's
    installers. Any other answer deletes the download (`notSigned`).
-6. **Run** (`installerCommands.ts`), after `CmClient`'s shells are stopped (`CmClient.dispose`: they hold `cm`'s files,
-   and the Windows installer stops while `cm` runs): Windows starts the installer elevated, so Windows asks for
+6. **Run** (`installerCommands.ts`) with `CmClient` held (`CmClient.hold`): its shells end, as they hold `cm`'s files
+   and the Windows installer stops while `cm` runs, and no command starts a process or a shell until the installer
+   ended and the version was read again. A command asked meanwhile (from Settings, a view refreshing) waits, then runs
+   on the `cm` the installer left; one its caller cancels while it waits never runs. A command already running in a
+   process of its own goes on: an app update waits for the operations changing a workspace first ("Updates bring their
+   cm"). Then: Windows starts the installer elevated, so Windows asks for
    permission, unattended with its own small dialogs (`--mode unattended --unattendedmodeui minimalWithDialogs`),
    without the official client's option that starts it once done, and waits for it (`windowsInstallerRun`: .NET's
    `Process.Start` with the `runas` verb, so a declined prompt ends with Windows' `ERROR_CANCELLED`,

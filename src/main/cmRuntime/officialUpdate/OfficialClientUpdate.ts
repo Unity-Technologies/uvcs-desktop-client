@@ -40,8 +40,11 @@ export interface OfficialClientUpdateOptions {
   /** The edition of the installation a `cm` belongs to (`officialEditionOf`, its links resolved). */
   editionOf: (cmPath: string) => OfficialEdition;
   tools: OfficialUpdateTools;
-  /** Stops `CmClient`'s shells: the installer replaces the files they hold open, and on Windows stops while one runs. */
-  stopCm: () => void;
+  /**
+   * Holds `CmClient` while the installer runs (`CmClient.hold`): its shells end, as the installer replaces the files
+   * they hold open and on Windows stops while one runs, and no command starts until the returned function resumes it.
+   */
+  holdCm: () => () => void;
   /** The installed `cm` and its version, read again once the installer ended (`CmRuntime.installedCm`). */
   installedAgain: () => Promise<InstalledCm | null>;
   /** Where it stands changed (`state`). */
@@ -88,7 +91,7 @@ function failureOf(error: unknown): OfficialUpdateError {
  * Updates the official installation of Unity Version Control, as the official client updates itself
  * (docs/features/cm-runtime.md "Updating the installed one"): asks the download site for the latest version of the
  * installed edition, downloads its installer (in the background as soon as the update screen shows: `prepare`), and on
- * the user's click checks it's signed by Unity, stops the app's `cm`, runs it and waits for it, then reads the installed
+ * the user's click checks it's signed by Unity, holds the app's `cm`, runs it and waits for it, then reads the installed
  * version again (`install`). On Linux it only names the command that updates it.
  */
 export class OfficialClientUpdate {
@@ -145,13 +148,7 @@ export class OfficialClientUpdate {
       version = installer.version;
       this.set({ kind: 'installing', version });
       await this.checkSignature(installer);
-      this.options.stopCm();
-      const outcome = await this.options.tools.run(installer);
-      if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');
-      const after = await this.options.installedAgain();
-      if (!after || !meetsCmVersion(after.version, floor)) {
-        throw new OfficialUpdateError('notUpdated', `The installer of ${version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
-      }
+      await this.runHoldingCm(installer, floor);
       this.ready = null;
       await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
       this.set(null);
@@ -162,6 +159,24 @@ export class OfficialClientUpdate {
       return false;
     } finally {
       this.installRequested = false;
+    }
+  }
+
+  /**
+   * Runs the installer with `CmClient` held, and reads the installed version again before commands start again: they
+   * run on the `cm` it left. Fails unless that version meets the floor.
+   */
+  private async runHoldingCm(installer: DownloadedInstaller, floor: string): Promise<void> {
+    const resumeCm = this.options.holdCm();
+    try {
+      const outcome = await this.options.tools.run(installer);
+      if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');
+      const after = await this.options.installedAgain();
+      if (!after || !meetsCmVersion(after.version, floor)) {
+        throw new OfficialUpdateError('notUpdated', `The installer of ${installer.version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
+      }
+    } finally {
+      resumeCm();
     }
   }
 

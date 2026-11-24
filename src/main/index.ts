@@ -68,7 +68,7 @@ const cmRuntime = createCmRuntime({
     early.dropAll();
     cm.relocate();
   },
-  stopShells: () => cm.dispose(),
+  holdCm: () => cm.hold(),
   logCommand: (entry) => cm.logEntry(entry),
   statusChanged: (status) => {
     sendEvent('cmRuntimeChanged', status);

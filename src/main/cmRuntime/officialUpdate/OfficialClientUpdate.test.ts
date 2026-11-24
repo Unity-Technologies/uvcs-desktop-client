@@ -74,8 +74,11 @@ async function setup({ site = fakeSite(), platform = 'windows', verdict = { trus
     folder,
     editionOf: () => 'cloud',
     tools,
-    stopCm: () => calls.push('stop cm'),
-    installedAgain: async () => ({ ...INSTALLED, version: versionAfter }),
+    holdCm: () => {
+      calls.push('hold cm');
+      return () => calls.push('resume cm');
+    },
+    installedAgain: async () => (calls.push('read version'), { ...INSTALLED, version: versionAfter }),
     changed: () => states.push(update.state()),
     now: () => 0,
   });
@@ -92,12 +95,12 @@ describe('OfficialClientUpdate', () => {
     expect(kinds()).toEqual(['lookingUp', 'downloading', 'downloaded']);
   });
 
-  it('installs on the click: checks the signature, stops cm, runs the installer and reads the version again', async () => {
+  it('installs on the click: checks the signature, holds cm, runs the installer and reads the version again, then resumes cm', async () => {
     const { update, folder, calls } = await setup();
     await update.prepare(INSTALLED, FLOOR);
     expect(await update.install(INSTALLED, FLOOR)).toBe(true);
     const installer = join(folder, FILE);
-    expect(calls).toEqual([`check ${installer}`, 'stop cm', `run ${installer} 11.0.16.10694`]);
+    expect(calls).toEqual([`check ${installer}`, 'hold cm', `run ${installer} 11.0.16.10694`, 'read version', 'resume cm']);
     expect(update.state()).toBeNull();
     expect(existsSync(folder)).toBe(false);
   });
@@ -140,7 +143,7 @@ describe('OfficialClientUpdate', () => {
     const { update, folder, calls } = await setup({ site: { fetch, requests: [] }, platform: 'macos-arm64' });
     expect(await update.install({ path: '/Applications/PlasticSCM.app/Contents/MacOS/cm', version: '11.0.16.9000' }, FLOOR)).toBe(true);
     const zip = join(folder, 'unity-vcs-11.0.16.10694-cloud-macos-arm64.pkg.zip');
-    expect(calls).toEqual([`unpack ${zip}`, `check ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')}`, 'stop cm', `run ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')} 11.0.16.10694`]);
+    expect(calls).toEqual([`unpack ${zip}`, `check ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')}`, 'hold cm', `run ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')} 11.0.16.10694`, 'read version', 'resume cm']);
   });
 
   describe('fails, saying why, once the user asked', () => {
@@ -180,14 +183,15 @@ describe('OfficialClientUpdate', () => {
       const { update, folder, calls } = await setup({ verdict: { trusted: false, why: 'Its signature is HashMismatch' } });
       expect(await update.install(INSTALLED, FLOOR)).toBe(false);
       expect(update.state()).toMatchObject({ kind: 'failed', failure: 'notSigned', version: '11.0.16.10694' });
-      expect(calls.some((call) => call.startsWith('run') || call === 'stop cm')).toBe(false);
+      expect(calls.some((call) => call.startsWith('run') || call === 'hold cm')).toBe(false);
       expect(existsSync(folder)).toBe(false);
     });
 
-    it("when the user didn't give the installer permission", async () => {
-      const { update } = await setup({ outcome: { kind: 'declined' }, versionAfter: '11.0.16.9000' });
+    it("when the user didn't give the installer permission, resuming cm", async () => {
+      const { update, calls } = await setup({ outcome: { kind: 'declined' }, versionAfter: '11.0.16.9000' });
       expect(await update.install(INSTALLED, FLOOR)).toBe(false);
       expect(update.state()).toMatchObject({ kind: 'failed', failure: 'declined', version: '11.0.16.10694' });
+      expect(calls.filter((call) => call.endsWith(' cm'))).toEqual(['hold cm', 'resume cm']);
     });
 
     it('when the installer ended and the installed one is still too old, keeping the download to try again', async () => {
