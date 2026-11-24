@@ -904,11 +904,11 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
   in its tooltip), told by `useDescribeWorkspace` (a local `cm wi` of each, `workspaceHeadsReader`; `cm status` only for recent ones it can't tell). A
   partial or dynamic workspace also shows its kind as a chip, with what it means in its tooltip (`WorkspaceKindChip`,
-  `workspaceKindChip`), and as a badge in its avatar's corner, a bolt or a half-filled circle in the accent color on a raised disc, which the collapsed
-  sidebar keeps when the chip goes (`WorkspaceKindBadge`; both mark the kinds `markedWorkspaceKind` names, and a
-  missing workspace's neither: `shownWorkspaceKind`); a standard one, the way most are, shows none, and its details'
-  Type line says it (`workspaceKindWords`). In
-  the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
+  `workspaceKindChip`), and as a badge in its avatar's corner, a bolt or a half-filled circle in the accent color on a
+  raised disc, which the collapsed sidebar keeps when the chip goes (`WorkspaceKindBadge`; both mark the kinds
+  `markedWorkspaceKind` names, and a missing workspace's neither: `shownWorkspaceKind`); a standard one, the way most
+  are, shows none, and its details' Type line says it (`workspaceKindWords`). In the switcher's narrow rows the server
+  gives way first, down to its icon, then the branch's name.
 
 ## Start-up
 
