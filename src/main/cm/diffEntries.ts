@@ -2,15 +2,25 @@ import type { DiffEntry, DiffStatus, PermissionsChange } from '@shared/domain/di
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { comparePaths } from '@shared/pathOrder';
 import type { CmClient, CmRecordsOptions } from './CmClient';
+import { FIND_DATE_FORMAT } from './findQuery';
 import { recordFormat, unquoted, type ReadRecord } from './formatRecords';
 
 /**
  * `--format` for `cm diff --repositorypaths` that `readDiffEntry` understands. `{repository}` is the repository of
  * each item's revisions: under an xlink, the xlinked one. `{srcfsprotection}` and `{fsprotection}` are the item's file
- * permissions before and after (`-rw-r--r--`, nothing where none is set). `cm diff` prints the paths, the repository and
- * the permissions between double quotes, which are no part of them.
+ * permissions before and after (`-rw-r--r--`, nothing where none is set). `{date}` is when the revision `{revid}` names
+ * was made, read with the rest of it: no other command asks the server for it. `cm diff` prints the paths, the
+ * repository, the permissions and the date between double quotes, which are no part of them.
  */
-export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserevid', 'revid', 'type', 'repository', 'srcfsprotection', 'fsprotection']);
+export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserevid', 'revid', 'type', 'repository', 'srcfsprotection', 'fsprotection', 'date']);
+
+/**
+ * `cm diff` of `specs`, printed for `readDiffEntry`: its dates in the round-trip format of `cm find`
+ * (`FIND_DATE_FORMAT`), which the renderer parses, rather than the one `cm`'s own config may set.
+ */
+export function diffCommand(specs: readonly string[]): string[] {
+  return ['diff', ...specs, '--repositorypaths', `--format=${DIFF_FORMAT}`, `--dateformat=${FIND_DATE_FORMAT}`];
+}
 
 const STATUSES: Record<string, DiffStatus> = { A: 'added', C: 'changed', D: 'deleted', M: 'moved' };
 const ITEM_TYPES: Record<string, ItemType> = { F: 'file', B: 'binaryFile', D: 'directory', X: 'xlink' };
@@ -20,7 +30,7 @@ const ITEM_TYPES: Record<string, ItemType> = { F: 'file', B: 'binaryFile', D: 'd
  * changeset touching most of a big tree prints about 130 bytes a file.
  */
 export async function queryDiffEntries(cm: Pick<CmClient, 'queryRecords'>, specs: string[], options: CmRecordsOptions): Promise<DiffEntry[]> {
-  return mergedDiffEntries(await cm.queryRecords(['diff', ...specs, '--repositorypaths', `--format=${DIFF_FORMAT}`], readDiffEntry, options));
+  return mergedDiffEntries(await cm.queryRecords(diffCommand(specs), readDiffEntry, options));
 }
 
 /**
@@ -48,6 +58,7 @@ export const readDiffEntry: ReadRecord<DiffEntry> = ([
   quotedRepository = '',
   quotedPermissionsBefore = '',
   quotedPermissionsAfter = '',
+  quotedDate = '',
 ]) => {
   const [path, sourcePath, repository] = [unquoted(quotedPath), unquoted(quotedSourcePath), unquoted(quotedRepository)];
   const status = STATUSES[statusCode];
@@ -63,6 +74,7 @@ export const readDiffEntry: ReadRecord<DiffEntry> = ([
     itemType,
     ...sidesOf(status, baseRevisionId, revisionId),
     repository,
+    date: revisionDate(unquoted(quotedDate)),
   };
   if (!onlyPermissionsChanged(status, itemType, baseRevisionId, revisionId)) return entry;
   return { ...entry, permissionsChange: permissionsChange(unquoted(quotedPermissionsBefore), unquoted(quotedPermissionsAfter)) };
@@ -86,6 +98,14 @@ function onlyPermissionsChanged(status: DiffStatus, itemType: DiffEntry['itemTyp
   return status === 'changed' && itemType !== 'xlink' && baseRevisionId === -1 && revisionId !== -1;
 }
 
+/**
+ * The date `cm` printed for an item's revision; undefined where it printed none (an xlink, an item without a revision)
+ * or the empty date it gives a revision it has no details of (`DateTime.MinValue`, `0001-01-01T00:00:00.0000000`).
+ */
+function revisionDate(printed: string): string | undefined {
+  return printed && !printed.startsWith('0001-') ? printed : undefined;
+}
+
 function permissionsChange(before: string, after: string): PermissionsChange {
   return { before: before || null, after: after || null };
 }
@@ -93,7 +113,7 @@ function permissionsChange(before: string, after: string): PermissionsChange {
 function mergeEntries(first: DiffEntry, second: DiffEntry): DiffEntry {
   const withStatus = (status: DiffStatus) => [first, second].find((entry) => entry.status === status);
   const [moved, changed] = [withStatus('moved'), withStatus('changed')];
-  if (moved && changed) return { ...moved, baseRevisionId: changed.baseRevisionId, revisionId: changed.revisionId };
+  if (moved && changed) return { ...moved, baseRevisionId: changed.baseRevisionId, revisionId: changed.revisionId, date: changed.date };
   const [deleted, added] = [withStatus('deleted'), withStatus('added')];
   if (deleted && added) return sameKind(deleted, added) ? replacedEntry(deleted, added) : added;
   return first;
