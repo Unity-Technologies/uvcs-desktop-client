@@ -21,7 +21,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { isSubmenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import { shownToasts } from '../../testing/operationOutcome';
 import { pendingChangeMenu } from './pendingChangeMenu';
-import { addFilterRules } from './pendingChangeOperations';
+import { addFilterRules, askAndAddFilterRules } from './pendingChangeOperations';
 
 const ws = '/ws';
 const change = (path: string, itemType: PendingChange['itemType'] = 'file'): PendingChange => ({ path, kinds: ['private'], itemType, size: 1, lastModified: '' });
@@ -58,6 +58,10 @@ describe('Ignore, cloak or hide', () => {
     expect(await patternsAddedBy(entries.get('All items named New directory…'))).toEqual(['New directory']);
   });
 
+  it('leaves out a name the rules file would read as a comment', () => {
+    expect([...ignoreEntries(pendingChangeMenu(ws, [change('#scratch')], [])).keys()]).toEqual(['This item (/#scratch)…']);
+  });
+
   it('offers the name several items share, wherever they are', () => {
     const selection = [change('Assets/Thumbs.db'), change('Docs/Thumbs.db')];
 
@@ -84,11 +88,11 @@ describe('Ignore, cloak or hide', () => {
   });
 });
 
-describe('addFilterRules', () => {
+describe('askAndAddFilterRules', () => {
   it('shows the suggested rules, in the list file, before adding them', async () => {
     fakeApi.answer('pendingChanges.addFilterRules', () => undefined);
 
-    await addFilterRules(ws, 'hidden', ['/anewfile.txt2']);
+    await askAndAddFilterRules(ws, 'hidden', ['/anewfile.txt2']);
 
     expect(rulesDialog.shown).toEqual([{ fileName: 'hidden_changes.conf', suggested: ['/anewfile.txt2'] }]);
   });
@@ -97,7 +101,7 @@ describe('addFilterRules', () => {
     fakeApi.answer('pendingChanges.addFilterRules', () => undefined);
     rulesDialog.answer = () => ['/src/*.txt2', 'anewfile.txt2'];
 
-    await addFilterRules(ws, 'ignore', ['/src/anewfile.txt2']);
+    await askAndAddFilterRules(ws, 'ignore', ['/src/anewfile.txt2']);
 
     expect(fakeApi.argsOf('pendingChanges.addFilterRules')).toEqual([[ws, 'ignore', ['/src/*.txt2', 'anewfile.txt2']]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Added 2 rules to ignore.conf' }]);
@@ -106,10 +110,23 @@ describe('addFilterRules', () => {
   it('adds nothing when the user cancels', async () => {
     rulesDialog.answer = () => undefined;
 
-    await addFilterRules(ws, 'ignore', ['/Library']);
+    await askAndAddFilterRules(ws, 'ignore', ['/Library']);
 
     expect(fakeApi.argsOf('pendingChanges.addFilterRules')).toEqual([]);
     expect(shownToasts()).toEqual([]);
+  });
+
+});
+
+// The check-in's notice ("Add Library/ to ignore.conf") names its one rule on the button, so it adds it at once.
+describe('addFilterRules', () => {
+  it('adds the rules without asking', async () => {
+    fakeApi.answer('pendingChanges.addFilterRules', () => undefined);
+
+    await addFilterRules(ws, 'ignore', ['/Library']);
+
+    expect(rulesDialog.shown).toEqual([]);
+    expect(fakeApi.argsOf('pendingChanges.addFilterRules')).toEqual([[ws, 'ignore', ['/Library']]]);
   });
 
   it('names the one rule it added', async () => {

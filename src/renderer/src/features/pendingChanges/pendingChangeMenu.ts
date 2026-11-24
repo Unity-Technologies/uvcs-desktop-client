@@ -27,7 +27,7 @@ import { reviewMenuEntry } from '../review/reviewMenuEntry';
 import type { ListReview } from '../review/useReviewMode';
 import {
   absolutePath,
-  addFilterRules,
+  askAndAddFilterRules,
   addToSourceControl,
   checkout,
   deletePrivateFiles,
@@ -146,9 +146,9 @@ export function filterRulesSubmenu(workspacePath: string, paths: string[]): Grou
   const itemsLabel = itemPatterns.length === 1 ? `This item (${itemPatterns[0]})…` : `These ${formatCount(itemPatterns.length)} items…`;
   const patternsFor = (list: FilterRuleList): MenuEntry[] =>
     tidyMenu([
-      { id: `${list}.path`, label: itemsLabel, run: () => void addFilterRules(workspacePath, list, itemPatterns) },
-      name !== null && { id: `${list}.name`, label: `All items named ${name}…`, run: () => void addFilterRules(workspacePath, list, [name]) },
-      extension !== null && { id: `${list}.extension`, label: `All ${extension} files…`, run: () => void addFilterRules(workspacePath, list, [`*${extension}`]) },
+      { id: `${list}.path`, label: itemsLabel, run: () => void askAndAddFilterRules(workspacePath, list, itemPatterns) },
+      name !== null && { id: `${list}.name`, label: `All items named ${name}…`, run: () => void askAndAddFilterRules(workspacePath, list, [name]) },
+      extension !== null && { id: `${list}.extension`, label: `All ${extension} files…`, run: () => void askAndAddFilterRules(workspacePath, list, [`*${extension}`]) },
     ]);
 
   return menuSubmenu('filterRules', [
