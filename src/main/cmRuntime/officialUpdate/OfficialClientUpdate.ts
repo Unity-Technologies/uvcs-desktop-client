@@ -2,7 +2,7 @@ import { mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { meetsCmVersion, type InstalledCm } from '@shared/domain/cmRuntime';
-import type { OfficialUpdate, OfficialUpdateFailure } from '@shared/domain/officialUpdate';
+import type { OfficialUpdate, OfficialUpdateFailure, OfficialUpdateMethod } from '@shared/domain/officialUpdate';
 import { downloadBundle, type Fetch } from '../downloadBundle';
 import type { OfficialEdition } from './officialEdition';
 import { installerFileName, lastVersionUrl, parseLastVersion, type OfficialPlatform } from './officialRelease';
@@ -113,7 +113,7 @@ export class OfficialClientUpdate {
   constructor(private readonly options: OfficialClientUpdateOptions) {}
 
   /** How the installed one is updated here: its installer, a command the user runs (Linux), or neither (no installer for this computer). */
-  updatesBy(): 'installer' | 'command' | null {
+  updatesBy(): OfficialUpdateMethod | null {
     const { platform } = this.options;
     if (platform === null) return null;
     return platform === 'linux' ? 'command' : 'installer';

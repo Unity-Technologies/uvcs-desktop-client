@@ -163,7 +163,9 @@ export class CmRuntime {
 
   status(): CmRuntimeStatus {
     const officialUpdate = this.options.officialUpdate.state();
-    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion, ...(officialUpdate && { officialUpdate }) };
+    const updatesBy = this.options.officialUpdate.updatesBy();
+    const update = { ...(officialUpdate && { officialUpdate }), ...(updatesBy && { updatesBy }) };
+    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion, ...update };
     if (this.isReady()) {
       const { switchingToOwn, unrunnable } = this;
       return {
@@ -171,7 +173,7 @@ export class CmRuntime {
         source: this.chosen.source,
         ...(switchingToOwn && { switchingToOwn }),
         ...(unrunnable && { installedTooOld: { installed: unrunnable, requiredVersion: this.pinnedVersion } }),
-        ...(officialUpdate && { officialUpdate }),
+        ...update,
       };
     }
     return this.progress ?? this.installingStatus({ phase: 'downloading', receivedBytes: 0, totalBytes: null });

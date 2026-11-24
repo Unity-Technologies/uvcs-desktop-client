@@ -1,6 +1,6 @@
 import { meetsCmVersion, type CmSource, type CmUserChoice, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
 import { versionAndNeededText, versionText } from '@shared/domain/cmVersionWords';
-import type { OfficialUpdate } from '@shared/domain/officialUpdate';
+import type { OfficialUpdate, OfficialUpdateMethod } from '@shared/domain/officialUpdate';
 import { TRY_AGAIN_LABEL, UPDATE_LABEL } from '../cmSetup/cmScreenLabels';
 import { downloadPercent, isUpdating, UPDATE_FAILURE_REASONS } from '../cmSetup/officialUpdateWords';
 
@@ -33,8 +33,8 @@ export interface CmChoiceFacts {
   switchingToOwn?: OwnCmSwitch;
   /** The installed one's update, asked from the card. */
   officialUpdate?: OfficialUpdate;
-  /** False on Linux, which has no installer: the update screen shows the command instead. */
-  canInstall: boolean;
+  /** How main says the installed one updates here: only its installer gets the card's Update link (Linux shows the command on the update screen). */
+  updatesBy?: OfficialUpdateMethod;
 }
 
 /**
@@ -56,7 +56,7 @@ function tooOldCard(base: Pick<CmChoiceCard, 'choice' | 'label' | 'selected'>, i
     description: versionAndNeededText(installed.version, pinnedVersion),
     tip: `Older than this app needs. Update it to use it. ${installed.path}`,
     warning: true,
-    ...(facts.canInstall && { updateLabel: UPDATE_LABEL }),
+    ...(facts.updatesBy === 'installer' && { updateLabel: UPDATE_LABEL }),
   };
 }
 

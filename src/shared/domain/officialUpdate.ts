@@ -4,6 +4,12 @@
  * and run as the official client updates itself.
  */
 
+/**
+ * How the installed one is updated on this computer: with its installer (Windows, macOS), or with a command the user
+ * runs (Linux, which has none). Main decides it (`OfficialClientUpdate.updatesBy`); the windows only show it.
+ */
+export type OfficialUpdateMethod = 'installer' | 'command';
+
 /** Why the installed one couldn't be updated, each said to the user in its own plain words. */
 export type OfficialUpdateFailure =
   /** The download site has nothing newer than what's installed, or nothing as new as the app needs. */

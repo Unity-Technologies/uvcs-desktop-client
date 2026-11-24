@@ -183,7 +183,8 @@ is false), and the windows wait as they do for a setup.
   setup screen when it isn't there, and saves the pinned version as `cmDeclinedUpdateFor`: the screen doesn't ask again
   until the pin moves. The choice stays as it was, so once the installed one is new enough, it runs again without
   asking.
-- **Linux** has no installer: the screen shows the command that updates it, with Copy, Check Again
+- **Linux** has no installer: the screen shows the command that updates it (main says so in the status's `updatesBy`,
+  from `OfficialClientUpdate.updatesBy`; the windows never decide it from their OS), with Copy, Check Again
   (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the Included Version for Now".
 - **Checked again as a window gains focus** (the user may come back from updating it another way), quietly, never on a
   timer: new enough, it runs, its shells started again as they finish their commands, even at the same path, which now
@@ -253,7 +254,8 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
 neither tool knows), and the distribution's package manager from /etc/os-release: `sudo apt-get update && sudo apt-get
 install --only-upgrade <package>`, `sudo dnf upgrade <package>` or `sudo zypper update <package>`.
 
-**Settings**: the installed card, when it's too old, has an Update link (none on Linux) that runs the same update, the
+**Settings**: the installed card, when it's too old, has an Update link (only where `updatesBy` is `installer`: none
+on Linux) that runs the same update, the
 card saying how far it is ("Downloading the update… 42%", "Updating… Your computer may ask for permission.") or
 "Couldn't update it." with the reason in its tip and Try Again.
 
@@ -265,7 +267,7 @@ card saying how far it is ("Downloading the update… 42%", "Updating… Your co
   zipped around a `.pkg`), and prints the variable to set.
 - `UVCS_FAKE_OFFICIAL_UPDATE` fakes the OS's part (`developmentUpdateTools`): `installs` (the fake `cm` then prints the
   new version, through `UVCS_FAKE_CM_VERSION_FILE`), `fails` (it ends with the same version), `declined`, `unsigned`,
-  or `linux` (with `UVCS_RENDERER_PLATFORM=linux`, the command). `UVCS_FAKE_OFFICIAL_UPDATE_MS` is how long the fake
+  or `linux` (the command: the windows show what main says, `updatesBy`). `UVCS_FAKE_OFFICIAL_UPDATE_MS` is how long the fake
   installer takes (1.5 s by default).
 
 **Verified only with fakes**: the tests and the smoke test run no installer, and nothing here was run against a real

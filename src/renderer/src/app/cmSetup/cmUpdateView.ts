@@ -98,11 +98,19 @@ function byCommandView(status: CmTooOld, check: CmUpdateCheck): CmUpdateView {
 }
 
 /**
- * The update screen's view. `canInstall` is false on Linux, which has no installer to run: the screen shows the
- * command that updates it instead.
+ * Where Check Again leaves the screen once it read the version, from the status then: still asking for the update says
+ * so; anything else moved on by itself.
  */
-export function cmUpdateViewOf(status: CmTooOld, check: CmUpdateCheck, canInstall: boolean): CmUpdateView {
-  if (!canInstall) return byCommandView(status, check);
+export function checkAgainOutcome(statusKind: CmRuntimeStatus['kind']): CmUpdateCheck {
+  return statusKind === 'installedTooOld' ? 'stillTooOld' : 'none';
+}
+
+/**
+ * The update screen's view. Where main says the installed one updates by a command (Linux, which has no installer to
+ * run: `updatesBy`), the screen shows that command instead of Update.
+ */
+export function cmUpdateViewOf(status: CmTooOld, check: CmUpdateCheck): CmUpdateView {
+  if (status.updatesBy !== 'installer') return byCommandView(status, check);
   const update = status.officialUpdate;
   if (update?.kind === 'failed') return failedView(status, update);
   if (isUpdating(update)) return updatingView(status);
