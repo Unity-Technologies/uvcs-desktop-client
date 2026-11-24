@@ -20,7 +20,7 @@ import { layoutReader, recordFormat } from '../cm/formatRecords';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { readPendingChanges } from '../workspace/readPendingChanges';
 import { readPartialIncomingItems } from './partialIncoming';
-import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
+import { findUpdateBlockers, findUpdateConflicts } from '@shared/updateCollisions';
 
 const NOTHING_INCOMING: NothingIncoming = { branch: null, changesetCount: 0, countCapped: false, authors: [] };
 

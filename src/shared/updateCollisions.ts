@@ -1,6 +1,6 @@
-import type { DiffEntry } from '@shared/domain/diff';
-import type { UpdateConflict } from '@shared/domain/incoming';
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { DiffEntry } from './domain/diff';
+import type { UpdateConflict } from './domain/incoming';
+import type { PendingChange } from './domain/pendingChanges';
 
 const LOCAL_CONTENT_CHANGES = new Set(['changed', 'checkedOut', 'replaced']);
 
