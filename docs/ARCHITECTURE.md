@@ -202,9 +202,16 @@ and many people use the same server. Every `cm` command other than local reads (
   workspace's check reads only its branch head (`limit 1`), comparing its items again only when the head moved
   (docs/features/incoming.md "A partial workspace"). Nothing else polls: left changes, locks and lists wait for an
   event, a focus or an operation.
-- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (the update's `cm diff`
-  and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
-  native client does, and its card lists the newest of what that read brought. At "100+" a hover reads nothing heavy:
+- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (`useIncomingChanges`:
+  the newest page of changesets, `cm find ... limit 201`, the update's `cm diff cs:<loaded> cs:<head>` and the local
+  `cm status`) once per head, to warn about conflicts before any hover, as the native client does, and its card lists
+  the newest of what that read brought. That read is keyed by the branch, loaded changeset and head the check saw
+  (`incomingChangesFor`, `incomingChangesQuery`): never stale, so focus and mounting never read it again, a new head is
+  a new key (new changesets leave it alone, `isAffectedByNewChangesets`), and only an operation or Refresh reads it again
+  under the same head. It waits for the check rather than run before it. Where the workspace stands comes from the
+  `cm status --header` the workspace info shares (`WorkspaceHeaders.status`). What collides locally follows the local
+  changes as Changes' do: a local `cm status` alone (`localChangesForUpdate`, keyed under `pendingChanges`), the
+  conflicts worked out again in the renderer from the diff already read (`withLocalCollisions`, `findUpdateConflicts`). At "100+" a hover reads nothing heavy:
   the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
   says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
   card (that click), opening Incoming or Update reads the diff, Update again right before updating
