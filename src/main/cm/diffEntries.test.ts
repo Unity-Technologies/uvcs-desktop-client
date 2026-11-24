@@ -135,16 +135,33 @@ describe('reading diff entries', () => {
     ]);
   });
 
-  it("reads when each item's revision was made, as cm prints it in the round-trip format", () => {
-    // `cm diff cs:41 --repositorypaths --format=… --dateformat=o`: a deleted item's date is its last revision's.
+  it("dates an added or changed item by its new revision, as cm prints it in the round-trip format", () => {
+    // `cm diff cs:41 --repositorypaths --format=… --dateformat=o`.
     const output =
       formatOutput(['C', '"/src/player.cs"', '""', '40', '41', 'F', GAME, '""', '""', '"2026-11-20T09:15:02.1234567+01:00"']) +
-      formatOutput(['D', '"/src/enemy.cs"', '""', '-1', '12', 'F', GAME, '""', '""', '"2026-03-02T18:40:00.0000000+01:00"']);
+      formatOutput(['A', '"/src/enemy.cs"', '""', '-1', '42', 'F', GAME, '""', '""', '"2026-11-21T18:40:00.0000000+01:00"']);
 
     expect(diffEntriesIn(output).map(({ path, date }) => ({ path, date }))).toEqual([
-      { path: 'src/enemy.cs', date: '2026-03-02T18:40:00.0000000+01:00' },
+      { path: 'src/enemy.cs', date: '2026-11-21T18:40:00.0000000+01:00' },
       { path: 'src/player.cs', date: '2026-11-20T09:15:02.1234567+01:00' },
     ]);
+  });
+
+  it('dates no item whose change made no revision: cm prints the date of an older one, from before the change', () => {
+    // A deleted item's last revision, a pure move's and a change of permissions alone's one revision: all older.
+    const old = '"2024-01-05T10:00:00.0000000+01:00"';
+    const output =
+      formatOutput(['D', '"/src/old.prefab"', '""', '-1', '12', 'F', GAME, '""', '""', old]) +
+      formatOutput(['M', '"/src/moved.cs"', '"/moved.cs"', '-1', '14', 'F', GAME, '""', '""', old]) +
+      formatOutput(['C', '"/tools/build.sh"', '""', '-1', '15', 'F', GAME, '"-rw-r--r--"', '"-rwxr-xr-x"', old]);
+
+    expect(diffEntriesIn(output).map((entry) => entry.date)).toEqual([undefined, undefined, undefined]);
+  });
+
+  it("dates a path given to another item by the new item's revision", () => {
+    const added = formatOutput(['A', '"/src/Score.cs"', '""', '-1', '41', 'F', GAME, '""', '""', '"2026-11-20T09:15:02.0000000+01:00"']);
+    const deleted = formatOutput(['D', '"/src/Score.cs"', '""', '-1', '40', 'F', GAME, '""', '""', '"2024-01-05T10:00:00.0000000+01:00"']);
+    expect(diffEntriesIn(added + deleted)[0]).toMatchObject({ replaced: true, date: '2026-11-20T09:15:02.0000000+01:00' });
   });
 
   it('reads no date where cm prints none, or the empty date of a revision it knows nothing of', () => {

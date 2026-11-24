@@ -122,7 +122,8 @@ describe("a diff entry's date", () => {
     expect(date({ ...entry, date: '2026-11-20T08:15:03.0000000+00:00' })! > date({ ...entry, date: '2026-11-20T09:15:02.0000000+01:00' })!).toBe(true);
   });
 
-  it('is none where cm printed none', () => {
+  it('is none where cm printed none, or a date it cannot read', () => {
     expect(DIFF_ENTRY_FACTS.dateOf!(entry)).toBeUndefined();
+    expect(DIFF_ENTRY_FACTS.dateOf!({ ...entry, date: '20/11/2026 9:15' })).toBeUndefined();
   });
 });
