@@ -945,8 +945,13 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   (`writtenPlaceTip`). The bubble is always white with a soft shadow (`--image-pin-rim`, `--image-pin-shadow`), so it
   reads over any image; where the thread stands is a mark on it, never a color the image could swallow: an
   Open-colored dot while open, faded once settled, an accent ring around the avatar when selected (a state border,
-  then a bubble filled with the state's color, each vanished over an image of that color); an area is a border, never
-  a fill, so the image reads as it is, and it shows only while its
+  then a bubble filled with the state's color, each vanished over an image of that color). Its tooltip opens above
+  it, a model's pin's too, its caret on the bubble wherever the cursor is on it (`data-tip-side`, `placeTooltip`):
+  under the bubble is what the comment is about, which the reader looks at while reading it. An area is drawn as the one dragged to write it: a 2 px line in its state's color over a faint wash of
+  that color, the same bright colors in both themes as the image is the same (`--image-area-settled`, `-waiting`,
+  `-selected`; the light theme's own state colors read as a heavy dark band over images), a thin dark rim each side of the line keeping it apart from an image of its own color
+  (`--image-area-rim`), so the image reads as it is (a 1.5 px line with a light halo was tried and read as a washed-out double
+  border over images), and it shows only while its
   bubble is pointed at, its card open, or it's being written (its thread staying selected once the card closes
   doesn't keep it), as design tools do: every area drawn at
   once hid the image under their outlines. In every image mode, on the

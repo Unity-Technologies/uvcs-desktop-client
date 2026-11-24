@@ -136,6 +136,17 @@
   --image-pin-rim: #ffffff;
   --image-pin-shadow: rgba(0, 0, 0, 0.45);
 
+  /* The thin dark rim on both sides of an image comment's area line (`ImageCommentsOverlay`), in both themes, as the
+     image is the same in both: it keeps the line apart from an image of its own color, and fades into a dark one,
+     where the line reads alone. A light halo was tried and read as a washed-out double border. */
+  --image-area-rim: rgba(0, 0, 0, 0.3);
+  /* An area's line in each of its states, bright in both themes as the image is the same: the light theme's own state
+     colors, dark for text on white, turned into a heavy dark band beside the rim. Settled, waiting for an answer,
+     selected or being written. */
+  --image-area-settled: #d0d7de;
+  --image-area-waiting: #d29922;
+  --image-area-selected: #388bfd;
+
   /* The pointer marking a comment's spot on an image (`ImageCommentsOverlay`): the bubble a comment is drawn as
      (`CommentPinIcon`), a plus in it, its square tip the point marked. Light's accent fill with a white rim and plus, so
      it reads over any image in either theme; a cursor's image can't read tokens, so its colors are written out here. */

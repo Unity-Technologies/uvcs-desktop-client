@@ -45,15 +45,26 @@
   cursor: nesw-resize;
 }
 
-/* An area: a border, never a fill, so the image under it reads as it is (as a commented line is outlined). Only its
-   bubble shows until it's pointed at, its card is open, or it's being written: every area drawn at once hid the image
-   under their outlines. Its thread staying selected once the card closes doesn't keep it drawn. */
+/* An area is drawn as the one dragged to write it (`.dragArea`): a whole-pixel line in its state's color over a faint
+   wash of the same color, so the image under it still reads as it is. Only its bubble shows until it's pointed
+   at, its card is open, or it's being written: every area drawn at once hid the image under their outlines. Its thread
+   staying selected once the card closes doesn't keep it drawn. */
 .area {
+  --area-color: var(--image-area-settled);
   opacity: 0;
   transition: opacity var(--duration-fast) var(--ease-out);
-  border: 1.5px solid var(--border-comment);
+}
+
+/* One look for both, so the area doesn't change as the drag that drew it ends. A dark rim each side of the line keeps
+   it apart from an image of its own color (`--image-area-rim`). */
+.area,
+.dragArea {
+  border: 2px solid var(--area-color);
   border-radius: var(--radius-sm);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  background: color-mix(in srgb, var(--area-color) 10%, transparent);
+  box-shadow:
+    0 0 0 1px var(--image-area-rim),
+    inset 0 0 0 1px var(--image-area-rim);
 }
 
 .area:has(+ .bubble:hover),
@@ -64,21 +75,17 @@
 }
 
 .area[data-emphasized] {
-  border-color: var(--status-changed);
+  --area-color: var(--image-area-waiting);
 }
 
 .area[data-earlier] {
   border-style: dashed;
 }
 
-.area[data-selected] {
-  border-color: var(--accent);
-}
-
 /* The area a comment is being written on stays drawn as it was dragged, so the reviewer sees what they're commenting. */
+.area[data-selected],
 .area[data-writing] {
-  border: 2px solid var(--accent);
-  background: var(--accent-soft);
+  --area-color: var(--image-area-selected);
 }
 
 /* While commenting, the whole viewport takes the pointer: a click marks a point, a drag an area. */
@@ -90,10 +97,8 @@
 }
 
 .dragArea {
+  --area-color: var(--image-area-selected);
   position: absolute;
-  border: 2px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--accent-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
