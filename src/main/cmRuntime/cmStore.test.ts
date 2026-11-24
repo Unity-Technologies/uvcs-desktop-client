@@ -56,6 +56,11 @@ describe('storeEntriesToPrune', () => {
     expect(storeEntriesToPrune(['11.0.16.10659.partial'], '11.0.16.10659')).toEqual([]);
   });
 
+  it('deletes every version, finished or not, while the installed cm runs', () => {
+    const names = ['.DS_Store', '11.0.16.10659', '11.0.16.10700', '11.0.16.10800.partial'];
+    expect(storeEntriesToPrune(names, null)).toEqual(['11.0.16.10659', '11.0.16.10700', '11.0.16.10800.partial']);
+  });
+
   it('leaves alone anything that is not a version', () => {
     expect(storeEntriesToPrune(['.DS_Store', 'notes', 'latest'], '11.0.16.10659')).toEqual([]);
   });
