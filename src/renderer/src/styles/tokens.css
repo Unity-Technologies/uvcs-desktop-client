@@ -261,6 +261,8 @@
   --bg-segment-checked: #ffffff;
   /* Text matching a search or filter; unlike the blue selection, it stays visible on selected rows. */
   --bg-match: rgba(255, 196, 0, 0.38);
+  /* The match a search in code shows now, among the others in --bg-match (`CodeFindBar`): orange, as Pierre's editor marks it. */
+  --bg-match-current: rgba(255, 150, 50, 0.6);
   --bg-code: #f6f8fa;
   /* Inline code in rich text (`Markdown`, the comment editor; never a one-line preview): a muted berry, calm enough
      for comments full of identifiers. The dark theme's is the same hue lightened; both read well above 4.5:1. */
@@ -410,6 +412,7 @@
   --bg-input: #0d1117;
   --bg-segment-checked: #303844;
   --bg-match: rgba(210, 153, 34, 0.4);
+  --bg-match-current: rgba(255, 150, 50, 0.45);
   --bg-code: #0f141b;
   --text-code: #eab0d4;
   --border-subtle: #212830;
