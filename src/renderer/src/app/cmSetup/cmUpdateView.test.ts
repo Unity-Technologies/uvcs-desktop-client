@@ -4,10 +4,11 @@ import { cmUpdateViewOf, type CmTooOld } from './cmUpdateView';
 const TOO_OLD: CmTooOld = { kind: 'installedTooOld', installed: { path: '/usr/local/bin/cm', version: '11.0.16.9000' }, requiredVersion: '11.0.16.10659' };
 
 describe('cmUpdateViewOf', () => {
-  it('asks to update it in plain words, with the versions only under Details', () => {
+  it('asks to update it in plain words, with both versions on a line of their own and the path under Details', () => {
     const view = cmUpdateViewOf(TOO_OLD, 'none');
     expect(view).toMatchObject({ title: 'Update Unity Version Control', checkAgainLabel: 'Check Again', checking: false, includedLabel: 'Use the included version for now' });
-    expect(view.detail).toBe('Installed: version 11.0.16.9000 (/usr/local/bin/cm)\nNeeded: version 11.0.16.10659 or later');
+    expect(view.versions).toBe('Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later');
+    expect(view.detail).toBe('/usr/local/bin/cm');
     for (const text of [view.title, view.body, view.hint, view.includedLabel]) {
       expect(text).not.toMatch(/\bcm\b|command line|installer|bundle|\d+\.\d+/i);
     }

@@ -112,6 +112,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The installed and needed versions, under the update screen's body. */
+.versions {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

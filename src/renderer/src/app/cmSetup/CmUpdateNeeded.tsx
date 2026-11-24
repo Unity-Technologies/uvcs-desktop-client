@@ -33,6 +33,7 @@ export function CmUpdateNeeded({ status }: { status: CmTooOld }) {
     <div className={styles.failure}>
       <h1 className={styles.title}>{view.title}</h1>
       <p className={styles.reason}>{view.body}</p>
+      <p className={styles.versions}>{view.versions}</p>
       <p className={styles.reason} aria-live="polite">
         {view.hint}
       </p>
