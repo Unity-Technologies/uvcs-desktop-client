@@ -484,6 +484,7 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
     expect(relocations()).toBe(1);
+    expect(runtime.installedRevision()).toBe(1);
   });
 
   it('stays on the update screen when the update failed', async () => {
@@ -492,6 +493,7 @@ describe('CmRuntime with an installed cm older than its own', () => {
     await runtime.updateInstalled();
     expect(officialUpdate.installs).toHaveLength(1);
     expect(runtime.status()).toEqual(TOO_OLD);
+    expect(runtime.installedRevision()).toBe(0);
   });
 
   it('updates it from Settings while its own runs, and runs it then unless the user chose its own', async () => {

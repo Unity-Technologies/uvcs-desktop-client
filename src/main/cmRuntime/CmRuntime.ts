@@ -97,6 +97,8 @@ export class CmRuntime {
   private refusedInstalledPath: string | null = null;
   /** Where the app has no `cm` of its own, the installed one, too old to run: nothing runs (`admits`). */
   private unrunnable: InstalledCm | null = null;
+  /** How many times this launch found the installed `cm` replaced by a newer one (`installedRevision`). */
+  private installedReplaced = 0;
   /** Check Again reading the installed `cm`'s version (`checkInstalledAgain`): asks while it does join it. */
   private checkingInstalled: Promise<void> | null = null;
 
@@ -242,9 +244,19 @@ export class CmRuntime {
     const installed = this.updateNeeded ?? (await this.installedCm());
     if (!installed || meetsCmVersion(installed.version, this.pinnedVersion)) return;
     if (!(await this.options.officialUpdate.install(installed, this.pinnedVersion))) return;
+    this.installedReplaced++;
     this.updateNeeded = null;
     this.refusedInstalledPath = null;
     this.switchTo(this.choose(), { relocate: true });
+  }
+
+  /**
+   * Changes each time the installed `cm` was found replaced by a newer one, at the same path (an update, or Check
+   * Again): what remembers a version per executable (`system.cmVersion`) reads it again then, rather than take an
+   * answer the older one gave, or was still giving.
+   */
+  installedRevision(): number {
+    return this.installedReplaced;
   }
 
   /** The installed one's update moved on: the windows hear it. */
@@ -264,6 +276,7 @@ export class CmRuntime {
       return;
     }
     this.updateNeeded = null;
+    this.installedReplaced++;
     // Its shells, started before its version answered, run the executable the update replaced: started again.
     this.switchTo(this.choose(), { relocate: true });
   }

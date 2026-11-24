@@ -25,10 +25,12 @@ export function createSystemService({ cm, cmRuntime, operations, windows, settin
   });
 
   // Every window asks when it opens: once a `cm` runs and reaches its server, later windows take that answer. Kept per
-  // executable: choosing another `cm` in Settings (`cmRuntime.use`) asks the new one, and logs where it is.
+  // executable: choosing another `cm` in Settings (`cmRuntime.use`) asks the new one, and logs where it is; and per
+  // revision of the installed one (`installedRevision`): once it was updated, a read the older one answered is dropped.
   const versions = new Map<string, () => Promise<string>>();
   const versionOf = (executable: string): Promise<string> => {
-    let version = versions.get(executable);
+    const key = `${executable}\n${cmRuntime.installedRevision()}`;
+    let version = versions.get(key);
     if (!version) {
       version = untilSucceeded(async () => {
         // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
@@ -37,7 +39,7 @@ export function createSystemService({ cm, cmRuntime, operations, windows, settin
         diagnosticLog.write(cmFoundText(answer, executable));
         return answer;
       });
-      versions.set(executable, version);
+      versions.set(key, version);
     }
     return version();
   };
@@ -47,12 +49,14 @@ export function createSystemService({ cm, cmRuntime, operations, windows, settin
   const cmVersion = async (): Promise<string> => {
     cm.relocate();
     const executable = cm.executable;
+    const revision = cmRuntime.installedRevision();
     const answer = await versionOf(executable);
-    // Another `cm` runs since it was asked (a window opened at the same time dropped an older one): ask that one.
-    if (cm.executable !== executable) return cmVersion();
+    // Another `cm` runs since it was asked (a window opened at the same time dropped an older one), or the installed one
+    // was updated while it answered: ask that one.
+    if (cm.executable !== executable || revision !== cmRuntime.installedRevision()) return cmVersion();
     if (cmRuntime.admits(executable, answer)) return answer;
     // Check Again asks it again: the user may have updated it meanwhile.
-    versions.delete(executable);
+    versions.delete(`${executable}\n${revision}`);
     // The app's own runs instead (`CmRuntime.admits` relocated `cm` to it), when it's there; one still setting up shows
     // the setup screen meanwhile, as the update screen shows while the installed one waits for its update.
     if (cm.executable !== executable && cmRuntime.isReady()) return cmVersion();
