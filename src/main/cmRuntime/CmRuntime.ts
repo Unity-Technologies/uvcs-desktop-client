@@ -36,6 +36,12 @@ export interface CmRuntimeOptions {
   /** The user's choice in Settings, and saving a new one. */
   choice: () => CmChoice;
   saveChoice: (choice: CmChoice) => void;
+  /**
+   * The pinned version for which the user ran the app's own rather than update an older installed one
+   * (`cmDeclinedUpdateFor`), and saving it: not asked again until the pin moves.
+   */
+  declinedUpdateFor: () => string | null;
+  saveDeclinedUpdate: (pinnedVersion: string) => void;
   /** The `cm` installed on the computer (`findInstalledCm`), null when none was found. */
   findInstalled: () => string | null;
   /** What `cm version` prints for the `cm` at a path. */
@@ -44,10 +50,10 @@ export interface CmRuntimeOptions {
   relocated: () => void;
   statusChanged: (status: CmRuntimeStatus) => void;
   /**
-   * Once a `cm` runs, the store keeps the pinned version and the newest above it, an update's (`CmInstaller.prune`);
-   * development builds, sharing the store, prune nothing.
+   * Once a `cm` runs, the store keeps the pinned version and the newest above it, an update's, or nothing when the
+   * installed one runs (`CmInstaller.prune`, `keep` null); development builds, sharing the store, prune nothing.
    */
-  prune: (pinnedVersion: string) => void;
+  prune: (keep: string | null) => void;
   /** Shows a file in the OS's file manager (`shell.showItemInFolder`). */
   reveal: (path: string) => void;
   timers: CmRuntimeTimers;
@@ -79,6 +85,12 @@ export class CmRuntime {
   private waitingForReady: (() => void)[] = [];
   /** No version of the app's own `cm` was set up before this one: setting up, rather than updating. */
   private firstRun: boolean;
+  /** The installed `cm` found older than the pinned version, waiting for the user to update it (the update screen). */
+  private updateNeeded: InstalledCm | null = null;
+  /** The installed `cm` this launch found older than the pinned version, passed over for the app's own. */
+  private refusedInstalledPath: string | null = null;
+  /** Check Again reading the installed `cm`'s version (`checkInstalledAgain`): asks while it does join it. */
+  private checkingInstalled: Promise<void> | null = null;
 
   constructor(private readonly options: CmRuntimeOptions) {
     this.chosen = this.choose();
@@ -109,8 +121,9 @@ export class CmRuntime {
     return this.chosen.path;
   }
 
-  /** Whether that `cm` can run now: false while the app's own is still being set up. */
+  /** Whether that `cm` can run now: false while the app's own is still being set up, or the installed one needs an update. */
   isReady(): boolean {
+    if (this.updateNeeded) return false;
     return this.chosen.source !== 'managed' || this.options.installer.isInstalled(this.pinnedVersion);
   }
 
@@ -121,6 +134,7 @@ export class CmRuntime {
   }
 
   status(): CmRuntimeStatus {
+    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion };
     if (this.isReady()) return this.switchingToOwn ? { kind: 'ready', source: this.chosen.source, switchingToOwn: this.switchingToOwn } : { kind: 'ready', source: this.chosen.source };
     return this.progress ?? this.installingStatus({ phase: 'downloading', receivedBytes: 0, totalBytes: null });
   }
@@ -131,10 +145,13 @@ export class CmRuntime {
     return new Promise((resolve) => this.waitingForReady.push(resolve));
   }
 
-  /** Sets up the app's own `cm` if it runs and isn't there; prunes the store once a `cm` runs. */
+  /**
+   * Sets up the app's own `cm` if it runs and isn't there; prunes the store once a `cm` runs (an installed one, once its
+   * version is known to be new enough: `admits`).
+   */
   start(): void {
-    if (this.isReady()) this.pruneOnce();
-    else void this.install();
+    if (!this.isReady()) void this.install();
+    else if (this.chosen.source !== 'installed') this.pruneOnce();
   }
 
   /** Tries the setup again now: the user asked, or the network came back. */
@@ -145,15 +162,15 @@ export class CmRuntime {
   }
 
   /**
-   * Runs the installed `cm` from now on, or the app's own again (Settings, or the setup's failure screen). An installed
-   * one older than the pinned version is never taken (`usableInstalledCm`). Going back to the app's own before it's
-   * there keeps the installed one running while it downloads (`useOwnWhenDownloaded`): the windows never lose what they
-   * show for a setup screen.
+   * Runs the installed `cm` when there is one, or always the app's own (Settings, or the setup's failure screen). An
+   * installed one older than the pinned version is read first (`installedCm`) and never run: the update screen asks to
+   * update it, unless the user ran the app's own for this pinned version already. Going back to the app's own before
+   * it's there keeps the installed one running while it downloads (`useOwnWhenDownloaded`): the windows never lose what
+   * they show for a setup screen.
    */
   async use(choice: CmChoice): Promise<void> {
     const turn = ++this.choiceTurn;
-    // Refused without a word: Settings never offers an older one, nor does the setup's failure screen.
-    if (choice === 'installed' && !(await this.usableInstalledCm())) return;
+    const installed = choice === 'automatic' ? await this.installedCm() : null;
     if (turn !== this.choiceTurn) return;
     if (choice === 'managed' && this.chosen.source === 'installed' && this.hasOwnCm() && !this.options.installer.isInstalled(this.pinnedVersion)) {
       void this.useOwnWhenDownloaded();
@@ -162,26 +179,89 @@ export class CmRuntime {
     // Any other choice drops a switch to its own still downloading (`useOwnWhenDownloaded` checks it's still wanted).
     this.switchingToOwn = null;
     this.options.saveChoice(choice);
+    if (installed && !meetsCmVersion(installed.version, this.pinnedVersion) && this.hasOwnCm()) {
+      this.refuse(installed);
+      return;
+    }
+    this.refusedInstalledPath = null;
     this.switchTo(this.choose());
   }
 
   /**
+   * "Use the included version for now", on the update screen: runs the app's own, set up first when it isn't there,
+   * and remembers it for this pinned version, so the update screen doesn't ask again until the pin moves. The choice
+   * stays automatic: once the installed one is new enough, it runs again without asking.
+   */
+  useIncludedForNow(): void {
+    if (!this.updateNeeded) return;
+    this.options.saveDeclinedUpdate(this.pinnedVersion);
+    this.refusedInstalledPath = this.updateNeeded.path;
+    this.updateNeeded = null;
+    this.switchTo(this.choose());
+  }
+
+  /**
+   * Check Again, on the update screen (asked as the user presses it and as a window gains focus, never on a timer):
+   * reads the installed `cm`'s version again, and runs it once it's new enough; the app's own when none is found any
+   * more. A second ask while one reads joins it.
+   */
+  checkInstalledAgain(): Promise<void> {
+    if (!this.updateNeeded) return Promise.resolve();
+    this.checkingInstalled ??= this.readInstalledAgain().finally(() => (this.checkingInstalled = null));
+    return this.checkingInstalled;
+  }
+
+  private async readInstalledAgain(): Promise<void> {
+    const installed = await this.installedCm();
+    const before = this.updateNeeded;
+    // "Use the included version for now" while it read.
+    if (!before) return;
+    if (installed && !meetsCmVersion(installed.version, this.pinnedVersion)) {
+      if (installed.path === before.path && installed.version === before.version) return;
+      this.updateNeeded = installed;
+      this.announce();
+      return;
+    }
+    this.updateNeeded = null;
+    // Its shells, started before its version answered, run the executable the update replaced: started again.
+    this.switchTo(this.choose(), { relocate: true });
+  }
+
+  /**
    * Whether the `cm` at `executable`, which printed `version`, may run the app (`system.cmVersion` asks each `cm` it
-   * reads). Only an installed one older than the pinned version may not: where the app has its own, it runs that from
-   * now on (setting it up first if it isn't there), and the choice is saved; where it has none, nothing runs.
+   * reads). Only an installed one older than the pinned version may not: where the app has its own, the update screen
+   * asks to update it (`refuse`); where it has none, nothing runs. An installed one new enough runs, and the store is
+   * pruned of the app's own.
    */
   admits(executable: string, version: string): boolean {
-    if (this.chosen.source !== 'installed' || executable !== this.chosen.path || meetsCmVersion(version, this.pinnedVersion)) return true;
-    if (this.hasOwnCm()) {
-      this.switchingToOwn = null;
-      this.options.saveChoice('managed');
-      this.switchTo(this.choose());
+    if (this.chosen.source !== 'installed' || executable !== this.chosen.path) return true;
+    if (meetsCmVersion(version, this.pinnedVersion)) {
+      this.pruneOnce();
+      return true;
     }
+    if (this.hasOwnCm()) this.refuse({ path: executable, version: version.trim() });
     return false;
   }
 
-  private switchTo(chosen: ChosenCm): void {
-    if (chosen.path !== this.chosen.path || chosen.source !== this.chosen.source) {
+  /**
+   * An installed `cm` older than the pinned version: the update screen, or, when the user chose the app's own for this
+   * pinned version already ("Use the included version for now"), the app's own at once, without asking.
+   */
+  private refuse(installed: InstalledCm): void {
+    this.switchingToOwn = null;
+    if (this.options.declinedUpdateFor() === this.pinnedVersion) {
+      this.refusedInstalledPath = installed.path;
+      this.switchTo(this.choose());
+      return;
+    }
+    this.updateNeeded = installed;
+    this.cancelRetry();
+    this.progress = null;
+    this.announce();
+  }
+
+  private switchTo(chosen: ChosenCm, { relocate = false } = {}): void {
+    if (relocate || chosen.path !== this.chosen.path || chosen.source !== this.chosen.source) {
       this.chosen = chosen;
       this.options.relocated();
     }
@@ -252,10 +332,16 @@ export class CmRuntime {
     const candidates = {
       environmentPath,
       choice: this.options.choice(),
-      installedPath: this.options.findInstalled(),
+      installedPath: this.usableInstalledPath(),
       managedPath: bundle ? installer.cmPathOf(pin.version) : null,
     };
     return chooseCm(candidates, cmExecutableName(platform));
+  }
+
+  /** The installed `cm` found, unless this launch passed it over as too old (`refuse`). */
+  private usableInstalledPath(): string | null {
+    const found = this.options.findInstalled();
+    return found === this.refusedInstalledPath ? null : found;
   }
 
   private installingStatus(progress: CmInstallProgress): CmRuntimeStatus {
@@ -280,20 +366,26 @@ export class CmRuntime {
     this.announce();
   }
 
-  /** Tells the windows where it stands; once a `cm` runs, wakes what waited for it and prunes the store. */
+  /**
+   * Tells the windows where it stands; once a `cm` runs, wakes what waited for it and prunes the store (for an installed
+   * one, once its version is known: `admits`).
+   */
   private announce(): void {
     const status = this.status();
     this.options.statusChanged(status);
     if (status.kind !== 'ready') return;
     for (const resolve of this.waitingForReady.splice(0)) resolve();
-    this.pruneOnce();
+    if (status.source !== 'installed') this.pruneOnce();
   }
 
-  /** Once a launch, as a `cm` first runs: what the store holds changes only by this app's own installs after that. */
+  /**
+   * Once a launch, as a `cm` first runs: what the store holds changes only by this app's own installs after that. While
+   * the installed one runs, the app's own isn't kept at all: it's downloaded again if ever needed.
+   */
   private pruneOnce(): void {
     if (this.pruned) return;
     this.pruned = true;
-    this.options.prune(this.pinnedVersion);
+    this.options.prune(this.chosen.source === 'installed' ? null : this.pinnedVersion);
   }
 
   private async install(): Promise<void> {

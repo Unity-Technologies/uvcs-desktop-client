@@ -6,8 +6,11 @@
 /** Where the `cm` running comes from: the app's own, the one installed on the computer, or `UVCS_CM_PATH`. */
 export type CmSource = 'managed' | 'installed' | 'environment';
 
-/** Which `cm` the user chose in Settings: the app's own (the default), or the one installed on the computer. */
-export type CmChoice = 'managed' | 'installed';
+/**
+ * Which `cm` the user chose in Settings (docs/features/cm-runtime.md "Which cm runs"): `automatic`, the default, runs
+ * the one installed on the computer when there is one and the app's own otherwise; `managed` always runs the app's own.
+ */
+export type CmChoice = 'automatic' | 'managed';
 
 /** Why the app's `cm` couldn't be set up, each said to the user in its own plain words. */
 export type CmInstallFailure =
@@ -39,7 +42,7 @@ export function retriesByItself(failure: CmInstallFailure): boolean {
   return failure === 'offline' || failure === 'unreachable';
 }
 
-/** A `cm` installed on the computer, offered when the app's own can't be set up. */
+/** A `cm` installed on the computer: what runs by default, or what's offered when the app's own can't be set up. */
 export interface InstalledCm {
   path: string;
   version: string;
@@ -65,6 +68,11 @@ export type CmRuntimeStatus =
       /** True when no `cm` of the app's was ever set up before: setting up, rather than updating. */
       firstRun: boolean;
     }
+  /**
+   * The installed `cm`, which runs by default, is older than the pinned version, the oldest the app runs: the update
+   * screen asks to update it, or to run the app's own for now (docs/features/cm-runtime.md "The update screen").
+   */
+  | { kind: 'installedTooOld'; installed: InstalledCm; requiredVersion: string }
   | {
       kind: 'failed';
       version: string;
