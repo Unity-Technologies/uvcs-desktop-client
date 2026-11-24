@@ -208,7 +208,10 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
    `cloudedition.token` → `cloud`, `dvcs.token` → `dvcs`, none → `enterprise` (client only and full alike). On Windows
    it's the folder of `cm.exe` (`<install>\client\`); on macOS, links resolved first (`/usr/local/bin/cm` leads into
    PlasticSCM.app), it's inside the app bundle (`Contents/Applications/cm.app/Contents/MacOS/`, `Contents/MonoBundle/`,
-   `Contents/MacOS/`). `noCmInternalFiles.test.ts` names this one exception: `cm` prints no edition.
+   `Contents/MacOS/`). `noCmInternalFiles.test.ts` names this one exception: `cm` prints no edition. **Known limit**:
+   the official client also looks for the marker in the user's configuration folder when the installation has none;
+   the app looks only in the installation, as it never reads `cm`'s configuration folder (`noCmInternalFiles`), so
+   such an installation is taken for `enterprise`.
 2. **Platform** (`officialPlatformOf`): `windows`, `macos`, `macos-arm64` (the Mac's own architecture: Apple silicon
    even when the app runs under Rosetta, `app.runningUnderARM64Translation`) or `linux`.
 3. **The latest version** (`lastVersionUrl`, `parseLastVersion`): `GET
