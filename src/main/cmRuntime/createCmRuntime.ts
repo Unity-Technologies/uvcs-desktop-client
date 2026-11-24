@@ -1,6 +1,6 @@
 import { existsSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { app, net, shell } from 'electron';
 import type { CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import type { CommandLogEntry } from '@shared/events';
@@ -72,8 +72,9 @@ function versionReader(log: (entry: Omit<CommandLogEntry, 'id'>) => void): (cmPa
 /** The app's `cm`, wired to Electron and the settings. Its setup starts with `start()`, once Electron is ready (`net`). */
 export function createCmRuntime({ settings, prunes, relocated, logCommand, statusChanged, stopShells }: CmRuntimeWiring): CmRuntime {
   const versionOf = versionReader(logCommand);
+  const store = cmStoreFolder(process.platform, process.env, homedir());
   const installer = new CmInstaller({
-    store: cmStoreFolder(process.platform, process.env, homedir()),
+    store,
     platform: process.platform,
     bundlesUrl: process.env.UVCS_CM_BUNDLES_URL || CM_BUNDLES_URL,
     fetch: (url, init) => net.fetch(url, init),
@@ -85,8 +86,9 @@ export function createCmRuntime({ settings, prunes, relocated, logCommand, statu
     platform: development === 'linux' ? 'linux' : officialPlatformOf(process.platform, process.arch, app.runningUnderARM64Translation),
     site: process.env.UVCS_OFFICIAL_UPDATES_URL || OFFICIAL_SITE,
     fetch: (url, init) => net.fetch(url, init),
-    // A folder of the app's own in the OS's temporary folder: an installer is needed only until it ran.
-    folder: join(app.getPath('temp'), 'unity-version-control-update'),
+    // Beside the app's own `cm` store, never roaming with the profile, and emptied once the installer ran. Not the OS's
+    // temporary folder: Electron's on macOS ignores TMPDIR, so no test could keep its downloads apart.
+    folder: join(dirname(store), 'update'),
     editionOf: (cmPath) => officialEditionOf(resolvedPath(cmPath), process.platform, existsSync),
     tools: updateToolsFor(development),
     stopCm: stopShells,
