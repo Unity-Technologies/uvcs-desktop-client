@@ -71,8 +71,8 @@ function fakeOfficialUpdate() {
       state = next;
       official.onChange();
     },
-    /** How the installed one updates on the computer the test plays. */
-    by: 'installer' as 'installer' | 'command' | null,
+    /** How the installed one updates on the computer the test plays: none by default, so the statuses carry no `updatesBy`. */
+    by: null as 'installer' | 'command' | null,
     updatesBy: () => official.by,
     /** What `downloadAhead` was asked: the installed one and the floor. */
     downloadsAhead: [] as { installed: InstalledCm; floor: string }[],
@@ -270,6 +270,7 @@ describe('CmRuntime with an update waiting', () => {
 
     it('downloads its installer with the update, and runs it at the update’s version when asked', async () => {
       const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic' });
+      officialUpdate.by = 'installer';
       runtime.admits('/usr/bin/cm', INSTALLED_VERSION);
       const prefetch = await runtime.prefetchFor(LATER);
       expect(prefetch).toMatchObject({ kind: 'installed', installed: { path: '/usr/bin/cm', version: INSTALLED_VERSION }, neededVersion: '11.0.16.10800' });
@@ -284,6 +285,7 @@ describe('CmRuntime with an update waiting', () => {
     it('runs no installer on Restart & Install when the installed one was updated to the update’s version meanwhile', async () => {
       let version = INSTALLED_VERSION;
       const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic', versionOf: async () => version });
+      officialUpdate.by = 'installer';
       runtime.admits('/usr/bin/cm', INSTALLED_VERSION);
       const prefetch = await runtime.prefetchFor(LATER);
       if (prefetch?.kind !== 'installed') throw new Error('expected the installed one’s update');
@@ -294,7 +296,8 @@ describe('CmRuntime with an update waiting', () => {
     });
 
     it('reads its version when it hasn’t answered yet', async () => {
-      const { runtime } = runtimeWith({ chosen: 'installed' });
+      const { runtime, officialUpdate } = runtimeWith({ chosen: 'installed' });
+      officialUpdate.by = 'installer';
       expect(await runtime.prefetchFor(LATER)).toMatchObject({ kind: 'installed', installed: { version: INSTALLED_VERSION } });
     });
 
@@ -556,6 +559,15 @@ describe('CmRuntime with an installed cm older than its own', () => {
     runtime.admits('/usr/bin/cm', OLDER);
     runtime.prepareUpdate();
     expect(officialUpdate.prepared).toEqual([{ path: '/usr/bin/cm', version: OLDER }]);
+  });
+
+  it('tells the windows how the installed one updates on this computer, on the update screen and once ready', () => {
+    const { runtime, officialUpdate, statuses } = runtimeWith({ chosen: 'automatic', installed: [VERSION] });
+    officialUpdate.by = 'command';
+    runtime.admits('/usr/bin/cm', OLDER);
+    expect(statuses.at(-1)).toEqual({ ...TOO_OLD, updatesBy: 'command' });
+    runtime.useIncludedForNow();
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed', updatesBy: 'command' });
   });
 
   it('shows where the update stands on the update screen', () => {
