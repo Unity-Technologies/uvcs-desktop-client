@@ -765,9 +765,9 @@ As the official client's menu did, but in the app's grammar and words. Its Delet
 it's off then; its Replace was ⌘H, which hides the app on macOS.
 
 **Keys.** The menu shows the keys the editor takes on each OS, from the registry's "Text" area (`textUndo`...
-`goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Pierre's Ctrl+Alt+F is AltGr+F on European
-layouts (`pierreEditorKeymap` gives the editor the registry's key beside Pierre's own). Go to line is ⌃G on macOS (⌘G is
-Find next there) and Ctrl+G elsewhere, from anywhere in the code (`editorHasFocusIn`).
+`goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Ctrl+Alt+F is AltGr+F on European layouts
+(`pierreEditorKeymap` gives the editor the registry's key beside Pierre's own). Go to line is ⌃G on macOS (⌘G is Find
+next there) and Ctrl+G elsewhere (where F3 is Find next), from anywhere in the code (`editorHasFocusIn`).
 
 **Find in the code.** ⌘F (Ctrl+F) in a text diff, or in a merge's hand-editing, finds text in one of its sides; ⌥⌘F
 (Ctrl+H) finds and replaces in the text typed into. Every side has the same search, the app's own (`useCodeFind`,
@@ -778,7 +778,10 @@ Find and Replace in the code's menu open it on the side right-clicked.
 - **One search.** Pierre's editor has a search panel of its own, over the text typed into only, opened by its keymap.
   The code takes the keys that would open it on their way down, before the editor sees them (`searchKeyMode`, which
   reads them with Pierre's own `resolveEditorCommandFromKeyboardEvent` and the app's keymap: the registry's keys and
-  Pierre's Ctrl+Alt+F), and opens the app's search instead, so every side looks and works alike.
+  Pierre's Ctrl+Alt+F), and opens the app's search instead, so every side looks and works alike. Two kinds of key are
+  left alone: AltGr typing a character (`[` is AltGr+F on a Czech or Hungarian layout, which Pierre would read as its
+  Ctrl+Alt+F) is kept from the editor's keymap and typed (`typesCharacter`), and a key in a field of the app's over the
+  code, a review comment written by a line, stays that field's (`typedOutsideCode`).
 - **Where it stands.** 16 pixels in from the top right of the side it searches (`findBarRight`), as each side of a diff
   had its own search box in the desktop client; a unified diff, one side shown alone, and a merge's hand-editing have it
   at their top right. In the app's look: the gray of a panel, the app's fields, the options drawn as the letters they
@@ -792,13 +795,18 @@ Find and Replace in the code's menu open it on the side right-clicked.
   in (`placeAfterReplace`); Replace all replaces every match, past `MAX_MATCHES` too. A regular expression's `$1`, `$&`
   and `$<name>` put in what the match captured, each match read where it stands in its line (`replaceEdits`); any other
   replacement is put in as typed. Each goes into the editor as one change (`Editor.applyEdits`), which Undo takes back.
-- **Keys.** Enter and Shift+Enter step through the matches, going round at either end, and Esc closes the bar, the
-  focus going back to the text typed into, or to the diff (`findBarKeyAction`).
+- **Keys.** Enter and Shift+Enter in its fields step through the matches, going round at either end, as ⌘G and ⇧⌘G
+  (F3 and Shift+F3 off macOS) do from anywhere in the bar or the code (`findAgainKey`). Esc closes the bar, the focus
+  going back to the text typed into, or to the diff. The bar takes every key pressed in it, its buttons' too, so none
+  reaches the window's shortcuts; a button keeps Enter for itself (`findBarKeyAction`). An IME's composing keys stay
+  the IME's.
 - **Marks and scrolling.** Every match on screen is marked in `--bg-match`, the one shown in `--bg-match-current`, with
   the browser's highlights over Pierre's rows (`useWordMarks`, finding unchanged lines' rows too: `sideLineRowSelector`,
-  which reads a unified diff's unchanged line by its older number, `data-alt-line`). The match shown is scrolled to only
-  when it isn't in view (`rowNeedsScroll`), unfolding the collapsed lines that hold it, and a long line scrolls sideways
-  to it (`sidewaysScrollBy`).
+  which reads a unified diff's unchanged line by its older number, `data-alt-line`, and a whole file's, `data-file`). The
+  match shown is scrolled to when the search moves to another (a step, the text searched for, an option, a
+  replacement), never because typing moved it, and only when it isn't in view (`rowNeedsScroll`), unfolding the
+  collapsed lines that hold it; a long line scrolls sideways to it (`sidewaysScrollBy`). The text typed into is searched
+  again once typing pauses (`useDeferredValue`), so a big file's search doesn't slow each keystroke.
 
 Pierre's search panel (`SearchPanelWidget`) wasn't reused: it isn't exported, runs on its editor's text document, which
 a read-only side doesn't have, and its look is its own. Copying its styles and icons was tried and dropped: they'd have

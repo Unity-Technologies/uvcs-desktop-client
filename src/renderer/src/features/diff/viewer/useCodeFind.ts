@@ -1,5 +1,5 @@
 import type { Editor } from '@pierre/diffs/edit';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { focusAs } from '../../../lib/focusRing';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import {
@@ -10,7 +10,9 @@ import {
   firstMatchFrom,
   matchCountWords,
   matchMarks,
+  findAgainKey,
   placeAfterReplace,
+  replaceAllEdits,
   replaceEdits,
   rowNeedsScroll,
   shownMatchMarks,
@@ -24,7 +26,7 @@ import {
   type TextPlace,
 } from './codeFind';
 import { lineUnderPointer } from './lineActions';
-import { paneRect, pierreShadowRoot, rowTextRange, rowUnderPointer, sideLineRowSelector } from './pierreDom';
+import { paneRect, pierreShadowRoot, rowTextRange, rowUnderPointer, sideLineRowSelector, typedOutsideCode } from './pierreDom';
 import { useDiffShadowRoot } from './useDiffShadowRoot';
 import { useWordMarks, type WordMarkColors } from './useWordMarks';
 import { searchKeyMode } from './pierreSearchKeys';
@@ -103,9 +105,12 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
   const shownSide = onlySide ?? side;
   const replaceable = canReplace(shownSide, typedInto);
   const text = textOf(shownSide);
+  // Searched again as the text typed into changes, when typing pauses: a big file's search and marks cost more than a
+  // keystroke should.
+  const searched = useDeferredValue(text);
   const found = useMemo(
-    () => (open ? findInText(text, query, options, MAX_MATCHES, startLine) : { matches: NO_MATCHES, capped: false }),
-    [open, text, query, options, startLine],
+    () => (open ? findInText(searched, query, options, MAX_MATCHES, startLine) : { matches: NO_MATCHES, capped: false }),
+    [open, searched, query, options, startLine],
   );
   const current = firstMatchFrom(found.matches, from);
   const shownMatch = current === null ? null : found.matches[current]!;
@@ -133,12 +138,18 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
     };
   }, [open, root, shownSide]);
 
+  // The match shown comes into view when the search moves to another: a step, a query, an option, a replacement. Not
+  // when typing moves it (a line typed above it): the view stays with the caret.
   const matchKey = shownMatch && `${shownSide}:${shownMatch.line}:${shownMatch.start}:${shownMatch.end}`;
+  const revealAfterEdit = useRef(false);
+  const lastSearched = useRef(searched);
   useEffect(() => {
+    const typed = lastSearched.current !== searched;
+    lastSearched.current = searched;
     const container = containerRef.current;
-    if (!container || !shownMatch) return;
+    if (!container || !shownMatch || (typed && !revealAfterEdit.current)) return;
+    revealAfterEdit.current = false;
     bringIntoView(container, shownSide, shownMatch, latest.current.scrollTo);
-    // Only when another match shows: what's on screen moving (typing elsewhere, a scroll) doesn't bring it back.
   }, [matchKey]);
 
   /**
@@ -176,14 +187,18 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
     return true;
   };
 
+  /** Replaces the match shown, read again in the text as it is now (the search may wait for typing to pause). */
   const replace = (): void => {
-    if (!shownMatch) return;
-    const [edit] = replaceEdits(text, [shownMatch], query, options, replacement);
-    if (applyEdits([edit!])) setFrom(placeAfterReplace(edit!));
+    const now = searched === text ? found : findInText(text, query, options, MAX_MATCHES, startLine);
+    const index = firstMatchFrom(now.matches, from);
+    if (index === null) return;
+    const [edit] = replaceEdits(text, [now.matches[index]!], query, options, replacement);
+    if (!applyEdits([edit!])) return;
+    revealAfterEdit.current = true;
+    setFrom(placeAfterReplace(edit!));
   };
 
-  // Every match, past the ones the bar counts (`MAX_MATCHES`).
-  const replaceAll = (): void => void applyEdits(replaceEdits(text, findInText(text, query, options, Infinity).matches, query, options, replacement));
+  const replaceAll = (): void => void applyEdits(replaceAllEdits(text, query, options, replacement));
 
   const step = (backwards: boolean): void => {
     const next = steppedMatch(found.matches.length, current, backwards);
@@ -199,16 +214,22 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
   };
 
   /**
-   * The keys that open a search, anywhere in the code (`searchKeyMode`), taken on their way down, before Pierre's editor
-   * opens a search panel of its own: ⌘F finds, ⌥⌘F or Ctrl+H finds and replaces. The bar stands outside the code and
-   * takes its own keys (`findBarKeyAction`).
+   * The search's keys in the code, taken on their way down, before Pierre's editor, which would open a search panel of
+   * its own (`searchKeyMode`): ⌘F finds, ⌥⌘F or Ctrl+H finds and replaces, and while the bar is open ⌘G and ⇧⌘G (F3,
+   * Shift+F3) step through the matches (`findAgainKey`). AltGr typing a character goes on to be typed, kept from the
+   * editor's keymap. A field of the app's over the code (a review comment's) keeps its keys; the bar stands outside the
+   * code and takes its own (`findBarKeyAction`).
    */
   const onKeyDownCapture = (event: KeyboardEvent): void => {
+    if (typedOutsideCode(event.target)) return;
     const wanted = searchKeyMode(event.nativeEvent);
-    if (!wanted) return;
+    if (wanted === 'type') return event.stopPropagation();
+    const again = open && !wanted ? findAgainKey(event.nativeEvent) : null;
+    if (!wanted && !again) return;
     event.preventDefault();
     event.stopPropagation();
-    openFind(wanted);
+    if (again) step(again === 'previous');
+    else openFind(wanted!);
   };
 
   const bar: CodeFindBarModel | null = open

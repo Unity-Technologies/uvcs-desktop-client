@@ -63,7 +63,7 @@ export interface OpenedCode {
   readOnly: ReadOnlySelection;
 }
 
-/** The selection holding text the editor treats as its own (its last, as Pierre's search panel does); none for carets alone. */
+/** The selection holding text the editor treats as its own (its last, as Pierre's editor reads it); none for carets alone. */
 export function primarySelection(selections: readonly TextSpan[]): TextSpan | null {
   return selections.findLast((span) => !isEmptySpan(span)) ?? null;
 }

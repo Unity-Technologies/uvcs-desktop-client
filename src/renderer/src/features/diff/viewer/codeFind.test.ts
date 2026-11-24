@@ -2,6 +2,7 @@ import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import {
   canReplace,
+  findAgainKey,
   findBarKeyAction,
   findBarRight,
   findInText,
@@ -9,7 +10,9 @@ import {
   firstMatchFrom,
   matchCountWords,
   matchMarks,
+  MAX_MATCHES,
   placeAfterReplace,
+  replaceAllEdits,
   replaceEdits,
   rowNeedsScroll,
   shownMatchMarks,
@@ -236,6 +239,14 @@ describe('replaceEdits', () => {
   });
 });
 
+describe('replaceAllEdits', () => {
+  it('replaces every match, past the ones a search keeps', () => {
+    const text = 'a'.repeat(MAX_MATCHES + 5);
+    expect(findInText(text, 'a', ANY_CASE).capped).toBe(true);
+    expect(replaceAllEdits(text, 'a', ANY_CASE, 'b')).toHaveLength(MAX_MATCHES + 5);
+  });
+});
+
 describe('placeAfterReplace', () => {
   it('goes on just past the text put in, never finding what it wrote', () => {
     expect(placeAfterReplace({ range: { start: { line: 4, character: 2 }, end: { line: 4, character: 7 } }, newText: 'speedy' })).toEqual({ line: 5, character: 8 });
@@ -243,6 +254,22 @@ describe('placeAfterReplace', () => {
 
   it('goes on past a replacement of several lines, on its last', () => {
     expect(placeAfterReplace({ range: { start: { line: 4, character: 2 }, end: { line: 4, character: 7 } }, newText: 'a\nbc' })).toEqual({ line: 6, character: 2 });
+  });
+});
+
+describe('findAgainKey', () => {
+  const press = (key: string, modifiers: Partial<{ metaKey: boolean; ctrlKey: boolean; shiftKey: boolean }> = {}) => ({ key, code: key.length === 1 ? `Key${key.toUpperCase()}` : key, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers });
+
+  it('steps from the code with ⌘G and ⇧⌘G on macOS, F3 and Shift+F3 elsewhere', () => {
+    expect(findAgainKey(press('g', { metaKey: true }), true)).toBe('next');
+    expect(findAgainKey(press('g', { metaKey: true, shiftKey: true }), true)).toBe('previous');
+    expect(findAgainKey(press('F3'), false)).toBe('next');
+    expect(findAgainKey(press('F3', { shiftKey: true }), false)).toBe('previous');
+  });
+
+  it("never takes Enter, which the code types, nor Ctrl+G, Go to line off macOS", () => {
+    expect(findAgainKey(press('Enter'), true)).toBeNull();
+    expect(findAgainKey(press('g', { ctrlKey: true }), false)).toBeNull();
   });
 });
 
@@ -261,6 +288,23 @@ describe('findBarKeyAction', () => {
     expect(findBarKeyAction(press('Escape'), 'search', true)).toBe('close');
     expect(findBarKeyAction(press('Enter'), 'search', true)).toBe('next');
     expect(findBarKeyAction(press('Enter', { shiftKey: true }), 'search', true)).toBe('previous');
+  });
+
+  it('steps with ⌘G and ⇧⌘G on macOS, F3 and Shift+F3 elsewhere, in any field or button', () => {
+    expect(findBarKeyAction(press('g', { metaKey: true }), 'replace', true)).toBe('next');
+    expect(findBarKeyAction(press('g', { metaKey: true, shiftKey: true }), 'button', true)).toBe('previous');
+    expect(findBarKeyAction({ ...press('F3'), code: 'F3' }, 'search', false)).toBe('next');
+    expect(findBarKeyAction({ ...press('F3', { shiftKey: true }), code: 'F3' }, 'search', false)).toBe('previous');
+  });
+
+  it("leaves Enter to a button, which it presses, but still closes with Esc there", () => {
+    expect(findBarKeyAction(press('Enter'), 'button', true)).toBeNull();
+    expect(findBarKeyAction(press('Escape'), 'button', true)).toBe('close');
+    expect(findBarKeyAction(press('f', { metaKey: true }), 'button', true)).toBe('reselect');
+  });
+
+  it('leaves the Enter that ends an IME composition to the IME', () => {
+    expect(findBarKeyAction({ ...press('Enter'), isComposing: true }, 'search', true)).toBeNull();
   });
 
   it('replaces the match shown with Enter in the replace field', () => {

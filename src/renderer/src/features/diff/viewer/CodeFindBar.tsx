@@ -22,30 +22,28 @@ const TOGGLES: { option: keyof FindOptions; label: string; glyph: ReactNode }[] 
 export function CodeFindBar({ bar }: { bar: CodeFindBarModel }) {
   const { options, setOptions } = bar;
 
-  const keysOf =
-    (field: FindBarField) =>
-    (event: KeyboardEvent): void => {
-      const action = findBarKeyAction(event.nativeEvent, field);
-      if (!action) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (action === 'close') bar.close();
-      else if (action === 'reselect') bar.inputRef.current?.select();
-      else if (action === 'showReplace') bar.showReplace();
-      else if (action === 'replaceOne') bar.replace();
-      else bar.step(action === 'previous');
-    };
+  // Every key pressed in the bar, its buttons' too, so none reaches the window's shortcuts (⌘F the view's filter).
+  const onKeyDown = (event: KeyboardEvent): void => {
+    const action = findBarKeyAction(event.nativeEvent, fieldOf(event.target));
+    if (!action) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (action === 'close') bar.close();
+    else if (action === 'reselect') bar.inputRef.current?.select();
+    else if (action === 'showReplace') bar.showReplace();
+    else if (action === 'replaceOne') bar.replace();
+    else bar.step(action === 'previous');
+  };
 
   // In the order Tab goes: the text searched for, its replacement, then the buttons; the grid lays them out in rows.
   return (
-    <div className={styles.bar} role="search" data-replaceable={bar.toggleReplace ? '' : undefined} data-replacing={bar.replacing ? '' : undefined} style={bar.right === null ? undefined : { right: bar.right }}>
+    <div className={styles.bar} role="search" onKeyDown={onKeyDown} data-replaceable={bar.toggleReplace ? '' : undefined} data-replacing={bar.replacing ? '' : undefined} style={bar.right === null ? undefined : { right: bar.right }}>
       <Search size={13} className={styles.fieldIcon} />
       <input
         ref={bar.inputRef}
         className={`${styles.input} ${styles.searchInput}`}
         value={bar.query}
         onChange={(event) => bar.setQuery(event.target.value)}
-        onKeyDown={keysOf('search')}
         placeholder="Search"
         aria-label="Search"
         spellCheck={false}
@@ -55,7 +53,7 @@ export function CodeFindBar({ bar }: { bar: CodeFindBarModel }) {
           className={`${styles.input} ${styles.replaceInput}`}
           value={bar.replacement}
           onChange={(event) => bar.setReplacement(event.target.value)}
-          onKeyDown={keysOf('replace')}
+          data-field="replace"
           placeholder="Replace"
           aria-label="Replace with"
           spellCheck={false}
@@ -97,4 +95,10 @@ export function CodeFindBar({ bar }: { bar: CodeFindBarModel }) {
       </Tooltip>
     </div>
   );
+}
+
+/** Which part of the bar a key was pressed in: the replace field, the search field, or a button. */
+function fieldOf(target: EventTarget): FindBarField {
+  if (!(target instanceof HTMLElement) || target.tagName !== 'INPUT') return 'button';
+  return target.dataset.field === 'replace' ? 'replace' : 'search';
 }

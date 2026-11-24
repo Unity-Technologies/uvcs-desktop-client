@@ -168,31 +168,52 @@ export function canReplace(side: DiffSide, typedInto: boolean): boolean {
   return typedInto && side === 'additions';
 }
 
-/** What a key does in one of the bar's fields. */
+/** What a key does in the bar. */
 export type FindBarKeyAction = 'close' | 'next' | 'previous' | 'reselect' | 'showReplace' | 'replaceOne';
 
-/** The bar's fields: the text searched for, and what replaces it. */
-export type FindBarField = 'search' | 'replace';
+/** Where in the bar a key was pressed: the text searched for, what replaces it, or one of its buttons. */
+export type FindBarField = 'search' | 'replace' | 'button';
 
 /**
- * The bar's keys (the registry's "Text" area): Esc closes it, Enter and Shift+Enter step to the next and previous
- * match (in the replace field, Enter replaces the match shown, as Pierre's panel does), ⌘F selects the text searched
- * for again and Replace's key (⌥⌘F, Ctrl+H) shows the replace field. The bar takes them before anything else, so ⌘F
- * never reaches the view's filter of files (`FilterField` listens on the window). None for any other key, which the
- * field types.
+ * The bar's keys (the registry's "Text" area): Esc closes it; ⌘G and ⇧⌘G (F3, Shift+F3) step to the next and
+ * previous match; Enter and Shift+Enter do too in a field, Enter replacing the match shown in the replace field, as
+ * code editors do, while a button keeps them for itself; ⌘F selects the text searched for again; and Replace's key (⌥⌘F,
+ * Ctrl+H) shows the replace field. The bar takes them before anything else, so ⌘F never reaches the view's filter of
+ * files (`FilterField` listens on the window). None for any other key, which the field types; none while an IME
+ * composes.
  */
-export function findBarKeyAction(event: PressedKey, field: FindBarField = 'search', mac?: boolean): FindBarKeyAction | null {
+export function findBarKeyAction(event: PressedKey & { isComposing?: boolean }, field: FindBarField = 'search', mac = isMac): FindBarKeyAction | null {
+  if (event.isComposing) return null;
   if (pressedShortcut(event, 'textCloseFind', mac)) return 'close';
   if (pressedShortcut(event, 'textReplace', mac)) return 'showReplace';
-  if (pressedShortcut(event, 'textFindPrevious', mac)) return 'previous';
-  if (pressedShortcut(event, 'textFindNext', mac)) return field === 'replace' ? 'replaceOne' : 'next';
+  const again = findAgainKey(event, mac);
+  if (again) return again;
+  if (field !== 'button' && pressedFieldKey(event, 'textFindPrevious', mac)) return 'previous';
+  if (field !== 'button' && pressedFieldKey(event, 'textFindNext', mac)) return field === 'replace' ? 'replaceOne' : 'next';
   if (pressedShortcut(event, 'textFind', mac)) return 'reselect';
   return null;
 }
 
-/** Whether `event` is one of a shortcut's keys on the platform (`mac`: the app's own by default). */
-function pressedShortcut(event: PressedKey, id: ShortcutId, mac = isMac): boolean {
+/**
+ * The keys that step to the next or previous match from anywhere in the code while the bar is open: ⌘G and ⇧⌘G on
+ * macOS, F3 and Shift+F3 elsewhere (every key of `textFindNext` and `textFindPrevious` past the first, which is the
+ * field's Enter).
+ */
+export function findAgainKey(event: PressedKey, mac = isMac): 'next' | 'previous' | null {
+  const pressed = (id: ShortcutId): boolean => shortcutKeys(SHORTCUTS[id], mac).slice(1).some((key) => matchesShortcut(event, key, mac));
+  if (pressed('textFindPrevious')) return 'previous';
+  if (pressed('textFindNext')) return 'next';
+  return null;
+}
+
+/** Whether `event` is one of a shortcut's keys on the platform. */
+function pressedShortcut(event: PressedKey, id: ShortcutId, mac: boolean): boolean {
   return shortcutKeys(SHORTCUTS[id], mac).some((key) => matchesShortcut(event, key, mac));
+}
+
+/** Whether `event` is a shortcut's first key, the one a field of the bar takes (Enter, Shift+Enter). */
+function pressedFieldKey(event: PressedKey, id: ShortcutId, mac: boolean): boolean {
+  return matchesShortcut(event, shortcutKeys(SHORTCUTS[id], mac)[0]!, mac);
 }
 
 /** A box's extent along one axis, in the page's pixels. */
@@ -247,6 +268,11 @@ export function replaceEdits(text: string, matches: readonly CodeMatch[], query:
     const range = { start: { line: match.line - 1, character: match.start }, end: { line: match.line - 1, character: match.end } };
     return { range, newText: pattern ? expandedReplacement(line, match, pattern, replacement) : replacement };
   });
+}
+
+/** The edits that replace every match in `text`, past the ones a search keeps (`MAX_MATCHES`). */
+export function replaceAllEdits(text: string, query: string, options: FindOptions, replacement: string): CodeEdit[] {
+  return replaceEdits(text, findInText(text, query, options, Infinity).matches, query, options, replacement);
 }
 
 /** What a regular expression's match becomes: the line with that match replaced, by `replace` with the pattern sticky at its start, cut back to the match. */

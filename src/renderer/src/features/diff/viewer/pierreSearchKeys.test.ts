@@ -2,8 +2,9 @@ import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { pierreReadsMac, pierreShortcut, searchKeyMode } from './pierreSearchKeys';
 
-const press = (key: string, modifiers: Partial<{ metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }> = {}) =>
-  ({ key, code: `Key${key.toUpperCase()}`, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...modifiers }) as KeyboardEvent;
+type Pressed = Partial<{ metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean; isComposing: boolean; code: string }>;
+const press = (key: string, modifiers: Pressed = {}) =>
+  ({ key, code: `Key${key.toUpperCase()}`, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, isComposing: false, ...modifiers }) as KeyboardEvent;
 
 describe('searchKeyMode', () => {
   it('opens Find with ⌘F on macOS and Ctrl+F elsewhere', () => {
@@ -18,6 +19,14 @@ describe('searchKeyMode', () => {
 
   it("opens Replace with Pierre's own Ctrl+Alt+F too, so its editor never opens a search panel of its own", () => {
     expect(searchKeyMode(press('f', { ctrlKey: true, altKey: true }), false, false)).toBe('replace');
+  });
+
+  it('lets AltGr+F type its character on a layout where it types one ([ in Czech), though Pierre reads it as Ctrl+Alt+F', () => {
+    expect(searchKeyMode(press('[', { code: 'KeyF', ctrlKey: true, altKey: true }), false, false)).toBe('type');
+  });
+
+  it('leaves a key typed while composing to the IME', () => {
+    expect(searchKeyMode(press('f', { metaKey: true, isComposing: true }), true, true)).toBeNull();
   });
 
   it('leaves any other key to the code', () => {
