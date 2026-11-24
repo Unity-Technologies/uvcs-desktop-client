@@ -1,39 +1,27 @@
 import { ArrowDown, ArrowUp, CaseSensitive, WholeWord, X } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
-import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { IconButton } from '../../../ui/IconButton';
 import { SearchField } from '../../../ui/SearchField';
+import { findBarKeyAction } from './codeFind';
 import type { CodeFindBarModel } from './useCodeFind';
 import styles from './CodeFindBar.module.css';
 
 /**
  * The search box over a diff's read-only side (`useCodeFind`): the text to find, whether case and whole words count,
- * which match shows of how many, the previous and next ones, and closing. Enter and Shift+Enter step through the
- * matches, Esc closes it, and ⌘F selects its text again rather than reaching the view's filter.
+ * which match shows of how many, the previous and next ones, and closing. Its keys are `findBarKeyAction`'s.
  */
 export function CodeFindBar({ bar }: { bar: CodeFindBarModel }) {
   const { options, setOptions } = bar;
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
-    const native = event.nativeEvent;
-    const handled = (): void => {
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    if (matchesShortcut(native, hotkey('textCloseFind'))) {
-      handled();
-      bar.close();
-    } else if (matchesShortcut(native, hotkey('textFindPrevious'))) {
-      handled();
-      bar.step(true);
-    } else if (matchesShortcut(native, hotkey('textFindNext'))) {
-      handled();
-      bar.step(false);
-    } else if (matchesShortcut(native, hotkey('textFind'))) {
-      handled();
-      bar.inputRef.current?.select();
-    }
+    const action = findBarKeyAction(event.nativeEvent);
+    if (!action) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (action === 'close') bar.close();
+    else if (action === 'reselect') bar.inputRef.current?.select();
+    else bar.step(action === 'previous');
   };
 
   return (

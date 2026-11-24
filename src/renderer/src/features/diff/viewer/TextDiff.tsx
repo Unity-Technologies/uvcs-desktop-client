@@ -33,6 +33,7 @@ import { releasingSelection } from './lineMenu';
 import { useCodeMenu } from './useCodeMenu';
 import { CodeFindBar } from './CodeFindBar';
 import { useCodeFind } from './useCodeFind';
+import { openPierreSearchPanel } from './pierreSearchPanel';
 import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
@@ -253,8 +254,18 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // What the place does with a line (a review's comment on it), a button by the line under the pointer.
   const lineAction = useLineActionButton(placeLineAction, lineLinks.options, container, layout, selectedForAction);
   const codeSides = textDiffSides({ wholeFile, sides, editable, editorAttached: edit });
-  // ⌘F on a read-only side: the side typed into has Pierre's search panel, which takes it first.
-  const codeFind = useCodeFind({ containerRef: container, textOf: (side) => (side === 'deletions' ? original : current), onlySide: codeSides.onlySide, scrollTo: scrollToShownLine });
+  // ⌘F and Find in the menu: the app's bar on a read-only side, Pierre's search panel in the text typed into.
+  const codeFind = useCodeFind({
+    containerRef: container,
+    textOf: (side) => (side === 'deletions' ? original : current),
+    onlySide: codeSides.onlySide,
+    typedInto: codeSides.typedInto,
+    openEditorSearch: () => {
+      editor.current?.focus();
+      openPierreSearchPanel(container.current, 'find');
+    },
+    scrollTo: scrollToShownLine,
+  });
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,

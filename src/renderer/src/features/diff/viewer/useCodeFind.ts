@@ -5,15 +5,18 @@ import { hotkey } from '../../../lib/shortcutRegistry';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import {
   findInText,
+  findOpening,
   findPlaceholder,
   firstMatchFrom,
   matchCountWords,
   matchMarks,
   rowNeedsScroll,
+  shownMatchMarks,
   sidewaysScrollBy,
   sideToFind,
   steppedMatch,
   type CodeMatch,
+  MAX_MATCHES,
   type FindOptions,
   type TextPlace,
 } from './codeFind';
@@ -29,6 +32,10 @@ interface CodeFindOptions {
   textOf: (side: DiffSide) => string;
   /** The one side the diff shows alone; null for two. */
   onlySide: DiffSide | null;
+  /** The newer side is typed into: Find there is the editor's own search panel. */
+  typedInto: boolean;
+  /** Opens the editor's search panel in the text typed into (`openPierreSearchPanel`). */
+  openEditorSearch: () => void;
   /** Scrolls the diff to a line, unfolding the region that holds it (`scrollToShownLine`). */
   scrollTo: (container: HTMLElement, line: ChangedLine) => void;
 }
@@ -52,34 +59,41 @@ const SHOWN_MATCH: WordMarkColors = { deletions: 'var(--bg-match-current)', addi
 const NO_MATCHES: CodeMatch[] = [];
 
 /**
- * Finding text in a diff's read-only side (docs/features/diff.md, "Find in the code"). ⌘F in
- * the diff, or Find in its menu, opens the bar on the side last pressed (`sideToFind`), from the line pressed; the
- * side typed into keeps Pierre's own search panel, which takes ⌘F first. Every decision is `codeFind`'s; this holds the
+ * Finding text in a diff's read-only side (docs/features/diff.md, "Find in the code"). ⌘F in the diff, or Find in its
+ * menu, opens the bar on the side last pressed, from the line pressed, or the editor's search panel where that side is
+ * typed into (`findOpening`). Every decision is `codeFind`'s; this holds the
  * bar's state, marks the matches on the rows on screen (`useWordMarks`, every line's row: `sideLineRowSelector`) and
  * brings the match shown into view.
  */
-export function useCodeFind({ containerRef, textOf, onlySide, scrollTo }: CodeFindOptions) {
+export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEditorSearch, scrollTo }: CodeFindOptions) {
   const [open, setOpen] = useState(false);
   const [side, setSide] = useState<DiffSide>(sideToFind(onlySide, null));
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<FindOptions>({ matchCase: false, wholeWord: false });
   // Where the search goes from: the line pressed as it opened, then the match stepped to.
   const [from, setFrom] = useState<TextPlace | null>(null);
+  // The line pressed as it opened: past `MAX_MATCHES`, the matches kept are those around it.
+  const [startLine, setStartLine] = useState(1);
   const pressed = useRef<ChangedLine | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const latest = useRef({ scrollTo });
-  latest.current = { scrollTo };
+  const latest = useRef({ scrollTo, openEditorSearch });
+  latest.current = { scrollTo, openEditorSearch };
 
   const shownSide = onlySide ?? side;
   const text = textOf(shownSide);
-  const found = useMemo(() => (open ? findInText(text, query, options) : { matches: NO_MATCHES, capped: false }), [open, text, query, options]);
+  const found = useMemo(
+    () => (open ? findInText(text, query, options, MAX_MATCHES, startLine) : { matches: NO_MATCHES, capped: false }),
+    [open, text, query, options, startLine],
+  );
   const current = firstMatchFrom(found.matches, from);
   const shownMatch = current === null ? null : found.matches[current]!;
-  const marks = useMemo(() => matchMarks(shownSide, found.matches, current), [shownSide, found.matches, current]);
+  // Every match's marks once per search; a step changes only the shown one's, drawn over them.
+  const allMarks = useMemo(() => matchMarks(shownSide, found.matches), [shownSide, found.matches]);
+  const shownMarks = useMemo(() => shownMatchMarks(shownSide, shownMatch), [shownSide, shownMatch]);
 
   const root = useDiffShadowRoot(containerRef);
-  useWordMarks(containerRef, root, marks.others, OTHER_MATCHES, sideLineRowSelector);
-  useWordMarks(containerRef, root, marks.current, SHOWN_MATCH, sideLineRowSelector);
+  useWordMarks(containerRef, root, allMarks, OTHER_MATCHES, sideLineRowSelector);
+  useWordMarks(containerRef, root, shownMarks, SHOWN_MATCH, sideLineRowSelector);
 
   const matchKey = shownMatch && `${shownSide}:${shownMatch.line}:${shownMatch.start}:${shownMatch.end}`;
   useEffect(() => {
@@ -89,12 +103,13 @@ export function useCodeFind({ containerRef, textOf, onlySide, scrollTo }: CodeFi
     // Only when another match shows: what's on screen moving (typing elsewhere, a scroll) doesn't bring it back.
   }, [matchKey]);
 
-  /** Opens the bar on `on` (a side right-clicked), else the side last pressed, from the line pressed there. */
+  /** Opens Find on `on` (a side right-clicked), else the side last pressed: the bar, or the editor's panel (`findOpening`). */
   const openFind = (on?: DiffSide): void => {
-    const target = sideToFind(onlySide, on ?? pressed.current?.side ?? null);
-    const line = pressed.current?.side === target ? pressed.current.lineNumber : null;
-    setSide(target);
-    setFrom(line === null ? null : { line, character: 0 });
+    const opening = findOpening(onlySide, typedInto, pressed.current, on);
+    if (opening.kind === 'editor') return latest.current.openEditorSearch();
+    setSide(opening.side);
+    setFrom(opening.from);
+    setStartLine(opening.from?.line ?? 1);
     setOpen(true);
     // The field is there once React shows the bar.
     requestAnimationFrame(() => {

@@ -1,5 +1,20 @@
+import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { findInText, findPlaceholder, firstMatchFrom, matchCountWords, matchMarks, rowNeedsScroll, sidewaysScrollBy, sideToFind, steppedMatch, type FindOptions } from './codeFind';
+import {
+  findBarKeyAction,
+  findInText,
+  findOpening,
+  findPlaceholder,
+  firstMatchFrom,
+  matchCountWords,
+  matchMarks,
+  rowNeedsScroll,
+  shownMatchMarks,
+  sidewaysScrollBy,
+  sideToFind,
+  steppedMatch,
+  type FindOptions,
+} from './codeFind';
 
 const ANY_CASE: FindOptions = { matchCase: false, wholeWord: false };
 
@@ -55,6 +70,12 @@ describe('findInText', () => {
     expect(findInText('aaaa', 'a', ANY_CASE, 3)).toEqual({ matches: [{ line: 1, start: 0, end: 1 }, { line: 1, start: 1, end: 2 }, { line: 1, start: 2, end: 3 }], capped: true });
     expect(findInText('aaa', 'a', ANY_CASE, 3).capped).toBe(false);
   });
+
+  it('keeps, past its limit, the matches from the line searched from, going round from the top', () => {
+    const text = ['hit', 'hit', 'hit', 'hit', 'hit'].join('\n');
+    expect(findInText(text, 'hit', ANY_CASE, 3, 4).matches.map((match) => match.line)).toEqual([1, 4, 5]);
+    expect(findInText(text, 'hit', ANY_CASE, 10, 4).matches.map((match) => match.line)).toEqual([1, 2, 3, 4, 5]);
+  });
 });
 
 describe('firstMatchFrom', () => {
@@ -103,7 +124,6 @@ describe('matchCountWords', () => {
 
   it('says which match shows of how many', () => {
     expect(matchCountWords('x', 2, found(12))).toBe('3 of 12');
-    expect(matchCountWords('x', null, found(12))).toBe('12 results');
   });
 
   it('says there are more past the limit', () => {
@@ -112,23 +132,83 @@ describe('matchCountWords', () => {
 });
 
 describe('matchMarks', () => {
-  const matches = [
-    { line: 3, start: 0, end: 2 },
-    { line: 3, start: 5, end: 7 },
-    { line: 8, start: 1, end: 3 },
-  ];
-
-  it('marks the match shown apart from the others, on the side searched', () => {
-    expect(matchMarks('deletions', matches, 1)).toEqual({
-      others: { deletions: new Map([[3, [{ start: 0, end: 2 }]], [8, [{ start: 1, end: 3 }]]]), additions: new Map() },
-      current: { deletions: new Map([[3, [{ start: 5, end: 7 }]]]), additions: new Map() },
+  it('marks every match on the side searched, by line', () => {
+    const matches = [
+      { line: 3, start: 0, end: 2 },
+      { line: 3, start: 5, end: 7 },
+      { line: 8, start: 1, end: 3 },
+    ];
+    expect(matchMarks('deletions', matches)).toEqual({
+      deletions: new Map([
+        [3, [{ start: 0, end: 2 }, { start: 5, end: 7 }]],
+        [8, [{ start: 1, end: 3 }]],
+      ]),
+      additions: new Map(),
     });
   });
 
-  it('marks every match alike with none shown', () => {
-    const marks = matchMarks('additions', matches, null);
-    expect(marks.others.additions.get(3)).toHaveLength(2);
-    expect(marks.current.additions.size).toBe(0);
+  it('marks thousands of matches on one minified line in one list', () => {
+    const marks = matchMarks('additions', findInText('a;'.repeat(5_000), ';', ANY_CASE).matches);
+    expect(marks.additions.get(1)).toHaveLength(5_000);
+  });
+
+  it('marks the match shown on its own, or nothing without one', () => {
+    expect(shownMatchMarks('additions', { line: 4, start: 2, end: 5 })).toEqual({ deletions: new Map(), additions: new Map([[4, [{ start: 2, end: 5 }]]]) });
+    expect(shownMatchMarks('deletions', null)).toEqual({ deletions: new Map(), additions: new Map() });
+  });
+});
+
+describe('findOpening', () => {
+  const pressedOld = { side: 'deletions' as const, lineNumber: 12 };
+
+  it('opens the bar on the read-only side pressed, from the line pressed', () => {
+    expect(findOpening(null, true, pressedOld)).toEqual({ kind: 'bar', side: 'deletions', from: { line: 12, character: 0 } });
+  });
+
+  it("leaves the side typed into to its editor's search panel, so one side never has two", () => {
+    expect(findOpening(null, true, { side: 'additions', lineNumber: 3 })).toEqual({ kind: 'editor' });
+    expect(findOpening(null, true, null)).toEqual({ kind: 'editor' });
+    expect(findOpening('additions', true, null)).toEqual({ kind: 'editor' });
+  });
+
+  it('opens the bar on a newer side nothing types into', () => {
+    expect(findOpening(null, false, { side: 'additions', lineNumber: 3 })).toEqual({ kind: 'bar', side: 'additions', from: { line: 3, character: 0 } });
+  });
+
+  it('searches from the top of the side right-clicked when the line pressed was on the other side', () => {
+    expect(findOpening(null, false, pressedOld, 'additions')).toEqual({ kind: 'bar', side: 'additions', from: null });
+  });
+
+  it('searches the one side a diff shows alone, whichever was pressed', () => {
+    expect(findOpening('deletions', false, { side: 'additions', lineNumber: 2 })).toEqual({ kind: 'bar', side: 'deletions', from: null });
+  });
+});
+
+describe('findBarKeyAction', () => {
+  const press = (key: string, modifiers: Partial<{ metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }> = {}) => ({
+    key,
+    code: key.length === 1 ? `Key${key.toUpperCase()}` : key,
+    metaKey: false,
+    ctrlKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...modifiers,
+  });
+
+  it('closes with Esc and steps with Enter and Shift+Enter', () => {
+    expect(findBarKeyAction(press('Escape'), true)).toBe('close');
+    expect(findBarKeyAction(press('Enter'), true)).toBe('next');
+    expect(findBarKeyAction(press('Enter', { shiftKey: true }), true)).toBe('previous');
+  });
+
+  it("takes ⌘F (Ctrl+F off macOS) to select its text again, so it never reaches the view's filter", () => {
+    expect(findBarKeyAction(press('f', { metaKey: true }), true)).toBe('reselect');
+    expect(findBarKeyAction(press('f', { ctrlKey: true }), false)).toBe('reselect');
+  });
+
+  it('leaves every other key to the field', () => {
+    expect(findBarKeyAction(press('f'), true)).toBeNull();
+    expect(findBarKeyAction(press('a', { metaKey: true }), true)).toBeNull();
   });
 });
 

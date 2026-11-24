@@ -1,4 +1,6 @@
-import type { DiffSide } from './changeBlocks';
+import { matchesShortcut, type PressedKey } from '../../../lib/shortcuts';
+import { hotkey } from '../../../lib/shortcutRegistry';
+import type { ChangedLine, DiffSide } from './changeBlocks';
 import type { MarkRange, WordMarksByLine } from './wordMarkRows';
 
 /**
@@ -36,22 +38,28 @@ const NOTHING_FOUND: FoundMatches = { matches: [], capped: false };
 
 /**
  * Every place `query` stands in `text`, line by line (a match never spans a line break: LF, CRLF or a lone CR, as
- * Pierre breaks the lines it shows). Literal text, never a pattern. Ignoring case, letters match as Unicode folds them
- * one for one (`σ` finds `Σ` and `ς`), so each match keeps its length in the line and marks the characters it found.
+ * Pierre breaks the lines it shows), in the order of the text. Literal text, never a pattern. Ignoring case, letters
+ * match as Unicode folds them one for one (`σ` finds `Σ` and `ς`), so each match keeps its length in the line and marks
+ * the characters it found. Past `limit`, the matches kept are those from `fromLine` on, going round from the top: the
+ * ones around where the user searches from, never only the file's first.
  */
-export function findInText(text: string, query: string, options: FindOptions, limit = MAX_MATCHES): FoundMatches {
+export function findInText(text: string, query: string, options: FindOptions, limit = MAX_MATCHES, fromLine = 1): FoundMatches {
   if (!query) return NOTHING_FOUND;
   const pattern = matchPattern(query, options);
-  const matches: CodeMatch[] = [];
   const lines = text.split(/\r\n|\n|\r/);
-  for (let index = 0; index < lines.length; index++) {
+  const first = Math.min(Math.max(fromLine, 1), lines.length) - 1;
+  const after: CodeMatch[] = [];
+  const before: CodeMatch[] = [];
+  for (let step = 0; step < lines.length; step++) {
+    const index = (first + step) % lines.length;
+    const kept = index >= first ? after : before;
     pattern.lastIndex = 0;
     for (let found = pattern.exec(lines[index]!); found; found = pattern.exec(lines[index]!)) {
-      if (matches.length === limit) return { matches, capped: true };
-      matches.push({ line: index + 1, start: found.index, end: found.index + found[0].length });
+      if (after.length + before.length === limit) return { matches: [...before, ...after], capped: true };
+      kept.push({ line: index + 1, start: found.index, end: found.index + found[0].length });
     }
   }
-  return { matches, capped: false };
+  return { matches: [...before, ...after], capped: false };
 }
 
 function matchPattern(query: string, { matchCase, wholeWord }: FindOptions): RegExp {
@@ -87,25 +95,27 @@ export function steppedMatch(count: number, current: number | null, backwards: b
 /** What the bar says of the matches: which one shows of how many ("3 of 12"), or that there are none. Nothing before a query. */
 export function matchCountWords(query: string, current: number | null, { matches, capped }: FoundMatches): string {
   if (!query) return '';
-  if (matches.length === 0) return 'No results';
-  const total = `${matches.length.toLocaleString('en-US')}${capped ? '+' : ''}`;
-  return current === null ? `${total} results` : `${(current + 1).toLocaleString('en-US')} of ${total}`;
+  if (matches.length === 0 || current === null) return 'No results';
+  return `${(current + 1).toLocaleString('en-US')} of ${matches.length.toLocaleString('en-US')}${capped ? '+' : ''}`;
 }
 
-/** Each match's characters to mark on its side, the match shown apart, in a stronger color (`useWordMarks`). */
-export interface MatchMarks {
-  others: WordMarksByLine;
-  current: WordMarksByLine;
+/**
+ * Every match's characters to mark on its side (`useWordMarks`), by line. Made once per search, not per step: the match
+ * shown is marked on its own over them, in a stronger color (`shownMatchMarks`).
+ */
+export function matchMarks(side: DiffSide, matches: readonly CodeMatch[]): WordMarksByLine {
+  const marks = new Map<number, MarkRange[]>();
+  for (const { line, start, end } of matches) {
+    const lineMarks = marks.get(line);
+    if (lineMarks) lineMarks.push({ start, end });
+    else marks.set(line, [{ start, end }]);
+  }
+  return onSide(side, marks);
 }
 
-export function matchMarks(side: DiffSide, matches: readonly CodeMatch[], current: number | null): MatchMarks {
-  const others = new Map<number, MarkRange[]>();
-  const shown = new Map<number, MarkRange[]>();
-  matches.forEach(({ line, start, end }, index) => {
-    const marks = index === current ? shown : others;
-    marks.set(line, [...(marks.get(line) ?? []), { start, end }]);
-  });
-  return { others: onSide(side, others), current: onSide(side, shown) };
+/** The match shown's characters, marked over every match's. */
+export function shownMatchMarks(side: DiffSide, match: CodeMatch | null): WordMarksByLine {
+  return onSide(side, new Map(match ? [[match.line, [{ start: match.start, end: match.end }]]] : []));
 }
 
 function onSide(side: DiffSide, marks: Map<number, MarkRange[]>): WordMarksByLine {
@@ -118,6 +128,40 @@ function onSide(side: DiffSide, marks: Map<number, MarkRange[]>): WordMarksByLin
  */
 export function sideToFind(onlySide: DiffSide | null, pressed: DiffSide | null): DiffSide {
   return onlySide ?? pressed ?? 'additions';
+}
+
+/** Where Find opens and what it searches from. */
+export type FindOpening =
+  /** The side is typed into: Pierre's own search panel, which its editor has (`openPierreSearchPanel`). */
+  | { kind: 'editor' }
+  /** The app's bar, on a read-only side, from the line pressed there (none pressed there: from the top). */
+  | { kind: 'bar'; side: DiffSide; from: TextPlace | null };
+
+/**
+ * Where ⌘F, or Find in the code's menu, opens: on `on` (the side right-clicked), else on the side last pressed
+ * (`sideToFind`). The newer side, typed into, has Pierre's search panel, so one side never has two searches; any other
+ * side has the bar, from the line pressed when it was pressed on that side.
+ */
+export function findOpening(onlySide: DiffSide | null, typedInto: boolean, pressed: ChangedLine | null, on?: DiffSide): FindOpening {
+  const side = sideToFind(onlySide, on ?? pressed?.side ?? null);
+  if (typedInto && side === 'additions') return { kind: 'editor' };
+  return { kind: 'bar', side, from: pressed?.side === side ? { line: pressed.lineNumber, character: 0 } : null };
+}
+
+/** What a key does in the bar's field. */
+export type FindBarKeyAction = 'close' | 'next' | 'previous' | 'reselect';
+
+/**
+ * The bar's keys (the registry's "Text" area): Esc closes it, Enter and Shift+Enter step to the next and previous
+ * match, and ⌘F selects its text again. The bar takes them before anything else, so ⌘F never reaches the view's filter
+ * of files (`FilterField` listens on the window). None for any other key, which the field types.
+ */
+export function findBarKeyAction(event: PressedKey, mac?: boolean): FindBarKeyAction | null {
+  if (matchesShortcut(event, hotkey('textCloseFind'), mac)) return 'close';
+  if (matchesShortcut(event, hotkey('textFindPrevious'), mac)) return 'previous';
+  if (matchesShortcut(event, hotkey('textFindNext'), mac)) return 'next';
+  if (matchesShortcut(event, hotkey('textFind'), mac)) return 'reselect';
+  return null;
 }
 
 /** The field's placeholder: which version it searches, where the diff shows two. */
