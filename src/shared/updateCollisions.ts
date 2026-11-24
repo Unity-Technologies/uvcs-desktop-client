@@ -1,6 +1,6 @@
 import type { DiffEntry } from './domain/diff';
 import type { UpdateConflict } from './domain/incoming';
-import type { PendingChange } from './domain/pendingChanges';
+import type { ChangeKind, PendingChange, PendingChangesSnapshot } from './domain/pendingChanges';
 
 const LOCAL_CONTENT_CHANGES = new Set(['changed', 'checkedOut', 'replaced']);
 
@@ -34,4 +34,21 @@ export function findUpdateConflicts(incoming: DiffEntry[], local: PendingChange[
       incomingRevisionId: entry.revisionId,
       repository: entry.repository,
     }));
+}
+
+/**
+ * Kinds of change `cm status --controlledchanged --changed` never prints, which the incoming read checks the update
+ * against: Changes' list (`pendingChangesStatusOptions`) also asks for local deletes and, by the user's filter, local
+ * moves, private, ignored, cloaked and hidden changed files. `--iscochanged` only tells an unchanged checkout (`CO`)
+ * from an edited one (`CO+CH`), both checkouts still.
+ */
+const NOT_CONTROLLED_CHANGES: ReadonlySet<ChangeKind> = new Set(['locallyDeleted', 'locallyMoved', 'private', 'ignored', 'cloaked', 'hiddenChanged']);
+
+/**
+ * The local changes an update can collide with, out of Changes' pending changes: what `cm status --controlledchanged
+ * --changed` would print, so the conflicts come out as the incoming read's own. `findUpdateBlockers` takes any local
+ * path, so nothing else may be left in.
+ */
+export function localChangesForUpdateOf(snapshot: PendingChangesSnapshot): PendingChange[] {
+  return snapshot.changes.filter((change) => change.kinds.length > 0 && !change.kinds.some((kind) => NOT_CONTROLLED_CHANGES.has(kind)));
 }
