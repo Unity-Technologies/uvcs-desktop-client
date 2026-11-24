@@ -287,7 +287,7 @@ export class OfficialClientUpdate {
     const response = await reaching(url, fetch(url, { headers: { Accept: 'application/json' }, signal }));
     const body = await reaching(url, response.text());
     if (!response.ok) throw new OfficialUpdateError('unreachable', `HTTP ${response.status} from ${url}: ${body.slice(0, 200)}`);
-    const release = parseLastVersion(body);
+    const release = parseLastVersion(body, site);
     if (!release) throw new OfficialUpdateError('noUpdate', `${url} has no newer version: ${body.slice(0, 200) || 'an empty answer'}`);
     if (!meetsCmVersion(release.version, floor)) throw new OfficialUpdateError('noUpdate', `${url} has ${release.version}, older than ${floor}`);
     return release;

@@ -38,8 +38,8 @@ export function installerQuestions(site: string, version: string): InstallerQues
 
 /** The editions and platforms whose answer has nothing at `version` or newer, one line each; none when all have it. */
 export function unpublishedInstallers(version: string, answers: readonly (InstallerQuestion & { body: string })[]): string[] {
-  return answers.flatMap(({ edition, platform, body }) => {
-    const release = parseLastVersion(body);
+  return answers.flatMap(({ edition, platform, url, body }) => {
+    const release = parseLastVersion(body, new URL(url).origin);
     if (!release) return [`${edition} on ${platform}: nothing published after ${versionJustBefore(version)}`];
     return compareCmVersions(release.version, version) < 0 ? [`${edition} on ${platform}: the latest is ${release.version}`] : [];
   });
