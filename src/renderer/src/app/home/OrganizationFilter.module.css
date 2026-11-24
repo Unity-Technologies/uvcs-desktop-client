@@ -1,6 +1,6 @@
 /*
- * The sidebar's organization filter, for someone with many (`showsOrganizationFilter`): drawn as one more of the
- * sidebar's rows, a magnifier and quiet words, until the pointer or the caret comes to it.
+ * The sidebar's organization filter, for someone with many (`showsOrganizationFilter`): the app's search field, with
+ * its border, so it reads as a field and not as one more entry, at the height of the sidebar's rows.
  */
 .filter {
   display: flex;
@@ -10,19 +10,12 @@
 
 .filter input {
   height: 28px;
-  border-color: transparent;
-  background: transparent;
-  color: var(--text-primary);
   font-size: inherit;
 }
 
-.filter input:hover {
-  background: var(--bg-hover);
-}
-
+/* The field's ring falls outside it, where the sidebar's groups cut what overflows them (`NavGroups`): drawn inside. */
 .filter input:focus {
-  border-color: var(--border-default);
-  background: var(--bg-input);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .noMatches {
