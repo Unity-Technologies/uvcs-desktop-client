@@ -5,11 +5,13 @@ import { repositoryPlace, samePlace, workspacePathOf, workspacePlace, type Place
 import type { SavedWindow } from '@shared/domain/settings';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
+import type { CmSetupStart } from '@shared/startingPlace';
 import { createMainWindow } from './createMainWindow';
 import { askBeforeUnloading } from './leaveRequests';
 import { PageWindowRegistry, type FollowChanges } from './PageWindowRegistry';
 import { savedBoundsOf } from './savedWindowBounds';
 import { inSessionOrder, windowsToReopen } from './windowSession';
+import { windowsStayInBackground } from './backgroundWindows';
 
 interface WorkspaceWindowsOptions {
   settings: SettingsStore;
@@ -17,6 +19,8 @@ interface WorkspaceWindowsOptions {
   workspaceOf: (viewer: number) => string | undefined;
   /** A window opened, closed, got focus or changed title: the Window menu lists them. */
   onWindowsChanged: () => void;
+  /** The app's own `cm` being set up or updated, if it is: a window opened meanwhile starts on the setup screen. */
+  cmSetup: () => CmSetupStart | null;
   onClosed: (viewer: number) => void;
   /** No window explores the repository anymore: what was kept of it while one did can go. */
   onRepositoryLeft: (repository: string) => void;
@@ -72,7 +76,7 @@ export class WorkspaceWindows {
     const cascadeFrom = reopening ? undefined : (BrowserWindow.getFocusedWindow() ?? this.all().at(-1));
     // Its page starts on a workspace when its folder is there; for a missing one, the page's own check explains it.
     const startsOn = place && (place.kind === 'repository' || existsSync(place.workspacePath)) ? place : undefined;
-    const window = createMainWindow(this.options.settings, { cascadeFrom, place: startsOn, onCloseRequested: this.options.onCloseRequested, ...reopening });
+    const window = createMainWindow(this.options.settings, { cascadeFrom, place: startsOn, onCloseRequested: this.options.onCloseRequested, cmSetup: this.options.cmSetup(), ...reopening });
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
     // A page loaded again (a reload) starts not knowing a page window follows it: it's told, or it would stop showing it.
@@ -272,6 +276,8 @@ export class WorkspaceWindows {
    * puts them back where they were, while a launch of their own starts on Changes.
    */
   saveSession({ withViews }: { withViews: boolean }): void {
+    // Never maximized or full screen, its windows would reopen so at the person's next launch (`windowsStayInBackground`).
+    if (windowsStayInBackground(process.env, app.isPackaged)) return;
     const openWindows = inSessionOrder(this.all(), this.lastFocused).map((window): SavedWindow => {
       const place = this.placeIn(window);
       const saved = { ...savedPlaceFields(place), bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() };
@@ -496,6 +502,7 @@ function placeOfWorkspace(workspacePath: string | undefined): Place | undefined 
 }
 
 export function focusWindow(window: BrowserWindow): void {
+  if (windowsStayInBackground(process.env, app.isPackaged)) return;
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();

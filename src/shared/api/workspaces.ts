@@ -1,4 +1,4 @@
-import type { SwitchChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
+import type { SwitchChangesAction, SwitchPreflight, SwitchResult, WholeBranchChangesAction } from '../domain/switchWithChanges';
 import type { NewFolderCheck, PartialRule, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceKind, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
@@ -63,8 +63,11 @@ export interface WorkspacesApi {
   rename(workspacePath: string, newName: string): Promise<void>;
   /** Unregisters the workspace; files on disk are kept. */
   remove(workspacePath: string): Promise<void>;
-  /** Downloads the latest changes of the loaded branch. */
-  update(workspacePath: string, operationId: string): Promise<void>;
+  /**
+   * Downloads the latest changes of the loaded branch. `paths`, in a partial workspace only: just those items and what
+   * they hold, relative to the workspace (Incoming's checked items); none updates everything it loads.
+   */
+  update(workspacePath: string, operationId: string, paths?: readonly string[]): Promise<void>;
   /**
    * The calling window now shows this workspace: it gets `workspaceChanged` events when the workspace changes on
    * disk, instead of the ones of the workspace it showed before. Windows showing the same workspace share a watcher.
@@ -106,4 +109,10 @@ export interface WorkspacesApi {
    * Unchanged checkouts are simply undone. Fails if there are other pending changes and no `pendingChanges`.
    */
   switchTo(workspacePath: string, targetSpec: string, operationId: string, pendingChanges?: SwitchChangesAction): Promise<SwitchResult>;
+  /**
+   * Makes a partial workspace standard: it downloads everything its branch holds, with a standard switch to it. Pending
+   * changes are shelved first, then brought back or undone, as `pendingChanges` says. Every window is told its kind
+   * changed (`workspaceKindChanged`). Fails on a workspace that isn't partial.
+   */
+  downloadWholeBranch(workspacePath: string, operationId: string, pendingChanges?: WholeBranchChangesAction): Promise<SwitchResult>;
 }

@@ -48,14 +48,24 @@ function heldCat(answer: typeof SERVER = SERVER) {
   };
 }
 
-/** `folder`: a long one makes command lines fill with fewer revisions. */
-async function setUp(answer: CmAnswer = SERVER, { longFolder = false } = {}) {
+/**
+ * The quick backlog the tests that pass it run with (`maxQuickBacklog`): each read writes a file, and dozens of them
+ * take seconds on a slow Windows runner, where a test fails at five. Past `MAX_QUICK_CAT`, so a backlog past it still
+ * takes more than one quick `cm cat`.
+ */
+const SMALL_BACKLOG = MAX_QUICK_CAT + 2;
+
+/**
+ * `longFolder`: a long one makes command lines fill with fewer revisions. `maxQuickBacklog`: `SMALL_BACKLOG` keeps a
+ * test past it quick.
+ */
+async function setUp(answer: CmAnswer = SERVER, { longFolder = false, maxQuickBacklog = MAX_QUICK_BACKLOG } = {}) {
   const base = await mkdtemp(join(tmpdir(), 'revision-cat-'));
   const folder = longFolder ? join(base, 'f'.repeat(200)) : base;
   await mkdir(folder, { recursive: true });
   const fake = fakeCmClient({ cat: answer });
   const timing = manualSchedule();
-  const cat = new RevisionCat({ cm: fake.cm, schedule: timing.schedule });
+  const cat = new RevisionCat({ cm: fake.cm, schedule: timing.schedule, maxQuickBacklog });
   const target = (name: string | number) => join(folder, `v${name}`);
   const save = (asked: CatRevision, name: string | number = /^\w+:(\d+)/.exec(asked.spec)![1]!) => cat.save(workspacePlace(WORKSPACE), asked, target(name));
   return { fake, ...timing, cat, target, save };
@@ -138,8 +148,8 @@ describe('RevisionCat', () => {
 
   it('runs at most two cm cats at once: the reads asked meanwhile wait, and the next batch is formed from them as one ends', async () => {
     const held = heldCat(BATCHING_SERVER);
-    const { fake, flush, save } = await setUp(held.cat);
-    const backlog = (from: number) => Array.from({ length: MAX_QUICK_BACKLOG + 1 }, (_, i) => save(version(from + i)));
+    const { fake, flush, save } = await setUp(held.cat, { maxQuickBacklog: SMALL_BACKLOG });
+    const backlog = (from: number) => Array.from({ length: SMALL_BACKLOG + 1 }, (_, i) => save(version(from + i)));
     const first = backlog(1000);
     flush();
     const second = backlog(2000);
@@ -154,9 +164,9 @@ describe('RevisionCat', () => {
     held.letAllThrough();
     await Promise.all([...second, ...meanwhile]);
     expect(readsPerCommand(fake)).toEqual([
-      ['execute', MAX_QUICK_BACKLOG + 1],
-      ['execute', MAX_QUICK_BACKLOG + 1],
-      ['execute', MAX_QUICK_BACKLOG + 1],
+      ['execute', SMALL_BACKLOG + 1],
+      ['execute', SMALL_BACKLOG + 1],
+      ['execute', SMALL_BACKLOG + 1],
     ]);
   });
 
@@ -209,14 +219,14 @@ describe('RevisionCat', () => {
   });
 
   it('finds the one spec that failed a whole cm cat before it wrote anything, saying nothing of it, in halves: every other read is saved', async () => {
-    const refusing: CmAnswer = (command) => (catReadsOf(command.args).some((read) => read.spec.startsWith('itemid:13#')) ? cmFails('Error: Incorrect object specification') : SERVER(command));
-    const { fake, flush, save } = await setUp(refusing);
-    const reads = Array.from({ length: MAX_QUICK_BACKLOG + 1 }, (_, i) => save(version(i + 1)));
+    const refusing: CmAnswer = (command) => (catReadsOf(command.args).some((read) => read.spec.startsWith('itemid:5#')) ? cmFails('Error: Incorrect object specification') : SERVER(command));
+    const { fake, flush, save } = await setUp(refusing, { maxQuickBacklog: SMALL_BACKLOG });
+    const reads = Array.from({ length: SMALL_BACKLOG + 1 }, (_, i) => save(version(i + 1)));
     flush();
     const results = await Promise.allSettled(reads);
     expect(results.filter((result) => result.status === 'rejected')).toEqual([{ status: 'rejected', reason: expect.objectContaining({ message: 'Incorrect object specification' }) }]);
-    // The batch, then two halves at each halving: never a command each.
-    expect(fake.commands.length).toBeLessThanOrEqual(1 + 2 * Math.ceil(Math.log2(MAX_QUICK_BACKLOG + 1)));
+    // The batch, then the half holding the failure halved again until it stands alone: never a command each.
+    expect(readsPerCommand(fake).map(([, reads]) => reads)).toEqual([SMALL_BACKLOG + 1, 4, 3, 2, 1, 1, 1]);
   });
 
   it('fails the reads of a cm cat that failed for them all (a dropped connection) after trying its halves once, never one by one', async () => {
@@ -224,13 +234,13 @@ describe('RevisionCat', () => {
       for (const { target } of catReadsOf(args)) await writeFile(target, 'cut sh');
       return cmFails('Error: The connection was closed');
     };
-    const { fake, flush, save } = await setUp(cutShort);
-    const reads = Array.from({ length: MAX_QUICK_BACKLOG + 2 }, (_, i) => save(version(i + 1)));
+    const { fake, flush, save } = await setUp(cutShort, { maxQuickBacklog: SMALL_BACKLOG });
+    const reads = Array.from({ length: SMALL_BACKLOG + 2 }, (_, i) => save(version(i + 1)));
     flush();
     const results = await Promise.allSettled(reads);
     expect(results.every((result) => result.status === 'rejected' && /connection was closed/.test(String(result.reason)))).toBe(true);
-    const half = (MAX_QUICK_BACKLOG + 2) / 2;
-    expect(readsPerCommand(fake).map(([, reads]) => reads)).toEqual([MAX_QUICK_BACKLOG + 2, half, half]);
+    const half = (SMALL_BACKLOG + 2) / 2;
+    expect(readsPerCommand(fake).map(([, reads]) => reads)).toEqual([SMALL_BACKLOG + 2, half, half]);
   });
 
   it("reads again, alone, the one revision a failure left unexplained, rather than fail it with another's error", async () => {
@@ -282,6 +292,6 @@ describe('RevisionCat', () => {
     const saved = Promise.all([cat.save(workspacePlace(WORKSPACE), version(1), target(1)), cat.save(repositoryPlace('eco@local'), version(2), target(2))]);
     flush();
     await saved;
-    expect(fake.commands.map((command) => command.options)).toEqual([{ cwd: WORKSPACE }, { outsideWorkspaces: true }]);
+    expect(fake.commands.map((command) => command.options)).toEqual([{ cwd: WORKSPACE }, { outsideWorkspaces: true, server: 'local' }]);
   });
 });

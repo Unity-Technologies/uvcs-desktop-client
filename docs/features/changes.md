@@ -3,6 +3,27 @@
 What the Changes view does with pending changes that the rest of the app doesn't show. The list itself (rows, order,
 List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item rows".
 
+## The check-in's comment
+
+Written in the rich comment editor (docs/features/rich-comments.md "Writing"): a summary, holding no button, and a
+description. The description's footer (`DescriptionFooter`, `descriptionFooterButtons`) is a quiet row at its
+bottom-left, as GitHub Desktop draws its own: small muted icon buttons apart by hairlines, each named by its tooltip.
+**Recent comments**, while there are some, opens the repository's comments checked in lately ("Recent comments are per
+repository" below), a pick filling the summary and the description (`recentCommentPick`); **Change requests to apply**, with their count, while the check-in offers some
+(docs/features/code-reviews.md "Applying change requests"). While it shows, the description is taller by its row
+(`DESCRIPTION_FOOTER_HEIGHT`), so it takes none of the room to type. With neither, there's no footer and the description is
+as it always was.
+
+## Nothing pending: the task's next step
+
+On a clean workspace on a task branch with changesets of its own, the empty state offers the task's next step
+(`MergeTaskSuggestion`, decided by `taskNextStepOf` and `taskNextStepView`): create its merge request, where the request
+stands and its next move, merge it once reviewed, then what to do once merged. One line and at most two buttons, as calm
+as the empty state. After a check-in (`SuccessEmptyState`), under its Copy link, the line and only the step's most
+useful button (`besideAnotherAction`), so that screen keeps two buttons too. Under a list holding only files never
+checked in, the most useful action alone, quiet. What each case shows and what it costs: docs/features/merge.md
+"Finishing a task" › "The next step, in Changes".
+
 ## Changelists and status groups in the list
 
 - **Grouping by changelist** is the view menu's "Group by ▸ Changelist" in Changes alone (`usePendingChangesViewStore`'s
@@ -46,6 +67,20 @@ What acts on some of a changelist's files (Include or Exclude, Add to version co
 rules) isn't in it: the header's checkbox includes or excludes them all, and the rest is the files' own menu, on the
 files selected or a folder right-clicked. Opening the files' menu on the default changelist's header was dropped: the
 same kind of row offered two different menus.
+
+## Ignore, cloak or hide
+
+"Ignore, cloak or hide ▸" (`filterRulesSubmenu`, in Changes and Files) adds rules to the workspace's `ignore.conf`,
+`cloaked.conf` or `hidden_changes.conf`. Each list offers the selected items by path ("This item (/a/b.txt)…", one
+rule each, leaving out the items a selected folder covers: `itemRulePatterns`), by the name they all share ("All items
+named b.txt…", a bare name, which matches it in every folder, never offered for a name starting with `#` or `!`,
+which the file reads as a comment or an exception: `sharedName`) and by the extension they all share ("All
+.txt files…": `sharedExtension`); an option the selection doesn't share isn't offered. Every entry opens the rules in
+a dialog (`askAndAddFilterRules`, `askFilterRules`), one per line, for the user to change before they're added (`rulesFromText` reads them),
+since the right rule is often a pattern none of the entries suggests. Rules already in the file aren't added twice
+(`withRules`). The check-in's notice of many private files ("Add Library/ to ignore.conf") adds its one rule
+without the dialog (`addFilterRules`): its button already says what it writes. The legacy client's "Apply rules to all my workspaces" isn't offered: it writes `cm`'s own config
+folder, which the app never touches (ARCHITECTURE.md "`cm` owns its files").
 
 ## Search matches: a move recorded by hand
 
@@ -124,3 +159,20 @@ isn't the one. "Search matches…" in either one's menu pairs them by hand, with
   `.psd` that isn't pairable, and a pairing the detection gets wrong (`src/Legacy/Arsenal/Weapon.cs` paired with
   `Gun.cs` at 40% where it became `Rifle.cs` at 30%). With "Detect moved and renamed files" on, most of its deleted
   files are paired, and offered so; turn it off to see each on its own.
+
+## Recent comments are per repository
+
+The check-in's Recent comments menu offers the comments checked in to the workspace's repository, from any of its
+workspaces, never another repository's: a comment often names what only makes sense where it was written (`cs:4207`,
+`br:/main/task`, a change request applied). They're kept in the settings by repository
+(`recentCommentsByRepository`, keyed by `repositoryKey`: the name and the server in any case, the server without its
+protocol, so two workspaces of one repository share them), the newest first, `MAX_RECENT_COMMENTS` each; a check-in
+puts its comment first (`rememberComment` in `checkinOperations`, the repository read from the workspace's info
+Changes already has). The main process applies it to what it holds (`settings.rememberRecentComment`,
+`SettingsStore.rememberRecentComment`, `withRecentComment`), as it does the recent workspaces and branches: a window
+replacing the whole list from its own copy would drop what another window just checked in. Only the `MAX_RECENT_COMMENT_REPOSITORIES` repositories checked in to last
+keep theirs, so the settings don't grow with every repository ever used.
+
+The comments kept before they were per repository (`recentComments`) can't be told apart by repository: they're offered
+to every repository with no list of its own yet, until its first check-in starts one (`recentCommentsFor`), and are
+never written again.

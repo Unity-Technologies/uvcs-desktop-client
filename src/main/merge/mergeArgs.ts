@@ -1,11 +1,11 @@
-import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { MergeOperation, MergePlan } from '@shared/domain/merge';
 import { appliedMergeOptions } from '@shared/domain/mergeOptions';
 import { MERGE_FIELD_SEPARATOR, MERGE_PREVIEW_RECORD_ARGS } from '../cm/mergeOutput';
 
 export const MACHINE_READABLE_ARGS = ['--machinereadable', `--fieldseparator=${MERGE_FIELD_SEPARATOR}`];
 
 /** The source and kind of a merge, and the options the user chose for it, as `cm merge` arguments. */
-export function mergeSourceArgs(request: MergeRequest): string[] {
+export function mergeSourceArgs(request: MergeOperation): string[] {
   const applied = appliedMergeOptions(request);
   return [
     request.sourceSpec,
@@ -20,7 +20,7 @@ export function mergeSourceArgs(request: MergeRequest): string[] {
 }
 
 /** A `cm merge` that only prints its plan, with its contributors, as records read as they arrive (`mergePlanOf`). */
-export function mergePlanArgs(request: MergeRequest): string[] {
+export function mergePlanArgs(request: MergeOperation): string[] {
   return ['merge', ...mergeSourceArgs(request), ...MACHINE_READABLE_ARGS, ...MERGE_PREVIEW_RECORD_ARGS, '--printcontributors'];
 }
 
@@ -30,7 +30,7 @@ export function mergePlanArgs(request: MergeRequest): string[] {
  * destination and the app writes the resolutions afterwards. A merge into a server branch hands `cm` each file's
  * decision in `fileConflictResolutionsPath` (`fileConflictResolutionsFile`).
  */
-export function fileConflictArgs(request: MergeRequest, plan: MergePlan, fileConflictResolutionsPath: string): string[] {
+export function fileConflictArgs(request: MergeOperation, plan: MergePlan, fileConflictResolutionsPath: string): string[] {
   if (plan.fileConflicts.length === 0) return [];
   return request.destinationBranch ? [`--fileconflictsresolutionsfile=${fileConflictResolutionsPath}`] : ['--keepdestination'];
 }

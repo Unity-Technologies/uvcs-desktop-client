@@ -38,6 +38,28 @@ export interface ServerProfile {
   workingMode: string;
 }
 
+/** A protocol a server may be written with (`ssl://host:8088`), which names the same server as `host:8088`; links leave it out. */
+export const SERVER_PROTOCOL = /^(?:ssl|udt|tcp):\/\//i;
+
+/**
+ * One form for a server however it's written: by host and port without the protocol (`ssl://host:8088` → `host:8088`),
+ * an organization's name in any case (`ACME@unity` → `acme@unity`). `acme@unity` and `acme@cloud` stay apart.
+ */
+export function serverKey(server: string): string {
+  return server.replace(SERVER_PROTOCOL, '').toLowerCase();
+}
+
+/**
+ * One form for a repository spec (`name@server`) however a workspace, a link or `cm` writes it: its name in any case,
+ * as `cm` takes it, and its server as `serverKey` gives it. Repository names hold no `@`, so the server is everything
+ * after the first one. For what is kept or matched per repository (`isRepository`, recent comments).
+ */
+export function repositoryKey(repositorySpec: string): string {
+  const at = repositorySpec.indexOf('@');
+  if (at === -1) return repositorySpec.toLowerCase();
+  return `${repositorySpec.slice(0, at).toLowerCase()}@${serverKey(repositorySpec.slice(at + 1))}`;
+}
+
 /**
  * Whether an item of `repository` is in the place's (a workspace's, or a repository explored without one): undefined
  * while the place's isn't known yet, so a caller doesn't act on an xlinked repository's item meanwhile (list the wrong

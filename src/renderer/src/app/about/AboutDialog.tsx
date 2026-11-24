@@ -1,18 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Bug, Copy, Lightbulb, RefreshCw, Scale } from 'lucide-react';
-import { useEffect } from 'react';
+import { BookOpen, Bug, Copy, FolderOpen, Lightbulb, RefreshCw, Scale } from 'lucide-react';
+import { useEffect, type ReactNode } from 'react';
 import { api } from '../../api/client';
 import { AppMark } from '../../components/AppMark';
 import { APP_NAME, APP_PITCH } from '../../lib/appIdentity';
+import { REVEAL_LABEL } from '../../lib/platform';
 import { Button } from '../../ui/Button';
+import { IconButton } from '../../ui/IconButton';
 import { CardDialog } from '../../ui/dialog/CardDialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { Spinner } from '../../ui/Spinner';
 import { copyToClipboard } from '../../ui/copyToClipboard';
+import { useCmRuntimeStore } from '../cmSetup/cmRuntimeStore';
 import { cmVersionQuery } from '../startup/useCmAvailability';
 import { openReleaseNotesDialog } from '../updates/ReleaseNotesDialog';
 import { foundUpdateVersion, useHasWhatsNew } from '../updates/updateReleaseNotes';
 import { checkForUpdates, installUpdate, setAboutOpen, useUpdateStore } from '../updates/updateStore';
+import { aboutCmValue } from './aboutCm';
 import { aboutDetails } from './aboutDetails';
 import { aboutBugReportUrl, featureRequestUrl } from './aboutIssueUrls';
 import { aboutUpdateAction, aboutUpdateLine, describePlatform } from './aboutUpdate';
@@ -23,10 +27,14 @@ export function openAboutDialog(): void {
   openDialog((close) => <AboutDialog onClose={close} />);
 }
 
-/** The app's name and version, its update, and what it runs on: the `cm` found (already asked at start) and Electron. */
+/**
+ * The app's name and version, its update, and what it runs on: the `cm` that runs (its version, already asked at start,
+ * which one it is, and a button that shows it) and Electron.
+ */
 function AboutDialog({ onClose }: { onClose: () => void }) {
   const { data: info } = useQuery(appInfoQuery);
   const { data: cmVersion } = useQuery(cmVersionQuery);
+  const cmStatus = useCmRuntimeStore((state) => state.status);
 
   useEffect(() => {
     setAboutOpen(true);
@@ -44,8 +52,13 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
 
       {info && (
         <dl className={styles.meta}>
-          <Property term="cm" value={cmVersion ?? '…'} />
-          <Property term="Platform" value={describePlatform(info.platform, info.arch)} />
+          <Property
+            term="cm"
+            wide
+            value={aboutCmValue(cmVersion, cmStatus)}
+            action={<IconButton size="small" label={REVEAL_LABEL} icon={<FolderOpen size={13} />} onClick={() => void api.cmRuntime.reveal()} />}
+          />
+          <Property term="Platform" wide value={describePlatform(info.platform, info.arch)} />
           <Property term="Electron" value={info.electron} />
           <Property term="Chromium" value={info.chromium} />
         </dl>
@@ -125,11 +138,14 @@ function UpdateBox() {
   );
 }
 
-function Property({ term, value }: { term: string; value: string }) {
+function Property({ term, value, action, wide = false }: { term: string; value: string; action?: ReactNode; wide?: boolean }) {
   return (
-    <div className={styles.property}>
+    <div className={wide ? `${styles.property} ${styles.wide}` : styles.property}>
       <dt>{term}</dt>
-      <dd className="selectable">{value}</dd>
+      <dd className="selectable">
+        {value}
+        {action}
+      </dd>
     </div>
   );
 }

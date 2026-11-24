@@ -64,9 +64,15 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
   changeset: 'operation',
   checkin: 'operation',
   checkout: 'operation',
-  // `cm codereview reviewer list` lists a review's reviewers; every other `cm codereview` writes.
-  codereview: (args) => (args[1] === 'reviewer' && (args[2] === 'list' || args[2] === 'ls') ? 'list' : 'operation'),
+  // `cm codereview reviewer list` lists a review's reviewers, `cm codereview subscription` answers whether the user
+  // gets its emails; every other `cm codereview` writes.
+  codereview: (args) => {
+    if (args[1] === 'reviewer' && (args[2] === 'list' || args[2] === 'ls')) return 'list';
+    return args[1] === 'subscription' ? 'answer' : 'operation';
+  },
   label: 'operation',
+  // A merge request's state or destination (`mergeRequestArgs`); the app reads merge requests with `cm find review`.
+  mergerequest: 'operation',
   move: 'operation',
   // A partial workspace's update, switch and checkin: `cm partial <command>`.
   partial: 'operation',

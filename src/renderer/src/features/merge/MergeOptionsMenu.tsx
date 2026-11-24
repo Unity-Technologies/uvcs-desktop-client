@@ -1,5 +1,5 @@
 import { SlidersHorizontal } from 'lucide-react';
-import type { MergeRequest } from '@shared/domain/merge';
+import type { MergeOperation } from '@shared/domain/merge';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Popover } from '../../ui/Popover';
@@ -18,7 +18,7 @@ import {
 import styles from './MergeOptionsMenu.module.css';
 
 interface MergeOptionsMenuProps {
-  request: MergeRequest;
+  request: MergeOperation;
   labels: MergeLabels;
   /** Which options this merge offers (`mergeOptionsOffered`). */
   offered: MergeOptionsOffered;
@@ -26,7 +26,7 @@ interface MergeOptionsMenuProps {
   contributor: Contributor | null;
   onContributorChange: (contributor: Contributor) => void;
   /** A request that calculates the merge differently: the page previews it again. */
-  onRequestChange: (request: MergeRequest) => void;
+  onRequestChange: (request: MergeOperation) => void;
 }
 
 /** How the merge is calculated, and who contributes to its conflicting files, behind one header button. */

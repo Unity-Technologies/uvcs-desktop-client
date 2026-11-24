@@ -1,5 +1,5 @@
 import type { MergeLinkType } from '@shared/domain/branchExplorer';
-import type { CodeReviewStatus } from '@shared/domain/codeReview';
+import type { CodeReviewStatus, MergeRequestState } from '@shared/domain/codeReview';
 import { AVATAR_COLORS, avatarColorOf, type AvatarColor } from '../../../lib/avatarColors';
 import { composite, hslAtContrast, hslColor, hueOf, parseColor, type Rgb } from '../../../styles/contrast';
 import { branchHue, hueToColor, hueToInk, LINE_TONE } from '../model/branchHue';
@@ -60,10 +60,15 @@ export interface GraphPalette {
   labelMark: string;
   /** Under a small badge drawn over the canvas. */
   badgeShadow: string;
-  /** Link colors for everything but plain merges, which take the source branch's color. */
-  mergeLinks: Record<Exclude<MergeLinkType, 'merge'>, string>;
+  /**
+   * Merge link colors, one per kind whatever branches they join, so a merge never reads as a branch's own line: merges
+   * green, cherry picks violet, subtractive merges red, as UVCS users know them.
+   */
+  mergeLinks: Record<MergeLinkType, string>;
   /** Code review chips, colored like the status badges elsewhere. */
   reviewStatus: Record<CodeReviewStatus, string>;
+  /** A merge request's state glyph, leading its review chip, in the state's color. */
+  mergeRequestState: Record<MergeRequestState, string>;
   /** Authors' avatars without a picture, their fills as every avatar's (`avatarFill`), with the initials in `avatarLetter`. */
   avatars: Record<AvatarColor, string>;
   avatarLetter: string;
@@ -113,9 +118,10 @@ export function readGraphPalette(element: Element): GraphPalette {
     labelMark: variable('--label-mark'),
     badgeShadow: variable('--badge-shadow'),
     mergeLinks: {
-      interval: variable('--status-added'),
-      cherryPick: variable('--status-changed'),
-      intervalCherryPick: variable('--status-changed'),
+      merge: variable('--graph-merge-link'),
+      interval: variable('--graph-merge-link'),
+      cherryPick: variable('--graph-cherry-pick-link'),
+      intervalCherryPick: variable('--graph-cherry-pick-link'),
       subtractive: variable('--status-deleted'),
       intervalSubtractive: variable('--status-deleted'),
     },
@@ -123,6 +129,12 @@ export function readGraphPalette(element: Element): GraphPalette {
       'Under review': variable('--status-moved'),
       Reviewed: variable('--status-added'),
       'Rework required': variable('--status-changed'),
+    },
+    mergeRequestState: {
+      Draft: variable('--merge-request-draft'),
+      Open: variable('--merge-request-open'),
+      Merged: variable('--merge-request-merged'),
+      Closed: variable('--merge-request-closed'),
     },
     avatars: Object.fromEntries(AVATAR_COLORS.map((token) => [token, variable(token)])) as Record<AvatarColor, string>,
     avatarLetter: variable('--avatar-letter'),

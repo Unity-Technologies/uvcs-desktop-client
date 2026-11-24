@@ -8,6 +8,11 @@ export function toNeedle(query: string): string {
   return query.trim().toLowerCase().replace(/\s+/g, '');
 }
 
+/** The query as a phrase to find whole: lowercased, each run of spaces one space. Empty: nothing to find. */
+export function toPhrase(query: string): string {
+  return query.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 /** Matching from the start alone would let a letter early in the folders break up a run in the name, so try both. */
 export function scoreText(haystack: string, needle: string, chars: readonly string[], nameStart: number): number {
   return Math.max(scoreFrom(haystack, needle, chars, 0, nameStart), nameStart > 0 ? scoreFrom(haystack, needle, chars, nameStart, nameStart) : 0);

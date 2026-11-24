@@ -1,6 +1,7 @@
 import { cloneElement, useEffect, useRef, type ReactElement } from 'react';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { HoverCard } from '../../ui/HoverCard';
+import { SlashBreakingText } from '../../ui/SlashBreakingText';
 import { AnchoredCard, useHoverOpen } from './AnchoredCard';
 import type { ChipCard } from './chipContent';
 import { CommentLine } from './CommentLine';
@@ -18,7 +19,8 @@ interface ChipHoverCardProps {
 
 /**
  * A chip's hover card (`chipCard`), the Branch Explorer's card (`HoverCard`): the comment drawn as a comment's line,
- * then what the object is, who and when. On hover after a moment, and at once on keyboard focus.
+ * then what the object is, who and when; a file's name, then its folder (wrapping between its folders), then its version.
+ * On hover after a moment, and at once on keyboard focus.
  */
 export function ChipHoverCard({ card, children, onOpenChange }: ChipHoverCardProps) {
   const anchor = useRef<HTMLElement>(null);
@@ -31,7 +33,11 @@ export function ChipHoverCard({ card, children, onOpenChange }: ChipHoverCardPro
       {cloneElement(children, { ref: anchor, ...handlers })}
       {open && (
         <AnchoredCard anchor={anchor}>
-          <HoverCard title={card.comment ? <CommentLine comment={card.comment} interactive={false} /> : card.title} meta={card.meta.length > 0 ? card.meta.join(' · ') : undefined} />
+          <HoverCard
+            title={card.comment ? <CommentLine comment={card.comment} interactive={false} /> : <SlashBreakingText text={card.title} />}
+            body={card.folder && <SlashBreakingText text={card.folder} />}
+            meta={card.meta.length > 0 ? card.meta.join(' · ') : undefined}
+          />
         </AnchoredCard>
       )}
     </>

@@ -1,4 +1,5 @@
 import type { WorkspaceKind } from '@shared/domain/workspace';
+import { fitsCommandLine } from './commandLineLimit';
 import { readPartialUpdateProgress } from './progress/partialUpdateProgress';
 import type { ProgressReader } from './progress/progressReader';
 import { readUpdateProgress } from './progress/updateProgress';
@@ -26,7 +27,33 @@ export function updateCommand(kind: WorkspaceKind): ProgressingCommand {
   return { args: ['update', PROGRESS, '--noinput', '--dontmerge'], readProgress: readUpdateProgress };
 }
 
-/** Switches the workspace to `targetSpec`: `cm partial switch` in a partial workspace, which only switches to branches. */
+/**
+ * Updates only `paths` of a partial workspace (relative to it, run with the workspace as `cwd`): `cm partial update`
+ * brings each path's whole subtree. Paths that would overflow one command line are split across several commands, run
+ * one after the other (`fitsCommandLine`).
+ */
+export function partialUpdateCommands(paths: readonly string[]): ProgressingCommand[] {
+  const update = (batch: readonly string[]): ProgressingCommand => ({
+    args: ['partial', 'update', ...batch, '--dontmerge'],
+    readProgress: readPartialUpdateProgress,
+  });
+  const batches: string[][] = [];
+  let batch: string[] = [];
+  for (const path of paths) {
+    if (batch.length > 0 && !fitsCommandLine(update([...batch, path]).args)) {
+      batches.push(batch);
+      batch = [];
+    }
+    batch.push(path);
+  }
+  if (batch.length > 0) batches.push(batch);
+  return batches.map(update);
+}
+
+/**
+ * Switches the workspace to `targetSpec`: `cm partial switch` in a partial workspace, which only switches to branches.
+ * A standard switch of a partial workspace makes it standard (`downloadWholeBranch` asks it with `kind` 'standard').
+ */
 export function switchCommand(targetSpec: string, kind: WorkspaceKind): ProgressingCommand {
   if (kind === 'partial') return { args: ['partial', 'switch', targetSpec, '--noinput'], readProgress: readPartialUpdateProgress };
   return { args: ['switch', targetSpec, PROGRESS, '--noinput'], readProgress: readUpdateProgress };

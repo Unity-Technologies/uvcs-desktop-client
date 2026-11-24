@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CmShellSession, shellCommandTimeoutMs } from './CmShellSession';
+import { CmShellSession, SHELL_EXIT_TIMEOUT_MS, shellCommandTimeoutMs } from './CmShellSession';
 import { FIELD_SEPARATOR, RecordReader, RECORD_SEPARATOR } from './formatRecords';
 import { OutputBuffer } from './OutputBuffer';
 import { textLimitOf } from './outputLimit';
@@ -29,14 +29,47 @@ function printedShellProcess() {
   const stdout = new EventEmitter();
   const stderr = new EventEmitter();
   const stdin = Object.assign(new EventEmitter(), { write: () => true, end: () => {} });
-  const process = Object.assign(new EventEmitter(), { stdout, stderr, stdin, kill: () => true });
+  const kills: string[] = [];
+  const process = Object.assign(new EventEmitter(), { stdout, stderr, stdin, kill: (signal: string) => (kills.push(signal), true) });
   return {
     process: process as unknown as ChildProcessWithoutNullStreams,
+    kills,
+    close: () => void process.emit('close', 0),
     print: (output: string | Buffer) => void stdout.emit('data', Buffer.isBuffer(output) ? output : Buffer.from(output, 'utf8')),
     printError: (output: string) => void stderr.emit('data', Buffer.from(output, 'utf8')),
     breakInput: (error: Error) => void stdin.emit('error', error),
   };
 }
+
+describe('CmShellSession ending', () => {
+  it('settles its dispose once the process exited', async () => {
+    session = new CmShellSession(process.execPath, fakeCmFolder);
+    await session.start();
+    await expect(session.dispose()).resolves.toBeUndefined();
+  });
+
+  it('kills a process that hasn’t exited a while after it was asked to, and settles once it closed', async () => {
+    vi.useFakeTimers();
+    const shell = printedShellProcess();
+    vi.mocked(spawn).mockReturnValueOnce(shell.process);
+    session = new CmShellSession('cm', '/wk');
+    void session.run(['status']).catch(() => undefined);
+    let ended = false;
+    const disposed = session.dispose().then(() => (ended = true));
+
+    await vi.advanceTimersByTimeAsync(SHELL_EXIT_TIMEOUT_MS - 1);
+    expect({ ended, kills: shell.kills }).toEqual({ ended: false, kills: [] });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(shell.kills).toEqual(['SIGKILL']);
+    shell.close();
+    await disposed;
+    expect(ended).toBe(true);
+  });
+
+  it('settles at once when no process runs', async () => {
+    await expect(new CmShellSession('cm', '/wk').dispose()).resolves.toBeUndefined();
+  });
+});
 
 describe('CmShellSession', () => {
   it('runs commands in order and reports their exit codes', async () => {

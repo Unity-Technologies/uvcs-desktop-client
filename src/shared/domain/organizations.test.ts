@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { isUnityOrganization, nameInProject, nameWithProject, projectColor, projectOfRepository, projectPartOf, serverKind } from './organizations';
+import { isUnityOrganization, isWildcardServer, nameInProject, nameWithProject, projectColor, projectOfRepository, projectPartOf, serverKind } from './organizations';
+
+describe('isWildcardServer', () => {
+  it('tells the profile for every cloud organization from an organization or a server', () => {
+    expect(isWildcardServer('*@cloud')).toBe(true);
+    expect(isWildcardServer('acme@cloud')).toBe(false);
+    expect(isWildcardServer('build:8087')).toBe(false);
+  });
+});
 
 describe('serverKind', () => {
   it('tells Unity organizations from cloud organizations by the alias cm names them with', () => {

@@ -41,11 +41,13 @@ export const COPY_ENTRY_IDS = COPY_KINDS.map((kind) => `copy.${kind}`);
 
 /**
  * What the toast says was copied: "Branch spec", "Changeset GUID", "Path" for an item, "3 paths" for several.
- * `noun` is the object's kind as a sentence starts it ("Branch", "Code review"), empty for files.
+ * `noun` is the object's kind as a sentence starts it ("Branch", "Code review"), empty for files. A text the object is
+ * named for (a review comment's comment) is the noun alone: "Comment".
  */
 export function copiedWhat(noun: string, kind: CopyKind, count = 1): string {
   const label = kind === 'guid' ? LABELS[kind] : LABELS[kind].toLowerCase();
   if (count > 1) return `${formatCount(count)} ${kind === 'fullPath' ? 'full paths' : kind === 'serverPath' ? 'repository paths' : `${label}s`}`;
+  if (noun.toLowerCase() === label) return noun;
   return noun ? `${noun} ${label}` : LABELS[kind];
 }
 

@@ -4,11 +4,12 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
-import type { PartialRule, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
+import type { SwitchResult, WholeBranchChangesAction } from '@shared/domain/switchWithChanges';
+import type { PartialRule, WorkspaceInfo, WorkspaceKind, WorkspaceSummary } from '@shared/domain/workspace';
 import { recordFormat } from '../cm/formatRecords';
 import { loadedItemsArgs, readLoadedItem } from '../cm/loadedItems';
 import { EMPTY_PARTIAL_UPDATE_ARGS, partialConfigureArgs } from '../cm/partialWorkspace';
-import { switchCommand, updateCommand } from '../cm/updateArgs';
+import { partialUpdateCommands, switchCommand, updateCommand, type ProgressingCommand } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { workspaceCreateArgs } from '../cm/workspaceCreateArgs';
@@ -21,17 +22,25 @@ import { locateInWorkspace } from '../links/locateInWorkspace';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
-import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
+import { kindDependencies } from '../workspace/shelveFlowDependencies';
 import { readTrayRuns } from '../system/uvcsTray';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
-import { switchWithChanges } from '../workspace/switchWithChanges';
+import { downloadWholeBranch, switchWithChanges } from '../workspace/switchWithChanges';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
-  const kindOf = kindFromHeaders(headers);
-  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups'), kindOf };
+/**
+ * `tellKindChanged` tells every window a workspace's kind changed, so the lists showing it read it again (the kind
+ * they read once is kept for good: `workspaceKindQuery`).
+ */
+export function createWorkspacesService(
+  { cm, operations, watchers, windows, settings, headers }: ServiceContext,
+  { switchShelves, leftChanges }: SwitchContext,
+  tellKindChanged: (workspacePath: string) => void,
+): WorkspacesApi {
+  const { kindOf, forgetKind } = kindDependencies(headers);
+  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups'), kindOf, forgetKind };
   const lookUpRepository = workspaceRepositoryLookup(cm);
   // The heads and the kinds of the listed workspaces read one workspace at a time between them, so one pooled shell stays free.
   const listedReadTurns = workspaceReadTurns();
@@ -50,13 +59,9 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
     const [status, { name, kind }] = await Promise.all([headers.status(workspacePath), headers.names(workspacePath)]);
 
-    return {
-      name,
-      path: workspacePath,
-      repository: `${status.repositoryName}@${status.server}`,
-      ...status,
-      kind,
-    };
+    // `kind` already says whether it's partial; the window gets it from there, not from the status's `partial`.
+    const { repositoryName, server, selector, loadedChangeset } = status;
+    return { name, path: workspacePath, repository: `${repositoryName}@${server}`, repositoryName, server, selector, loadedChangeset, kind };
   }
 
   async function create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary> {
@@ -94,11 +99,14 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     await cm.query(['workspace', 'delete', workspacePath]);
   }
 
-  function update(workspacePath: string, operationId: string): Promise<void> {
+  /** `paths` (a partial workspace's) update one batch after the other: a stop leaves the later batches as they were. */
+  function update(workspacePath: string, operationId: string, paths?: readonly string[]): Promise<void> {
     return operations.run(operationId, async ({ signal, progressOf }) => {
       try {
-        const { args, readProgress } = updateCommand(await kindOf(workspacePath));
-        await cm.execute(args, { cwd: workspacePath, signal, onOutputLine: progressOf(readProgress) });
+        const commands: ProgressingCommand[] = paths ? partialUpdateCommands(paths) : [updateCommand(await kindOf(workspacePath))];
+        for (const { args, readProgress } of commands) {
+          await cm.execute(args, { cwd: workspacePath, signal, onOutputLine: progressOf(readProgress) });
+        }
       } catch (error) {
         if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;
@@ -128,10 +136,41 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     });
   }
 
+  /**
+   * Runs a step that turns a workspace of kind `from` into another kind. A failure may come after it converted it, so
+   * the kind read before is forgotten and the windows are told it changed either way.
+   */
+  async function changingKind<T>(workspacePath: string, from: WorkspaceKind, step: () => Promise<T>): Promise<T> {
+    // The kind only decides whether to tell the windows (a local, cached read): a read that fails must not stop the
+    // user's choice, and telling once too often only makes a window read the kind again.
+    const converts = await kindOf(workspacePath).then(
+      (kind) => kind === from,
+      () => true,
+    );
+    try {
+      return await step();
+    } finally {
+      if (converts) {
+        headers.forget(workspacePath);
+        tellKindChanged(workspacePath);
+      }
+    }
+  }
+
+  /** The first `cm partial configure` on a standard workspace makes it partial. */
   function configurePartial(workspacePath: string, rules: PartialRule[], operationId: string): Promise<void> {
-    return operations.run(operationId, async ({ signal }) => {
-      await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
-    });
+    return operations.run(operationId, ({ signal }) =>
+      changingKind(workspacePath, 'standard', async () => {
+        await cm.execute(partialConfigureArgs(rules), { cwd: workspacePath, signal });
+      }),
+    );
+  }
+
+  /** A standard switch to its own branch makes a partial workspace standard. */
+  function downloadWholeBranchOf(workspacePath: string, operationId: string, pendingChanges?: WholeBranchChangesAction): Promise<SwitchResult> {
+    return operations.run(operationId, (context) =>
+      changingKind(workspacePath, 'partial', () => downloadWholeBranch(switchDependencies, workspacePath, pendingChanges, context)),
+    );
   }
 
   async function loadedIn(workspacePath: string, folder: string): Promise<string[]> {
@@ -180,5 +219,6 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>
       operations.run(operationId, (context) => switchWithChanges(switchDependencies, workspacePath, targetSpec, pendingChanges, context)),
+    downloadWholeBranch: downloadWholeBranchOf,
   };
 }

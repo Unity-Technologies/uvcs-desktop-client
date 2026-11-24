@@ -1,15 +1,18 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useNewValuesEffect } from '../../lib/useNewValuesEffect';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
+import { focusAs, ringsOnClickFocus } from '../../lib/focusRing';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
 import { focusedKeyOf, selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
-import { anchorRevealStep } from './anchorReveal';
+import { anchorRevealStep, selectionSetWhileHidden } from './anchorReveal';
 import type { Column } from './column';
 import { DataTableHeader } from './DataTableHeader';
 import { DataTableRow } from './DataTableRow';
+import { placeOfRow, rowAtPlace, separatorIndexOf } from './tableSeparator';
 import { rowsPerPage, selectionStep } from './tableKeys';
 import { useKeepRowSelected } from './useKeepRowSelected';
 import { useSortedRows, type TableSort } from './useSortedRows';
@@ -36,6 +39,11 @@ interface DataTableProps<Row> {
   letterMoves?: boolean;
   /** Scrolls this row into view (centered) whenever it changes, e.g. after revealing a search result. */
   revealKey?: string | null;
+  /**
+   * Counts the times `revealKey` was asked for (`RowReveal`): the same row asked for again shows again, while the view
+   * showing again doesn't scroll the table back to it.
+   */
+  revealCount?: number;
   /** Selects a row whenever no shown row is selected (the first, or the one that took the place of a selected row that went away), so a details panel next to the table always has something to show. */
   selectFirstRow?: boolean;
   /** What the rows are, for screen readers (e.g. "Changesets"). */
@@ -46,6 +54,11 @@ interface DataTableProps<Row> {
   divided?: boolean;
   /** Stands for the rows while there are none (a filter's "No matching …"), under the column titles, which stay. */
   empty?: ReactNode;
+  /**
+   * A line with words between two rows, before the row of `beforeKey`, as tall as a row: no row itself, the keys and
+   * the selection go past it (a review's "Reviewed by you"). None while that row isn't shown.
+   */
+  separator?: { beforeKey: string; content: ReactNode };
 }
 
 /** The room above the first row and below the last of a list without column titles: `--space-1`. */
@@ -70,11 +83,13 @@ export function DataTable<Row>({
   onRowKeyDown,
   letterMoves = false,
   revealKey,
+  revealCount,
   selectFirstRow = false,
   label,
   hideHeader = false,
   divided = false,
   empty,
+  separator,
 }: DataTableProps<Row>) {
   const rowIdPrefix = useId();
   const rowId = (index: number): string => `${rowIdPrefix}-${index}`;
@@ -92,12 +107,13 @@ export function DataTable<Row>({
   const isShown = (key: string): boolean => rowsByKey.has(key);
   const focused = focusedKeyOf(focusedKey, selection, isShown);
   const focusedIndex = focused === null ? -1 : orderedKeys.indexOf(focused);
+  const separatorIndex = separatorIndexOf(orderedKeys, separator?.beforeKey);
 
   // Without column titles, plain rows keep off the edges above and below them, as Changes' do; the virtualizer owns
   // that room, so scrolling a row into view still shows it whole.
   const inset = hideHeader && !divided ? HEADERLESS_INSET : 0;
   const virtualizer = useVirtualizer({
-    count: sortedRows.length,
+    count: sortedRows.length + (separatorIndex === -1 ? 0 : 1),
     getScrollElement: () => viewportRef.current,
     estimateSize: () => rowHeight,
     overscan: 12,
@@ -110,18 +126,29 @@ export function DataTable<Row>({
     const index = key ? orderedKeys.indexOf(key) : -1;
     const viewport = viewportRef.current;
     if (index === -1 || !viewport) return false;
-    const top = index * rowHeight;
+    const place = placeOfRow(index, separatorIndex);
+    const top = place * rowHeight;
     const inView = top >= viewport.scrollTop && top + rowHeight <= viewport.scrollTop + viewport.clientHeight;
     // A row out of view lands in the middle: context around it, and room for the layout above to settle (a header loading).
-    if (!inView) virtualizer.scrollToIndex(index, { align: 'center' });
+    if (!inView) virtualizer.scrollToIndex(place, { align: 'center' });
     return true;
   };
 
-  // Only when the requested row changes (or appears), not on every re-render of the rows.
-  useEffect(() => void reveal(revealKey ?? null), [revealKey, orderedKeys.length]);
+  // Only when the requested row changes (or appears), not on every re-render of the rows, nor as the view shows again.
+  useNewValuesEffect(() => void reveal(revealKey ?? null), [revealKey, revealCount, orderedKeys.length]);
 
-  // A selection kept from an earlier visit shows once its row is in.
+  // A selection kept from an earlier visit shows once its row is in; so does one made while the view was hidden, kept
+  // mounted (`selectionSetWhileHidden`), as the view shows again and runs its effects: this one first.
   const revealedAnchor = useRef(false);
+  const selectionNow = useRef(selection);
+  selectionNow.current = selection;
+  const selectionWhenHidden = useRef<SelectionState | undefined>(undefined);
+  useEffect(() => {
+    if (selectionSetWhileHidden(selectionWhenHidden.current, selectionNow.current)) revealedAnchor.current = false;
+    return () => {
+      selectionWhenHidden.current = selectionNow.current;
+    };
+  }, []);
   useEffect(() => {
     const step = anchorRevealStep(orderedKeys.length, revealedAnchor.current);
     if (step === 'forget') revealedAnchor.current = false;
@@ -137,7 +164,7 @@ export function DataTable<Row>({
     if (!moved) return;
     setFocusedKey(moved.focused);
     onSelectionChange(moved.state);
-    virtualizer.scrollToIndex(orderedKeys.indexOf(moved.focused));
+    virtualizer.scrollToIndex(placeOfRow(orderedKeys.indexOf(moved.focused), separatorIndex));
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -164,6 +191,12 @@ export function DataTable<Row>({
   const onRowMouseDown = (key: string, event: MouseEvent): void => {
     // Right-clicking inside the selection keeps it, so the context menu acts on all selected rows.
     if (event.button === 2 && selection.selected.has(key)) return;
+    // Shift+click and Cmd/Ctrl+click would focus the table ringed (`ringsOnClickFocus`): it focuses ringless instead,
+    // and the click selects no text.
+    if (ringsOnClickFocus(event) && tableRef.current) {
+      event.preventDefault();
+      focusAs(tableRef.current, 'pointer');
+    }
     setFocusedKey(key);
     onSelectionChange(selectOnClick(selection, key, orderedKeys, { shift: event.shiftKey, toggle: isModPressed(event) }));
     if (event.button === 0 && !event.shiftKey && !isModPressed(event)) onRowPressed?.(rowsByKey.get(key)!);
@@ -173,7 +206,15 @@ export function DataTable<Row>({
   const body = (
     <div ref={viewportRef} className={styles.viewport}>
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-        {virtualizer.getVirtualItems().map(({ index, start }) => {
+        {virtualizer.getVirtualItems().map(({ index: place, start }) => {
+          const index = rowAtPlace(place, separatorIndex);
+          if (index === null) {
+            return (
+              <div key="separator" role="presentation" className={styles.separator} style={{ top: start, height: rowHeight }}>
+                {separator?.content}
+              </div>
+            );
+          }
           const key = orderedKeys[index]!;
           const row = sortedRows[index]!;
           const selected = isSelectedAt(index);
@@ -188,8 +229,8 @@ export function DataTable<Row>({
               top={start}
               height={rowHeight}
               selected={selected}
-              joinsAbove={selected && isSelectedAt(index - 1)}
-              joinsBelow={selected && isSelectedAt(index + 1)}
+              joinsAbove={selected && index !== separatorIndex && isSelectedAt(index - 1)}
+              joinsBelow={selected && index + 1 !== separatorIndex && isSelectedAt(index + 1)}
               focused={key === focused}
               divided={divided}
               onMouseDown={(event) => onRowMouseDown(key, event)}

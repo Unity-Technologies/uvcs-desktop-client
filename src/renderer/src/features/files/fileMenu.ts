@@ -28,12 +28,15 @@ import { cutAction, pasteAction } from './cutPasteActions';
 import { checkinItems } from './filesCheckinOperation';
 import { filesItemLink } from './filesItemLink';
 import { fileMenuTargets, itemViews } from './fileMenuTargets';
-import { useFilesViewStore } from './filesViewStore';
+import type { FileView } from '../annotate/fileView';
+import { showFileView, useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { listedItems } from './directoryListing';
 import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, unloadedXlinkOf, type XlinkSurroundings } from './xlinkItem';
 import { createXlink, editXlink, loadXlinkFiles } from '../xlinks/xlinkOperations';
+import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
+import { choosesDownloadsFor } from '../partialWorkspace/workspaceDownloads';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const FILE_SHORTCUTS = {
@@ -46,11 +49,13 @@ export const FILE_SHORTCUTS = {
   showChanges: hotkey('listDiff'),
 };
 
-/** The file annotated beside the tree, in the diff's place (from Go to file's actions too: the tree selects it). */
-function showAnnotated(workspacePath: string, path: string): void {
-  const view = useFilesViewStore.getState();
-  view.setFileView('annotate');
-  view.requestReveal(workspacePlace(workspacePath), path);
+/**
+ * The file shown beside the tree as `view`, its diff or its annotations, and selected in the tree: from Go to file's
+ * actions too, whose file the tree may not have selected.
+ */
+function showSelected(workspacePath: string, path: string, view: FileView): void {
+  showFileView(view);
+  useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), path);
 }
 
 /**
@@ -63,11 +68,11 @@ export function itemLinkText(workspacePath: string, item: TreeItem): string | nu
   return workspace && target && isWritable(target) ? repositoryLinkTo(workspace.repository, target) : null;
 }
 
-/** Where an item is as far as xlinks go, from what its window already read: the tree's listings, the workspace's info. */
-function xlinkSurroundingsOf(workspacePath: string, item: TreeItem): XlinkSurroundings {
+/** Where an item is as far as xlinks go, from what its window already read: the tree's listings, the workspace's repository. */
+function xlinkSurroundingsOf(workspacePath: string, item: TreeItem, workspaceRepository: string | undefined): XlinkSurroundings {
   return {
     underXlink: isUnderXlink(item.path, (directory) => listedItems(workspacePath, directory)),
-    workspaceRepository: queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey)?.repository,
+    workspaceRepository,
   };
 }
 
@@ -91,11 +96,14 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const { privateItems, checkoutCandidates, checkinable, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const views = single && itemViews(single, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
-  const surroundings = single && xlinkSurroundingsOf(workspacePath, single);
-  const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings);
+  const workspace = queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey);
+  const surroundings = single && xlinkSurroundingsOf(workspacePath, single, workspace?.repository);
+  const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings, workspace?.kind);
   const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
   const unloadedXlink =
-    single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path) });
+    single && surroundings && unloadedXlinkOf(single, surroundings, { added: isAdded(pendingChanges, single.path), listedItems: listedItems(workspacePath, single.path), workspaceKind: workspace?.kind });
+  const choosesDownloads =
+    single && surroundings && choosesDownloadsFor({ ...single, added: isAdded(pendingChanges, single.path) }, surroundings, workspace?.kind);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
@@ -110,9 +118,10 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
     xlinkDirectory !== null && menuAction('newXlink', () => createXlink(workspacePath, xlinkDirectory)),
-    single && views?.changes && menuAction('changes', () => useFilesViewStore.getState().setFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
+    single && choosesDownloads && menuAction('chooseDownloads', () => openChooseDownloads(workspacePath, single.path)),
+    single && views?.changes && menuAction('changes', () => showSelected(workspacePath, single.path, 'diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
     single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
-    single && views?.annotate && menuAction('annotate', () => showAnnotated(workspacePath, single.path), { shortcut: FILE_SHORTCUTS.annotate }),
+    single && views?.annotate && menuAction('annotate', () => showSelected(workspacePath, single.path, 'annotate'), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     toolsSubmenu(workspacePlace(workspacePath), items.map((item) => toolSubject.item(absolutePath(workspacePath, item.path)))),

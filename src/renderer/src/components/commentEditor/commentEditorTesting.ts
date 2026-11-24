@@ -1,3 +1,4 @@
+import { ensureSyntaxTree } from '@codemirror/language';
 import { EditorSelection, EditorState, type Extension, type Transaction } from '@codemirror/state';
 import { commentMarkdown } from './commentLanguage';
 
@@ -11,7 +12,18 @@ export function editorState(written: string, extensions: Extension = []): Editor
   const text = written.replace(/[‸«»]/g, '');
   const selection =
     anchor >= 0 ? EditorSelection.single(anchor, written.indexOf('»') - 1) : EditorSelection.cursor(caret >= 0 ? caret : text.length);
-  return EditorState.create({ doc: text, selection, extensions: [commentMarkdown(), extensions] });
+  return fullyParsed(EditorState.create({ doc: text, selection, extensions: [commentMarkdown(), extensions] }));
+}
+
+/**
+ * The state with its whole text parsed. A new state is parsed only up to 3,000 characters, for at most 20 ms
+ * (`LanguageState.init` in @codemirror/language), and a view finishes the parse later; a test has no view, and a slow
+ * machine (a CI runner) can spend those 20 ms before the parse reaches the text being tested. `ensureSyntaxTree`
+ * parses the rest, and a transaction takes the finished tree, since a state's tree is fixed once the state is made.
+ */
+function fullyParsed(state: EditorState): EditorState {
+  ensureSyntaxTree(state, state.doc.length, Infinity);
+  return state.update({}).state;
 }
 
 /** The state written back as `editorState` takes it: the text, with the caret or the selection marked. */

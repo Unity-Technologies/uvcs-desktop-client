@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import type { MergeRequest } from '@shared/domain/merge';
+import type { MergeOperation } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY } from '../../app/queryClient';
 
-export function useMergePlan(workspacePath: string, request: MergeRequest) {
+export function useMergePlan(workspacePath: string, request: MergeOperation) {
   return useQuery({
     queryKey: mergePlanKey(workspacePath, request),
     queryFn: () => api.merge.preview(workspacePath, request),
@@ -12,7 +12,7 @@ export function useMergePlan(workspacePath: string, request: MergeRequest) {
   });
 }
 
-export function mergePlanKey(workspacePath: string, request: MergeRequest) {
+export function mergePlanKey(workspacePath: string, request: MergeOperation) {
   return queryKeys.inWorkspace(workspacePath, 'mergePlan', request);
 }
 

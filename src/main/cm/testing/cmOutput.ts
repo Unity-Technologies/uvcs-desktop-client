@@ -190,14 +190,15 @@ export function shelvesCreated(...shelves: { id: number; repository?: string }[]
 
 /**
  * A record of `cm diff … --repositorypaths --format=DIFF_FORMAT`: `status` is A, C, D or M; paths as `cm` prints them.
- * A C without a `base` is a change of the item's permissions alone (`permissions`, before and after).
+ * A C without a `base` is a change of the item's permissions alone (`permissions`, before and after). `date` as
+ * `--dateformat=o` prints it.
  */
 export function diffRecord(
   status: string,
   path: string,
-  { oldPath = '', base = -1, revision = 36, type = 'F', repository = 'eco@local', permissions = ['', ''] as readonly [string, string] } = {},
+  { oldPath = '', base = -1, revision = 36, type = 'F', repository = 'eco@local', permissions = ['', ''] as readonly [string, string], date = '' } = {},
 ): string {
-  return formatOutput([status, `"/${path}"`, `"${oldPath && `/${oldPath}`}"`, base, revision, type, `"${repository}"`, `"${permissions[0]}"`, `"${permissions[1]}"`]);
+  return formatOutput([status, `"/${path}"`, `"${oldPath && `/${oldPath}`}"`, base, revision, type, `"${repository}"`, `"${permissions[0]}"`, `"${permissions[1]}"`, `"${date}"`]);
 }
 
 /** `cm merge … --machinereadable --fieldseparator=…` output, as a merge run prints it: one record per line, fields apart by the separator given. */
@@ -250,7 +251,8 @@ export function extendedAclOutput(level: AclOutputLevel, indent = 2): string {
 /** An item of `cm ls --tree -R --format` (`treeListingArgs`): its workspace path and what tells its revision. */
 export interface ListedRecord {
   path: string;
-  type?: 'dir' | 'txt' | 'bin' | 'xlink';
+  /** `cm ls` never prints `xlink`: an xlink is a `dir`. */
+  type?: 'dir' | 'txt' | 'bin';
   size?: number;
   revid: number;
   hash?: string;

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useNewValuesEffect } from '../../../lib/useNewValuesEffect';
 import { placeId } from '@shared/domain/place';
+import { mergedChangesetOf } from '@shared/domain/reviewConversation';
 import { commentDraftKey } from '../../../components/DetailsHeading';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
@@ -10,61 +12,155 @@ import { CommentComposer } from './CommentComposer';
 import { addReviewComment } from './reviewCommentOperations';
 import { ReviewDescriptionCard } from './ReviewDescriptionCard';
 import { ReviewSideRail } from './ReviewSideRail';
-import { ReviewThreadCard, threadElementId } from './ReviewThreadCard';
-import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type ReviewThread, type TimelineEntry } from './reviewThreads';
-import { openItemsOf, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { ReviewThreadCard } from './ReviewThreadCard';
+import { openThreads, threadsOf, type ReviewThread } from './reviewThreads';
+import { conversationLaidOut, openItemsOf, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
 import { isLineThread } from '../inline/fileThreads';
 import { useCommentContext } from '../inline/useCommentContext';
+import { openItemsIn } from '../mergeCard';
+import { MergeRequestCard } from '../MergeRequestCard';
 import { ReviewerChangesRow } from './ReviewerChangesRow';
 import { TimelineEventRow } from './TimelineEventRow';
 import { useReviewConversation } from './useReviewConversation';
+import { navigation } from '../../../app/navigation/navigationStore';
+import { CheckinsRow } from '../rounds/CheckinsRow';
+import { RoundMarker } from '../rounds/RoundMarker';
+import { conversationBlocksOf, roundCountOf, roundHolding, stepGroupsOf, type ConversationBlock, type ConversationEntry } from '../rounds/reviewRounds';
+import { useConversationLayout } from '../rounds/useConversationLayout';
+import { opensAtSince, roundChoiceForgotten, roundChosen, roundIsOpen } from '../rounds/roundFolds';
+import { SinceLine } from '../rounds/SinceLine';
+import { placeInView } from '../../../lib/scrollPlacement';
+import { newChangesetsSpan } from '../../diff/branchChangesetRows';
+import { useReviewCheckpoint } from '../rounds/useReviewCheckpoint';
 import styles from './ReviewConversation.module.css';
 
 /**
  * What was said on a review, oldest first as a conversation reads: its description, then the comments and their
- * replies among what the server noted (requests, statuses, renames), then a field to say something. Beside it, the
- * reviewers and what's still open.
+ * replies among what the server noted (requests, statuses, renames), a merge request's card, then a field to say
+ * something. Beside it, the reviewers and what's still open.
  */
 interface ReviewConversationTabProps {
   review: CodeReview;
   /** The thread the page was opened at (Show in conversation, from the code): gone to, lit and ringed. */
   focusThread?: number;
+  /** A reply of that thread the page was opened at (a link to it): gone to and lit, its thread ringed. */
+  focusReply?: number;
   /** A thread picked in Open: the page forgets the one it was opened at, so going to it again goes to it. */
   onPickedInOpen: () => void;
 }
 
-export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: ReviewConversationTabProps) {
+export function ReviewConversationTab({ review, focusThread, focusReply, onPickedInOpen }: ReviewConversationTabProps) {
   const place = usePlace();
   const user = usePlaceUser();
   // "Show in conversation" from the dialog moves this page to the thread, in place (`showInConversation`).
   const seeInContext = useCommentContext(review);
   // "Applied" shows how the change request was applied, in context, as in the code.
   const seeAppliedOf = (thread: ReviewThread): (() => void) | undefined =>
-    seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined;
+    seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since', steps }) : undefined;
   const { data: conversation, isPending, error } = useReviewConversation(review.id);
-  const timeline = useMemo(() => (conversation ? foldReviewerChanges(timelineOf(conversation)) : []), [conversation]);
+  // A branch's changesets place its check-ins and say where each reviewer left off (`conversationBlocksOf`).
+  const { changesets, checkpoint, statusChangesets, settled: changesetsSettled } = useReviewCheckpoint(review);
+  // "See the changes": what was checked in since the user's last review, selected together in Changes as one diff.
+  const newSpan = newChangesetsSpan(changesets, checkpoint);
+  // Laid out once while the page is open: what the user (or a refresh) changes updates the cards in place, never moves
+  // a thread or folds a round (`useConversationLayout`).
+  const layout = useConversationLayout(review, user);
+  const blocks = useMemo(
+    () => (conversation ? conversationBlocksOf({ conversation, user, changesets, reviewDate: review.date, layout, statusChangesets }) : []),
+    [conversation, user, changesets, review.date, layout, statusChangesets],
+  );
+  // "How it was applied" steps through the threads where this page shows them, not where a fresh layout would.
+  const steps = useMemo(() => stepGroupsOf(blocks), [blocks]);
+  const [roundChoices, setRoundChoices] = useState<ReadonlyMap<number, boolean>>(() => new Map());
   const open = useMemo(() => (conversation ? openThreads(threadsOf(conversation.comments)) : []), [conversation]);
 
   // The thread gone to: opened at (Show in conversation, from the code) or picked in Open. Lit, ringed, marked in Open.
-  const [pick, setPick] = useState(() => pickOnFocus(undefined, focusThread));
-  const [pickedFocus, setPickedFocus] = useState(focusThread);
-  if (focusThread !== pickedFocus) {
-    setPickedFocus(focusThread);
-    setPick(pickOnFocus(pick, focusThread));
+  const [pick, setPick] = useState(() => pickOnFocus(undefined, focusThread, focusReply));
+  const [pickedFocus, setPickedFocus] = useState({ focusThread, focusReply });
+  if (focusThread !== pickedFocus.focusThread || focusReply !== pickedFocus.focusReply) {
+    setPickedFocus({ focusThread, focusReply });
+    setPick(pickOnFocus(pick, focusThread, focusReply));
   }
   const openItems = useMemo(() => openItemsOf(review.id, open, pick), [review.id, open, pick]);
 
-  // Brought into view once read, after its card unfolds.
-  const read = conversation !== undefined;
+  const pickedRound = pick && roundHolding(blocks, pick.threadId);
+  // Going to a thread unfolds its round again, even one folded by hand; a click on its line still folds it.
+  const [unfoldedFor, setUnfoldedFor] = useState(pick);
+  if (pick !== unfoldedFor) {
+    setUnfoldedFor(pick);
+    setRoundChoices((chosen) => roundChoiceForgotten(chosen, pickedRound));
+  }
+  const roundCount = roundCountOf(blocks);
+
+  // Elements are found within this conversation, never the document's: another view kept mounted, hidden, may show
+  // the same review, with the same ids (`mountedViews`).
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const elementById = (id: string): HTMLElement | null | undefined => scrollerRef.current?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+
+  // Brought into view once laid out for good, after its card unfolds; not again as the view shows again.
+  const placed = conversationLaidOut({ read: conversation !== undefined, changesetsSettled });
+  useNewValuesEffect(() => {
+    const element = pick && elementById(pickedElementId(pick));
+    if (placed && pick && element) placeInView(element, pickedBehaviorOf(pick));
+  }, [placed, pick]);
+
+  // Opened where the reviewer left off, once: their own status set meanwhile moves the line, never the page.
+  const [openedAtSince, setOpenedAtSince] = useState(false);
   useEffect(() => {
-    if (read && pick) document.getElementById(threadElementId(pick.threadId))?.scrollIntoView(pickedScrollOf(pick));
-  }, [read, pick]);
+    if (!placed || openedAtSince) return;
+    setOpenedAtSince(true);
+    const sinceLine = elementById(SINCE_LINE_ID);
+    if (opensAtSince(blocks, focusThread) && sinceLine) placeInView(sinceLine, 'auto');
+  }, [placed, openedAtSince, blocks, focusThread]);
+
+  const eventContext = { destination: review.mergeRequest?.destination, statusChangesets };
+  const renderEntry = (entry: ConversationEntry) => (
+    <li key={entryKey(entry)}>
+      {entry.kind === 'event' && <TimelineEventRow event={entry.event} context={eventContext} user={user} />}
+      {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
+      {entry.kind === 'checkins' && (
+        <CheckinsRow entry={entry} onOpenChangeset={(changesetId) => navigation.openPage({ kind: 'codeReview', reviewId: review.id, tab: 'changes', focusChangeset: changesetId })} />
+      )}
+      {entry.kind === 'thread' && (
+        <ReviewThreadCard review={review} thread={entry.thread} user={user} {...threadMarkOf(entry.thread.root.id, pick)} onSeeApplied={seeAppliedOf(entry.thread)} />
+      )}
+    </li>
+  );
+  const renderBlock = (block: ConversationBlock) => {
+    switch (block.kind) {
+      case 'round': {
+        // The marker, then what the round held while unfolded, at the timeline's own indent. One keyed fragment per
+        // round: a round inserted as a status is given keeps the others' entries mounted (an open "N more" stays open).
+        const open = roundIsOpen(block.round, roundChoices, pickedRound);
+        return (
+          <Fragment key={`round-${block.round.number}`}>
+            <li>
+              <RoundMarker round={block.round} roundCount={roundCount} user={user} open={open} onToggle={() => setRoundChoices((chosen) => roundChosen(chosen, block.round.number, open))} />
+            </li>
+            {open && block.entries.map(renderEntry)}
+          </Fragment>
+        );
+      }
+      case 'since':
+        return (
+          <li key="since">
+            <SinceLine
+              id={SINCE_LINE_ID}
+              date={block.date}
+              onSeeChanges={newSpan && (() => navigation.openPage({ kind: 'codeReview', reviewId: review.id, tab: 'changes', focusChangesets: newSpan }))}
+            />
+          </li>
+        );
+      case 'entry':
+        return renderEntry(block.entry);
+    }
+  };
 
   if (error) return <EmptyState title="Couldn't read the conversation" description={error.message} />;
 
   return (
     // The whole tab scrolls, its scrollbar at the window's edge; the conversation is a column centered in it.
-    <div className={styles.scroller}>
+    <div ref={scrollerRef} className={styles.scroller}>
       <div className={styles.conversation}>
         <div className={styles.main}>
           {isPending ? (
@@ -76,23 +172,11 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
           ) : (
             <>
               <ReviewDescriptionCard review={review} description={conversation.description} />
-              <ol className={styles.timeline}>
-                {timeline.map((entry) => (
-                  <li key={entryKey(entry)}>
-                    {entry.kind === 'event' && <TimelineEventRow event={entry.event} />}
-                    {entry.kind === 'reviewerChanges' && <ReviewerChangesRow events={entry.events} />}
-                    {entry.kind === 'thread' && (
-                      <ReviewThreadCard
-                        review={review}
-                        thread={entry.thread}
-                        user={user}
-                        {...threadMarkOf(entry.thread.root.id, pick)}
-                        onSeeApplied={seeAppliedOf(entry.thread)}
-                      />
-                    )}
-                  </li>
-                ))}
-              </ol>
+              {/* Where it stands and what's next, read first after what it is: the history follows. */}
+              {review.mergeRequest && (
+                <MergeRequestCard review={review} mergeRequest={review.mergeRequest} open={openItemsIn(open)} mergedChangeset={mergedChangesetOf(conversation.events)} />
+              )}
+              <ol className={styles.timeline}>{blocks.map(renderBlock)}</ol>
             </>
           )}
           <div className={styles.newComment}>
@@ -114,7 +198,10 @@ export function ReviewConversationTab({ review, focusThread, onPickedInOpen }: R
   );
 }
 
-function entryKey(entry: TimelineEntry): string {
+/** The "New since your last review" line's element, which the conversation opens scrolled to. */
+const SINCE_LINE_ID = 'review-since-last-review';
+
+function entryKey(entry: ConversationEntry): string {
   switch (entry.kind) {
     case 'event':
       return `event-${entry.event.id}`;
@@ -122,5 +209,7 @@ function entryKey(entry: TimelineEntry): string {
       return `events-${entry.events[0]!.id}`;
     case 'thread':
       return `thread-${entry.thread.root.id}`;
+    case 'checkins':
+      return `checkins-${entry.changesets[0]!.id}`;
   }
 }

@@ -59,6 +59,12 @@ describe("a diff's file menu", () => {
     expect(revertEntry(diffEntryMenu(workspacePlace(ws), ofChangeset, [entry('changed', 'binaryFile')], { workspaceRepository: repository }))).toBeDefined();
   });
 
+  it('offers no revert for a file the diff replaced: the item at its path is another, which the older side never was', () => {
+    const replaced: DiffEntry = { ...entry(), replaced: true };
+
+    expect(revertEntry(diffEntryMenu(workspacePlace(ws), ofChangeset, [replaced], { workspaceRepository: repository }))).toBeUndefined();
+  });
+
   it('reverts a file moved and edited: its content goes back, its name stays', () => {
     const movedAndEdited = { ...entry('moved'), revisionId: 40, oldPath: 'src/old/a.ts' };
 

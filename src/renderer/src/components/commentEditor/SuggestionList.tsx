@@ -10,6 +10,7 @@ import { IssueStatusIcon } from '../issues/IssueStatusIcon';
 import { suggestionListPosition, type Box } from './popupPosition';
 import type { Suggestion } from './suggestionItems';
 import type { SuggestionRow } from './suggestionRows';
+import type { SuggestionListHint } from './changeRequestTrigger';
 import styles from './SuggestionList.module.css';
 
 interface SuggestionListProps {
@@ -22,13 +23,15 @@ interface SuggestionListProps {
   query: string;
   onPick: (index: number) => void;
   onHover: (index: number) => void;
+  /** A muted line at its foot (`suggestionListHint`). */
+  hint?: SuggestionListHint | null;
 }
 
 /**
  * The suggestions for what is being typed, under it: a listbox the field's `aria-activedescendant` walks, its rows
  * picked with the keys or the pointer while the caret stays in the field.
  */
-export function SuggestionList({ id, rows, active, anchor, query, onPick, onHover }: SuggestionListProps) {
+export function SuggestionList({ id, rows, active, anchor, query, onPick, onHover, hint }: SuggestionListProps) {
   const list = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   // Placed again whenever the trigger moves or the list's size does: rows of the same count may be taller or wider
@@ -72,6 +75,13 @@ export function SuggestionList({ id, rows, active, anchor, query, onPick, onHove
         ),
       )}
       </HighlightQuery>
+      {hint && (
+        <div className={styles.hint} role="presentation">
+          {hint.before}
+          <code>{hint.code}</code>
+          {hint.after}
+        </div>
+      )}
     </div>,
     document.body,
   );

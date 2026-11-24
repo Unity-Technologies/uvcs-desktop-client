@@ -1,11 +1,14 @@
 import type { BrowserWindowConstructorOptions, Point, TitleBarOverlayOptions } from 'electron';
 import { TITLE_BAR_HEIGHT, type WindowChrome } from '@shared/windowChrome';
 
-/** The traffic lights' top-left corner at 100% zoom, in window points: centered in the top bar. */
-const TRAFFIC_LIGHTS = { x: 16, y: 16 };
+/** How far in from the window's left edge the traffic lights start, in window points, at every zoom. */
+const TRAFFIC_LIGHTS_X = 16;
 
-/** How far above the top bar's middle the traffic lights' top sits: kept at every zoom, it keeps them centered. */
-const TRAFFIC_LIGHTS_ABOVE_MIDDLE = TITLE_BAR_HEIGHT / 2 - TRAFFIC_LIGHTS.y;
+/**
+ * How far above the top bar's middle the traffic lights' top sits, half their height (macOS draws them about 14 points
+ * tall, not the 12 their circles look): kept at every zoom, it keeps them centered.
+ */
+const TRAFFIC_LIGHTS_ABOVE_MIDDLE = 7;
 
 /**
  * The top bar's height in window points at a page zoom (View > Zoom In, Zoom Out: `zoomPage`), unrounded: the page
@@ -26,7 +29,7 @@ export function topBarHeightAt(zoom: number): number {
  */
 export function trafficLightsAt(zoom: number): Point {
   const y = Math.round(scaledTopBarHeight(zoom) / 2 - TRAFFIC_LIGHTS_ABOVE_MIDDLE);
-  return { x: TRAFFIC_LIGHTS.x, y: Math.max(0, y) };
+  return { x: TRAFFIC_LIGHTS_X, y: Math.max(0, y) };
 }
 
 /**

@@ -1,5 +1,5 @@
 import { RotateCcw, Settings, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { usePlace } from '../../../app/workspace/useWorkspace';
@@ -23,6 +23,8 @@ import styles from './ReviewConversation.module.css';
  * reviewers from the server's users and groups.
  */
 export function ReviewersSection({ review }: { review: CodeReview }) {
+  // Its own per page: a review may show in two views kept mounted (`KeptView`).
+  const titleId = useId();
   const place = usePlace();
   const user = usePlaceUser();
   const groups = useReviewerGroups();
@@ -39,9 +41,9 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
   };
 
   return (
-    <section className={styles.railSection} aria-labelledby="review-reviewers">
+    <section className={styles.railSection} aria-labelledby={titleId}>
       <div className={styles.railHeading}>
-        <h2 id="review-reviewers" className={styles.railTitle}>
+        <h2 id={titleId} className={styles.railTitle}>
           Reviewers
         </h2>
         <FilterPopover

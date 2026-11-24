@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect } from 'vitest';
 import type { UvcsBridge } from '@shared/bridge';
 import type { UvcsEventName, UvcsEvents } from '@shared/events';
+import type { SignInProblem } from '@shared/domain/signIn';
 import type { FailedCommand, InvokeRequest, InvokeResponse } from '@shared/ipc';
 import { memoryStorage } from './memoryStorage';
 
@@ -30,6 +31,18 @@ export class FakeCommandFailure extends Error {
   }
 }
 
+/** An error as the main process reports a command its server's sign-in refused (`ApiError` with its `signIn`). */
+export class FakeSignInFailure extends Error {
+  constructor(readonly signIn: SignInProblem) {
+    super('Sign in to this server again to continue.');
+  }
+}
+
+/** A command refused as `server`'s session ended, for `fakeApi.answer(method, () => { throw signInFailure(...) })`. */
+export function signInFailure(server: string): FakeSignInFailure {
+  return new FakeSignInFailure({ kind: 'sessionEnded', server, details: { commandLine: `cm checkconnection ${server}`, output: '' } });
+}
+
 /** A failed `cm` command printing `output`, for `fakeApi.answer(method, () => { throw commandFailure(...) })`. */
 export function commandFailure(output: string, commandLine = 'cm'): FakeCommandFailure {
   return new FakeCommandFailure({ commandLine, exitCode: 1, output, logEntryId: 1 });
@@ -51,7 +64,8 @@ async function invoke({ method, args }: InvokeRequest): Promise<InvokeResponse> 
     return { ok: true, value: await (handler as (...args: unknown[]) => unknown)(...args) };
   } catch (error) {
     const command = error instanceof FakeCommandFailure ? error.command : undefined;
-    return { ok: false, error: { message: error instanceof Error ? error.message : String(error), command } };
+    const signIn = error instanceof FakeSignInFailure ? error.signIn : undefined;
+    return { ok: false, error: { message: error instanceof Error ? error.message : String(error), command, ...(signIn && { signIn }) } };
   }
 }
 
@@ -67,6 +81,8 @@ const uvcs: UvcsBridge = { platform: 'darwin', initialZoom: 1, invoke, on: on as
 const fakeWindow = Object.assign(new EventTarget(), {
   uvcs,
   localStorage: storage,
+  // A window opened on the home screen, with nothing in its address (`startingPlaceQuery`).
+  location: { search: '', pathname: '/index.html' },
   matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
 });
 const fakeDocument = Object.assign(new EventTarget(), { visibilityState: 'visible', hasFocus: () => true, activeElement: null, body: null });

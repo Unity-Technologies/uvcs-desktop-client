@@ -1,0 +1,61 @@
+import type { WorkspaceKind, WorkspaceSelector } from '@shared/domain/workspace';
+
+/**
+ * Whether a workspace may choose what it downloads: one on a branch, partial or standard (the first choice applied,
+ * `cm partial configure`, makes a standard one partial). Off a branch it isn't offered: on a label the dialog's tree
+ * has no changeset to show (`downloadTreePoint`), and what `cm partial configure` does to a workspace on a changeset
+ * hasn't been checked. A dynamic workspace downloads files as they're opened, and an unknown kind or selector may be
+ * either.
+ */
+export function choosesDownloads(kind: WorkspaceKind | undefined, selector: WorkspaceSelector | undefined): boolean {
+  return (kind === 'partial' || kind === 'standard') && selector?.kind === 'branch';
+}
+
+/**
+ * Whether Files' header has a Choose what to download button: only in a partial workspace, where choosing folders is
+ * everyday work. In a standard one, choosing makes it partial, a rare step kept in the workspace pill's menu and the
+ * palette, as Download the whole branch is in a partial one.
+ */
+export function showsChooseDownloadsButton(kind: WorkspaceKind | undefined): boolean {
+  return kind === 'partial';
+}
+
+/**
+ * What choosing changes for a standard workspace, in the words of the new workspace's "What to download" cards
+ * (`downloadCards`); null when the workspace is already partial.
+ */
+export function chooseDownloadsNote(kind: WorkspaceKind | undefined): string | null {
+  if (kind !== 'standard') return null;
+  return 'Applying makes this a partial workspace: only the folders you pick are downloaded, each file updates on its own, and merging needs the whole branch.';
+}
+
+/** What Files' menu knows of an item when it decides whether to offer choosing what to download on it. */
+export interface DownloadsItem {
+  isPrivate: boolean;
+  /** Added and not checked in yet: the server's tree, which the dialog shows, doesn't hold it. */
+  added: boolean;
+  /** The item's repository, `name@server`, when the listing gives it. */
+  repository?: string;
+}
+
+/**
+ * Whether Files' menu offers Choose what to download on an item: only in a partial workspace, as Files' header button
+ * (`showsChooseDownloadsButton`): in a standard one it would make the workspace partial, a rare step kept in the
+ * workspace pill's menu and the palette. Only on an item of the workspace's own repository that the server's tree
+ * holds: not a private or added item, which the dialog's tree doesn't show, nor one under an xlink: an xlink downloads
+ * whole, and its folders aren't chosen.
+ */
+export function choosesDownloadsFor(
+  item: DownloadsItem,
+  where: { underXlink: boolean; workspaceRepository: string | undefined },
+  kind: WorkspaceKind | undefined,
+): boolean {
+  if (kind !== 'partial') return false;
+  if (item.isPrivate || item.added || where.underXlink) return false;
+  return !(where.workspaceRepository && item.repository && item.repository !== where.workspaceRepository);
+}
+
+/** Whether a workspace may download its whole branch, which makes it standard: a partial one, once its branch is known. */
+export function downloadsWholeBranch(kind: WorkspaceKind | undefined, selector: WorkspaceSelector | undefined): boolean {
+  return kind === 'partial' && selector?.kind === 'branch';
+}

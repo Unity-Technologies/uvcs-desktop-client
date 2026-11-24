@@ -36,13 +36,29 @@
   gap: var(--space-3);
 }
 
+/* One timeline, as a pull request reads: a rail down through the events' icons, behind the cards, which are opaque. */
 .timeline {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  /* Under the middle of an event's icon (`.event`'s padding, then half its 24px). */
+  left: calc(var(--space-4) + 11px);
+  width: 2px;
+  background: var(--border-subtle);
+}
+
+.timeline > li {
+  position: relative;
 }
 
 /* A comment: its avatar beside it, then who, when and its menu, then what it says. */
@@ -89,6 +105,15 @@
   font-size: var(--text-sm);
 }
 
+/* At the header's end: the comment's menu, and while a change request is edited, its Suggest change before it. */
+.commentHeaderActions {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 /* Who and when: a narrow card (a side of a split diff) wraps between these parts, never inside a name or a date. */
 .commentWho {
   display: flex;
@@ -118,6 +143,8 @@
 
 .comment:hover .commentMenu,
 .description:hover .commentMenu,
+.event:hover .commentMenu,
+.foldedRow:hover .commentMenu,
 .commentMenu:focus-within,
 .commentMenu:has([aria-expanded='true']) {
   opacity: 1;
@@ -163,19 +190,29 @@
   padding-block: var(--space-2);
 }
 
-/* The band: the fold, the kind, the file and line, then where it stands. */
+/* The band: the fold, the file and line, then what it is and where it stands. */
 .threadHeader {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
   min-height: 36px;
-  /* Its text sits on one baseline (see `.headerEnd`), whose line starts at the top: the padding centers it. */
+  /*
+   * Its text sits on one baseline (see `.headerEnd`), whose line starts at the top: the padding centers it around the
+   * pill, which every band has (`pillOf`: the kind of every thread with a header), so its words sit centered too.
+   */
   padding: 7.5px var(--space-3) 7.5px var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-subtle);
   color: var(--text-secondary);
   font-size: var(--text-sm);
+}
+
+/* A foldable thread's band folds it with a click anywhere on it (`rowTakesClick`), as its chevron does: the hand on
+   both. */
+.threadHeader[data-folds],
+.threadHeader[data-folds] .foldToggle {
+  cursor: pointer;
 }
 
 .foldToggle {
@@ -212,10 +249,6 @@
   color: var(--text-tertiary);
 }
 
-.thread:has(.pill[data-tone='open']) .kindIcon {
-  color: var(--status-changed);
-}
-
 .location {
   display: flex;
   min-width: 0;
@@ -227,7 +260,7 @@
 
 /* The folder gives way first; then the file's name, its line staying whole. */
 /*
- * Cut short in turn, never together: the folder, then the line (`writtenLine`), the file's name last. Flex shrinks
+ * Cut short in turn, never together: the folder, then the line (`writtenPlace`), the file's name last. Flex shrinks
  * them all at once, by these weights times their widths, and an ellipsis shows at a fraction of a pixel cut: weights
  * this far apart leave the next one less than a layout unit until the one before has gone.
  */
@@ -265,7 +298,7 @@ button.location:hover .locationFile {
  * "line 1962", after the file and not part of its link: the band's gap sets it apart. In the file's font and size, so
  * the two sit on one baseline. Cut short before the file's name, after its folder (`locationFolder`).
  */
-.writtenLine {
+.writtenPlace {
   flex-shrink: 10000;
   min-width: 0;
   overflow: hidden;
@@ -277,7 +310,7 @@ button.location:hover .locationFile {
 }
 
 /* Inside the Comments panel's location, after the file's name. */
-.location > .writtenLine {
+.location > .writtenPlace {
   margin-left: 6px;
 }
 
@@ -286,7 +319,7 @@ button.location:hover .locationFile {
  * UI font sat a pixel apart.
  */
 .headerStart > .location,
-.headerStart > .writtenLine,
+.headerStart > .writtenPlace,
 .headerEnd {
   align-self: baseline;
 }
@@ -303,7 +336,7 @@ button.location:hover .locationFile {
   color: var(--text-tertiary);
 }
 
-/* A pill outlined in its words' color: where a thread stands (open amber, done green), who wrote the review. */
+/* A pill outlined in its words' color: where a thread stands (open amber, done green, a plain comment violet), who wrote the review. */
 .pill {
   display: inline-flex;
   flex: none;
@@ -328,15 +361,40 @@ button.location:hover .locationFile {
   color: var(--status-added);
 }
 
-/* "Applied" and "Answered": the pill is a link as a whole, to how the change request was applied or to the answer. */
+/*
+ * A plain comment on a line: it stands nowhere, so in a muted violet no state takes. Not gray, which reads as
+ * Discarded; not blue, the links' color; not teal, too close to Applied's green.
+ */
+.pill[data-tone='comment'] {
+  border-color: var(--comment-kind-border);
+  color: var(--comment-kind-text);
+}
+
+/* The thread's kind, leading the pill in its words' color; its own tooltip names it where the words don't. */
+.pill .kindIcon {
+  align-self: center;
+  color: inherit;
+}
+
+/*
+ * The pill's words give its baseline, so they read on one line with the band's file and "1 reply" (`.headerEnd`):
+ * left to the icon, the first item, the words sat two pixels high.
+ */
+.pillLabel {
+  align-self: baseline;
+}
+
+/* A pill that leads somewhere is a link as a whole (how it was settled, the answer): every one hovers alike, a light
+   fill of its own color. */
 button.pill {
   font-family: inherit;
   background: none;
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 button.pill:hover {
-  background: color-mix(in srgb, var(--status-added) 10%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .foldedLine {
@@ -350,6 +408,28 @@ button.pill:hover {
   color: var(--text-secondary);
   font-size: var(--text-sm);
   text-align: left;
+}
+
+/*
+ * A folded card's line and its first comment's menu (`FirstCommentMenu`) at its end, where the comment shown whole has
+ * it; the menu kept from making the line taller.
+ */
+.foldedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.foldedRow .foldedLine {
+  /* The whole line unfolds the card on a click, up to the menu, as it did on its own. */
+  flex: 1;
+}
+
+.foldedRow .commentMenu {
+  display: inline-flex;
+  flex: none;
+  margin-block: -4px;
 }
 
 .foldedText {
@@ -404,18 +484,42 @@ button.pill:hover {
   width: 24px;
   height: 24px;
   border-radius: var(--radius-full);
-  background: var(--bg-active);
+  /* Its tint over the page, opaque: the timeline's rail runs behind it. */
+  background: linear-gradient(var(--bg-active), var(--bg-active)), var(--bg-surface);
   color: var(--text-secondary);
 }
 
 .event[data-icon='Reviewed'] .eventIcon {
-  background: color-mix(in srgb, var(--status-added) 16%, transparent);
+  background: color-mix(in srgb, var(--status-added) 16%, var(--bg-surface));
   color: var(--status-added);
 }
 
 .event[data-icon='Rework required'] .eventIcon {
-  background: color-mix(in srgb, var(--status-changed) 16%, transparent);
+  background: color-mix(in srgb, var(--status-changed) 16%, var(--bg-surface));
   color: var(--status-changed);
+}
+
+/* A merge request's move: the glyph of the state it moved to, in that state's color (`mergeRequestStateColors`). */
+.eventIcon[data-state] {
+  background: color-mix(in srgb, var(--merge-request-color) 16%, var(--bg-surface));
+  color: var(--merge-request-color);
+}
+
+/* The changeset a merge request was merged in, after the sentence that names it. */
+.eventChangeset {
+  display: inline-flex;
+  align-items: baseline;
+  /* A word space each side of its dot (`.eventSeparator`), and after "at" or "in": not the line's gap, so it reads as
+     one sentence. */
+  gap: 3px;
+  margin-inline: -3px;
+  white-space: nowrap;
+}
+
+/* A dot between a changeset and the time, its spaces a word's, as the line's " · " elsewhere, not the line's gap. */
+.eventSeparator {
+  flex: none;
+  color: var(--text-tertiary);
 }
 
 .eventBody {
@@ -433,10 +537,18 @@ button.pill:hover {
   font-size: var(--text-sm);
 }
 
+/* The editor of what a reviewer said with their status, where the comment shows. */
+.eventEditor {
+  margin-top: var(--space-1);
+}
+
+/* What a reviewer said with their status: a soft tint, no bar, as the timeline's rail is its only vertical line (a bar
+   beside it read as two). */
 .eventComment {
   margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
 }
 
 .newComment {
@@ -462,7 +574,8 @@ button.pill:hover {
   gap: var(--space-2);
 }
 
-.railSection > ul {
+.railSection > ul,
+.railSection > [aria-busy='true'] {
   align-self: stretch;
 }
 
@@ -491,6 +604,14 @@ button.pill:hover {
   margin: 0;
   color: var(--text-tertiary);
   font-size: var(--text-sm);
+}
+
+/* A sentence under a section's title: why the user gets the review's emails. */
+.railNote {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 18px;
 }
 
 .reviewers,
@@ -601,18 +722,45 @@ button.pill:hover {
   gap: var(--space-3);
 }
 
-.eventRunToggle {
+/* A timeline line that folds what's under it (`FoldableLine`): a click anywhere on it folds, so the whole line answers
+   the pointer; its chevron ends it, after the time, on every line alike. */
+.foldableLine {
+  cursor: pointer;
+}
+
+.foldableLine:hover {
+  color: var(--text-primary);
+}
+
+.foldChevron {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
   padding: 0;
   border: none;
+  border-radius: var(--radius-sm);
   background: none;
+  color: var(--text-tertiary);
+  /* The hand, as the rest of the line it folds (buttons otherwise show the arrow). */
+  cursor: pointer;
+}
+
+.foldableLine:hover .foldChevron {
   color: var(--text-secondary);
 }
 
-.eventRunToggle:hover {
-  color: var(--accent-text);
+.foldChevron:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.foldChevron > svg {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.foldChevron[aria-expanded='true'] > svg {
+  transform: rotate(90deg);
 }
 
 .foldedLine .author {
@@ -669,7 +817,10 @@ button.pill:hover {
   }
 }
 
-/* The reply an Answered pill leads to, lit for a moment as a thread gone to is, alternating so a second click lights it again. */
+/*
+ * The reply an Answered pill leads to, or a link goes to, lit for a moment as a thread gone to is, alternating so each
+ * new one lights it again (`commentLightShown`).
+ */
 .comment[data-highlight] {
   border-radius: var(--radius-md);
 }
@@ -705,14 +856,6 @@ button.pill:hover {
     animation: none;
     border-color: var(--accent);
   }
-}
-
-/* In the code, what the thread is, where the conversation names its file. */
-.kindLabel {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
 }
 
 /* Written on an earlier version of the file: said quietly, the tooltip telling which. */
@@ -771,14 +914,14 @@ button.earlierTag:hover {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-/* The band's start (kind, file, tags): its own row of the band in the code, laid out as if it weren't there elsewhere. */
+/* The band's start (file, tags): its own row of the band in the code, laid out as if it weren't there elsewhere. */
 .headerStart {
   display: contents;
 }
 
 /*
  * In the code, a card is as wide as a side of the diff, which can be narrow: its band stays one line, its start giving
- * way: the kind's name cut short first, then the tag (each whole in its tooltip), the state and the × keeping their place.
+ * way: the tag cut short (whole in its tooltip), the pill and the × keeping their place.
  */
 .thread[data-in-code] .headerStart {
   display: flex;
@@ -786,14 +929,18 @@ button.earlierTag:hover {
   align-items: center;
   gap: 6px;
   min-width: 0;
+  /*
+   * Its clip reaches 4px past it on every side, given back by the margin: the fold toggle's own -4px (lining its
+   * chevron up with the text under it) and its focus ring were cut off.
+   */
+  margin: -4px;
+  padding: 4px;
   overflow: hidden;
 }
 
-.thread[data-in-code] .kindLabel {
-  flex-shrink: 100;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Alone in the code's band, no path to share a baseline with: centered on the fold toggle, as the pill is. */
+.thread[data-in-code] .headerStart > .writtenPlace {
+  align-self: center;
 }
 
 .thread[data-in-code] .earlierTag {
@@ -805,12 +952,12 @@ button.earlierTag:hover {
 
 
 /*
- * A thread under its file's name in the Comments panel: its kind's icon leading, as a bullet; who started it, its line
- * and replies, then where it stands; its first words under them, as wide as the row.
+ * A thread under its file's name in the Comments panel: who started it, its line and replies, then what it is and where
+ * it stands; its first words under them, as wide as the row.
  */
 .row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   column-gap: var(--space-2);
   row-gap: 2px;
   align-items: center;
@@ -834,13 +981,10 @@ button.earlierTag:hover {
   background: var(--bg-selected);
 }
 
-.row:has(.pill[data-tone='open']) .kindIcon {
-  color: var(--status-changed);
-}
-
 /*
  * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
- * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s).
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). A place naming a model's part
+ * ("point on Wheel") can be as long as an artist made it: it gives way first instead (`.rowPlace[data-names-part]`).
  */
 .rowAbout {
   display: flex;
@@ -869,15 +1013,24 @@ button.earlierTag:hover {
   flex-shrink: 10000;
 }
 
-.rowLine {
+.rowPlace {
   overflow: hidden;
   min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/*
+ * A place naming a model's part (`writtenPlaceNamesPart`): at most half the row, and cut before who wrote it, its
+ * weight orders of magnitude above the author's, so a long part name never leaves the row without its author.
+ */
+.rowPlace[data-names-part] {
+  max-width: 50%;
+  flex-shrink: 1000000000000;
+}
+
 /* "·" between who, where and how many replies: drawn, not read aloud. */
-.rowLine::before,
+.rowPlace::before,
 .rowAbout .replyCount::before {
   content: '·' / '';
   margin-right: 6px;
@@ -890,7 +1043,7 @@ button.earlierTag:hover {
 /* Its first words, under who started it and as wide as the rest of the row: the way to the thread by keyboard. */
 .rowText {
   display: flex;
-  grid-column: 2 / 4;
+  grid-column: 1 / 3;
   min-width: 0;
   padding: 0;
   border: none;

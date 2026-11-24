@@ -8,7 +8,7 @@ import { drawLabels } from './drawLabels';
 import { drawLanes } from './drawLanes';
 import { drawMergeLinks, drawPendingMergeLinks } from './drawMergeLinks';
 import { drawNodes, drawWorkspaceMarker } from './drawNodes';
-import { OriginPen, originFor } from './pen';
+import { contextPen, OriginPen, originFor } from './pen';
 import { toWorld } from './viewport';
 
 /** The world pen, aimed anew at every frame instead of allocated. */
@@ -29,13 +29,14 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   drawn.cutBranchComments.reset();
   drawn.captions.reset();
   const visible = visibleArea(scene);
-  const draw: DrawContext = { ctx, pen: ctx, scene, visible, detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn };
+  const screenPen = contextPen(ctx);
+  const draw: DrawContext = { ctx, pen: screenPen, scene, visible, detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn, zoom: viewport.zoom };
   const originX = originFor(visible.left);
   const originY = originFor(visible.top);
   worldPen.aim(ctx, originX, originY);
   const screen = (): void => {
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    draw.pen = ctx;
+    draw.pen = screenPen;
   };
   const world = (): void => {
     const { zoom, panX, panY } = viewport;
@@ -71,7 +72,8 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   drawDateRuler(draw);
 }
 
-function visibleArea({ viewport, size }: GraphScene): VisibleArea {
+/** The part of the graph on screen, in world px, with the columns it spans. */
+export function visibleArea({ viewport, size }: Pick<GraphScene, 'viewport' | 'size'>): VisibleArea {
   const topLeft = toWorld(viewport, 0, 0);
   const bottomRight = toWorld(viewport, size.width, size.height);
   return {

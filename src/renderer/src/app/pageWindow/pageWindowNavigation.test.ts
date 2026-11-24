@@ -21,11 +21,18 @@ afterEach(() => {
 });
 
 describe('a page window', () => {
-  it('never goes blank for a view its page goes to: its workspace window comes forward on it', () => {
+  it("never goes blank for a view its page goes to: its workspace window comes forward on the view's list", () => {
+    // A link or Show in Locks: the list, which shows what it asks for, never the pages that view was left with.
     navigation.goToView('branchExplorer');
 
-    expect(fakeApi.argsOf('windows.showWorkspaceWindow')).toEqual([['goto.branchExplorer']]);
+    expect(fakeApi.argsOf('windows.showWorkspaceWindow')).toEqual([['goto.branchExplorer.list']]);
     expect(useNavigation.getState().pages).toEqual([DIFF]);
+  });
+
+  it('returns its workspace window to a view as the user left it, for the view shortcut (⌘1…)', () => {
+    navigation.returnToView('branchExplorer');
+
+    expect(fakeApi.argsOf('windows.showWorkspaceWindow')).toEqual([['goto.branchExplorer']]);
   });
 
   it('opens a history within it, and a merge in its workspace window', () => {

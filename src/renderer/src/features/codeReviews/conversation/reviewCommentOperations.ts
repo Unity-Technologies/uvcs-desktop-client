@@ -1,33 +1,66 @@
+import type { CodeReview } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
-import type { NewLineComment, ReviewComment } from '@shared/domain/reviewConversation';
+import type { NewImageComment, NewModelComment, NewLineComment, ReviewComment, ReviewEventChange } from '@shared/domain/reviewConversation';
 import { api } from '../../../api/client';
 import { runVoidAction } from '../../../app/operations/runOperation';
-import { isAffectedByCodeReviews } from '../../../app/refresh/refreshScopes';
+import { isAffectedByCodeReviews, isAffectedByTakingPartInReview } from '../../../app/refresh/refreshScopes';
 import { confirm } from '../../../ui/dialog/confirm';
+import { pickChangeset } from '../../changesets/ChangesetPickerDialog';
+import { changesetsToApplyIn, type ChangeRequestMark } from './changeRequestMarks';
 
 // Every write on a review reads the review again, its lists too: the counts of comments and open ones change with it.
+// What the user writes (a comment, a reply) subscribes them to its emails again: that is read too.
 // Each resolves to whether it was done, so the field that wrote it is cleared or keeps the text to try again.
 
 export function addReviewComment(place: Place, reviewId: number, text: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.add(place, reviewId, text), isAffectedByCodeReviews);
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.add(place, reviewId, text), isAffectedByTakingPartInReview);
 }
 
 /** A change request, a question or a comment on a line of the review's diff. */
 export function addLineComment(place: Place, reviewId: number, comment: NewLineComment, text: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnLine(place, reviewId, comment, text), isAffectedByCodeReviews);
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnLine(place, reviewId, comment, text), isAffectedByTakingPartInReview);
+}
+
+/** A change request, a question or a comment on a point or an area of an image of the review's diff. */
+export function addImageComment(place: Place, reviewId: number, comment: NewImageComment, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnImage(place, reviewId, comment, text), isAffectedByTakingPartInReview);
+}
+
+/** A change request, a question or a comment on a point or a part of a 3D model of the review's diff. */
+export function addModelComment(place: Place, reviewId: number, comment: NewModelComment, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnModel(place, reviewId, comment, text), isAffectedByTakingPartInReview);
 }
 
 export function replyToComment(place: Place, comment: Pick<ReviewComment, 'guid'>, text: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't reply", () => api.reviewComments.reply(place, comment.guid, text), isAffectedByCodeReviews);
+  return runVoidAction(place, "Couldn't reply", () => api.reviewComments.reply(place, comment.guid, text), isAffectedByTakingPartInReview);
 }
 
 /** Discards a change request with a reply saying why: it's no longer open. */
 export function discardChangeRequest(place: Place, changeRequest: Pick<ReviewComment, 'guid'>, why: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't discard the change request", () => api.reviewComments.reply(place, changeRequest.guid, why, { discard: true }), isAffectedByCodeReviews);
+  return runVoidAction(place, "Couldn't discard the change request", () => api.reviewComments.reply(place, changeRequest.guid, why, { discard: true }), isAffectedByTakingPartInReview);
+}
+
+/**
+ * Marks a change request by hand (`changeRequestMarkOf`): applied in the changeset the user picks, among the review's
+ * own where it has them (`changesetsToApplyIn`), the newest first; or not applied, at once, as it's marked again as
+ * easily.
+ */
+export async function markChangeRequest(place: Place, review: Pick<CodeReview, 'target'>, changeRequest: Pick<ReviewComment, 'guid'>, mark: ChangeRequestMark): Promise<boolean> {
+  if (mark === 'notApplied') {
+    return runVoidAction(place, "Couldn't mark the change request as not applied", () => api.reviewComments.markNotApplied(place, changeRequest.guid), isAffectedByCodeReviews);
+  }
+  const changesetId = await pickChangeset({ title: 'Mark as applied in a changeset', among: changesetsToApplyIn(review.target) });
+  if (changesetId === undefined) return false;
+  return runVoidAction(place, "Couldn't mark the change request as applied", () => api.reviewComments.markApplied(place, changeRequest.guid, changesetId), isAffectedByCodeReviews);
 }
 
 export function editReviewComment(place: Place, comment: Pick<ReviewComment, 'guid'>, text: string): Promise<boolean> {
   return runVoidAction(place, "Couldn't save the comment", () => api.reviewComments.edit(place, comment.guid, text), isAffectedByCodeReviews);
+}
+
+/** What a reviewer said with their status, the status kept. */
+export function editStatusComment(place: Place, event: Pick<Extract<ReviewEventChange, { kind: 'statusChanged' }>, 'guid' | 'status'>, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't save the comment", () => api.reviewComments.editStatusComment(place, event.guid, event.status, text), isAffectedByCodeReviews);
 }
 
 export async function deleteReviewComment(place: Place, comment: Pick<ReviewComment, 'guid'>): Promise<boolean> {

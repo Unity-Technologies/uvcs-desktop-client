@@ -1,0 +1,26 @@
+/* Where a merge request's review stands (`ReviewStanding`): a disc, then two lines. */
+.standing {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+/* The title sits on the disc's middle. */
+.title {
+  margin: 2px 0 0;
+  font-weight: var(--weight-semibold);
+}
+
+.detail {
+  margin: 0;
+  color: var(--text-tertiary);
+}

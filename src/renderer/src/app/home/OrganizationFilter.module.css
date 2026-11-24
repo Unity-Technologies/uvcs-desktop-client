@@ -1,0 +1,25 @@
+/*
+ * The sidebar's organization filter, for someone with many (`showsOrganizationFilter`): the app's search field, with
+ * its border, so it reads as a field and not as one more entry, at the height of the sidebar's rows.
+ */
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.filter input {
+  height: 28px;
+  font-size: inherit;
+}
+
+/* The field's ring falls outside it, where the sidebar's groups cut what overflows them (`NavGroups`): drawn inside. */
+.filter input:focus {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.noMatches {
+  padding: 0 var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}

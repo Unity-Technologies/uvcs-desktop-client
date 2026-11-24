@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bandRect, linesToReveal, MARKER_INSET, markerLeft, markerSpots, rowsKey } from './diffAnnotations';
+import { bandLines, bandRect, firstLineKey, linesToReveal, MARKER_INSET, markerLeft, markerSpots, rangeBox, rangeLinesOf, rowsKey } from './diffAnnotations';
 
 // Lines 1–10 unchanged, then line 11 replaced, then unchanged lines 12–40 (a hunk of 3 context lines each side).
 const HUNKS = [{ deletionStart: 8, deletionCount: 7, additionStart: 8, additionCount: 7 }];
@@ -41,6 +41,41 @@ describe('markerLeft', () => {
 describe('bandRect', () => {
   it("outlines a line's row across its pane's code, from the gutter's edge to the pane's end", () => {
     expect(bandRect({ top: 100, bottom: 120, contentLeft: 48, paneRight: 640 })).toEqual({ top: 100, left: 48, width: 592, height: 20 });
+  });
+});
+
+describe('a band on a range of lines', () => {
+  const band = { key: 'additions:9', side: 'additions', lineNumber: 9, firstLineNumber: 6, selected: false } as const;
+  const box = (top: number, bottom: number) => ({ top, bottom, contentLeft: 40, paneRight: 600 });
+
+  it('measures its first line and its own', () => {
+    expect(bandLines([band, { key: 'additions:2', side: 'additions', lineNumber: 2, selected: false }])).toEqual([
+      { key: 'additions:9', side: 'additions', lineNumber: 9 },
+      { key: firstLineKey('additions:9'), side: 'additions', lineNumber: 6 },
+      { key: 'additions:2', side: 'additions', lineNumber: 2 },
+    ]);
+  });
+
+  it('spans from its first line to its last, or what of them is rendered', () => {
+    expect(rangeBox(box(100, 120), box(160, 180))).toEqual(box(100, 180));
+    expect(rangeBox(undefined, box(160, 180))).toEqual(box(160, 180));
+    expect(rangeBox(box(100, 120), undefined)).toEqual(box(100, 120));
+    expect(rangeBox(undefined, undefined)).toBeUndefined();
+  });
+
+  it('runs on out of the rendered rows when an end is beyond them, and is none when the whole range is', () => {
+    const above = { ...box(40, 40), outside: 'above' } as const;
+    const below = { ...box(900, 900), outside: 'below' } as const;
+    expect(rangeBox(above, box(160, 180))).toEqual(box(40, 180));
+    expect(rangeBox(box(100, 120), below)).toEqual({ ...box(100, 900), contentLeft: below.contentLeft, paneRight: below.paneRight });
+    expect(rangeBox(above, below)).toEqual({ ...box(40, 900), contentLeft: below.contentLeft, paneRight: below.paneRight });
+    expect(rangeBox(above, { ...above })).toBeUndefined();
+    expect(rangeBox(undefined, below)).toBeUndefined();
+  });
+
+  it('unfolds every line above its own, which a fold could cut through', () => {
+    expect(rangeLinesOf([band]).map((row) => row.lineNumber)).toEqual([6, 7, 8]);
+    expect(rangeLinesOf([{ ...band, firstLineNumber: undefined }])).toEqual([]);
   });
 });
 

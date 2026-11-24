@@ -26,6 +26,11 @@ describe('menuPoint', () => {
     expect(menuPoint(layout, { kind: 'changeset', id: 4 })).toEqual(nodePoint(layout, 4));
     expect(menuPoint(layout, { kind: 'label', label, more: [] })).toEqual(nodePoint(layout, label.changeset));
     expect(menuPoint(layout, { kind: 'branch', lane })).toEqual(selectionPoint(layout, { kind: 'branch', name: '/main/b' }));
+  });
+
+  it('opens the pending changes’ menu where they are drawn, and none when the workspace has no changes', () => {
+    const withPending = layoutGraph(sampleHistory(), undefined, { branch: '/main/a', parent: 5, mergeLinks: [] });
+    expect(menuPoint(withPending, { kind: 'pending' })).toEqual(pendingPoint(withPending));
     expect(menuPoint(layout, { kind: 'pending' })).toBeNull();
   });
 });

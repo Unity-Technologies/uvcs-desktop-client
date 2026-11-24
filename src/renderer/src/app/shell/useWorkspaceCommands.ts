@@ -1,8 +1,9 @@
-import { ArrowDownToLine, CodeXml, Copy, FolderDown, FolderGit2, FolderSearch, Pause, Play, SquareTerminal } from 'lucide-react';
+import { ArrowDownToLine, CodeXml, Copy, FolderDown, FolderGit2, FolderSearch, HardDriveDownload, Pause, Play, SquareTerminal } from 'lucide-react';
 import { useMemo } from 'react';
 import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
 import { openInEditor } from '../../components/externalApps/externalAppOperations';
 import { openChooseDownloads } from '../../features/partialWorkspace/ChooseDownloadsDialog';
+import { choosesDownloads, downloadsWholeBranch } from '../../features/partialWorkspace/workspaceDownloads';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import { OPEN_IN_FILE_MANAGER_LABEL } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -10,12 +11,15 @@ import { useCommands, type Command } from '../commands/commandStore';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
-import { updateUnlessUpToDate } from './workspaceOperations';
+import { downloadWholeBranch, updateUnlessUpToDate } from './workspaceOperations';
 
-/** Commands only a workspace has, beside every place's (`usePlaceCommands`): its files on disk, updating them and, in a partial one, choosing them. */
+/** Commands only a workspace has, beside every place's (`usePlaceCommands`): its files on disk, updating them, choosing which it downloads (`choosesDownloads`) and downloading the whole branch (`downloadsWholeBranch`). */
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
-  const kind = useWorkspaceInfo().data?.kind;
+  const workspace = useWorkspaceInfo().data;
+  const selector = workspace?.selector;
+  const offersDownloads = choosesDownloads(workspace?.kind, selector);
+  const offersWholeBranch = downloadsWholeBranch(workspace?.kind, selector);
   const { autoRefresh } = useSettings();
   const updateSettings = useUpdateSettings();
   const apps = useExternalApps();
@@ -40,16 +44,29 @@ export function useWorkspaceCommands(): void {
         keywords: ['refresh', 'watch', 'live'],
         run: () => updateSettings({ autoRefresh: !autoRefresh }),
       },
-      // Only a partial workspace chooses its files: any other holds every file.
-      ...(kind === 'partial'
+      // A partial workspace chooses its files; a standard one on a branch too, and becomes partial.
+      ...(offersDownloads
         ? [
             {
               id: 'workspace.chooseDownloads',
               group: 'Workspace',
               label: 'Choose what to download…',
               icon: FolderDown,
-              keywords: ['partial', 'download', 'load', 'unload'],
+              keywords: ['partial', 'convert', 'download', 'load', 'unload'],
               run: () => openChooseDownloads(workspacePath),
+            },
+          ]
+        : []),
+      // A partial workspace becomes standard again.
+      ...(offersWholeBranch && selector
+        ? [
+            {
+              id: 'workspace.downloadWholeBranch',
+              group: 'Workspace',
+              label: 'Download the whole branch…',
+              icon: HardDriveDownload,
+              keywords: ['standard', 'full', 'convert', 'partial', 'download', 'everything'],
+              run: () => void downloadWholeBranch(workspacePath, selector),
             },
           ]
         : []),
@@ -98,7 +115,7 @@ export function useWorkspaceCommands(): void {
         run: () => copyWorkspacePath(workspacePath),
       },
     ],
-    [workspacePath, kind, autoRefresh, updateSettings, editor, terminal],
+    [workspacePath, offersDownloads, offersWholeBranch, selector, autoRefresh, updateSettings, editor, terminal],
   );
 
   useCommands(commands);

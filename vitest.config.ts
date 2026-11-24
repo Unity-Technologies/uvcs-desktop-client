@@ -14,7 +14,8 @@ const TEST_WORKERS = Math.max(2, availableParallelism() - 1);
 export default defineConfig({
   resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },
   test: {
-    // scripts/build: the build's own logic (the third-party notices, the dependency license check).
+    // scripts/build: the scripts' own logic (the third-party notices, the dependency license check, the release notes'
+    // before-and-after pictures).
     include: ['src/**/*.test.ts', 'scripts/build/**/*.test.ts'],
     globalSetup: ['vitest.tempDirectory.ts'],
     pool: 'threads',

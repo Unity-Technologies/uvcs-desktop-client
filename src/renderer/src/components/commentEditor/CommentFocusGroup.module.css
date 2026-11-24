@@ -37,6 +37,7 @@
   font-size: var(--text-md);
 }
 
+/* The panel's sibling (`CommentFocusGroup`), in the same stacking context: just under it, whatever the page around. */
 .backdrop {
   position: fixed;
   inset: 0;

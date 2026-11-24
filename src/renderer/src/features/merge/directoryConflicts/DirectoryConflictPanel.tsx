@@ -6,7 +6,7 @@ import {
   type DirectoryConflict,
   type DirectoryConflictResolution,
   type MergeContributors,
-  type MergeRequest,
+  type MergeOperation,
 } from '@shared/domain/merge';
 import { workspacePlace } from '@shared/domain/place';
 import { PathLabel } from '../../../components/PathLabel';
@@ -25,7 +25,7 @@ import styles from './DirectoryConflictPanel.module.css';
 
 interface DirectoryConflictPanelProps {
   workspacePath: string;
-  request: MergeRequest;
+  request: MergeOperation;
   contributors: MergeContributors | undefined;
   conflict: DirectoryConflict;
   labels: MergeLabels;
@@ -133,7 +133,7 @@ export function DirectoryConflictPanel({ workspacePath, request, contributors, c
 
 interface ComparisonProps {
   workspacePath: string;
-  request: MergeRequest;
+  request: MergeOperation;
   contributors: MergeContributors;
   conflict: DirectoryConflict;
   labels: MergeLabels;

@@ -1,6 +1,5 @@
 import { useRepositoryShown } from '../workspace/useRepositoryShown';
 import { PlaceLayout } from './PlaceLayout';
-import { RepositorySidebarCard } from './RepositorySidebarCard';
 import { RepositoryTopBar } from './RepositoryTopBar';
 import { StatusBar } from './StatusBar';
 import { useRepositoryCommands } from './useRepositoryCommands';
@@ -15,5 +14,5 @@ export function RepositoryScreen({ repository }: { repository: string }) {
   useRepositoryCommands(repository);
   useRepositoryWindowTitle(repository);
 
-  return <PlaceLayout topBar={<RepositoryTopBar repository={repository} />} sidebarCard={<RepositorySidebarCard repository={repository} />} statusBar={<StatusBar />} />;
+  return <PlaceLayout topBar={<RepositoryTopBar repository={repository} />} statusBar={<StatusBar />} />;
 }

@@ -54,8 +54,19 @@ describe('checkinItems', () => {
 
     expect(steps.askedCounts).toEqual([1]);
     expect(steps.checkins).toEqual([
-      { workspacePath: ws, changes: [newFile], paths: ['notes.txt'], addsPrivate: true, comment: 'Add notes', quiet: false },
+      { workspacePath: ws, changes: [newFile], paths: ['notes.txt'], addsPrivate: true, comment: 'Add notes', quiet: false, again: expect.any(Function) },
     ]);
+  });
+
+  it('offers the check-in again with the comment given, never asking it twice, should a sign-in refuse it', async () => {
+    steps.comments.push('Add notes');
+    await checkinItems(ws, [newFile], [newFile, edited]);
+
+    await (steps.checkins[0] as { again: () => Promise<boolean> }).again();
+
+    expect(steps.askedCounts).toEqual([1]);
+    expect(steps.checkins).toHaveLength(2);
+    expect(steps.checkins[1]).toMatchObject({ comment: 'Add notes', paths: ['notes.txt'] });
   });
 
   it('lets the success card tell it when nothing is left pending', async () => {

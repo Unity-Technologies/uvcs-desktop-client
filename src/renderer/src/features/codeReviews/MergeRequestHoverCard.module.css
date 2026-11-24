@@ -1,0 +1,4 @@
+/* Holds a merge request's summary on hover (`MergeRequestSummaryCard`, framed), above the rows as the top bar's cards. */
+.popover {
+  z-index: 900;
+}

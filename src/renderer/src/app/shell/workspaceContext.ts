@@ -1,4 +1,4 @@
-import type { IncomingSummary } from '@shared/domain/incoming';
+import type { IncomingSummary, PartialIncoming } from '@shared/domain/incoming';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
 import { formatCountAtLeast, pluralizeAtLeast } from '../../lib/text';
@@ -30,6 +30,7 @@ export interface WorkspaceContext {
  */
 export function workspaceContext(info: WorkspaceInfo, summary: IncomingSummary | undefined): WorkspaceContext {
   const { repository, selector, loadedChangeset } = info;
+  if (summary && 'partial' in summary) return { changeset: null, repository, sync: partialSyncState(summary) };
   if (loadedChangeset === null) return { changeset: null, repository, sync: null };
   const spec = `cs:${loadedChangeset}`;
   if (selector.kind !== 'branch') {
@@ -40,16 +41,18 @@ export function workspaceContext(info: WorkspaceInfo, summary: IncomingSummary |
 
   const branch = selector.name;
   const changeset = { id: loadedChangeset, spec, description: `${spec} on ${branch}` };
-  if (!summary || summary.branch !== branch) return { changeset, repository, sync: null };
+  if (!summary || summary.branch !== branch || 'partial' in summary) return { changeset, repository, sync: null };
   const { changesetCount: count, countCapped } = summary;
-  const sync: SyncState =
-    count === 0
-      ? { kind: 'upToDate', label: 'Up to date', tip: `Nothing new on ${branch}` }
-      : {
-          kind: 'behind',
-          count,
-          label: `${formatCountAtLeast(count, countCapped)} incoming`,
-          tip: `${pluralizeAtLeast(count, countCapped, 'new changeset')} on ${branch}: review them in Incoming`,
-        };
-  return { changeset, repository, sync };
+  return { changeset, repository, sync: syncState(branch, count, countCapped, 'new changeset') };
+}
+
+/** A partial workspace loads no one changeset: what its branch head brings is the items it would change. */
+function partialSyncState({ branch, itemCount }: PartialIncoming): SyncState {
+  return syncState(branch, itemCount, false, 'item', 'changed');
+}
+
+function syncState(branch: string, count: number, countCapped: boolean, noun: string, verb = ''): SyncState {
+  if (count === 0) return { kind: 'upToDate', label: 'Up to date', tip: `Nothing new on ${branch}` };
+  const what = pluralizeAtLeast(count, countCapped, noun) + (verb && ` ${verb}`);
+  return { kind: 'behind', count, label: `${formatCountAtLeast(count, countCapped)} incoming`, tip: `${what} on ${branch}: review them in Incoming` };
 }

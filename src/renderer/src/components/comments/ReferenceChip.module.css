@@ -27,6 +27,38 @@
   box-shadow: var(--focus-ring-visible);
 }
 
+/* In a sentence (`plain`): the object reads as words of it, in its font, weight and color; under the pointer it shows
+   it's a link, in the accent and underlined. No fill and no accent at rest: in a line of the timeline either read as a
+   badge and drew the eye from the verdict. */
+.plain {
+  display: inline-flex;
+  align-items: baseline;
+  /* The icon's own box already holds a pixel either side of its stroke: icon and name read as one word. */
+  gap: 1px;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: baseline;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.plain:hover {
+  color: var(--accent-text);
+}
+
+.plain:hover .label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.plain:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
 .icon {
   flex: none;
   align-self: center;
@@ -88,12 +120,14 @@
   margin-left: var(--space-1);
 }
 
+/* A person is never a link (their card is what they show): their name in the color of the text around it, muted where
+   that is, so it never reads as one. */
 .person {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   max-width: 100%;
-  color: var(--accent-text);
+  color: inherit;
   font-weight: var(--weight-medium);
   white-space: nowrap;
   vertical-align: bottom;
@@ -103,4 +137,19 @@
   font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', var(--font-ui);
   font-style: normal;
   line-height: 1;
+}
+
+/* A change request to apply: "Applies" in the summary's muted weight, then the request's first line, which gives way. */
+.lead {
+  flex: none;
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
+}
+
+.request {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

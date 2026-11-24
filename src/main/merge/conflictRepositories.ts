@@ -1,4 +1,4 @@
-import type { FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { FileConflict, MergeOperation, MergePlan } from '@shared/domain/merge';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
@@ -29,7 +29,7 @@ type PrintedFileConflict = PrintedMergePlan['fileConflicts'][number];
 export async function withConflictRepositories(
   cm: CmClient,
   workspacePath: string,
-  request: MergeRequest,
+  request: MergeOperation,
   plan: PrintedMergePlan,
   copies?: Pick<WorkspaceCopies, 'remember'>,
   known?: readonly FileConflict[],
@@ -93,7 +93,7 @@ function sameItemKey(conflict: PrintedFileConflict): string {
  * The tree the merge goes into: its destination contributor, else the branch merged into. Null for a workspace merge
  * whose contributors `cm` didn't print: the workspace's loaded changeset is its destination then.
  */
-export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): string | null {
+export function destinationTree(request: MergeOperation, plan: PrintedMergePlan): string | null {
   const destination = plan.contributors?.destination.changesetId;
   if (destination !== undefined) return spec.changeset(destination);
   return request.destinationBranch ? spec.branch(request.destinationBranch) : null;
@@ -101,11 +101,12 @@ export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): 
 
 /**
  * The workspace's loaded changeset. A workspace on a shelve takes no merges: `cm` finds no branch to check out on. A
- * partial workspace has no one changeset whose files the conflicts could be listed from (`loadedChangesetOf`).
+ * partial workspace takes none either, even on a changeset: on a branch it has no one changeset whose files the
+ * conflicts could be listed from (`loadedChangesetOf`), and a merge needs the whole tree, which it didn't download.
  */
 async function loadedTree(cm: CmClient, workspacePath: string): Promise<string> {
-  const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
-  if (loadedChangeset === null) throw new Error(noLoadedTreeMessage(selector));
+  const { selector, loadedChangeset, partial } = await readWorkspaceLoad(cm, workspacePath);
+  if (loadedChangeset === null || partial) throw new Error(noLoadedTreeMessage(selector));
   return spec.changeset(loadedChangeset);
 }
 

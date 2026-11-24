@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, DirectoryConflictResolution, MergePlan } from '@shared/domain/merge';
 import { layoutGroupedTree } from '../../lib/groupedPathTree';
-import { buildMergeItems, directoryConflictsInListOrder, fileStateOf, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, directoryConflictsInListOrder, fileStateOf, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem, MERGE_VIEW_OFFER } from './mergeItems';
 import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
 import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 
@@ -55,6 +55,29 @@ describe('merge items', () => {
     ];
     const listed = buildMergeItems({ ...plan, directoryConflicts: [], changes }, [], []).map((item) => item.path);
     expect(listed).toEqual(['src/ui/widgets/Lap_2.cs', 'old/a.cs', 'assets', 'assets/ship.mat', 'empty']);
+  });
+
+  it('keeps a folder added with its Unity meta and the items under it, so the meta rides on the folder', () => {
+    const changes: MergePlan['changes'] = [
+      { kind: 'added', path: '/Assets/Props' },
+      { kind: 'added', path: '/Assets/Props.meta' },
+      { kind: 'added', path: '/Assets/Props/box.prefab' },
+    ];
+    const listed = buildMergeItems({ ...plan, directoryConflicts: [], changes }, [], []).map((item) => item.path);
+    expect(listed).toEqual(['Assets/Props', 'Assets/Props.meta', 'Assets/Props/box.prefab']);
+  });
+
+  it('keeps a folder deleted with its Unity meta, and leaves out one whose meta changed otherwise', () => {
+    const changes: MergePlan['changes'] = [
+      { kind: 'deleted', path: '/Assets/Old' },
+      { kind: 'deleted', path: '/Assets/Old.meta' },
+      { kind: 'deleted', path: '/Assets/Old/a.png' },
+      { kind: 'added', path: '/Assets/New' },
+      { kind: 'changed', path: '/Assets/New.meta' },
+      { kind: 'added', path: '/Assets/New/b.png' },
+    ];
+    const listed = buildMergeItems({ ...plan, directoryConflicts: [], changes }, [], []).map((item) => item.path);
+    expect(listed).toEqual(['Assets/Old', 'Assets/Old.meta', 'Assets/Old/a.png', 'Assets/New.meta', 'Assets/New/b.png']);
   });
 
   it('names every item by its path without the root, for the tree and the filter', () => {
@@ -135,5 +158,11 @@ describe('a folder conflict that holds another conflict', () => {
   it("is what the folder row's menu acts on, alone, instead of everything the folder holds", () => {
     expect(mergeItemsActedOn(rows, new Set([folderRow.key]), items).map((item) => item.path)).toEqual(['src/shared']);
     expect(mergeItemsActedOn(rows, new Set([folderRow.key, items[1]!.key]), items)).toEqual(items);
+  });
+});
+
+describe('MERGE_VIEW_OFFER', () => {
+  it("offers no sort by date: the merge page's items have no dates", () => {
+    expect(MERGE_VIEW_OFFER).toEqual({ statusGroups: false, dates: false });
   });
 });

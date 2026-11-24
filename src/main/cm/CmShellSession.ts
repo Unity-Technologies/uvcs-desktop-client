@@ -1,15 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
+import { looksLikePrompt, MAX_PROMPT_LENGTH, WaitingForInputError } from './consolePrompts';
 import { ANSWER_TEXT, CmOutputTooLargeError } from './outputLimit';
 import type { OutputReading } from './outputReading';
 import { StreamOutput, TextOutput, type OutputStream, type ShellCommandOutput } from './ShellCommandOutput';
 import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 import { resultLineAtEnd } from './shellResultLine';
-/** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
-const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
-/** Longer last lines are output (e.g. `--format` records), not a question. */
-const MAX_PROMPT_LENGTH = 300;
 const PROMPT_STALL_MS = 1500;
 const READ_TIMEOUT_MS = 120_000;
 /** A write of few paths can still touch a whole tree (removing or moving a folder); a stalled prompt is caught long before either timeout. */
@@ -43,6 +40,13 @@ const TAIL_LENGTH = MAX_PROMPT_LENGTH + 1;
  * next queued commands as answers, so a stalled prompt or a timeout kills the process: the
  * running command fails and the queued ones continue on a fresh process.
  */
+/**
+ * How long a session asked to exit may take before it's killed (`dispose`): `exit` ends a `cm shell` at once, but one
+ * stuck on a command or a prompt never reads it, and the installed `cm`'s update waits for every session to end
+ * (`CmClient.hold`).
+ */
+export const SHELL_EXIT_TIMEOUT_MS = 3_000;
+
 export class CmShellSession {
   private process: ChildProcessWithoutNullStreams | null = null;
   private readonly queue: PendingCommand[] = [];
@@ -96,13 +100,33 @@ export class CmShellSession {
     });
   }
 
-  dispose(): void {
-    this.process?.stdin.end('exit\n');
+  /**
+   * Ends the session: its commands fail, and its process is asked to exit, then killed if it hasn't within
+   * `SHELL_EXIT_TIMEOUT_MS`. Settles once the process closed (at once when none runs).
+   */
+  dispose(): Promise<void> {
+    const child = this.process;
+    const closed = child ? this.exited(child) : Promise.resolve();
+    child?.stdin.end('exit\n');
     this.process = null;
     this.clearTimers();
     const pending = [...(this.running ? [this.running] : []), ...this.queue.splice(0)];
     this.running = null;
     pending.forEach((command) => command.reject(new Error('cm shell session was closed')));
+    return closed;
+  }
+
+  /** Settles once `child` closed, killing it if it hasn't within `SHELL_EXIT_TIMEOUT_MS` of being asked to exit. */
+  private exited(child: ChildProcessWithoutNullStreams): Promise<void> {
+    return new Promise((resolve) => {
+      const kill = setTimeout(() => this.guarded(() => child.kill('SIGKILL')), SHELL_EXIT_TIMEOUT_MS);
+      // Waiting for a session to exit is no reason to keep the app running.
+      kill.unref?.();
+      child.once('close', () => {
+        clearTimeout(kill);
+        resolve();
+      });
+    });
   }
 
   private runNext(): void {
@@ -177,7 +201,7 @@ export class CmShellSession {
     const newline = tail.lastIndexOf('\n');
     if (newline < 0 && length > MAX_PROMPT_LENGTH) return;
     const lastLine = tail.slice(newline + 1);
-    if (!lastLine || !PROMPT_LIKE_TAIL.test(lastLine)) return;
+    if (!lastLine || !looksLikePrompt(lastLine)) return;
 
     // Output that just paused mid-line on a `:` (a date, a path) is not a prompt. When the main process was busy,
     // the timer can fire before the output that came meanwhile is read: `setImmediate` reads it first.
@@ -187,7 +211,7 @@ export class CmShellSession {
         setImmediate(() =>
           this.guarded(() => {
             if (this.received !== receivedBefore || !this.running) return;
-            this.abortRunning(new Error(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`));
+            this.abortRunning(new WaitingForInputError(lastLine));
           }),
         ),
       this.promptStallMs,

@@ -35,24 +35,29 @@ describe('Creating and editing xlinks from Files', () => {
   });
 
   it('creates a new xlink in the folder selected, or the folder of the file selected, the root too', () => {
-    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace)).toBe('code');
-    expect(newXlinkDirectoryOf(item('code/a.cs', 'file'), inWorkspace)).toBe('code');
-    expect(newXlinkDirectoryOf(item('', 'directory'), inWorkspace)).toBe('');
+    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace, 'standard')).toBe('code');
+    expect(newXlinkDirectoryOf(item('code/a.cs', 'file'), inWorkspace, 'standard')).toBe('code');
+    expect(newXlinkDirectoryOf(item('', 'directory'), inWorkspace, 'standard')).toBe('');
   });
 
   it('creates none from a private item: cm takes an xlink only in a controlled folder', () => {
-    expect(newXlinkDirectoryOf(item('build', 'directory', { isPrivate: true }), inWorkspace)).toBeNull();
-    expect(newXlinkDirectoryOf(item('code/notes.txt', 'file', { isPrivate: true }), inWorkspace)).toBeNull();
+    expect(newXlinkDirectoryOf(item('build', 'directory', { isPrivate: true }), inWorkspace, 'standard')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/notes.txt', 'file', { isPrivate: true }), inWorkspace, 'standard')).toBeNull();
   });
 
   it('creates none from an xlink or anything under one: it would go in the xlinked repository', () => {
-    expect(newXlinkDirectoryOf(item('code/lib', 'directory', { xlink }), inWorkspace)).toBeNull();
-    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory'), { ...inWorkspace, underXlink: true })).toBeNull();
-    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), inWorkspace)).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/lib', 'directory', { xlink }), inWorkspace, 'standard')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory'), { ...inWorkspace, underXlink: true }, 'standard')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), inWorkspace, 'standard')).toBeNull();
+  });
+
+  it('creates none in a partial workspace, which can’t check in a new xlink; until its kind is read, it does', () => {
+    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace, 'partial')).toBeNull();
+    expect(newXlinkDirectoryOf(item('code', 'directory'), inWorkspace, undefined)).toBe('code');
   });
 
   it('trusts the listings alone until the workspace’s repository is read', () => {
-    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), { underXlink: false, workspaceRepository: undefined })).toBe('code/lib/src');
+    expect(newXlinkDirectoryOf(item('code/lib/src', 'directory', { repository: 'pnunit@codice@cloud' }), { underXlink: false, workspaceRepository: undefined }, 'standard')).toBe('code/lib/src');
   });
 
   it('edits an xlink of the workspace, not a folder, nor one nested in another xlink', () => {
@@ -63,14 +68,21 @@ describe('Creating and editing xlinks from Files', () => {
 
   it('loads the files of a checked-in xlink whose folder is listed empty, and of no other', () => {
     const item = { isPrivate: false, xlink };
-    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [] })).toEqual(item);
-    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [{ path: 'code/lib/src' }] })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: 'standard' })).toEqual(item);
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [{ path: 'code/lib/src' }], workspaceKind: 'standard' })).toBeNull();
     // Not read yet: nothing tells it is empty.
-    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: undefined })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: undefined, workspaceKind: 'standard' })).toBeNull();
     // Not checked in: no command can load it yet.
-    expect(unloadedXlinkOf(item, inWorkspace, { added: true, listedItems: [] })).toBeNull();
-    expect(unloadedXlinkOf({ isPrivate: false }, inWorkspace, { added: false, listedItems: [] })).toBeNull();
-    expect(unloadedXlinkOf(item, { underXlink: true }, { added: false, listedItems: [] })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: true, listedItems: [], workspaceKind: 'standard' })).toBeNull();
+    expect(unloadedXlinkOf({ isPrivate: false }, inWorkspace, { added: false, listedItems: [], workspaceKind: 'standard' })).toBeNull();
+    expect(unloadedXlinkOf(item, { underXlink: true }, { added: false, listedItems: [], workspaceKind: 'standard' })).toBeNull();
+  });
+
+  it("loads no xlink's files in a partial workspace, which downloads them as it downloads a file", () => {
+    const item = { isPrivate: false, xlink };
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: 'partial' })).toBeNull();
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: 'standard' })).toEqual(item);
+    expect(unloadedXlinkOf(item, inWorkspace, { added: false, listedItems: [], workspaceKind: undefined })).toEqual(item);
   });
 
   it('tells an item under an xlink from the folders listed above it', () => {

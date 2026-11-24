@@ -14,6 +14,9 @@ import { captionCardCorner, captionCardMaxHeight, captionCardMaxWidth, keepInsid
 import type { GraphPalette } from './graphPalette';
 import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
+import { codeReviewLine, reviewChipOf } from '../../codeReviews/reviewChip';
+import { openReview } from '../../codeReviews/codeReviewOperations';
+import { MergeRequestSummaryCard } from '../../codeReviews/MergeRequestSummaryCard';
 
 /**
  * Where a tooltip opens: over a changeset's caption (the card's first line lays exactly on it, in the caption's
@@ -75,8 +78,8 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
         <div className={styles.subject} style={{ font: palette.fonts.caption, lineHeight: SUBJECT_LINE_HEIGHT, color: anchor.color }}>
           {/* An empty inline block sits on the baseline, where the caption's first glyph starts. */}
           <span ref={textOriginRef} className={styles.textOrigin} />
-          {/* Its references as chips, as the body draws them and a row's first line does. */}
-          <CommentLine comment={changeset.comment} interactive={false} />
+          {/* Its references as chips that open what they name, as the body's do: a click in the card never reaches the graph. */}
+          <CommentLine comment={changeset.comment} />
         </div>
         {/* Wrapped in a card narrowed by the edge, the line breaks between its parts, never inside one. */}
         <HoverCardMeta>
@@ -92,9 +95,21 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
     );
   }
 
+  const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
+  // A merge request's chip shows its summary, as its chip in the lists and the top bar's do.
+  // What hovering a branch's review chip shows, decided as the lists' chips decide it.
+  const hover = target.kind === 'codeReview' ? reviewChipOf(target.review, false).hover : undefined;
+  if (hover?.kind === 'summary') {
+    return (
+      // The pointer can move into it (`pointerCardStays`, `CAPTION_CARD_ATTRIBUTE`): its title opens the request, as in the lists.
+      <div className={styles.tooltip} data-flip={flip} data-enterable style={{ left: flip ? x - 14 : x + 14, top: y + 14 }} {...{ [CAPTION_CARD_ATTRIBUTE]: true }}>
+        <MergeRequestSummaryCard request={hover.request} framed onOpen={() => openReview(hover.request)} />
+      </div>
+    );
+  }
+
   const content = tooltipContent(target, layout, pendingChangeCount);
   if (!content) return null;
-  const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   return (
     <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
       <HoverCard title={content.title} body={content.body} meta={content.meta} />
@@ -134,7 +149,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
     case 'codeReview':
       return {
         title: commentLineText(target.review.title),
-        body: `Code review ${target.review.id} · ${target.review.status}`,
+        body: codeReviewLine(target.review),
         meta: 'Click to open the review',
       };
     case 'mergeLink':

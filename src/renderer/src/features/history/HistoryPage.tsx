@@ -2,7 +2,8 @@ import { History } from 'lucide-react';
 import { useCallback, useEffect, useMemo } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
 import { useOtherRepository, usePlace } from '../../app/workspace/useWorkspace';
-import { detailsWidthOf, useDetailsPaneStore, type DetailsWidthLimits } from '../../components/detailsPaneStore';
+import type { DetailsWidthLimits } from '../../components/detailsPaneStore';
+import { RememberedSplitPane } from '../../components/RememberedSplitPane';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
@@ -11,7 +12,6 @@ import { FilterField } from '../../ui/FilterField';
 import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
-import { SplitPane } from '../../ui/SplitPane';
 import { Stowable } from '../../ui/Stowable';
 import { listedDiffs } from '../../components/diffExpansion';
 import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
@@ -47,8 +47,6 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const { data: history, error } = useItemHistory(page.path, page.revision);
   // A file under an xlink: its changesets, branches and labels are the xlinked repository's.
   const otherRepository = useOtherRepository(history?.revisions[0]?.repository);
-  const listWidth = useDetailsPaneStore((state) => detailsWidthOf(state, LIST_WIDTH_KEY, LIST_WIDTH));
-  const setListWidth = useDetailsPaneStore((state) => state.setWidth);
   const [view, setView] = usePageRevisionView(page.view);
   const diffExpanded = useDiffExpanded();
 
@@ -117,12 +115,9 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   return (
     <>
       <Stowable stowed={diffExpanded}>{header}</Stowable>
-      <SplitPane
-        initialSize={LIST_WIDTH.initial}
-        minSize={LIST_WIDTH.min}
-        maxSize={LIST_WIDTH.max}
-        size={listWidth}
-        onSizeChange={(size) => setListWidth(LIST_WIDTH_KEY, size)}
+      <RememberedSplitPane
+        widthKey={LIST_WIDTH_KEY}
+        widthLimits={LIST_WIDTH}
         stowed={diffExpanded ? 'first' : undefined}
         // One layout from the first frame on: placeholder rows while the history is read, and "No history yet"
         // beside an empty list.

@@ -1,0 +1,83 @@
+import type { Changeset } from '@shared/domain/changeset';
+import type { DayFormat } from '../../../lib/formatDate';
+import { pluralize } from '../../../lib/text';
+import { displayName, sameUser } from '../../../lib/userName';
+import { roundName, type CheckinsEntry, type ReviewRound } from './reviewRounds';
+
+/**
+ * A round's line in words: what's bold, what follows it, the changeset its status was given at when the line names it,
+ * then what it settled. "**Reviewed** by Vio at ⟨cs 14⟩ · 1 request applied".
+ */
+export interface RoundLineText {
+  bold: string;
+  rest: string;
+  changeset?: number;
+  counts: string;
+  /** The whole line in words, the changeset's number in its place: what its fold button is named, and its tooltip. */
+  label: string;
+  /** Whether a dot parts the changeset from the time after it, whose number it would otherwise run into. */
+  dotBeforeTime: boolean;
+}
+
+/**
+ * A round's line, its first words bold. Folded, it sums the round up: its name, what closed it, at which changeset, and
+ * what it settled: "**Round 1** · Rework required by you at 14 · 5 requests applied, 2 questions answered". Unfolded, it
+ * heads what the round held, whose review it was and what it settled, with no verdict: the status's own event says that
+ * once, at the round's end ("**Round 1** · Vio's review · 5 requests applied"); repeated on top, with its time above
+ * older events, it read as a second review. A review's only round has no name (`roundName`): its line starts at what
+ * closed it, or at whose review it was, bold: "**Reviewed** by you · 1 request applied", "**Your review** · 1 request
+ * applied".
+ */
+export function roundText(round: ReviewRound, user: string | undefined, roundCount: number, open: boolean): RoundLineText {
+  const own = user !== undefined && sameUser(round.reviewer, user);
+  const settled = [
+    round.applied > 0 && `${pluralize(round.applied, 'request')} applied`,
+    round.discarded > 0 && `${round.discarded} discarded`,
+    round.answered > 0 && `${pluralize(round.answered, 'question')} answered`,
+    round.open > 0 && `${round.open} open`,
+  ].filter((part): part is string => typeof part === 'string');
+  const counts = settled.length > 0 ? ` · ${settled.join(', ')}` : '';
+  const changeset = open ? undefined : round.changesetId;
+  const name = roundName(round.number, roundCount);
+  const words = open ? headingWords(name, own ? undefined : displayName(round.reviewer)) : summaryWords(name, `${round.status} by ${own ? 'you' : displayName(round.reviewer)}${changeset !== undefined ? ' at' : ''}`, round.status);
+  const label = `${words.bold}${words.rest}${changeset !== undefined ? ` ${changeset}` : ''}${counts}`;
+  return { ...words, ...(changeset !== undefined && { changeset }), counts, label, dotBeforeTime: changeset !== undefined && counts === '' };
+}
+
+/** A folded round's first words: "**Round 1** · Reviewed by Vio", or "**Reviewed** by Vio" for a review's only round. */
+function summaryWords(name: string | undefined, verdict: string, status: string): { bold: string; rest: string } {
+  return name === undefined ? { bold: status, rest: verdict.slice(status.length) } : { bold: name, rest: ` · ${verdict}` };
+}
+
+/** An unfolded round's first words: "**Round 1** · Vio's review", or "**Vio's review**" for a review's only round. */
+function headingWords(name: string | undefined, reviewer: string | undefined): { bold: string; rest: string } {
+  const whose = reviewer === undefined ? 'your review' : `${reviewer}'s review`;
+  if (name !== undefined) return { bold: name, rest: ` · ${whose}` };
+  return { bold: whose.charAt(0).toUpperCase() + whose.slice(1), rest: '' };
+}
+
+/**
+ * The line before what's new to a reviewer: "New since your last review", saying what's under it, and the day of it in the
+ * reader's time zone ("Nov 9"), apart, to read a step quieter; no day when the date can't be read.
+ */
+export function sinceText(date: string, { locale, timeZone }: DayFormat = {}): { label: string; day?: string } {
+  const label = 'New since your last review';
+  const at = new Date(date);
+  if (Number.isNaN(at.getTime())) return { label };
+  return { label, day: new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone }).format(at) };
+}
+
+/** What a batch of check-ins says after its author's name: "checked in 3 changesets". */
+export function checkinsText(entry: Pick<CheckinsEntry, 'changesets'>): string {
+  return entry.changesets.length === 1 ? 'checked in a changeset' : `checked in ${pluralize(entry.changesets.length, 'changeset')}`;
+}
+
+/** How many changesets a batch lists before "N more". */
+export const MAX_SHOWN_CHECKINS = 5;
+
+/** The changesets a batch lists: all of a short one; the first ones of a longer one and how many more, until shown all. */
+export function shownCheckins(changesets: readonly Changeset[], showsAll: boolean): { shown: readonly Changeset[]; more: number } {
+  // "1 more" would take the row the changeset itself takes.
+  if (showsAll || changesets.length <= MAX_SHOWN_CHECKINS + 1) return { shown: changesets, more: 0 };
+  return { shown: changesets.slice(0, MAX_SHOWN_CHECKINS), more: changesets.length - MAX_SHOWN_CHECKINS };
+}

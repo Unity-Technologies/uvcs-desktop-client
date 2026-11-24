@@ -61,19 +61,30 @@
   font-weight: var(--weight-semibold);
 }
 
-.item {
+/* A branch: the button that picks it, then its actions' "…" on the highlighted one (`RowActionsButton`). */
+.row {
   display: flex;
   align-items: center;
+  padding-right: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.row[data-highlighted='true'] {
+  background: var(--accent-soft);
+}
+
+.item {
+  display: flex;
+  flex: 1;
+  align-self: stretch;
+  align-items: center;
+  min-width: 0;
   gap: 10px;
   padding: 0 var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background: none;
   text-align: left;
-}
-
-.item[data-highlighted='true'] {
-  background: var(--accent-soft);
 }
 
 .icon {
@@ -100,6 +111,24 @@
   white-space: nowrap;
 }
 
+/* The name, then its review's chip, as in the Branches view; the name gives way to the chip when room is short. */
+.nameLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nameLine > .name {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.nameLine > :not(.name) {
+  flex: none;
+}
+
 .name {
   font-weight: var(--weight-medium);
   line-height: 16px;
@@ -107,7 +136,7 @@
 
 .comment {
   color: var(--text-tertiary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   line-height: 15px;
 }
 

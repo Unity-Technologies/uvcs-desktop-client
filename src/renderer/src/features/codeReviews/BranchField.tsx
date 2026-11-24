@@ -1,0 +1,68 @@
+import { ChevronDown, GitBranch } from 'lucide-react';
+import { useId, useState } from 'react';
+import type { Branch } from '@shared/domain/branch';
+import type { Place } from '@shared/domain/place';
+import { PathLabel } from '../../components/PathLabel';
+import { classNames } from '../../lib/classNames';
+import fieldStyles from '../../ui/Field.module.css';
+import { Popover } from '../../ui/Popover';
+import { FieldFrame } from '../../ui/TextField';
+import { BranchChoiceList } from '../branches/BranchChoiceList';
+import type { BranchGroup } from '../branches/branchSearchRows';
+import styles from './BranchField.module.css';
+
+interface BranchFieldProps {
+  /** Whose branches it lists: the dialog's place. */
+  place: Place;
+  label: string;
+  /** The branch picked; none shows `placeholder`. */
+  value: string | undefined;
+  placeholder: string;
+  /** The branch list's groups, from every branch read; memoized by the caller. */
+  groupsOf: (branches: Branch[]) => BranchGroup[];
+  /** The list's filter field's placeholder. */
+  searchPlaceholder: string;
+  onPick: (branch: Branch) => void;
+  /** Closes the dialog the field sits in, as a merge request opens from the list's card. */
+  onLeave: () => void;
+}
+
+/**
+ * A dialog's branch, boxed as its other fields: it shows the branch picked and opens the branch list
+ * (`BranchChoiceList`) to pick another, the branches read only once it opens.
+ */
+export function BranchField({ place, label, value, placeholder, groupsOf, searchPlaceholder, onPick, onLeave }: BranchFieldProps) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  return (
+    <FieldFrame id={id} label={label}>
+      <Popover
+        width={420}
+        open={open}
+        onOpenChange={setOpen}
+        trigger={
+          <button id={id} type="button" className={classNames(fieldStyles.input, styles.trigger)}>
+            <GitBranch size={13} className={styles.icon} aria-hidden />
+            <span className={styles.name}>{value ? <PathLabel key={value} path={value} tooltip={false} /> : <span className={styles.placeholder}>{placeholder}</span>}</span>
+            <ChevronDown size={12} className={styles.icon} aria-hidden />
+          </button>
+        }
+      >
+        <BranchChoiceList
+          place={place}
+          current={value}
+          groupsOf={groupsOf}
+          placeholder={searchPlaceholder}
+          onPick={(branch) => {
+            setOpen(false);
+            onPick(branch);
+          }}
+          onLeave={() => {
+            setOpen(false);
+            onLeave();
+          }}
+        />
+      </Popover>
+    </FieldFrame>
+  );
+}

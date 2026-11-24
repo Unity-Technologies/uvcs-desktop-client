@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { UpdateStatus } from '@shared/domain/appUpdate';
 import { AppUpdates } from './AppUpdates';
-import { previewUpdateFeed, previewUpdateFile, previewUpdateOf } from './previewUpdateFeed';
+import { previewCmPinOf, previewUpdateFeed, previewUpdateFile, previewUpdateOf } from './previewUpdateFeed';
 
 const file = {
   version: '0.2.5',
@@ -35,6 +35,11 @@ describe('a preview update, for seeing What’s New while developing', () => {
     expect(previewUpdateFile(false, {})).toBeUndefined();
   });
 
+  it('pins the cm version the file names, with no bundles to download, or none', () => {
+    expect(previewCmPinOf({ ...file, cmVersion: '11.0.16.10800' })).toEqual({ version: '11.0.16.10800', bundles: {} });
+    expect(previewCmPinOf(file)).toBeNull();
+  });
+
   it('refuses a file that names no version', () => {
     expect(() => previewUpdateOf({ releaseNotes: [] })).toThrow(/"version"/);
     expect(() => previewUpdateOf([])).toThrow(/"version"/);
@@ -56,6 +61,7 @@ describe('a preview update, for seeing What’s New while developing', () => {
       beforeRestart: () => undefined,
       push: (status) => pushed.push(status),
       logFailure: () => undefined,
+      cmPrefetchFor: async () => null,
     });
 
     await updates.check();

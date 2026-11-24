@@ -5,12 +5,16 @@ import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelveApplied, isAffectedByShelveDeletion } from '../../app/refresh/refreshScopes';
+import { workspaceTakesMerges } from '../../components/workspaceTakesMerges';
 import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
-/** Puts left changes back: applied right away when they merge cleanly, otherwise through the merge view. */
+/**
+ * Puts left changes back: applied right away when they merge cleanly, otherwise through the merge view, which a
+ * partial workspace can't take (`workspaceTakesMerges`): there they stay on their shelve, to apply in a standard one.
+ */
 export async function restoreLeftChanges(workspacePath: string, left: LeftChanges): Promise<void> {
   const result = await runOperation({
     title: `Restoring your changes from ${branchLabel(left.sourceName)}`,
@@ -32,6 +36,13 @@ export async function restoreLeftChanges(workspacePath: string, left: LeftChange
       toast.info('Your changes weren’t restored', 'Check in, shelve or undo your current changes first, then restore.');
       break;
     case 'conflicts':
+      if (!workspaceTakesMerges(workspacePath)) {
+        toast.info(
+          'Your changes weren’t restored',
+          `They need a merge, which a partial workspace can’t take. They’re safe in shelve ${result.shelveId}: apply it in a standard workspace.`,
+        );
+        break;
+      }
       // The shelve is deleted once the merge view applies it.
       navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec: spec.shelve(result.shelveId) } });
       break;

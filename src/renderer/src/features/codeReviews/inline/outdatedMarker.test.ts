@@ -5,7 +5,7 @@ import { outdatedKey } from './fileComments';
 import type { EarlierThread, LineThread } from './fileThreads';
 import { outdatedMarkerOf } from './outdatedMarker';
 
-const ON_LINE = { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Retry.cs', line: 20 } as const;
+const ON_LINE = { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Retry.cs', firstLine: 20, lastLine: 20 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'borja', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: `Thread ${id}`, kind: 'comment', anchor: ON_LINE, ...fields };

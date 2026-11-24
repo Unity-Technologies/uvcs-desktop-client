@@ -7,10 +7,13 @@ import { AppErrorBoundary } from './app/errors/AppErrorBoundary';
 import { reportUnexpectedErrors } from './app/errors/reportUnexpectedErrors';
 import { guardUnloading } from './app/navigation/leaveGuard';
 import { reportShownView } from './app/navigation/reportShownView';
+import { isSettingUpCm, useCmRuntimeStore } from './app/cmSetup/cmRuntimeStore';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openPageWindowFromAddress } from './app/pageWindow/openPageWindowFromAddress';
 import { openPlaceFromAddress } from './app/workspace/openPlaceFromAddress';
 import { exposePageZoom } from './app/shell/exposePageZoom';
+import { markReadsInFlight } from './app/markReadsInFlight';
+import { queryClient } from './app/queryClient';
 import { trackPointerReturnFocus } from './lib/inputModality';
 import { WINDOW_CHROME } from './lib/platform';
 import './styles/global.css';
@@ -28,13 +31,15 @@ setTimeout(preloadCommentEditor, 2500);
 
 document.documentElement.dataset.chrome = WINDOW_CHROME;
 exposePageZoom();
+markReadsInFlight(queryClient);
 guardUnloading();
 trackPointerReturnFocus();
 // A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.
 if (!openPageWindowFromAddress()) {
   openPlaceFromAddress();
   reportShownView();
-  void prefetchStartupQueries();
+  // While the app's own `cm` is set up, nothing can read the first screen: its views ask once they show.
+  if (!isSettingUpCm(useCmRuntimeStore.getState().status)) void prefetchStartupQueries();
 }
 
 const root = createRoot(document.getElementById('root')!);

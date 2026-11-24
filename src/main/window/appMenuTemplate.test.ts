@@ -12,6 +12,8 @@ function templateOn(platform: NodeJS.Platform, links: Partial<AppMenuContext> = 
     newWindow: () => {},
     openDocumentation: () => {},
     reportIssue: () => {},
+    showLogFiles: () => {},
+    showCmClient: () => {},
     requestFeature: () => {},
     showAboutPanel: () => {},
     checkForUpdates: () => {},
@@ -92,16 +94,17 @@ describe('appMenuTemplate', () => {
     expect(hasRole(submenuOf(templateOn('darwin')[0]!), 'about')).toBe(false);
   });
 
-  it('reports an issue and requests a feature from Help, each on its own form', () => {
+  it('reports an issue, shows the log files to attach to it and requests a feature from Help', () => {
     const opened: string[] = [];
-    const help = submenuOf(
-      templateOn('win32', { reportIssue: () => opened.push('bug report'), requestFeature: () => opened.push('feature request') }).find((menu) => menu.label === '&Help')!,
-    );
+    const links = { reportIssue: () => opened.push('bug report'), showLogFiles: () => opened.push('log files'), requestFeature: () => opened.push('feature request') };
+    const help = submenuOf(templateOn('win32', links).find((menu) => menu.label === '&Help')!);
     const click = (label: string) => (help.find((item) => item.label === label)!.click as () => void)();
 
     click('&Report an Issue');
+    click('Show &Log Files');
     click('Request a &Feature');
-    expect(opened).toEqual(['bug report', 'feature request']);
+    expect(opened).toEqual(['bug report', 'log files', 'feature request']);
+    expect(itemsOf('darwin', 'Help').map((item) => item.label)).toContain('Show Log Files');
   });
 
   it('goes Home, creates and opens workspaces and links from File, and leaves updating one to the incoming chip', () => {

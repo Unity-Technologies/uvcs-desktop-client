@@ -1,15 +1,20 @@
 // First: errors nothing else catches are the app's to report from here on, never Electron's native dialog.
 import './errors/installUnexpectedErrorHandlers';
+import { release } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
 import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
-import { readBranchNames } from './cm/branchNames';
+import { cmBranchNameReads } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
-import { locateCm } from './cm/locateCm';
+import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
+import { createCmRuntime } from './cmRuntime/createCmRuntime';
 import { warnOnOrganizationIds } from './cm/organizationIds';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
 import { findWorkspaceRoot } from './cm/workspaceRoot';
+import { logAppHealth } from './diagnostics/appHealth';
+import { appLog } from './diagnostics/appLog';
+import { commandText, startedText } from './diagnostics/logRecords';
 import { apiMethods } from './ipc/apiMethods';
 import { EarlyCalls } from './ipc/EarlyCalls';
 import { registerApi } from './ipc/registerApi';
@@ -32,9 +37,11 @@ import { handleLaunchRequests, isTheRunningApp, launchNamesAFolder } from './sta
 import { receiveLinks, registerAsLinkHandler } from './startup/linkRequests';
 import type { LinkRequests } from './links/LinkRequests';
 import { trackOperations } from './startup/operationTracking';
+import { KEEP_COVERED_WINDOWS_DRAWING, windowsStayInBackground } from './window/backgroundWindows';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
+import { trackSignIns } from './startup/signIns';
 import { isShown, watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
@@ -48,17 +55,39 @@ import { showProgressOnAppIcon } from './window/showProgressOnAppIcon';
 import { WindowWrites } from './window/WindowWrites';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
+import { WorkspaceServers } from './workspace/WorkspaceServers';
+import { readWorkspaceOrigin } from './cm/workspaceStatus';
 
 const userData = app.getPath('userData');
-// Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
-const cm = new CmClient(locateCm, join(userData, 'outside-workspaces'));
 const settings = openSettings(userData);
-// What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
-const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
+// Which `cm` runs, and the app's own set up when it isn't there yet (docs/features/cm-runtime.md).
+const cmRuntime = createCmRuntime({
+  settings,
+  prunes: app.isPackaged,
+  relocated: (change) => {
+    // What the first window was read ahead from is the `cm` before.
+    early.dropAll();
+    cm.relocate(change);
+  },
+  holdCm: () => cm.hold(),
+  logCommand: (entry) => cm.logEntry(entry),
+  statusChanged: (status) => {
+    sendEvent('cmRuntimeChanged', status);
+    appIcon.cmSetupReported(cmSetupIconProgress(status));
+  },
+});
+// Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
+const cm = new CmClient(() => cmRuntime.cmPath(), join(userData, 'outside-workspaces'));
+// What a workspace is loaded from, shared by the reads that follow one another as a window opens it; each one's server
+// remembered as it's read, for the sign-in gate.
+const workspaceServers = new WorkspaceServers((directory) => readWorkspaceOrigin(cm, directory));
+const headers = new WorkspaceHeaders(workspaceServers.remembering(cmHeaderReaders(cm)));
+// One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
+const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
-  (place) => readBranchNames(cm, place),
+  cmBranchNameReads(cm),
   Date.now,
   // A repository's names are kept while a window explores it (`windows.explores`); its last window lets them go.
   (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
@@ -77,11 +106,12 @@ const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
   beforeRestart: () => quitting.restartToInstall(),
-});
+}, cmRuntime);
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installMenuBar(),
+  cmSetup: () => cmRuntime.setupRunning(),
   onClosed: (viewer) => watchers.release(viewer),
   onRepositoryLeft: (repository) => {
     branchNames.forget(repositoryPlace(repository));
@@ -99,7 +129,7 @@ const closing = new ClosingWithWrites({
   kept: (windowId) => appIcon.windowKept(windowId),
   close: (windowId) => BrowserWindow.fromId(windowId)?.close(),
 });
-const installMenuBar = appMenuInstaller(windows, updates);
+const installMenuBar = appMenuInstaller(windows, updates, appLog.file, cmRuntime);
 const quitting = new Quitting({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
@@ -119,6 +149,8 @@ const commandLog = new CommandLogRelay((entry) => {
   else sendEvent('commandLogged', entry);
 });
 cm.onCommandLogged((entry) => commandLog.logged(entry));
+// And to the log file, which outlives the windows' command logs (ARCHITECTURE.md "The log file").
+cm.onCommandLogged((entry) => appLog.write(commandText(entry)));
 if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
 if (!app.isPackaged) warnOnOrganizationIds(cm);
 ignoreOwnCommandWrites(cm, watchers, headers);
@@ -140,6 +172,7 @@ const api = createServices({
   handedOverDiffs: new HandedOverDiffs(),
   headers,
   updates,
+  cmRuntime,
   workspaceCopies,
   revisionCat,
   revisionDownloads,
@@ -147,6 +180,8 @@ const api = createServices({
   repositoryPaths,
   branchNames,
   issueTrackers,
+  diagnosticLog: appLog,
+  signIns,
 });
 const early = new EarlyCalls(apiMethods(api));
 
@@ -157,13 +192,15 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   void repositoryPaths.removeLeftOvers();
   void removeLeftOverTempDirectories();
   registerApi(api, early);
+  // `net` downloads only once Electron is ready.
+  cmRuntime.start();
   followAppTheme(settings);
   handleQuitting(quitting);
   installDockMenu(windows);
   updates.checkPeriodically();
   registerAsLinkHandler();
   const openFirst = (): void => {
-    openFirstWindow({ cm, windows, early, settings, commandLog }, readAhead);
+    openFirstWindow({ cm, windows, early, settings, commandLog, cmReady: () => cmRuntime.isReady() }, readAhead);
     links.windowsOpened();
   };
   void launched.then(openFirst, openFirst);
@@ -171,11 +208,18 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   app.on('activate', () => windows.all().length === 0 && windows.open());
 }
 
+if (windowsStayInBackground(process.env, app.isPackaged)) {
+  app.commandLine.appendSwitch(KEEP_COVERED_WINDOWS_DRAWING.switch, KEEP_COVERED_WINDOWS_DRAWING.value);
+}
+
 if (isTheRunningApp()) {
-  const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
+  appLog.write(startedText({ appVersion: app.getVersion(), platform: process.platform, osRelease: release(), arch: process.arch, electronVersion: process.versions.electron }));
+  logAppHealth(app, appLog);
+  const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder), cmRuntime);
   const links = receiveLinks(windows);
-  // `cm` doesn't need Electron ready: the first screen's commands run while it gets there.
-  const readAhead = readFirstScreenAhead({ cm, windows, early, settings }, launchNamesAFolder());
+  // `cm` doesn't need Electron ready: the first screen's commands run while it gets there. Not while the app's own `cm`
+  // still has to be set up: the window shows the setup first, and reads its screen once it's done.
+  const readAhead = cmRuntime.isReady() ? readFirstScreenAhead({ cm, windows, early, settings }, launchNamesAFolder()) : null;
   void app.whenReady().then(() => start(launched, readAhead, links));
 } else {
   app.quit();

@@ -14,6 +14,7 @@ import type { MatchSide } from './moveMatches';
 import { matchedMessage } from './moveMatchWords';
 import { pickMoveMatch } from './MoveMatchDialog';
 import { askUndoChanges } from './UndoChangesDialog';
+import { askFilterRules } from './FilterRulesDialog';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
 /** The item's path on disk; the empty path is the workspace folder itself (the Files tree's root row). */
@@ -113,6 +114,13 @@ export async function searchMatches(workspacePath: string, change: PendingChange
   if (recorded) toast.success(matchedMessage(match));
 }
 
+/** Shows the suggested rules for the user to change, then adds what they confirm to `list`'s rules file. */
+export async function askAndAddFilterRules(workspacePath: string, list: FilterRuleList, suggested: string[]): Promise<void> {
+  const patterns = await askFilterRules(FILTER_LIST_FILES[list], suggested);
+  if (patterns) await addFilterRules(workspacePath, list, patterns);
+}
+
+/** Adds rules to `list`'s rules file without asking: for a button whose label already names the one rule it adds. */
 export async function addFilterRules(workspacePath: string, list: FilterRuleList, patterns: string[]): Promise<void> {
   const added = await runVoidAction(workspacePlace(workspacePath), "Couldn't update the rules", () => api.pendingChanges.addFilterRules(workspacePath, list, patterns));
   if (added) toast.success(`Added ${addedRulesWording(patterns)} to ${FILTER_LIST_FILES[list]}`);

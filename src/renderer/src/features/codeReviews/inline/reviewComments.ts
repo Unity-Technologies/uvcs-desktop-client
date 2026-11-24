@@ -4,7 +4,7 @@ import { navigation } from '../../../app/navigation/navigationStore';
 import type { PageOf } from '../../../app/navigation/pages';
 import type { DiffFocusRequest } from '../../diff/diffFocusRequest';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { anchorPath, writtenIn, type LineThread } from './fileThreads';
+import { anchorPath, writtenIn, type FileThread, type LineThread } from './fileThreads';
 import type { ContextRequest } from './commentContext';
 
 /**
@@ -29,9 +29,9 @@ export interface ReviewComments {
   user: string | undefined;
   focus: ThreadFocus | null;
   /** Shows a thread in the Changes tab: its file, in the mode it was written in, scrolled to it. */
-  goToThread: (thread: LineThread) => void;
+  goToThread: (thread: FileThread) => void;
   /** Selects a thread already on screen, its card clicked or focused in the code: nothing scrolls but the panel's list. */
-  selectThread: (thread: LineThread) => void;
+  selectThread: (thread: FileThread) => void;
   /** Shows a thread in the Conversation tab, among the rest. */
   showInConversation: (threadId: number) => void;
   /** Shows a thread in context (`useCommentContext`); none until the place's repository is known. */
@@ -56,12 +56,14 @@ export function showInConversation(reviewId: number, threadId: number): void {
 
 /**
  * What the review's diff is asked for to go to a thread: its file (without the leading slash, as the diff names
- * files), in the mode it was written in: the changeset of a comment written changeset by changeset, or the whole
- * branch (`null`); a review of anything but a branch has one mode.
+ * files), in the mode it was written in: the changeset of a comment written in one changeset's diff, or the whole
+ * branch (`null`); a review of anything but a branch has one mode. `inChangeset`, the changeset the page names (a
+ * change request shown where it was applied), wins over where it was written.
  */
-export function threadDiffRequest(review: Pick<CodeReview, 'target'>, thread: LineThread, seq: number): DiffFocusRequest {
+export function threadDiffRequest(review: Pick<CodeReview, 'target'>, thread: FileThread, seq: number, inChangeset?: number): DiffFocusRequest {
   const path = anchorPath(thread.root.anchor);
   if (review.target.kind !== 'branch') return { path, seq };
+  if (inChangeset !== undefined) return { path, changesetId: inChangeset, seq };
   const written = writtenIn(review.target, thread);
   return { path, changesetId: written.kind === 'changeset' ? written.changesetId : null, seq };
 }

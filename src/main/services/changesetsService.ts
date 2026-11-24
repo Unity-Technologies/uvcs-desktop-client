@@ -1,3 +1,5 @@
+import { changeRequestsNotApplied } from '../cm/changeRequestsNotApplied';
+import { CmError } from '../cm/CmError';
 import type { ChangesetsApi } from '@shared/api/changesets';
 import type { OneObjectRead } from '@shared/api/oneObjectRead';
 import type { Changeset } from '@shared/domain/changeset';
@@ -49,7 +51,15 @@ export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
 
     async editComment(place, changesetId, comment) {
       const at = cmPlace(place);
-      await cm.query(['changeset', 'editcomment', at.spec(`cs:${changesetId}`), comment], at.options);
+      try {
+        await cm.query(['changeset', 'editcomment', at.spec(`cs:${changesetId}`), comment], at.options);
+        return {};
+      } catch (error) {
+        // Saved, and then `cm` fails naming the change requests no review had pending.
+        const notApplied = error instanceof CmError ? changeRequestsNotApplied(error.command.output, comment) : null;
+        if (!notApplied) throw error;
+        return { changeRequestsNotApplied: { requests: notApplied, logEntryId: (error as CmError).command.logEntryId } };
+      }
     },
 
     async moveToBranch(place, changesetId, branch) {

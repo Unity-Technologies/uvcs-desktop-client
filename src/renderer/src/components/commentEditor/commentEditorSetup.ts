@@ -15,6 +15,8 @@ import { liveDrawing } from './liveDecorations';
 import { tablesIn } from './tableModel';
 import { verticalMoveInto } from './verticalMove';
 import { issueReferencesCompartment, withIssueReferences } from './issueReferencesFacet';
+import { changeRequestsOfferedCompartment, changeRequestsOpened, withChangeRequestsOffered } from './changeRequestTrigger';
+import { commentedFileCompartment, withCommentedFile } from './commentedFileLanguage';
 import { compactChips, widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { oneLine } from './oneLine';
@@ -81,6 +83,9 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     widgetPortals.of(options.portals),
     compactChips.of(options.singleLine),
     issueReferencesCompartment.of(withIssueReferences(undefined)),
+    changeRequestsOfferedCompartment.of(withChangeRequestsOffered(false)),
+    commentedFileCompartment.of(withCommentedFile(null)),
+    changeRequestsOpened,
     editable.of(editableWhen(enabled)),
     theme.of(themed(codeThemeName)),
     EditorView.lineWrapping,

@@ -21,8 +21,11 @@ import { repositoryFileSearchKey, repositoryFileSearchView, searchesFor } from '
 import { RepositoryFileSearchList } from '../repositoryFiles/RepositoryFileSearchList';
 import { useRepositoryFileSearch } from '../repositoryFiles/useRepositoryFileSearch';
 import { applyDownloads } from './applyDownloads';
+import { choicesAwaitReads, downloadSearchRow, foldersOfResultsSoFar } from './downloadSearch';
+import { chooseDownloadsNote } from './workspaceDownloads';
 import { downloadRules, toggled, type DownloadedChoices } from './downloadSelection';
 import {
+  downloadChangeMarker,
   downloadKey,
   downloadRows,
   downloadSearchOf,
@@ -40,9 +43,12 @@ const ROOT = '';
 /** Stands in while there's no tree to list (the query is disabled then): a workspace on a shelve, or still loading. */
 const NO_TREE: RepositoryTreePoint = { kind: 'changeset', changeset: -1 };
 
-/** Lets the user tick what a partial workspace downloads and untick what it removes, then applies it in one go. */
-export function openChooseDownloads(workspacePath: string): void {
-  openDialog((close) => <ChooseDownloadsDialog workspacePath={workspacePath} close={close} />);
+/**
+ * Lets the user tick what a partial workspace downloads and untick what it removes, then applies it in one go. Opened
+ * from an item (Files' menu), it starts with that item selected and the folders above it open.
+ */
+export function openChooseDownloads(workspacePath: string, initialPath?: string): void {
+  openDialog((close) => <ChooseDownloadsDialog workspacePath={workspacePath} initialPath={initialPath} close={close} />);
 }
 
 function loadedInKey(workspacePath: string, folder: string) {
@@ -53,13 +59,14 @@ function folderRead<T>(folder: string, query: { data: T | undefined; isError: bo
   return { folder, data: query.data, failed: query.isError };
 }
 
-function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string; close: () => void }) {
+function ChooseDownloadsDialog({ workspacePath, initialPath, close }: { workspacePath: string; initialPath?: string; close: () => void }) {
   const queryClient = useQueryClient();
   const info = useWorkspaceInfoOf(workspacePath).data;
   const treePoint = info ? downloadTreePoint(info) : null;
   const place = useMemo(() => workspacePlace(workspacePath), [workspacePath]);
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
-  const [selected, setSelected] = useState(ROOT);
+  const [initial] = useState(() => revealedDownload(initialPath ?? ROOT, new Set()));
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(initial.expanded);
+  const [selected, setSelected] = useState(initial.selected);
   const [choices, setChoices] = useState<DownloadedChoices>(() => new Map());
   const [applying, setApplying] = useState(false);
   const [query, setQuery] = useState('');
@@ -76,6 +83,15 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   const searchPlace = useMemo(() => repositoryPlace(info?.repository ?? ''), [info?.repository]);
   const search = repositoryFileSearchView(useRepositoryFileSearch(searchPlace, searchOf?.changeset ?? null, query), query, searchOf?.name ?? '');
   const searching = searchesFor(query);
+  const foundPaths = search.rows.map((row) => row.path);
+
+  // Each result shows whether the workspace holds it, so the folders above the results have their loaded items read
+  // (local). They're kept while the dialog is open, so typing on doesn't read them again as results come and go.
+  // Updated while rendering, as React advises for state that follows other data: the set changes only when the
+  // results bring a new folder.
+  const [foldersOfResults, setFoldersOfResults] = useState<ReadonlySet<string>>(() => new Set());
+  const foldersSoFar = foldersOfResultsSoFar(foldersOfResults, foundPaths);
+  if (foldersSoFar !== foldersOfResults) setFoldersOfResults(foldersSoFar);
 
   // The repository side: what the workspace's changeset (or branch) holds, folder by folder.
   const repositoryFolders = [ROOT, ...expanded];
@@ -90,14 +106,15 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   // The workspace side: what it holds of each loaded folder. Whether a folder is loaded shows only once its parent is
   // read, so the folders to read come from what this dialog read so far; dropped as it closes (`gcTime` 0), they're
   // read afresh each time it opens, since applying changes them.
+  const foldersShown = new Set([...expanded, ...foldersOfResults]);
   const loadedSoFar = dataByFolder(
-    repositoryFolders.map((folder) => ({
+    [ROOT, ...foldersShown].map((folder) => ({
       folder,
       data: queryClient.getQueryData<string[]>(loadedInKey(workspacePath, folder)),
       failed: false,
     })),
   );
-  const loadedFolders = foldersToReadLoaded(downloadTreeOf(dataByFolder(listingReads), loadedSoFar), expanded);
+  const loadedFolders = foldersToReadLoaded(downloadTreeOf(dataByFolder(listingReads), loadedSoFar), foldersShown);
   const loadedQueries = useQueries({
     queries: loadedFolders.map((folder) => ({
       queryKey: loadedInKey(workspacePath, folder),
@@ -116,6 +133,7 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   const status = rootStatus(tree, failures);
   const rows = downloadRows(tree, choices, expanded, failures);
   const rules = downloadRules(tree, choices);
+  const foundRows = new Map(foundPaths.map((path) => [path, downloadSearchRow(path, tree, choices, failures)]));
   const treeId = useId();
   const rowId = (index: number) => `${treeId}-${index}`;
   const selectedIndex = rows.findIndex((row) => row.path === selected);
@@ -137,6 +155,12 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
       return next;
     });
   const toggleChecked = (path: string): void => setChoices((current) => toggled(path, tree, current));
+  // A result ticked in the search opens the folders above it, so they're read and the rules can reach it
+  // (`choicesAwaitReads`), and the tree shows it once the search is cleared.
+  const toggleFound = (path: string): void => {
+    toggleChecked(path);
+    setExpanded((open) => revealedDownload(path, open).expanded);
+  };
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const outcome = downloadKey(rows, selected, event.key);
@@ -174,13 +198,14 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
   return (
     <Dialog
       title="Choose what to download"
-      width={520}
+      description={chooseDownloadsNote(info?.kind)}
+      width={640}
       onClose={close}
       footer={
         <>
           <span className={styles.summary}>{rulesSummary(rules)}</span>
           <Button onClick={close}>Cancel</Button>
-          <Button variant="primary" disabled={!canApply(rules, applying)} onClick={() => void apply()}>
+          <Button variant="primary" disabled={!canApply(rules, applying, choicesAwaitReads(tree, choices, failures))} onClick={() => void apply()}>
             Apply
           </Button>
         </>
@@ -208,7 +233,28 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
       )}
       {status === 'ready' && searching && (
         <div className={styles.found}>
-          <RepositoryFileSearchList view={search} highlighted={highlighted} onHighlight={setHighlighted} onPick={reveal} />
+          <RepositoryFileSearchList
+            view={search}
+            highlighted={highlighted}
+            onHighlight={setHighlighted}
+            onPick={reveal}
+            lead={(path) => {
+              const found = foundRows.get(path);
+              if (found?.kind === 'loading') return <Spinner size={12} />;
+              if (found?.kind !== 'check') return null;
+              return <Checkbox checked={found.check} focusable={false} ariaLabel={found.label} onChange={() => toggleFound(path)} />;
+            }}
+            end={(path) => {
+              const found = foundRows.get(path);
+              if (found?.kind === 'failed') return <span className={styles.failed}>{found.failure}</span>;
+              if (found?.kind !== 'check' || !found.marker) return null;
+              return (
+                <span className={styles.marker} data-change={found.change}>
+                  {found.marker}
+                </span>
+              );
+            }}
+          />
         </div>
       )}
       {status === 'ready' && (
@@ -223,41 +269,54 @@ function ChooseDownloadsDialog({ workspacePath, close }: { workspacePath: string
           onKeyDown={onKeyDown}
           autoFocus
         >
-          {rows.map((row, index) => (
-            <div
-              key={row.path}
-              id={rowId(index)}
-              role="treeitem"
-              aria-selected={row.path === selected}
-              aria-expanded={row.expandable ? row.expanded : undefined}
-              aria-checked={row.check}
-              className={styles.row}
-              style={{ paddingInlineStart: `calc(${row.level} * var(--space-4) + var(--space-1))` }}
-              onClick={() => setSelected(row.path)}
-              onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
-            >
-              {row.expandable ? (
-                <button
-                  className={styles.chevron}
-                  data-expanded={row.expanded}
-                  aria-label={row.expanded ? 'Collapse' : 'Expand'}
-                  tabIndex={-1}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleExpanded(row.path);
-                  }}
-                >
-                  <ChevronRight size={13} />
-                </button>
-              ) : (
-                <span className={styles.chevronSpace} />
-              )}
-              <Checkbox checked={row.check} focusable={false} ariaLabel={row.name} onChange={() => toggleChecked(row.path)} />
-              <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
-              {row.note === 'loading' && <Spinner size={12} />}
-              {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
-            </div>
-          ))}
+          {rows.map((row, index) => {
+            const marker = downloadChangeMarker(row.change);
+            return (
+              <div
+                key={row.path}
+                id={rowId(index)}
+                role="treeitem"
+                aria-selected={row.path === selected}
+                aria-expanded={row.expandable ? row.expanded : undefined}
+                aria-checked={row.check}
+                className={styles.row}
+                style={{ paddingInlineStart: `calc(${row.level} * var(--space-4) + var(--space-1))` }}
+                onClick={() => setSelected(row.path)}
+                onDoubleClick={() => row.expandable && toggleExpanded(row.path)}
+              >
+                {row.expandable ? (
+                  <button
+                    className={styles.chevron}
+                    data-expanded={row.expanded}
+                    aria-label={row.expanded ? 'Collapse' : 'Expand'}
+                    tabIndex={-1}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleExpanded(row.path);
+                    }}
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                ) : (
+                  <span className={styles.chevronSpace} />
+                )}
+                <Checkbox
+                  checked={row.check}
+                  focusable={false}
+                  ariaLabel={row.name}
+                  onChange={() => toggleChecked(row.path)}
+                />
+                <ItemRow icon={<ItemIcon itemType={row.iconType} name={row.name} />} label={<span className={styles.name}>{row.name}</span>} />
+                {marker && (
+                  <span className={styles.marker} data-change={row.change}>
+                    {marker}
+                  </span>
+                )}
+                {row.note === 'loading' && <Spinner size={12} />}
+                {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
+              </div>
+            );
+          })}
         </div>
       )}
     </Dialog>

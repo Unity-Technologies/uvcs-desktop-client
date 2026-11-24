@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import type { ReactElement } from 'react';
+import { useRef, type ReactElement } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MenuEntries, type MenuPrimitives } from './MenuEntries';
 import styles from './Menu.module.css';
@@ -27,15 +27,19 @@ interface ActionDropdownMenuProps {
 }
 
 export function ActionDropdownMenu({ entries, align = 'end', children, open, onOpenChange, onCloseAutoFocus }: ActionDropdownMenuProps) {
+  // Typed as Radix types its trigger; `asChild` makes it whatever element `children` is.
+  const trigger = useRef<HTMLButtonElement>(null);
   return (
     <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
-      <DropdownMenu.Trigger asChild>{children}</DropdownMenu.Trigger>
+      <DropdownMenu.Trigger asChild ref={trigger}>
+        {children}
+      </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           className={styles.content}
           align={align}
           sideOffset={4}
-          onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus)}
+          onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus, trigger.current)}
           // React bubbles events out of portals to the trigger's ancestors: an item picked (Enter clicks it too) must not
           // also click the row the menu belongs to (the palette's Delete… opened the branch as well), nor press it (a
           // changelist's "…" menu selected and folded the changelist).

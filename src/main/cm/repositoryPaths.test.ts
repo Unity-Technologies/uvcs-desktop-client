@@ -35,7 +35,7 @@ describe('readListedPath', () => {
 
   it('reads an xlink as the folder the listing walks into', () => {
     const reader = new RecordReader(readListedPath);
-    reader.read(Buffer.from(formatOutput(['dir', '/'], ['xlink', '/lib'], ['txt', '/lib/theme.css']), 'utf8'));
+    reader.read(Buffer.from(formatOutput(['dir', '/'], ['dir', '/lib'], ['txt', '/lib/theme.css']), 'utf8'));
 
     expect(reader.finish()).toEqual([
       { path: 'lib', isDirectory: true },

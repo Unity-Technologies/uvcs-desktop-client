@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
+import { useNewValuesEffect } from '../../lib/useNewValuesEffect';
+import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { MenuEntry } from '../../lib/actions';
 import { Arrivals } from '../../lib/arrivals';
@@ -121,8 +122,9 @@ export function ChangesList({
     paddingStart: LIST_INSET,
     paddingEnd: LIST_INSET,
   });
-  // The selected row stays in view, however it was selected (the diff going on to the next file).
-  useEffect(() => {
+  // The selected row stays in view, however it was selected (the diff going on to the next file); not again as the
+  // view shows again, which would pull the list back from where the user scrolled it.
+  useNewValuesEffect(() => {
     const index = selection.anchor === null ? undefined : rowIndexes.get(selection.anchor);
     if (index !== undefined) virtualizer.scrollToIndex(index);
   }, [selection.anchor]);

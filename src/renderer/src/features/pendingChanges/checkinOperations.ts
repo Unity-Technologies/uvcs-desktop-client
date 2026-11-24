@@ -1,13 +1,12 @@
 import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { ApiError, api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
-import { saveSettings } from '../../app/settings/useSettings';
-import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
+import { rememberRecentComment } from '../../app/settings/useSettings';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
+import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving, withChangeRequestsApplied } from '../../app/refresh/refreshScopes';
 import { commentLineText } from '../../lib/comments/commentText';
 import { pluralize } from '../../lib/text';
 import { prompt } from '../../ui/dialog/prompt';
@@ -18,8 +17,8 @@ import { expectedCheckinResult, releasedCheckoutsNote } from './checkinOutcome';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
 import { checkedInMessage, useSuccessMomentStore } from './successMoment';
-
-const MAX_RECENT_COMMENTS = 15;
+import { changeRequestsNotAppliedText } from '../codeReviews/changeRequests/notApplied';
+import { useCommandLogStore } from '../../app/shell/commandLogStore';
 
 interface CheckinOptions {
   workspacePath: string;
@@ -33,6 +32,13 @@ interface CheckinOptions {
   updateFirst?: boolean;
   /** Every pending change goes in: the success moment in the empty Changes tells it, so no toast does. */
   quiet?: boolean;
+  /**
+   * The comment goes in the recent comments (true unless said): not one the app wrote for a single use, such as a
+   * review suggestion's "Apply suggestion from …", which names a change request no longer pending once applied.
+   */
+  remembersComment?: boolean;
+  /** The user's whole check-in, offered again once a sign-in it was refused for is made (`OperationOptions.again`). */
+  again?: () => unknown;
 }
 
 /**
@@ -46,15 +52,20 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
 
   const rejected: { rejection?: CheckinRejection } = {};
   const result = await runOperation({
-    title: `Checking in ${pluralize(changes.length, 'change')}`,
+    title: checkinTitle(changes.length),
     workspacePath,
     run: async (operationId) =>
       expectedCheckinResult(await api.pendingChanges.checkin(workspacePath, { paths, comment, addsPrivate }, operationId), changes),
-    affects: isAffectedByCheckinOrUpdate,
+    affects: withChangeRequestsApplied(isAffectedByCheckinOrUpdate, comment),
     success: (done) => {
       if (done.kind === 'noChanges') return releasedCheckoutsNote(changes.length);
-      if (options.quiet) return null;
+      // Checked in, but the change requests the comment names weren't applied: said even when the moment would be quiet.
+      // No failure to point at in the status bar: `cm` failed after checking in (`markHandled`).
+      if (done.changeRequestsNotApplied) useCommandLogStore.getState().markHandled(done.changeRequestsNotApplied.logEntryId);
+      const notApplied = changeRequestsNotAppliedText(done.changeRequestsNotApplied?.requests ?? []);
+      if (options.quiet && !notApplied) return null;
       return {
+        ...(notApplied && { kind: 'info' as const, detail: notApplied }),
         title: checkedInMessage(done.changesetId, done.branch),
         action: {
           label: 'View',
@@ -62,6 +73,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
         },
       };
     },
+    again: options.again,
     onFailure: (error) => {
       rejected.rejection = (error instanceof ApiError && checkinRejection(error.command)) || undefined;
       return rejected.rejection !== undefined;
@@ -73,7 +85,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
   useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, detail: commentLineText(comment) || undefined });
-  if (comment.trim()) await rememberComment(comment.trim());
+  if (comment.trim() && options.remembersComment !== false) await rememberComment(workspacePath, comment.trim());
   return true;
 }
 
@@ -85,8 +97,11 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
  */
 async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinRejection | null): Promise<boolean> {
   const { workspacePath, changes } = options;
-  const incoming = await runRead("Couldn't check what came in", () => api.merge.incomingChanges(workspacePath));
-  if (!incoming?.branch) return false;
+  // Each step refused for a sign-in offers the whole check-in again, as the user started it.
+  const again = options.again && { what: checkinTitle(changes.length), run: options.again };
+  const incoming = await runRead("Couldn't check what came in", () => api.merge.incomingChanges(workspacePath), { place: workspacePlace(workspacePath), again });
+  // A partial workspace checks in without catching up (`behindBranch`), and `cm` never asks it to merge first.
+  if (!incoming?.branch || 'partial' in incoming) return false;
   // Someone updated the workspace since the incoming check: nothing to catch up with.
   if (!rejection && incoming.changesets.length === 0) return checkinChanges(options);
 
@@ -103,8 +118,12 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
     navigation.goToView('incoming');
     return false;
   }
-  if (!(await updateToIncoming(workspacePath, incoming))) return false;
+  if (!(await updateToIncoming(workspacePath, incoming, options.again))) return false;
   return checkinChanges(options);
+}
+
+function checkinTitle(count: number): string {
+  return `Checking in ${pluralize(count, 'change')}`;
 }
 
 /**
@@ -141,8 +160,12 @@ export function undoUnchangedCheckouts(workspacePath: string): Promise<void | un
   return runAction(workspacePlace(workspacePath), "Couldn't undo the unchanged checkouts", () => api.pendingChanges.undoUnchanged(workspacePath), isAffectedByPendingChangeEdit);
 }
 
-/** Puts the comment first among the recent ones the check-in panel offers, once. A store that can't save it says so. */
-function rememberComment(comment: string): Promise<void> {
-  const { recentComments } = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
-  return saveSettings({ recentComments: [comment, ...recentComments.filter((recent) => recent !== comment)].slice(0, MAX_RECENT_COMMENTS) });
+/**
+ * Puts the comment first among the recent ones the check-in panel offers in the workspace's repository, once
+ * (`rememberRecentComment`, which the main process applies). The repository comes from the workspace's info, which
+ * Changes has already read (`cm wi`, a local read); a workspace whose info can't be read remembers nothing.
+ */
+async function rememberComment(workspacePath: string, comment: string): Promise<void> {
+  const { repository } = await queryClient.ensureQueryData(workspaceInfoQuery(workspacePath)).catch(() => ({ repository: undefined }));
+  if (repository) await rememberRecentComment(repository, comment);
 }

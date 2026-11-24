@@ -1,6 +1,7 @@
 import type { CmClient, CmRecordsOptions, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
 import { textOutputKind } from '../commandOutputs';
+import { refuseStickyShellOptions } from '../stickyShellOptions';
 import { extractErrorMessage } from '../errorMessage';
 import { RecordReader, type ReadRecord } from '../formatRecords';
 import { LineReader, type ReadLine } from '../LineReader';
@@ -57,6 +58,8 @@ export interface FakeCm {
   released: string[];
   /** Working directories a window watches (`show`), where queries that run anywhere go. */
   shown: string[];
+  /** How many times the `cm shell` sessions were restarted (`restartShells`: a server signed in again). */
+  shellRestarts(): number;
 }
 
 /**
@@ -72,11 +75,14 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   const warmedUp: string[] = [];
   const released: string[] = [];
   const shown: string[] = [];
+  let shellRestarts = 0;
   const keys = Object.keys(answers).sort((a, b) => b.length - a.length);
 
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}, readsRecords = false): Promise<string> {
     const command: FakeCmCommand = { via, args, line: args.join(' '), options, readsRecords };
     if (!readsRecords) textOutputKind(args);
+    // As `CmClient`, a quick command never carries an option a pooled `cm shell` would keep (`STICKY_SHELL_OPTIONS`).
+    if (via === 'query') refuseStickyShellOptions(args);
     commands.push(command);
     if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (take it from an output that names it): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));
@@ -110,6 +116,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     show: (cwd: string) => void shown.push(cwd),
     release: (cwd: string) => void released.push(cwd),
     relocate: () => undefined,
+    restartShells: () => void shellRestarts++,
     onCommandLogged: () => () => undefined,
     onCommandStarted: () => () => undefined,
     dispose: () => undefined,
@@ -124,6 +131,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     warmedUp,
     released,
     shown,
+    shellRestarts: () => shellRestarts,
   };
 }
 

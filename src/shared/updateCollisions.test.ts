@@ -1,0 +1,59 @@
+import { describe, expect, it } from 'vitest';
+import type { DiffEntry } from './domain/diff';
+import type { PendingChange } from './domain/pendingChanges';
+import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
+
+function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {
+  return { path, status, itemType, baseRevisionId: 10, revisionId: 20, repository: 'game@local' };
+}
+
+function local(path: string, kinds: PendingChange['kinds']): PendingChange {
+  return { path, kinds, itemType: 'file', size: 0, lastModified: '' };
+}
+
+describe('findUpdateBlockers', () => {
+  it('reports local changes to items the branch deleted or moved', () => {
+    const moved: DiffEntry = { ...incoming('src/new-name.txt', 'moved'), oldPath: 'src/old-name.txt' };
+    expect(
+      findUpdateBlockers([incoming('src/gone.txt', 'deleted'), moved, incoming('src/a.txt', 'changed')], [
+        local('src/gone.txt', ['changed']),
+        local('src/old-name.txt', ['checkedOut']),
+        local('src/a.txt', ['changed']),
+      ]),
+    ).toEqual(['src/gone.txt', 'src/old-name.txt']);
+  });
+
+  it('reports local changes to a file the branch replaced: the item changed is deleted there, another took its path', () => {
+    // As `mergedDiffEntries` reads `cm diff`'s A and D of one path (a file made a move of an older one on the branch).
+    const replaced: DiffEntry = { ...incoming('src/Score.cs', 'changed'), replaced: true };
+
+    expect(findUpdateBlockers([replaced], [local('src/Score.cs', ['changed'])])).toEqual(['src/Score.cs']);
+    expect(findUpdateConflicts([replaced], [local('src/Score.cs', ['changed'])])).toEqual([]);
+  });
+});
+
+describe('findUpdateConflicts', () => {
+  it('reports files changed both locally and on the branch', () => {
+    const conflicts = findUpdateConflicts(
+      [incoming('src/a.txt', 'changed'), incoming('src/b.txt', 'changed'), incoming('img.png', 'changed', 'binaryFile')],
+      [local('src/a.txt', ['checkedOut', 'changed']), local('img.png', ['changed'])],
+    );
+    expect(conflicts).toEqual([
+      { path: 'src/a.txt', isBinary: false, baseRevisionId: 10, incomingRevisionId: 20, repository: 'game@local' },
+      { path: 'img.png', isBinary: true, baseRevisionId: 10, incomingRevisionId: 20, repository: 'game@local' },
+    ]);
+  });
+
+  it('ignores local changes that do not touch the content', () => {
+    expect(findUpdateConflicts([incoming('src/a.txt', 'changed')], [local('src/a.txt', ['moved'])])).toEqual([]);
+  });
+
+  it('ignores incoming files whose permissions alone changed: their content is the one loaded', () => {
+    const onlyPermissions: DiffEntry = { ...incoming('tools/build.sh', 'changed'), baseRevisionId: 20, permissionsChange: { before: '-rw-r--r--', after: '-rwxr-xr-x' } };
+    expect(findUpdateConflicts([onlyPermissions], [local('tools/build.sh', ['checkedOut', 'changed'])])).toEqual([]);
+  });
+
+  it('ignores incoming additions and directories', () => {
+    expect(findUpdateConflicts([incoming('new.txt', 'added'), incoming('src', 'changed', 'directory')], [local('src', ['changed'])])).toEqual([]);
+  });
+});

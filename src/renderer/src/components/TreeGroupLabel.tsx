@@ -8,6 +8,8 @@ interface TreeGroupLabelProps {
   /** Before the name: a status group's badge. */
   icon?: ReactNode;
   collapsed: boolean;
+  /** Between the chevron and the icon: Incoming's checkbox choosing what an update brings. */
+  before?: ReactNode;
   /** How many items it holds. */
   count: number;
   /** What it says instead of the count, e.g. how many of its conflicts are resolved ("1 of 3"), and that count's tooltip. */
@@ -24,15 +26,16 @@ export interface GroupProgress {
 }
 
 /** A group of a list of changed files (a merge's conflicts, Incoming's files changed on both sides): its chevron, name and count. */
-export function TreeGroupLabel({ label, icon, collapsed, count, progress, tip }: TreeGroupLabelProps) {
+export function TreeGroupLabel({ label, icon, collapsed, before, count, progress, tip }: TreeGroupLabelProps) {
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={collapsed} aria-hidden />
+      {before}
       {icon}
       <span className={styles.groupLabel} data-tip={tip}>
         {label}
       </span>
-      <span className={styles.count} data-tip={progress?.tip}>
+      <span className={styles.groupCount} data-tip={progress?.tip}>
         {progress ? progress.count : formatCount(count)}
       </span>
     </>

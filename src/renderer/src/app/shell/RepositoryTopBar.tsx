@@ -3,19 +3,20 @@ import { Button } from '../../ui/Button';
 import { AccountButton } from '../account/AccountButton';
 import { createWorkspaceOfExplored } from '../workspace/createWorkspaceOfExplored';
 import { useSession } from '../workspace/sessionStore';
+import { RepositoryPill } from './RepositoryPill';
 import { TopBar } from './TopBar';
 import { TopBarSearch } from './TopBarSearch';
 
 /**
- * The top bar of a repository explored without a workspace: the search, the way to make it a workspace without
- * leaving it ("Create workspace"), and the account.
+ * The top bar of a repository explored without a workspace: the repository after the home button, then the search,
+ * the way to make it a workspace without leaving it ("Create workspace"), and the account.
  */
 export function RepositoryTopBar({ repository }: { repository: string }) {
   const goHome = useSession((state) => state.goHome);
 
   const end = (
     <>
-      <TopBarSearch tip="Fuzzy search branches, labels, changesets, shelves, code reviews and commands" />
+      <TopBarSearch tip="Fuzzy search branches, labels, changesets, shelves, merge requests and commands" />
       <Button
         variant="primary"
         icon={<FolderPlus size={14} />}
@@ -28,5 +29,5 @@ export function RepositoryTopBar({ repository }: { repository: string }) {
     </>
   );
 
-  return <TopBar onHome={goHome} end={end} />;
+  return <TopBar onHome={goHome} place={<RepositoryPill repository={repository} />} end={end} />;
 }

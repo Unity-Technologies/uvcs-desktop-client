@@ -24,6 +24,15 @@ export function describeWindowError(reason: unknown, fallbackMessage = ''): Unex
   return { message: message || 'Unknown error', details: details || 'Unknown error' };
 }
 
+/**
+ * An error thrown while rendering (`AppErrorBoundary`): as any window error, but never left out as benign, since the
+ * screen it broke shows; with the components it was thrown in when React tells them, for the log file.
+ */
+export function renderError(reason: unknown, componentStack?: string | null): UnexpectedError {
+  const error = describeWindowError(reason) ?? { message: String(reason), details: String(reason) };
+  return componentStack ? { ...error, details: `${error.details}\nIn components:${componentStack}` } : error;
+}
+
 /** The bug report on an unexpected error: titled with its words, the app's details and its stack filled in. */
 export function unexpectedErrorIssueUrl(info: ReportingAppInfo, cmVersion: string | undefined, error: UnexpectedError): string {
   return bugReportUrl(info.issuesUrl, {

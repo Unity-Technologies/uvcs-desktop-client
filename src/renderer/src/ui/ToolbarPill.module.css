@@ -14,7 +14,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 16px;
+  min-width: 16px;
   color: var(--text-secondary);
 }
 
@@ -23,12 +23,12 @@
   flex: 1;
   flex-direction: column;
   justify-content: center;
-  gap: 1px;
   min-width: 0;
 }
 
 .label,
 .sub {
+  /* Each line box is tall enough for its font's descenders: overflow, which ellipsizes it, would clip a g or a p. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -37,11 +37,11 @@
 .label {
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
-  line-height: 15px;
+  line-height: 17px;
 }
 
 .sub {
   color: var(--text-tertiary);
   font-size: var(--text-xs);
-  line-height: 13px;
+  line-height: 15px;
 }

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 await vi.hoisted(async () => (await import('../testing/fakeWindow')).setPlatform('win32'));
 
-import { holdBackMenuKeyRelease, isListMenuKey, isRowMenuKey } from './rowMenu';
+import { holdBackMenuKeyRelease, isListMenuKey, isRowMenuKey, showsRowActions } from './rowMenu';
 
 /** A key press as React hands it to a list's handler. */
 function press(key: string, modifiers: { shiftKey?: boolean } = {}): ReactKeyboardEvent & { defaultPrevented: boolean } {
@@ -40,5 +40,13 @@ describe('the keys that open a list row’s menu', () => {
     holdBackMenuKeyRelease(otherRelease);
 
     expect([release.defaultPrevented, otherRelease.defaultPrevented]).toEqual([true, false]);
+  });
+});
+
+describe('the "…" on a row of a list driven from its filter', () => {
+  it('shows on the highlighted row, and on the row whose menu is open once the highlight moves on', () => {
+    expect(showsRowActions({ highlighted: true, menuOpen: false })).toBe(true);
+    expect(showsRowActions({ highlighted: false, menuOpen: true })).toBe(true);
+    expect(showsRowActions({ highlighted: false, menuOpen: false })).toBe(false);
   });
 });

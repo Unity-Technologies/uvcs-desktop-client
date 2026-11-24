@@ -1,9 +1,14 @@
-import type { IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, LoadedBranch, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
-import type { DecidedMerge, DirectoryDecision, MergePlan, MergeRequest, MergeResolutions, MergeResult } from '../domain/merge';
+import type { BranchAtChangeset, IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
+import type { DecidedMerge, DirectoryDecision, MergeConflictCounts, MergeOperation, MergePlan, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
   /** What the merge would do, without touching the workspace. */
-  preview(workspacePath: string, request: MergeRequest): Promise<MergePlan>;
+  preview(workspacePath: string, request: MergeOperation): Promise<MergePlan>;
+  /**
+   * How many files and directory conflicts merging `source` into `destination` on the server would leave to resolve:
+   * one `cm merge --to` preview, in a process of its own (it takes over a second on a big repository). Nothing changes.
+   */
+  conflictCounts(workspacePath: string, source: string, destination: string): Promise<MergeConflictCounts>;
   /**
    * Applies the merge page's directory decisions, in order, as the user makes them, and returns the merge calculated
    * again on them: a decision can move, remove or add file conflicts and changes. Nothing in the workspace changes.
@@ -11,14 +16,14 @@ export interface MergeApi {
    * (`MergeResolutions.directoryDecisionsId`). A decision whose conflict an earlier one took out of the merge, or moved
    * (it's then another conflict, decided again), is dropped.
    */
-  decideDirectoryConflicts(workspacePath: string, request: MergeRequest, decisionsId: string, decisions: DirectoryDecision[]): Promise<DecidedMerge>;
+  decideDirectoryConflicts(workspacePath: string, request: MergeOperation, decisionsId: string, decisions: DirectoryDecision[]): Promise<DecidedMerge>;
   /** Forgets a merge page's directory decisions: the page closed. */
   discardDirectoryDecisions(decisionsId: string): Promise<void>;
   /**
    * Runs the merge with the user's resolutions. Workspace merges leave pending changes to check in;
    * merges into a server branch create a changeset.
    */
-  run(workspacePath: string, request: MergeRequest, resolutions: MergeResolutions, operationId: string): Promise<MergeResult>;
+  run(workspacePath: string, request: MergeOperation, resolutions: MergeResolutions, operationId: string): Promise<MergeResult>;
   /**
    * The changeset that merged `sourceChangeset` into `destinationBranch` (e.g. a task branch's head into its parent), or
    * null when it wasn't merged there. One `cm find merge` returning a single link.
@@ -28,9 +33,19 @@ export interface MergeApi {
    * One light `cm find` for the newest changesets on `loaded.branch` after the loaded one, at most 100 of them however
    * far behind the workspace is (`countCapped` beyond); polled, so it reads nothing else.
    */
-  incomingSummary(workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary>;
-  /** What updating brings: the newest page of changesets, one diff from the loaded changeset to the head, and what collides locally. */
-  incomingChanges(workspacePath: string): Promise<IncomingChanges>;
+  incomingSummary(workspacePath: string, loaded: BranchAtChangeset | null): Promise<IncomingSummary>;
+  /**
+   * The newest changeset of `branch`, null when it has none: what a partial workspace's check polls, one light
+   * `cm find`, comparing its items again (`incomingChanges`) only when the head moved.
+   */
+  branchHead(workspacePath: string, branch: string): Promise<number | null>;
+  /**
+   * What updating brings: the newest page of changesets, one diff from the loaded changeset to the head, and what
+   * collides locally; in a partial workspace, its items the head changes (`PartialIncomingChanges`). `at` says where a
+   * workspace on a branch stands, as its workspace info told; without it, the workspace's header is read
+   * (`cm status --header`, shared for a few seconds with the workspace info's).
+   */
+  incomingChanges(workspacePath: string, at?: BranchAtChangeset): Promise<IncomingChanges>;
   /** One page of the incoming changesets: the incoming card's newest few, or Incoming's older ones. */
   incomingChangesets(workspacePath: string, request: IncomingChangesetsRequest): Promise<IncomingChangesetPage>;
   /** Updates the workspace, merging locally changed files that also changed on the branch. */

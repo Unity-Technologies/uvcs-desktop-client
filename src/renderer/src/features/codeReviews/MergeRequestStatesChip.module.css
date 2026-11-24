@@ -1,0 +1,13 @@
+/* Each state's glyph in its color (`--merge-request-<state>`), in the menu. */
+.stateIcon {
+  composes: stateColor from './mergeRequestStateColors.module.css';
+  display: inline-flex;
+  color: var(--merge-request-color);
+}
+
+/* On the highlighted item the glyph takes the item's own color, as every menu icon does: a state's color on the accent
+   would fall below contrast. */
+[data-highlighted] > .stateIcon {
+  color: inherit;
+  opacity: 1;
+}

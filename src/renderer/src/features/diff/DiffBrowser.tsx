@@ -20,7 +20,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import type { DiffBrowserSlots } from './DiffBrowserLayout';
-import { DIFF_ENTRY_FACTS, diffEntryTones } from './diffEntrySources';
+import { DIFF_ENTRY_FACTS, DIFF_VIEW_OFFER, diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
 import { pairedEntryAt, pairedFocus } from './diffFocus';
@@ -36,6 +36,7 @@ import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, selectNow, useFileSteps } from './viewer/fileSteps';
+import { StepsAroundEmptyState } from './viewer/StepsAroundEmptyState';
 import { LineLinksContext, type LineLinks } from './viewer/lineLinks';
 import { useFocusUntilMoved } from './viewer/useFocusUntilMoved';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
@@ -105,7 +106,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     return markOf && withMetaMarks(markOf, pairs.metaOf);
   }, [entryFlag, targetKey, pairs]);
   const flag = useMemo(() => (entryFlag && flagMarkOf ? entryFlagChip(entryFlag, flagMarkOf) : undefined), [entryFlag, flagMarkOf]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag });
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag, viewOffer: DIFF_VIEW_OFFER });
   const markOf = useMemo(() => {
     if (!entryFlag || !flagMarkOf) return undefined;
     return (entry: DiffEntry) => {
@@ -129,7 +130,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const findSibling = useMemo(() => diffSibling(readEntries, target, workspaceRepository), [readEntries, target, workspaceRepository]);
   // A model's materials and textures are the ones where the diff points to, the side before with its changes undone.
   const findAssetsPoint = useMemo(() => diffAssetsPoint(readEntries, target), [readEntries, target]);
-  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => setSelection(singleSelection(key))), pathOf: (key) => key });
+  // Every row in list order: from a folder selected, the arrows go on to the files around it (`adjacentKey`).
+  const rowOrder = useMemo(() => rows.map((row) => row.key), [rows]);
+  const fileSteps = useFileSteps({ keys: rowKeys, rowOrder, current: selection.anchor, select: (key, selected) => selectNow(selected, () => setSelection(singleSelection(key))), pathOf: (key) => key });
 
   // The file asked for once the files are read, else the first, before the list paints: something is always selected
   // for the diff pane. A selected file the diff no longer holds (read again after a check-in) gives way the same.
@@ -144,7 +147,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // Once per request, as soon as the files are read: a diff read again leaves the file and its `.meta` toggle as they are.
   const appliedRequest = useRef<number | null>(null);
   useEffect(() => {
-    if (!focusRequest || appliedRequest.current === focusRequest.seq) return;
+    if (focusRequest?.path === undefined || appliedRequest.current === focusRequest.seq) return;
     const requested = pairedEntryAt(pairs, focusRequest.path);
     if (!requested) return;
     appliedRequest.current = focusRequest.seq;
@@ -222,7 +225,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>
         ) : pane === 'folder' && focusedFolder ? (
-          <EmptyState icon={<Folder size={24} />} title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path} description={`${pluralize(rangeLength(focusedFolder.held), 'change')}. Select a file to see its diff.`} />
+          <StepsAroundEmptyState fileSteps={fileSteps} selectedKey={focusedFolder.key}>
+            <EmptyState icon={<Folder size={24} />} title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path} description={`${pluralize(rangeLength(focusedFolder.held), 'change')}. Select a file to see its diff.`} />
+          </StepsAroundEmptyState>
         ) : null,
         slots.diff,
       )}

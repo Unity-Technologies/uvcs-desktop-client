@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
+import type { MergeOperation, MergeResolutions } from '@shared/domain/merge';
 import { changedStatus, mergeOutput, mergePreviewOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { fakeCat, PURGED } from '../cm/testing/fakeCat';
@@ -11,8 +11,8 @@ import { recordingContext } from '../operations/testing/recordingContext';
 import { mergeStateFilesIn, type MergeStateFiles } from './mergeStateFiles';
 import { runMerge } from './runMerge';
 
-const FROM_TASK: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
-const TO_MAIN: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' };
+const FROM_TASK: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/task' };
+const TO_MAIN: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' };
 
 const CONTRIBUTORS = [
   ['CONTRIBUTOR', 'SRC', '3', 'cs:3@eco@local', '/main/task'],

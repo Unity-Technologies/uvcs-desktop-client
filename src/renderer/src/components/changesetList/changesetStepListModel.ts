@@ -1,0 +1,191 @@
+import type { Changeset } from '@shared/domain/changeset';
+import type { ChangesetSpan } from '../../app/navigation/pages';
+import { commentLineText } from '../../lib/comments/commentText';
+import { formatDateTime } from '../../lib/formatDate';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import type { SelectionState } from '../../lib/selection';
+import { pluralize } from '../../lib/text';
+import { displayName, userFilterTexts } from '../../lib/userName';
+
+/**
+ * The list of changesets a branch diff and Incoming step through (`ChangesetStepList`): the changesets oldest on top,
+ * one selected showing its own diff and several selected showing as one (`changesetListChoice`), under the row that
+ * stands for all of them combined ("All changes on task", "All incoming changes"), which the place shows apart above
+ * the list (`ChangesetFold`), so the filter never hides it.
+ */
+
+/** The key the selection holds for every changeset combined (the row above the list), among the changesets' numbers. */
+export const ALL_CHANGES_KEY = 'all';
+
+export function changesetListRowKey(changeset: Changeset): string {
+  return String(changeset.id);
+}
+
+/** The selection of every changeset combined alone: what the list opens on. */
+export const ALL_CHANGES_SELECTION: SelectionState = { selected: new Set([ALL_CHANGES_KEY]), anchor: ALL_CHANGES_KEY };
+
+/**
+ * Changesets as the list shows them: oldest on top, as a branch was built and as a review's conversation reads (`cm
+ * find` reads them newest first). As the official client lists them.
+ */
+export function oldestFirst(changesets: readonly Changeset[]): Changeset[] {
+  return [...changesets].sort((a, b) => a.id - b.id);
+}
+
+/**
+ * The changesets the filter shows: every word in the number, the comment or the author, by the name shown and as
+ * stored (`userFilterTexts`, ARCHITECTURE.md "Filters"). A blank filter shows them all.
+ */
+export function filterChangesets(changesets: readonly Changeset[], query: string): readonly Changeset[] {
+  if (!query.trim()) return changesets;
+  return changesets.filter((changeset) => matchesWordFilter([String(changeset.id), changeset.comment, ...userFilterTexts(changeset.owner)], query));
+}
+
+/** The filter field's placeholder: "Filter 11 changesets"; "Filter changesets" while they're read (undefined). */
+export function changesetFilterPlaceholder(count: number | undefined): string {
+  return count === undefined ? 'Filter changesets' : `Filter ${pluralize(count, 'changeset')}`;
+}
+
+/** A row's tooltip: the comment's first line, then who, when (in full) and which changeset, which the row says shortly. */
+export function changesetRowTip(changeset: Changeset): { text: string; sub: string } {
+  return {
+    text: commentLineText(changeset.comment) || 'No comment',
+    sub: `${displayName(changeset.owner)} · ${formatDateTime(changeset.date)} · cs:${changeset.id}`,
+  };
+}
+
+/**
+ * A selection as the list keeps it, from the one the rows were given (`orderedKeys`, the rows' keys top to bottom):
+ * several changesets show as one diff, every changeset between them in it, so every row between is selected too, the
+ * selection one band; and the combined row joins no other, as it holds them all: with changesets, it is left out
+ * (Shift-click from it to a changeset selects the branch up to that changeset).
+ */
+export function changesetListSelection(next: SelectionState, orderedKeys: readonly string[]): SelectionState {
+  if (next.selected.size < 2) return next;
+  const places = orderedKeys.flatMap((key, index) => (key !== ALL_CHANGES_KEY && next.selected.has(key) ? [index] : []));
+  if (places.length === 0) return next;
+  const band = orderedKeys.slice(Math.min(...places), Math.max(...places) + 1);
+  const anchor = next.anchor !== null && band.includes(next.anchor) ? next.anchor : band.at(-1)!;
+  return { selected: new Set(band), anchor };
+}
+
+/**
+ * The changesets the selection shows (`changesetListChoice`), by number: those selected, or the one last clicked when
+ * a Cmd/Ctrl-click took the last one out, so the pane never goes blank. None for the combined row.
+ */
+export function selectedChangesetIds(selection: SelectionState): number[] {
+  const keys = selection.selected.size > 0 ? [...selection.selected] : selection.anchor === null ? [] : [selection.anchor];
+  return keys.filter((key) => key !== ALL_CHANGES_KEY).map(Number);
+}
+
+/**
+ * The changeset one `step` away from the one selected among the `shown` ones (1: the next row down, newer; -1: up,
+ * older), or null at either end. From the combined row (`selectedId` null) a step down goes to the oldest shown.
+ * `listed` is every changeset in the list's order (`oldestFirst`): a selected changeset the filter hides keeps its
+ * place in it, so the step goes to the nearest shown one on that side.
+ */
+export function changesetStep(listed: readonly Changeset[], shown: readonly Changeset[], selectedId: number | null, step: 1 | -1): number | null {
+  if (selectedId === null) return step === 1 ? (shown[0]?.id ?? null) : null;
+  const shownIds = new Set(shown.map((changeset) => changeset.id));
+  const start = listed.findIndex((changeset) => changeset.id === selectedId);
+  if (start === -1) return null;
+  for (let index = start + step; index >= 0 && index < listed.length; index += step) {
+    const candidate = listed[index]!;
+    if (shownIds.has(candidate.id)) return candidate.id;
+  }
+  return null;
+}
+
+/** What the place around the list asks it to select: everything combined, one changeset, or a span of them. */
+export type ChangesetListFocus = { kind: 'all' } | { kind: 'changeset'; changesetId: number } | { kind: 'span'; span: ChangesetSpan };
+
+/** The focus last applied to the list's selection, and whether the changesets were read then. */
+export interface AppliedFocus {
+  focus: ChangesetListFocus;
+  read: boolean;
+}
+
+/**
+ * Whether the list selects what `focus` asks for: each focus the place asks for once (a new object each time), and a
+ * span's again once the changesets are read (`read`), since only then are the changesets inside it known. Otherwise
+ * the user's own selection stays.
+ */
+export function appliesFocus(last: AppliedFocus | null, focus: ChangesetListFocus, read: boolean): boolean {
+  if (last?.focus !== focus) return true;
+  return !last.read && read && focus.kind === 'span';
+}
+
+/**
+ * The selection a focus asks for: the combined row, a changeset, or every changeset of the span (the newest the
+ * anchor), so they show as one diff. While the changesets are read, a span's ends, which show the same diff.
+ */
+export function focusSelection(focus: ChangesetListFocus, changesets: readonly Changeset[] | undefined): SelectionState {
+  if (focus.kind === 'all') return ALL_CHANGES_SELECTION;
+  if (focus.kind === 'changeset') return { selected: new Set([String(focus.changesetId)]), anchor: String(focus.changesetId) };
+  const { oldest, newest } = focus.span;
+  const inSpan = (changesets ?? []).filter((changeset) => changeset.id >= oldest && changeset.id <= newest).map((changeset) => String(changeset.id));
+  return { selected: new Set([String(oldest), String(newest), ...inSpan]), anchor: String(newest) };
+}
+
+/** The row a focus brings into view: the newest of a span, at its bottom. */
+export function focusRevealKey(focus: ChangesetListFocus): string {
+  if (focus.kind === 'all') return ALL_CHANGES_KEY;
+  return String(focus.kind === 'changeset' ? focus.changesetId : focus.span.newest);
+}
+
+/** How many places the list's rows take: every row, and the line between two of them when its row shows. */
+export function changesetListPlaces(rows: readonly Changeset[], separatorBeforeKey: string | undefined): number {
+  const separates = separatorBeforeKey !== undefined && rows.some((row) => changesetListRowKey(row) === separatorBeforeKey);
+  return rows.length + (separates ? 1 : 0);
+}
+
+/** A row's height: one line, as a commit picker lists them. */
+export const CHANGESET_ROW_HEIGHT = 28;
+
+/** The room the list's rows keep above and below them, as every list without column titles (`DataTable`'s inset). */
+const ROWS_INSET = 8;
+
+function placesHeight(places: number): number {
+  return places * CHANGESET_ROW_HEIGHT + ROWS_INSET;
+}
+
+/** The shortest the user can drag the rows: two of them, so the list never reads as gone. */
+export const CHANGESET_ROWS_MIN_HEIGHT = placesHeight(2);
+
+/**
+ * The changesets a list shows before the rest scroll inside it, every place alike (a branch's diff, a review,
+ * Incoming), until the user drags its splitter: the files under it keep their room.
+ */
+export const CHANGESET_LIST_MOST_ROWS = 6;
+
+/** The share of the window the rows can be dragged to, so the files under them always keep the rest. */
+export const CHANGESET_ROWS_MOST_SHARE = 0.5;
+
+/** The tallest the user can drag the rows in a window this tall (`CHANGESET_ROWS_MOST_SHARE`), never under the shortest. */
+export function changesetRowsMaxHeight(windowHeight: number): number {
+  return Math.max(CHANGESET_ROWS_MIN_HEIGHT, Math.round(windowHeight * CHANGESET_ROWS_MOST_SHARE));
+}
+
+/**
+ * How tall the list's rows are drawn: every place (the rows, and a line between two of them) up to the height the
+ * user dragged the list to (`dragged`), or `most` places until they do, those past it scrolling inside, so the files
+ * under the list keep their room. Never taller than its places, so a short list leaves no gap above the files. Its
+ * tallest while the changesets are read (`places` undefined), which the rows then rarely leave, and with none, for the
+ * filter's "No matching changesets".
+ */
+export function changesetRowsHeight(places: number | undefined, most: number, dragged?: number | null): number {
+  const tallest = dragged ?? placesHeight(most);
+  return places === undefined || places === 0 ? tallest : Math.min(placesHeight(places), tallest);
+}
+
+/**
+ * The height to remember as the user drags the splitter to `result`. Every list shares it, so a list shorter than it
+ * (a branch of three changesets) keeps it while the drag stays at or past its rows, where nothing on screen moves: only
+ * a drag that makes the list shorter than its rows is the user's new height.
+ */
+export function changesetRowsDragged(result: number, places: number | undefined, most: number, dragged: number | null): number | null {
+  if (places === undefined || places === 0) return result;
+  const rows = placesHeight(places);
+  const tallest = dragged ?? placesHeight(most);
+  return rows < tallest && result >= rows ? dragged : result;
+}

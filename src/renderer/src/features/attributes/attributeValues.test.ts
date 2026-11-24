@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attributeEditorFor, attributeTone, attributeValueKind, chipHover, chipText, defaultValuesIn, outgrowsQuickField, suggestedValues, valueCounts } from './attributeValues';
+import { attributeEditorFor, attributesSectionOf, hasAttributesToShow, attributeTone, attributeValueKind, chipHover, chipText, defaultValuesIn, outgrowsQuickField, suggestedValues, valueCounts } from './attributeValues';
 
 describe('attributeValueKind', () => {
   it('shows short enumerable values as pills', () => {
@@ -112,5 +112,58 @@ describe('valueCounts', () => {
       { value: 'READY', count: 3 },
       { value: 'FAILED', count: 1 },
     ]);
+  });
+});
+
+describe('hasAttributesToShow', () => {
+  it('shows while the values are read, and with a value or a type to add', () => {
+    expect(hasAttributesToShow(undefined, [])).toBe(true);
+    expect(hasAttributesToShow([{ name: 'status', value: 'open' }], [])).toBe(true);
+    expect(hasAttributesToShow([], [{ name: 'status' }])).toBe(true);
+  });
+
+  it('shows nothing with no value and no attribute type on the server', () => {
+    expect(hasAttributesToShow([], [])).toBe(false);
+  });
+});
+
+describe('attributesSectionOf', () => {
+  const types = [{ name: 'status' }, { name: 'releasenotes' }];
+
+  it('shows a placeholder while the values are read, with nothing to add yet', () => {
+    expect(attributesSectionOf(undefined, types, null)).toEqual({ body: 'reading', addable: [] });
+  });
+
+  it('says there are none, offering every attribute, when the object has no value', () => {
+    expect(attributesSectionOf([], types, null)).toEqual({ body: 'none', addable: ['status', 'releasenotes'] });
+  });
+
+  it('shows the chips, offering only the attributes the object has no value for', () => {
+    expect(attributesSectionOf([{ name: 'status', value: 'RESOLVED' }], types, null)).toEqual({ body: 'chips', addable: ['releasenotes'] });
+  });
+
+  it('shows the chip of the attribute being added, and offers no other until it is saved or dropped', () => {
+    expect(attributesSectionOf([], types, 'status')).toEqual({ body: 'chips', addable: [] });
+  });
+
+  it('shows a placeholder while neither the values nor the types are read', () => {
+    expect(attributesSectionOf(undefined, undefined, null)).toEqual({ body: 'reading', addable: [] });
+  });
+
+  it('hides while the values are read on a server with no attribute type, so no section flashes and goes', () => {
+    expect(attributesSectionOf(undefined, [], null)).toEqual({ body: 'hidden', addable: [] });
+  });
+
+  it('waits for the types to say whether an object with no value shows, and shows its values meanwhile, with no Add', () => {
+    expect(attributesSectionOf([], undefined, null)).toEqual({ body: 'reading', addable: [] });
+    expect(attributesSectionOf([{ name: 'status', value: 'RESOLVED' }], undefined, null)).toEqual({ body: 'chips', addable: [] });
+  });
+
+  it('hides with no value and no attribute type on the server', () => {
+    expect(attributesSectionOf([], [], null)).toEqual({ body: 'hidden', addable: [] });
+  });
+
+  it('shows a value whose type is gone from the server, with nothing to add', () => {
+    expect(attributesSectionOf([{ name: 'old', value: 'x' }], [], null)).toEqual({ body: 'chips', addable: [] });
   });
 });

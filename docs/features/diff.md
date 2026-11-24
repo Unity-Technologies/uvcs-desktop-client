@@ -13,10 +13,15 @@ A side of any diff that the workspace holds unchanged (the side before of the ne
 of a changeset the workspace is on) is read from its disk, not downloaded: ARCHITECTURE.md "Server budget",
 "Revisions on disk".
 
+Code shows in the app's code font (`--font-mono`) at 12px, the size the classic desktop client uses, rather than
+Pierre's 13px, wherever Pierre shows it: diffs, merge resolution and Annotate all take `PIERRE_SURFACE_CSS`
+(`--diffs-font-size`). Lines stay Pierre's 20px tall, because Pierre's virtualizer (`metrics.lineHeight`) and Annotate's
+`ANNOTATION_LINE_HEIGHT` both count on that height. A change to the line height changes all three together.
+
 ## The diff's header
 
-Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer; in a branch diff's
-"Changeset by changeset", over the diff's column, as "A branch's diff" says), the header says who, when and why (`ChangesetSummary`, `ShelveSummary`). A long comment is folded as a
+Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer; a changeset picked in a
+branch diff's list, over the diff's column, as "A branch's diff" says), the header says who, when and why (`ChangesetSummary`, `ShelveSummary`). A long comment is folded as a
 details panel folds it (`FoldedComment`, through `SummaryComment`), but tighter: two lines of title and three of
 description, then "Show more"; expanded, the description grows to at most 40% of the window and scrolls past that, so
 the files and the diff stay in sight. A short comment shows whole, with no link. The header's description is keyed by
@@ -36,31 +41,100 @@ is noise for anyone reading a branch, and the web code review and GitHub show on
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
 
-"Changeset by changeset" steps through the branch's changesets in a list stacked above the files of the one selected
-(`BranchChangesetList`), one `cm find` for them all, so the diff keeps the width it has in "Whole branch" and the
-files don't move as the mode switches. The page's header names the branch in both modes (`BranchDescription`); the
-selected changeset's summary sits above its diff (`TargetDiff`'s `pageDescription`), since its height follows its
-comment, and over the whole page it would move the lists being clicked at each step. Each changeset reads as History
-reads a revision (`RecordRow`): its comment's first line across the list's width, then cs:N, author and date. Its
-filter matches every word typed in a changeset's number, comment or author's name over the list already read
-(`filterBranchChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. A changeset the
-filter hides stays selected and shown: its diff doesn't change under the user while they type, and the next step goes
-on to the nearest changeset shown on that side (`changesetStep`). The arrows above the list, ⌥⇧↓ and ⌥⇧↑
-(`nextChangeset`, `previousChangeset`, as Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'), step
-from anywhere in the page but a text field, where they select text (`useShortcut`'s `whileTyping`). A branch with one
-changeset shows no list (`showsChangesetList`): the header names it.
+Above the files, the branch's changesets (`ChangesetStepList`, `useChangesetStepList` in
+`components/changesetList`, one `cm find` for its newest `BRANCH_CHANGESETS_LIMIT`, `branchChangesetsFilter`, so a
+branch as long as /main never reads whole; Incoming lists its changesets with the same list), under a
+first row that stands for all of them: **All changes on <branch>** (the branch's name, `branchLabel`, whole in the
+tooltip). Selected, as the page opens unless it's asked for changesets, that row shows the diff above:
+`{ kind: 'branch' }`, `cm diff br:<branch> --integration`. One changeset selected shows its own diff; several show as
+one (below). What the selection shows is `changesetListChoice`; `BranchDiff` only renders it. The page's header is one
+line naming what is selected on the branch (`BranchDescription`, `branchDiffHeading`): "All changes on <branch>",
+"Changes in cs:1234 on <branch>", "Changes in cs:15 to cs:17 on <branch>". Naming only the branch would read as if the
+files below were all the branch's. A changeset's summary sits above its diff
+(`TargetDiff`'s `pageDescription`), since its height follows its comment, and over the whole page it would move the
+list being clicked at each step; the header's one line keeps its height.
+
+Why no switch between two modes, the whole branch and its changesets one by one ("Whole branch | Changeset by
+changeset", tried): the branch's own diff is one more row of the list, so stepping into its changesets, and selecting
+several to read as one diff, is there from the start instead of behind a mode few found.
+
+The list folds under its **All changes on <branch>** row, which stands apart above the list and its filter
+(`ChangesetFold`, `changesetListFold`) and ends in its fold, "Changesets ⌄"
+(`changesetFoldLabel`; a count there turned into a number as the changesets were read, under the pointer): folded, the page reads as the branch's whole diff did, that row selected, with no list in
+the way and no `cm find` (the list mounts only open; a review's page has read the changesets for its rounds, so its
+row says "3 new", which selects them). A header line of its own, "Changesets · 13 ›", tried, read as
+a section's title, too quiet for what decides what the diff shows.
+It opens when the user opens it, remembered across branches and sessions (`useChangesetListFoldStore`), and when the
+page asks for changesets (what's new since a review, a changeset chip, where a comment was written). Folding it goes
+back to all the changes: a changeset selected out of sight would leave the diff showing what the line doesn't say.
+Always open, tried, put a list and a read in front of everyone reviewing the whole branch.
+
+Every list of changesets is as tall as its rows up to six (`CHANGESET_LIST_MOST_ROWS`, `changesetRowsHeight`), the rest
+scrolling inside it, so the files keep their room. The line under it is a splitter (`ResizeHandle` on its bottom edge): dragged, the rows take that
+height instead, from two rows (`CHANGESET_ROWS_MIN_HEIGHT`) up to half the window (`changesetRowsMaxHeight`), so the
+files keep the rest; never taller than the rows there are, so a short list leaves no gap. One height for every list of
+changesets (a branch's diff, a review, Incoming), remembered across pages and sessions (`useChangesetListHeightStore`):
+a short list dragged where nothing moves keeps it (`changesetRowsDragged`). A double-click on the splitter gives the
+list its own height back. Each changeset is one line of 28 px, as a commit picker lists them: a small avatar, the
+comment's first line (the rest of the width) and a short age in a fixed column ("now", "12m",
+"3h", "2d", "Oct 14": `formatShortAge`); its tooltip says the rest (`changesetRowTip`: the comment's first line, who,
+the full date, cs:N). Why not History's two-line `RecordRow`: the list sits above the files, and two lines and a big
+avatar per changeset left room for few. Why no number on the row: on every one it said little and took the comment's
+room; the tooltip has it, and the filter finds it.
+The list is oldest on top (`oldestFirst`), as the branch was built, as a review's conversation reads and as the official
+client lists them; stepping down goes on in time. Newest on top, as the app's other changeset lists are, was tried:
+stepping through a branch then went back in time, and the review's marks read upside down against its conversation.
+Its filter matches every word typed in a changeset's number, comment or author's name over the list already read
+(`filterChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. "All changes" stays,
+above the list, as no word could match it. A row the filter hides stays selected and
+shown: its diff doesn't change under the user while they type, and the next step goes on to the nearest changeset
+shown on that side (`changesetStep`). The arrows above the list, ⌥⇧↓ and ⌥⇧↑ (`nextChangeset`, `previousChangeset`,
+as Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'), step from anywhere in the page but a text
+field, where they select text (`useShortcut`'s `whileTyping`); from "All changes", down goes to the oldest. They step
+only while the list shows (`changesetStepsWork`, the list's `stepsEnabled`; Incoming's while its list is open):
+folded, a step would change the diff out of sight. Up from the oldest stops there, in every list: All changes is the
+row above the list (`ChangesetFold`), a click away, and not one of its rows. A branch with one changeset shows no list
+(`showsChangesetList`): all its changes are that changeset's.
 
 The list stays mounted as each changeset is stepped to, keeping its focus, scroll and filter: the files and the diff
-are drawn by a `DiffBrowser` mounted again for each changeset, into the slots of a `DiffBrowserLayout` that stays
+are drawn by a `DiffBrowser` mounted again for each target, into the slots of a `DiffBrowserLayout` that stays
 (`createPortal`). Why not key only what changes inside one component: the files and the diff share the browser's state
 (the selection, the filter, the review), and the list sits in the files' column, so no single subtree holds just the
 changeset's part.
 
-Each row has the changeset's own menu (`changesetMenu`, as in the Changesets view), whose Copy ▸ Link shares the
-changeset stepped to; the header's Copy link (⇧⌘C) stays the branch's, what the page is about. The list binds no list
+Each changeset's row has the changeset's own menu (`changesetMenu`, as in the Changesets view), whose Copy ▸ Link
+shares the changeset; the header's Copy link (⇧⌘C) stays the branch's, what the page is about. The list binds no list
 keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no ⌘C (`useCopyCommand`), as the view
 under the page keeps its own, and offering the list's link would take the view's from ⇧⌘C once the page closes
-(`useOfferSelectedObjectLink`).
+(`useOfferSelectedObjectLink`). "All changes" has no menu: the page's header is the branch's.
+
+Several changesets selected (Shift or ⌘/Ctrl-click, Shift+↓/↑) show as one diff: from the oldest one's parent to the
+newest, `DiffTarget` `{ kind: 'range', fromSpec: 'cs:<parent>', toSpec: 'cs:<newest>' }` (`changesetListChoice`'s
+`span`), read by one `cm diff cs:A cs:B`, immutable as every range (`isImmutableDiff`). The span holds every changeset
+between its ends, so the list selects them all and draws them as one band, rounded only at its ends
+(`changesetListSelection`; a ⌘/Ctrl-click in its middle can't leave a gap, only one at an end shortens it). "All changes"
+joins no other row: Shift-click from it to a changeset selects the branch up to that changeset. Where one changeset's
+summary sits, the span's says how many, its ends and who checked them in: "3 changesets · cs:15 to cs:17 · Daniel"
+(`changesetSpanSummary`; `TargetDiff`'s `description`). Stepping from a span (the arrows, ⌥⇧↓ ⌥⇧↑) goes to the one
+changeset next to the selection's anchor. In a code review, "All changes" and a span are the whole review's view, its
+comments placed by revision, and one changeset its own (`reviewDiffViewOf`).
+
+A code review hands the list where the user left off (`reviewedUpTo`, the review's checkpoint): a "Reviewed by you ·
+Nov 9" line between what they reviewed, above, and the first one new since (`reviewedSeparator`), so what's under it is
+new (`changesetMark`: a number past the changeset reviewed up to), and the reviewed ones a step quieter. At its end,
+**Show the 3 new** ("Show the new one") selects the new changesets the list shows together, as one diff
+(`ReviewedSeparator.showNew`, `newChangesetsSpan`). No dot on each new one: it took a column of every row, indenting
+them all, and stayed lit after the changeset was read (the app keeps nothing of what was opened; the line says it
+once). The line is no row: `DataTable`'s `separator`, which the keys and the selection go past (`tableSeparator.ts`).
+No "New" toggle keeping only the new changesets: Show the 3 new reads them, and the line already tells them apart. A
+merge isn't marked: telling one from the list would take another command per changeset.
+
+The place around the diff can ask for changesets while it shows already (`DiffFocusRequest`, a file, changesets or
+both): a changeset (`changesetId`), all the branch's changes (`null`), or a span selected together (`changesets`),
+each made a `ChangesetListFocus` (`branchDiffFocusFor`) that the list selects (`focusSelection`). A review's page asks
+for it as it moves (`focusChangeset`, `focusChangesets`, `focusThread`: `changesFocusAskedFor`); as it mounts,
+`BranchDiff` opens on them (`initialBranchDiffFocus`). No link names a span: what's new to one reviewer isn't to
+whoever opens it.
 
 ### Up to a changeset
 
@@ -78,7 +152,7 @@ parent in still lists the parent's files that merge brought. What decides is `br
   New branch) has a base like any other. Another root branch, read when chosen, says it starts from no other branch.
 - **Known with no command** where the view already read the branch's start (`ChangesetMenuContext.branchStartOf`): the
   Branch Explorer from its history (`branchStartInGraph`; not when the date range left out what precedes the branch's
-  first changeset shown), a branch diff's "Changeset by changeset" from the whole branch it lists
+  first changeset shown), a branch diff's list from the whole branch it lists
   (`branchStartOfChangesets`).
 - **Read when chosen** everywhere else (Changesets, Incoming, the top bar, the palette): one quick `cm find changeset
   "where ignorehidden = 'true' and branch = '<branch>' order by changesetid asc limit 1" --format={changesetid}{parent}`
@@ -129,6 +203,29 @@ re-read as the server lists are (`SLOW_CHANGING_QUERY`).
 Not shown: the xlink's branch expansion rules, which only `cm xlink --show` prints, and only for a workspace's own
 xlink. The official client shows the xlink as text in a file diff, rules included; its target changesets are what a
 reader of the diff needs.
+
+## A path replaced
+
+A changeset can delete a file and put another item at its path: a file added on a branch, then made a move of the
+older file it replaces so its history follows that one's. `cm diff` prints that path twice, `A` (the new item, no
+base revision) and `D` (the deleted one). Every list of files keys its rows by path, so `mergedDiffEntries` reads the
+two as one entry (`replacedEntry`): changed, from the deleted item's last revision to the new one's, marked
+`DiffEntry.replaced`, since its two sides are different items. Reading only the first, the delete was dropped and the
+file showed as added. Only two items with contents to compare merge so (two files, two folders: `sameKind`); a folder
+replaced by a file, or anything by an xlink, reads as the added item alone. A replaced file offers no "Revert file to
+before this change…" (`canRevertFromDiff`): its older side is another item. Such a fix usually keeps the contents, so the diff reads "No content changes"; a review's
+"How it was applied" shows it as the move it made instead (docs/features/code-reviews.md, "Comments in the code", See in context).
+
+## Dates
+
+A diff's list sorts by date (docs/ARCHITECTURE.md, "One sort, chosen") from `{date}` in `DIFF_FORMAT`, read with the
+rest of `cm diff` (`diffCommand`, `--dateformat=o`, the round-trip format `cm find` uses too): no other command, no
+extra cost on the server. `{date}` is when the revision `{revid}` names was made, so only an item the change gave a new
+revision is dated by it (`madeARevision`, `DiffEntry.date`): an added file, a content change, a moved file that changed
+(its content change's), a path replaced (the new item's). A deleted file's revision is its last one, and a pure move's
+or a change of permissions alone's is the one it had: all from before the change, so they get no date and go last, as a
+deleted file does in Changes. `cm` prints `0001-01-01T00:00:00.0000000` for a revision it has no details of, read as no
+date too (`revisionDate`).
 
 ## Only the permissions changed
 
@@ -219,7 +316,7 @@ edit look the same: the editor is on as soon as the diff has its colors, so noth
 starts. Each pane of code
 scrolls sideways on its own and its bar would sit at the end of the file, shown only while hovered, so `PaneScrollbars`
 keeps one per pane at the bottom of the view, wherever Pierre shows code (diffs, the whole-file editor, merge
-resolution, moved code, Annotate; `codeScrollsSideways.test.ts`). The view itself never scrolls sideways
+resolution, moved code, Annotate, a suggested change; `codeScrollsSideways.test.ts`). The view itself never scrolls sideways
 (`PaneScrollbars.module.css`): only its panes do, so a resize, which takes a few frames to measure the bars again,
 never shows a second bar under them. The panes' own bars are hidden through Pierre's
 `--diffs-scrollbar-gutter-override` (`paneScrollbarsCss`), so the code ends with the gap it starts with (8 px), and
@@ -227,7 +324,14 @@ while the bars show it leaves room for them under its last line: scrolled to the
 them, and the view's scroll padding keeps the caret typing past the bottom clear of them too. Every text diff, and the whole-file editor, renders only the
 lines in view (Pierre's `Virtualizer` on the diff's scrolling element): what's drawn again (a line added, a typing
 pause's word marks, a theme switch) costs those lines, not the file's. With every line of a 190 KB file shown, the
-typing pause's redraw took 0.45 s before; it's now under a frame. A file's language comes from its path
+typing pause's redraw took 0.45 s before; it's now under a frame. Pierre lays out lines it hasn't rendered from an
+estimate, one row each, and renders the rows a scroll brings in a frame or more later, at their real heights: a wrapped
+line is taller. So whatever is scrolled into a place (a change stepped to, a link's line, a comment's row) is placed
+again on each frame until it stands still there (`placementStep`; `scrollToAnnotationRow` counts its own frames), never
+a fixed number of times, which left a change or a line screens away in a wrapped file. The user's wheel, touch, press
+or key stops it, so the view is never pulled back from where they take it (`stopOnUserScroll`: the scroll position
+can't tell theirs from Pierre's, which moves it too as it measures rows). Its tests run it over `FakePierreLayout`,
+which lays a diff out that way. A file's language comes from its path
 (`lib/syntaxLanguage`, for diffs, annotations and merges alike): its whole name first (Dockerfile, Cargo.lock,
 .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
 projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
@@ -278,7 +382,7 @@ an unchanged empty line (`caretLineCss`): Pierre shows it as added after a chang
 ## Leaving unsaved edits
 
 `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
-(`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
+(`selectAfterLeaving`), another view (`goToView`, `returnToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
 away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has
 focus) or reloading asks the same (`guardUnloading`): the page holds its `beforeunload` back, the main process brings
 its window forward and sends `leaveRequested` (`main/window/leaveRequests`), and once the edits are saved or dropped
@@ -365,42 +469,66 @@ Every text diff of two versions steps through its changes (`useChangeNavigation`
 they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ ⌥↑ to move lines while typing) and the header's arrows
 (see "The arrows never move" below), from the diff or the list beside it; the first move goes from the top of the view.
 The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff not rendered there yet is
-scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one, as changes are always in the
-hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff
-beside a list of files (a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next file's first change or
-the previous file's last, asking about unsaved edits first. Incoming's diffs and conflicting files step through
-different files but share where a step arrives (`usePendingArrival`), so ↓ past a diff's last change into a conflicting
-file lands on its first conflict, and no arrival is left waiting for a file opened later. A diff opened any other way
-(picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it starts
-in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted until the
-first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It opens so once,
-as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added or
-deleted file) is one change; a file with none to step through (an image, a model, a binary, identical versions) keeps
-the arrows, which go from file to file ("Previous file", "Next file", no label), so stepping through the list never
-stops there. It steps through the files as the list shows them, never on to a folder (private, deleted or moved), which
-has no diff (`fileRowKeys`, Changes' too), though a folder's `.meta` diff shown in Changes steps on from the folder's
-place (`FileStepsOptions.rowOrder`); in a tree, those in a closed folder are skipped. With only folders pending, Changes
-selects the first of them (`firstChangeKeyOf`). The list itself, its order, layout and groups, are every list of changed
-files' (ARCHITECTURE.md "Lists of changed files"); a folder or a status group selected in it shows how many changes it
-holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
-`useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
-merge page steps through conflicts with it (merge.md "Stepping through conflicts").
+scrolled to where Pierre lays it out, `pierreLinePosition`, then placed again on each frame until it stands still two
+frames in a row, as the rows above it render at their real heights, which wrapped lines make taller than estimated:
+`changeScrollStep`, `placementStep`; collapsed lines never hide one, as changes are always in the hunks shown), lights
+up for a moment and, where discards are, is picked for ⌥⌘Z. Past the last or first change, a diff beside a list of files
+(a diff page, Changes, Incoming: `FileStepsContext`) goes on to the next file's first change or the previous file's
+last, asking about unsaved edits first. Incoming's diffs and conflicting files step through different files but share
+where a step arrives (`usePendingArrival`), so ↓ past a diff's last change into a conflicting file lands on its first
+conflict, and no arrival is left waiting for a file opened later. A diff opened any other way (picked in a list, from a
+link, on a page) opens with its first change in view, a few rows from the top unless it starts in view already (a
+collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), current ("1 of 12") but not lit (`openingStep`,
+`StepView.show`). Until a change is moved to, the count and the moves follow the scroll (`ChangePosition.followsView`,
+`shownChange`): at the top, ↓ goes to the second change; scrolled down, the count names the change the view stands at
+and ↓ and ↑ step from it. One opened on a link's lines stays on them, at no change, until the first
+move. A conflicting file opens the same, at "1 of 3" conflicts. It opens so once, as the diff first shows: changes typed
+or read later leave the view where it is. A version shown alone (an added or deleted file) is one change; a file with
+none to step through (an image, a model, a binary, identical versions) keeps the arrows, which go from file to file
+("Previous file", "Next file", no label), so stepping through the list never stops there. It steps through the files as
+the list shows them, never on to a folder (private, deleted or moved), which has no diff (`fileRowKeys`, Changes' too),
+though a folder's `.meta` diff shown in Changes steps on from the folder's place (`FileStepsOptions.rowOrder`); in a
+tree, those in a closed folder are skipped. With only folders pending, Changes selects the first of them
+(`firstChangeKeyOf`). The list itself, its order, layout and groups, are every list of changed files' (ARCHITECTURE.md
+"Lists of changed files"); a folder or a status group selected in it shows how many changes it holds instead of a diff.
+The stepping itself (the position, the keys, the arrival from a file beside it) is `useStepNavigation`, given the steps
+and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the merge page steps through conflicts
+with it (merge.md "Stepping through conflicts").
 
 ### The arrows never move
 
 People click ↓ many times in a row through a changeset, past each file's last change into the next file, so the arrow
 must never move under the pointer. The arrows are the header's last slot, side by side at its right edge, in every
 diff's header alike (`DiffViewerFrame`'s `navigator`): text, image, model, binary, identical, loading, an error, an
-xlink. Right before them, with no room reserved, the label has one form, "3 of 12", and only while a change is current
-(`positionLabel`); otherwise it is empty, as the line counts and the diff itself (identical, binary) already say how
-many there are, and the arrows' tips carry the count ("Next change · 12 in this file"). A count before the first step
-("12 changes") and "No changes" are left out on purpose: three forms of one label read as noise, and the room they
-needed, reserved, left "1 of 1" floating in a gap. It grows leftward, in tabular figures; then the Expand button and
-the view's controls. What they show is `changeNavigatorView`, decided by the view, never by the file shown: beside a
-list of files always (disabled at its ends rather than gone); with no list, on every diff a `FileDiffViewer` draws
-(History, Files, Browse repository, the merge page's previews of a change and its directory conflicts' comparisons:
-disabled where there is nothing to step through, an image, a binary), and on none of a merge page's merged result,
-whose conflict arrows step instead (`stepsThroughChanges` off).
+xlink. Right before them, with no room reserved, the label has one form, "3 of 12", while a change is current
+(`positionLabel`), which is from the moment a text diff opens (`openingStep`), so the count is always there and doesn't
+appear under the user's first click; it is empty only where nothing is current: no changes to step through (the diff
+itself says so: identical, binary, an image) or a link's lines before the first move. A count with no position ("12
+changes", "– of 12") and "No changes" are left out on purpose: several forms of one label read as noise, and the room
+they needed, reserved, left "1 of 1" floating in a gap. While the header waits for the next file's diff
+(`NavigatorView.waiting`), the count shown keeps its place (`heldLabel`), so a fast read swaps "3 of 3" for "1 of 5" in
+place and a slow one fades it out after a moment; a file with no count in between leaves none to come back. An arrow
+whose press leaves the file names the file it goes to in its tip ("Next file: GameManager.cs", `FileSteps.neighbor`),
+past the last change, before the first, and on a file with none to step through; its icon stays the same, as an arrow
+changing shape while the user clicks through reads as noise. Beside a list, every tip also says which file of it is
+shown ("· file 2 of 9", `FileSteps.position`); the label doesn't, as "1 of 27 · file 1 of 9" is too much for the header.
+The file a step lands in lights its title for a moment, as the change moved to lights (`arrivedByStep`,
+`SteppedDiffFrame`'s `useArrivals`); a file picked in the list doesn't. A row selected in a list view with no diff of
+its own (a folder, a status group, several files) shows under the same header, its arrows in the same place going on to
+the files around it (`StepsAroundEmptyState`, `adjacentKey`'s `rowOrder`), so ↓ never finds them gone; it has no Expand
+button, with nothing to expand. It grows leftward, in tabular figures; then the Expand button and the view's controls.
+What they show is `changeNavigatorView`, decided by the view, never by the file shown: beside a list of files always
+(disabled at its ends rather than gone); with no list, on every diff a `FileDiffViewer` draws (History, Files, Browse
+repository, the merge page's previews of a change and its directory conflicts' comparisons: disabled where there is
+nothing to step through, an image, a binary), and on none of a merge page's merged result, whose conflict arrows step
+instead (`stepsThroughChanges` off).
+
+**Why in the file's header, not the page's.** Moving the arrows up to a row naming the whole comparison ("All changes on
+task", over the files and the diff) was weighed and dropped: Expand Diff hides that row, so the arrows would jump into
+the file's header just as the user expands to step through; most views showing diffs have no such row (Changes,
+Incoming, History, Files, the merge page, dialogs), leaving two places for one control; a branch diff's and Incoming's
+changeset lists have arrows of their own right under it; and a count of changes across files ("change 14 of 230")
+would read every file's diff up front, a server round trip per file before the user looks at any.
 
 **Whose arrows.** The arrows are one element for as long as the view shows diffs: the header belongs to
 `SteppedDiffFrame`, which `FileDiffViewer` draws around every state of a file (loading, failed, loaded), and the loaded
@@ -610,11 +738,12 @@ deep-links.md "Where links are copied"; `useLineTools` wires them into `TextDiff
 newer side (`linkedLinesOf`). A workspace file's diff picks lines to discard them instead (`useBlockDiscard`).
 
 A page opened on a file's lines (`focusPath` with `focusLines`, a link's) opens that file scrolled to them, a third of
-the way down, and selected (`scrollToLine`, from where Pierre lays the line out, rendered or not); its unchanged lines
-show unfolded, as a link may name one (`collapseUnchanged` off for that file). Once: selecting another file drops them
-(`linkFocusOn`), so coming back leaves the file where the user was. Changes takes them from outside
-(`requestLineFocus`, `useRequestedLineFocus`): the pending change's diff scrolls to them and shows them as Pierre's
-selection until lines are picked to discard, Pierre echoing them back picking nothing (`useLinePick`'s `marked`).
+the way down, and selected (`scrollToLine`, from where Pierre lays the line out, rendered or not, placed again until it
+stands still as the rows around it render: `placementStep`); its unchanged lines show unfolded, as a link may name one
+(`collapseUnchanged` off for that file). Once: selecting another file drops them (`linkFocusOn`), so coming back leaves
+the file where the user was. Changes takes them from outside (`requestLineFocus`, `useRequestedLineFocus`): the pending
+change's diff scrolls to them and shows them as Pierre's selection until lines are picked to discard, Pierre echoing
+them back picking nothing (`useLinePick`'s `marked`).
 
 ## The code's menu
 
@@ -638,7 +767,8 @@ side right-clicked (`codeMenuTarget`):
 - **Read-only** (every other side): only what reads it. Copy copies the text selected in the page, read from its rows
   (`pageTextSelection`, `copiedPageText`); lines picked by their numbers have "Copy lines" instead. Select all selects
   every line of the side, as Shift+click would, where lines are selected for links. Undo, Redo, Cut, Paste and Delete
-  aren't offered, nor Find and Replace: Pierre's search panel is its editor's, and a read-only side has none.
+  aren't offered, nor Replace: there's nothing to replace in. Find opens the search ("Find in the code", below), where a
+  place has one; Annotate and a merge's conflicts have none.
 - Entries that need a selection are off without one, their tooltip saying so (Delete, Compare with clipboard, a
   read-only side's Copy; `codeMenuState`); Paste never waits on the clipboard.
 
@@ -646,17 +776,53 @@ As the official client's menu did, but in the app's grammar and words. Its Delet
 it's off then; its Replace was ⌘H, which hides the app on macOS.
 
 **Keys.** The menu shows the keys the editor takes on each OS, from the registry's "Text" area (`textUndo`...
-`goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Pierre's Ctrl+Alt+F is AltGr+F on European
-layouts: `pierreEditorKeymap` gives the editor the registry's key, and Pierre's own still works. Go to line is ⌃G on
-macOS (⌘G is Find next there) and Ctrl+G elsewhere, from anywhere in the code, Pierre's search box included
-(`editorHasFocusIn`); with Pierre's search panel open, Ctrl+G off macOS is its Find next. Ctrl+H typed in Pierre's
-search box doesn't switch it to Replace on Windows and Linux: the box takes its own keys, and only Pierre's ⌥⌘F
-(Ctrl+Alt+F), or the arrow at the panel's left, does there. That arrow shows and hides the Replace row on every OS.
+`goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Ctrl+Alt+F is AltGr+F on European layouts
+(`pierreEditorKeymap` gives the editor the registry's key beside Pierre's own). Go to line is ⌃G on macOS (⌘G is Find
+next there) and Ctrl+G elsewhere (where F3 is Find next), from anywhere in the code (`editorHasFocusIn`).
 
-**Find and Replace** open Pierre's search panel, which `Editor` has no public way to open (`openPierreSearchPanel`, see
-Pierre workarounds): the menu presses the key that opens it on the editor's content element, its modifier held as Pierre
-reads the platform (`pierreReadsMac`), so Replace opens from the menu on a Mac previewing another OS
-(`UVCS_RENDERER_PLATFORM`) too.
+**Find in the code.** ⌘F (Ctrl+F) in a text diff, or in a merge's hand-editing, finds text in one of its sides; ⌥⌘F
+(Ctrl+H) finds and replaces in the text typed into. Every side has the same search, the app's own (`useCodeFind`,
+`CodeFindBar`, every decision in `codeFind`). A click in the code and ⌘F search the side clicked, from the line clicked
+(`findOpening`, `firstMatchFrom`); a diff of one side searches it. ⌘F there never reaches the view's filter of files.
+Find and Replace in the code's menu open it on the side right-clicked.
+
+- **One search.** Pierre's editor has a search panel of its own, over the text typed into only, opened by its keymap.
+  The code takes the keys that would open it on their way down, before the editor sees them (`searchKeyMode`, which
+  reads them with Pierre's own `resolveEditorCommandFromKeyboardEvent` and the app's keymap: the registry's keys and
+  Pierre's Ctrl+Alt+F), and opens the app's search instead, so every side looks and works alike. Two kinds of key are
+  left alone: AltGr typing a character (`[` is AltGr+F on a Czech or Hungarian layout, which Pierre would read as its
+  Ctrl+Alt+F) is kept from the editor's keymap and typed (`typesCharacter`), and a key in a field of the app's over the
+  code, a review comment written by a line, stays that field's (`typedOutsideCode`).
+- **Where it stands.** 16 pixels in from the top right of the side it searches (`findBarRight`), as each side of a diff
+  had its own search box in the desktop client; a unified diff, one side shown alone, and a merge's hand-editing have it
+  at their top right. In the app's look: the gray of a panel, the app's fields, the options drawn as the letters they
+  stand for (Aa, ab, .*), "No results" until something matches, a round close button on its corner. Tab goes from the
+  text searched for to its replacement, then to the buttons.
+- **Matching.** The text literally, or a regular expression with "Use regular expression", one that doesn't compile yet
+  finding nothing; case ignored unless "Match case" is on; whole words only with "Match whole words" (`findInText`). It
+  keeps at most `MAX_MATCHES` matches ("1 of 10,000+"), those from the line clicked on, going round from the top.
+- **Replacing** (the text typed into only: `canReplace`). The chevron at the bar's left, or ⌥⌘F (Ctrl+H), shows the
+  replace field. Replace, or Enter in that field, replaces the match shown and goes on to the next, past the text put
+  in (`placeAfterReplace`); Replace all replaces every match, past `MAX_MATCHES` too. A regular expression's `$1`, `$&`
+  and `$<name>` put in what the match captured, each match read where it stands in its line (`replaceEdits`); any other
+  replacement is put in as typed. Each goes into the editor as one change (`Editor.applyEdits`), which Undo takes back.
+- **Keys.** Enter and Shift+Enter in its fields step through the matches, going round at either end, as ⌘G and ⇧⌘G
+  (F3 and Shift+F3 off macOS) do from anywhere in the bar or the code (`findAgainKey`). Esc closes the bar, the focus
+  going back to the text typed into, or to the diff. The bar takes every key pressed in it, its buttons' too, so none
+  reaches the window's shortcuts; a button keeps Enter for itself (`findBarKeyAction`). An IME's composing keys stay
+  the IME's.
+- **Marks and scrolling.** Every match on screen is marked in `--bg-match`, the one shown in `--bg-match-current`, with
+  the browser's highlights over Pierre's rows (`useWordMarks`, finding unchanged lines' rows too: `sideLineRowSelector`,
+  which reads a unified diff's unchanged line by its older number, `data-alt-line`, and a whole file's, `data-file`). The
+  match shown is scrolled to when the search moves to another (a step, the text searched for, an option, a
+  replacement), never because typing moved it, and only when it isn't in view (`rowNeedsScroll`), unfolding the
+  collapsed lines that hold it; a long line scrolls sideways to it (`sidewaysScrollBy`). The text typed into is searched
+  again in a render after each keystroke shows, which further typing can skip (`useDeferredValue`), so a big file's
+  search never holds up the text typed.
+
+Pierre's search panel (`SearchPanelWidget`) wasn't reused: it isn't exported, runs on its editor's text document, which
+a read-only side doesn't have, and its look is its own. Copying its styles and icons was tried and dropped: they'd have
+to follow every Pierre release, and they don't match the app.
 
 **Go to line…** asks for a line of the side it's on (`goToLine`: "Line number (1–240)", the caret's or the line
 right-clicked already in the field), takes only a line that side has and says which it has otherwise. The line scrolls a
@@ -720,7 +886,7 @@ What shows (`useMovedCode`, `MovedCode`):
   same at least; a line only added on the way pairs with none), and the pair is word-diffed as Pierre diffs one
   (`movedWordMarks`, `lineWordMarks`, `WORD_MARKS`). Pierre's own marks on moved lines compare them with whatever line
   stands beside them, so they're dropped (`movedCodeCss`) and these drawn with the browser's highlights
-  (`useMovedWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
+  (`useWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
   (`refreshWordMarks`) was rejected: each of its renders (its worker's colors, a keystroke) draws its own marks back.
 - Each place has a label, "Moved to line 143" or "Moved from line 4" with an arrow toward the other place, that scrolls
   there and lights it up (`scrollToChange`, `useChangeFlash`). It goes in the hatched gap across from the place when
@@ -730,7 +896,8 @@ What shows (`useMovedCode`, `MovedCode`):
 - The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog` of
   `movedCopies`, in the dialog "Compare with clipboard" opens too, `openCodeComparisonDialog`): a read-only diff of what
   moved with what it became, in the diff's look, layout and comparison method, so only what changed on the way shows as
-  changed. Code moved as it was, or with only what the method ignores changed, shows alone, its note saying so ("Moved
+  changed. Its header has the diff's own Split | Unified switch, the same preference (`useDiffPreferences`), as every
+  comparison this dialog opens has (Compare with clipboard, a suggestion's Compare in a larger view). Code moved as it was, or with only what the method ignores changed, shows alone, its note saying so ("Moved
   without changes", "Only whitespace differs"): a diff with no line changes has no lines for Pierre to show
   (`movedComparison`). Its lines are numbered from the start of the moved code (Pierre numbers a diff from 1); the title
   says where both places are. Putting the two places side by side in the diff itself, each side scrolling on its own,
@@ -807,6 +974,28 @@ most) and are painted from a blob URL that lives while it's shown (`useImageUrl`
 a 25 MB PNG, decoded again at every paint). The URL is revoked as the image changes, so what is painted is only ever
 the decode of the image's current URL (`shownDecodeState`): an `<img>` still given the one before fails to load.
 
+## Comments on images
+
+A place may draw over an image and take what the pointer marks on it without the image diff knowing what it is
+(`ImageAnnotationsContext`, as `DiffAnnotationsContext` adds rows under code; a review's comments,
+docs/features/code-reviews.md "Comments on images"):
+
+- **Pins** (`ImagePin`): a spot (`ImageSpot`, the image's own pixels) on the side whose image shows it, drawn by
+  `ImageCommentsOverlay` over every viewport of every mode (`StageOverlay`; Split's two panes each their side's), placed
+  from the composed frame (`anchoredOffset`) and the view (`spotOnScreen`), gliding with the zoom. One opens its card
+  beside it (`cardPlacement`), in a layer over the whole stage (`PinCard`, `stageCardPlacement`): in Split a card
+  beside a pin in a narrow pane reaches over the other one rather than being cut off, and a stage narrower than the
+  card narrows it, always clear of the zoom controls. While the spot is panned or zoomed out of its pane the card
+  hides, still mounted, and shows again as it was, what's being written in it kept; the focus it held goes to the stage
+  (`setCardHidden`), so the stage's keys keep working.
+- **Marking a spot**: where the place takes comments (`commentsOn`, a side shown: `takesComments`), the stage's first
+  control and **C** (`stageCommandOf`) turn the pointer into the comment cursor; a click is a point, a drag an area
+  (`spotOfGesture`, `AREA_DRAG_THRESHOLD`). A pin still `movable` drags by its bubble and reshapes by its area's
+  corners (`movedSpot`, `resizedSpot`).
+- **Going to a pin** brings it into view at the zoom shown (`PanZoom.showRect`, `transformShowing`).
+- The stage's keys leave a card's text alone (`keyTakenByText`), and the wheel scrolls a card rather than panning
+  (`isOnStageControl`).
+
 ## Unity's texture formats
 
 TGA, TIFF, Photoshop (PSD and PSB), OpenEXR and Radiance HDR show in the image diff like any other image: every mode,
@@ -861,7 +1050,10 @@ makes each into an image the browser paints before anything shows it (`usePainta
 
 An SVG reads as both (`toFileContent` ships its text and its image; past the text cap,
 only the image), so its diff shows rendered or as text, with a "Code | Image" switch in the header remembered per
-extension (`representations`, rendered by default). The text keeps every text feature (editing, discarding, the
+extension (`representations`, rendered by default). A place's comments on it (`RepresentationCommentsContext`) say
+how many the other view holds, with the switch to it (`otherRepresentationNotice`), and one gone to shows its own
+view, for that file while it shows, once (`askToTake`, `shownRepresentation`): the user's choice for the type stays as
+it was. The text keeps every text feature (editing, discarding, the
 comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`
 (no scripts, nothing fetched), and one declaring a huge size is drawn within 16 MP (`decodedSize`).
 
@@ -908,14 +1100,23 @@ docs/features/code-reviews.md "Comments in the code"):
   empty buffer), so it reads as part of the line it's on. The bar is a background: Pierre's `::before` on a gutter
   buffer is what keeps the gutter's width. Side by side, when both sides of a file hold rows, the gutter can't tell
   whose row is empty, and a buffer under a changed line on the other side may take its tint too.
-  Its `lineAction` is what the place does with one line (a review's "Comment on line 42"), on the lines it `offers`:
-  a "+" in Pierre's gutter slot of the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained
-  after the line numbers' hint), sitting just past the number and over the edge into the code, as a pull request's
-  does (over the number alone it hid it). It stays as the pointer goes from line to line (`lineHover`: Pierre says a
-  line was left before the next was entered, so a line left clears a frame later), and it has no pop-in: Pierre moves
-  its slot from line to line, which restarts an animation, a flicker on every line. The action is also the first entry
-  of the lines' menu, on the last of the lines selected
-  (`lineMenuEntries`, `lineActionTarget`). Not a key: a committed diff has no caret, so no line is "current".
+  Its `lineAction` is what the place does with lines (`ChangedLines`: a review's "Comment on lines 40–42"), on the
+  lines it `offers`:
+  a "+" by the line under the pointer (`useLineActionButton`, through `onLineEnter`, chained after the line numbers'
+  hint), sitting just past the number and over the edge into the code, as a pull request's does (over the number alone
+  it hid it; `lineActionSpot`). It's drawn over the diff in its scrolling container, above the outlines around
+  commented lines (`LineBands`), not in Pierre's gutter slot: Pierre isolates its code (`isolation: isolate`), so
+  nothing in the slot can be drawn above what the container draws over it. It stays as the pointer goes from line to
+  line (`lineHover`: Pierre says a line was left before the next was entered, so a line left clears a frame later) and
+  while the pointer is on it (`hold`, `release`: React says the button was entered before Pierre says the line was
+  left; a line entered lets go). Apart from its line, it's placed again when the code moves under a pointer at rest
+  (`useFollowedLine`: the layout switched, a thread grown), and goes once its line isn't drawn. It has no pop-in: an
+  animation restarted on every line flickered. Beside a selected line it acts on the whole selection
+  (`lineActionTargetAt`), and it drags over other lines of its side to act on all of them (`useLineActionDrag`,
+  `LineActionDragMarks`, `lineActionDrag.ts`; docs/features/code-reviews.md "Writing from the code"). The action is
+  also the first entry of the lines' menu, on the lines selected (`lineMenuEntries`, `lineActionTarget`), and the
+  selection lets go once it runs (`releasingSelection`). Not a key: a committed diff has no caret, so no line is
+  "current".
 - `DiffFocusRequestContext`: a file to show again, while the diff is on screen (`DiffBrowser` selects it; a branch's
   diff switches to the mode and changeset asked for, `BranchDiff`).
 
@@ -955,7 +1156,7 @@ release that installs.
   the text selected in the page (`pageTextSelection`, through Chromium's `ShadowRoot.getSelection`).
   The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
   its own (`display: contents`), and its code column stands for it (`paneRect`).
-- `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
+- `movedCodeCss`, `MovedCode`, `useWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
   `--diffs-addition-base`, its labels in the gaps across from it (`data-content-buffer`), and its words marked over a
   row's text nodes, which hold its line in order (`rowTextRange`). Checked on screen too.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
@@ -964,10 +1165,10 @@ release that installs.
 - `pierreWordMarks`: a diff typed into marks the changed words once typing pauses, in the rows Pierre keeps (see
   Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
-- `pierreSearchPanel`: the code's menu opens Pierre's search panel, which 1.6.2's `Editor` opens only from its keymap
-  (`openSearchPanel`, `openSearchReplacePanel`, reaching the private `#openSearchPanel(mode)`), by pressing the key
-  that opens it on the editor's content element; `pierreSearchPanel.test.ts` checks through Pierre's own
-  `resolveEditorCommandFromKeyboardEvent` that the key reaches the command on every OS. The keymap it gives the editors
+- `pierreSearchKeys`: Pierre's editor would open its own search panel from its keymap (`openSearchPanel`,
+  `openSearchReplacePanel`), with no option to turn it off; the code takes those keys first and opens the app's search
+  (`searchKeyMode`, see Find in the code). `pierreSearchKeys.test.ts` checks through Pierre's own
+  `resolveEditorCommandFromKeyboardEvent` which keys it reads as a search on every OS. The keymap it gives the editors
   (`pierreEditorKeymap`) puts Replace on the registry's key (see The code's menu).
 - `editorClipboard`: the code's menu runs Pierre's own `copy`, `cut` and `paste` listeners (`runEditorClipboard`).
   It relies on `Editor.focus()` (`#focus`) putting the window's selection inside the content element at once

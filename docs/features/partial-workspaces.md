@@ -2,8 +2,8 @@
 
 A partial workspace downloads only the folders and files the user chooses; everything else stays on the server. How
 the app tells a workspace's kind (`WorkspaceKind`, `workspaceKindsReader`) and shows it (`WorkspaceKindChip`,
-`WorkspaceKindBadge`) is in ARCHITECTURE.md. This doc holds how a partial workspace is created, how the user chooses
-what it downloads, and how it stays partial.
+`WorkspaceKindBadge`) is in ARCHITECTURE.md. This doc holds how a partial workspace is created, how a standard one
+becomes partial and a partial one standard again, how the user chooses what it downloads, and how it stays partial.
 
 ## Creating one
 
@@ -11,7 +11,7 @@ The Create workspace dialog asks "What to download": **The whole branch** (stand
 I pick** (partial). Each card says when to choose it (`downloadCards` in `newWorkspaceForm.ts`), since the app has one
 window for both kinds where the official client had a separate app for partial workspaces: the whole branch switches
 and merges freely; picked folders download less and update file by file, but `cm` refuses to merge into a partial
-workspace and switches it only to branches. The cards show from the start, before a repository is named; picking
+workspace and switches it only to branches of its repository. The cards show from the start, before a repository is named; picking
 folders is greyed for a new repository, which holds nothing to pick (`partialAllowed`). The kind chosen stays partial
 meanwhile (`kindChosen`): the dialog shows the whole branch, and naming an existing repository brings the folders back
 without the user picking them again. Choosing a card sets the kind
@@ -19,8 +19,9 @@ without the user picking them again. Choosing a card sets the kind
 a dynamic workspace has the whole branch. The request carries the kind
 (`CreateWorkspaceRequest.kind`).
 
-The cards don't say the choice can change later: the app doesn't convert a workspace between partial and standard.
-Only which folders a partial workspace holds changes later.
+The choice can change later both ways: a standard workspace becomes partial by choosing what it downloads ("Making a
+standard workspace partial"), and a partial one standard again by downloading the whole branch ("Making a partial
+workspace standard").
 
 `workspaces.create` makes the workspace, then runs `cm partial update --silent` in it (`EMPTY_PARTIAL_UPDATE_ARGS`),
 through `execute()` since it changes the workspace's files. An update of no paths downloads nothing but marks the
@@ -36,11 +37,20 @@ updating it.
 
 ## Choosing what to download
 
-**Choose what to download…** opens `ChooseDownloadsDialog`. It's offered on a partial workspace only:
+**Choose what to download…** opens `ChooseDownloadsDialog`. It's offered on a partial workspace, and on a standard
+one on a branch (`choosesDownloads`, "Making a standard workspace partial"):
 
-- the current workspace card's menu (`currentWorkspaceMenu`, the `chooseDownloads` action);
+- the current workspace pill's menu (`currentWorkspaceMenu`, a right-click on the top bar's workspace, the `chooseDownloads` action);
 - the command palette (`useWorkspaceCommands`);
-- Files, whose empty state says nothing is downloaded yet while the workspace holds nothing (`showsNothingDownloaded`).
+- Files: a button in its header, labeled rather than an icon so it can't be missed, only in a partial workspace
+  (`showsChooseDownloadsButton`): there choosing folders is everyday work, while in a standard one it makes the
+  workspace partial, a rare step kept in the menu and the palette as **Download the whole branch…** is in a partial
+  one; and its empty state, which says nothing is downloaded yet while the workspace holds nothing
+  (`showsNothingDownloaded`);
+- a file or folder's menu in Files, which opens the dialog with that item selected and the folders above it open
+  (`openChooseDownloads`'s `initialPath`, `revealedDownload`). Like the header button, only in a partial workspace;
+  nor on a private or added item, under an xlink, or on an item of another repository (`choosesDownloadsFor`): the
+  dialog lists only what the workspace's own repository holds at its changeset.
 
 The dialog shows the repository's tree at the workspace's changeset, a folder at a time as it opens (the same listing
 Browse repository reads, `repositoryListingQuery`), with a checkbox per item. A partial workspace on a branch loaded no
@@ -58,8 +68,13 @@ Its decisions are pure and tested:
   click does (`toggled`), and the fewest rules that make the workspace hold what's chosen (`downloadRules`). A folder
   downloaded or removed whole is one rule; a folder partly loaded is completed item by item, since `cm` refuses to
   load a folder that holds anything already. The root is never removed, only its items.
-- `downloadTree.ts`: the rows shown (`downloadRows`), the keys (`downloadKey`, a desktop tree's), the body's state
-  (`rootStatus`) and the summary beside Apply (`rulesSummary`).
+- `downloadTree.ts`: the rows shown (`downloadRows`; each folder lists folders and xlinks first, then files, by name,
+  as Files does: `downloadTreeOf`, `sortItems`), what Apply does to each (`downloadChangeOf`) and how a row shows
+  it (`downloadChangeMarker`), the keys (`downloadKey`, a desktop tree's), the body's state (`rootStatus`) and the
+  summary beside Apply (`rulesSummary`). Only what Apply changes stands out: checkboxes and names look as any other, and
+  an item it downloads has a green Download pill at the row's end, one it removes a red Remove pill
+  (`downloadChangeMarker`), so the change reads without its color too. What it keeps, leaves out or changes in part (a
+  mixed folder) has none.
 - `downloadTreeReads.ts`: what the folder reads give the tree (`downloadTreeReads`: the listings, what's loaded, the
   folders that failed to read) and when Apply can run (`canApply`).
 
@@ -69,7 +84,20 @@ Items draw as Files draws them (`ItemIcon`, `iconTypeOf`). A search above the tr
 it, as Files' and Browse repository's search does (`useRepositoryFileSearch`, `repositoryFileSearchView`): it lists the
 whole tree only once the user types (`listsTreeNow`), since most choose by opening folders and that listing is the server's heaviest
 read. It searches what the tree shows, and its notes name it so (`downloadSearchOf`): the tree's changeset or, on a
-branch, the branch's head, named by the branch. A pick opens the folders above it and selects it in the tree (`revealedDownload`). A workspace on a shelve has no search, as it has no tree.
+branch, the branch's head, named by the branch. A pick opens the folders above it and selects it in the tree (`revealedDownload`).
+
+Each result has its checkbox and pill too, so a file found can be chosen without leaving the search
+(`downloadSearch.ts`). Its checkbox shows once whether it's loaded is known (`isLoadKnown`, `downloadSearchRow`): the
+folders above the results have their loaded items read (`foldersAboveResults`, local), kept for as long as the dialog
+is open so typing on doesn't read them again. Ticking a result opens the folders above it in the tree, as a pick does,
+so they're read: the rules walk the tree from its root and would leave out a choice in a folder not read yet, so Apply
+waits for them (`choicesAwaitReads`, `canApply`). The repository's listings are read only on a tick, never for what a
+search merely shows. A result below a folder that couldn't be read says so in place of its checkbox, and Apply doesn't
+wait for that folder. The checkboxes take clicks only: the search field keeps the keyboard, where Space is part of a
+name, so Enter shows the item in the tree, where Space ticks it.
+
+The tree, the results and the message standing in for them share one height (`ChooseDownloadsDialog.module.css`), so
+the dialog keeps its size whatever it shows. A workspace on a shelve has no search, as it has no tree.
 
 ## Applying
 
@@ -80,6 +108,70 @@ It runs as an update (`operations.run`, `execute()`): it blocks other updates an
 runs, and refreshes what an update refreshes. Every `cm partial` command is a write of the workspace
 (`changesWorkspace`), so it runs in a `cm shell` of its own that reads it from its input (`processCommand`): a choice of
 thousands of items is still one command, past the command-line limit, rather than several that could stop halfway.
+
+## Making a standard workspace partial
+
+`cm` has no command to convert a workspace: the first `cm partial configure` run in a standard workspace makes it
+partial. So a standard workspace is offered **Choose what to download…** too, but only on a branch
+(`choosesDownloads`), the only place the app makes one partial, and a dynamic one downloads files as they're opened.
+The dialog says what applying changes, in the words of the Create workspace dialog's cards (`chooseDownloadsNote`,
+its description): only the folders picked download, each file updates on its own, and merging needs the whole branch.
+Nothing changes until Apply; Cancel leaves the workspace standard. The tree starts with everything checked, since a
+standard workspace holds the whole branch, so the user unchecks what to remove.
+
+The workspace's kind is read once per session (`workspaceKindQuery`), so `configurePartial` tells every window when
+it ran on a standard workspace (`workspaceKindChanged`, also when it failed: `cm` may have converted it before
+failing), and each reads the kind again (`forgetWorkspaceKind`). The current window's workspace info, whose `kind`
+picks the update command, refreshes as after any update (`isAffectedByCheckinOrUpdate`).
+
+## Making a partial workspace standard
+
+**Download the whole branch…** makes a partial workspace standard, so it can switch to a changeset, label, shelve or
+another repository, and merge. It's offered on a partial workspace on a branch (`downloadsWholeBranch`): the current
+workspace pill's menu (`currentWorkspaceMenu`, the `downloadWholeBranch` action) and the command palette
+(`useWorkspaceCommands`, `workspace.downloadWholeBranch`). A switch the partial workspace refuses says to download the
+whole branch first (`PARTIAL_REFUSED` in `switchWithChanges.ts`), so the way back is named where it's needed.
+
+`cm` has no command to convert a workspace back, and `cm update` refuses a partial workspace with checkouts: a standard
+`cm switch` to the branch the workspace is on downloads everything it holds and makes it standard
+(`downloadWholeBranch` in `main/workspace/switchWithChanges.ts`, `switchesAs: 'standard'`). It runs as the switch with
+pending changes does ("Switching with pending changes", shelves-and-switching.md): the changes are shelved first, as a
+partial workspace shelves them, then brought back, merged as a standard workspace merges, or undone, as the user
+chose (`WholeBranchChangesAction`). A switch that changes the workspace's kind reads the kind again afterwards, even
+when it failed (`switchWorkspace`, `forgetKind`): a failure that comes after `cm` converted the workspace puts the
+shelved changes back as the standard workspace it now is.
+
+It asks first (`askWholeBranchDownload`, its words in `wholeBranchDownload.ts`): it names the branch and says
+everything on it downloads, with no size estimate, which would cost a server read of the whole tree. With pending
+changes it asks what happens to them (`wholeBranchCards`: bring them along, or undo them, `UNDO_CHANGES_DESCRIPTION`).
+The toast says the whole branch is on disk and what happened to the changes (`wholeBranchToast`). The service forgets
+the kind it read and tells every window the kind changed (`downloadWholeBranchOf`, `workspaceKindChanged`), also when
+the switch failed: `cm` may have converted the workspace before failing.
+
+## Merges
+
+`cm` refuses to merge into a partial workspace, so it offers no merge into the workspace (`offersMerges`,
+`components/mergesOffered.ts`): no merge, cherry pick or subtractive merge, nor their ranges, in the branch, changeset
+and label menus; no Merge from branch…, Cherry pick changeset… or Undo the changes of a changeset… in the palette
+(`mergeCommandsOffered`); no M in the Branch Explorer. Download the whole branch… makes the workspace standard first.
+A merge on the server never touches the workspace, so it stays offered (`offersServerMerges`): Merge to… on a branch,
+a changeset or a label, Merge current branch into another branch…, finishing a task and the task's next step in
+Changes, though a task's merge page doesn't offer resolving its conflicts in the workspace
+(`offersResolvingInWorkspace`). Apply shelve stays too, as `cm partial shelveset apply` (shelves-and-switching.md "A partial workspace"): a
+shelve that needs a merge, applied or restored from left changes, stays shelved, and a toast says to apply it in a
+standard workspace instead of opening the merge page (`workspaceTakesMerges`). `menuGrammar.test.ts` builds the menus
+for a partial workspace. While the kind isn't known yet, every merge is offered, as most workspaces are standard. The app menu's Merge from Branch… stays enabled
+there and does nothing, as its command isn't registered.
+
+## Other operations it refuses
+
+A partial workspace has loaded no one changeset (`cm` reports none), so New label in Labels asks which changeset to
+label first, as a repository with no workspace does (`newLabel`, `labelsWorkspaceChangeset`): `cm` refuses to label the
+workspace's own. Files offers no New xlink… (`newXlinkDirectoryOf`): `cm partial checkin` refuses a new xlink,
+whatever it points to, even downloaded first, and `cm checkin` refuses a partial workspace; an xlink already checked
+in, and downloaded, is edited and checked in there as anywhere. It downloads an xlink whole, as a file, when Choose
+what to download… picks it, so Files offers no Load its files on an xlink there (`unloadedXlinkOf`). A switch to a changeset, a label or a shelve stays offered and
+says to download the whole branch first ("Making a partial workspace standard").
 
 ## Staying partial
 

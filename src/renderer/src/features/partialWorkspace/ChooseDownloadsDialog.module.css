@@ -1,6 +1,15 @@
+/* The tree, what the search finds and the message standing in for them share one height, tall enough to browse a
+   repository comfortably: the dialog keeps its size whatever it shows, rather than shrinking to a few top-level
+   folders and growing as they open. Below 1,040 px of window height it gives way to the window (the dialog's own
+   cap is 76vh). */
+.tree,
+.found,
+.message {
+  height: min(480px, 46vh);
+}
+
 /* The repository's files and folders as a tree, scrolling inside the dialog on a big repository. */
 .tree {
-  max-height: 360px;
   overflow-y: auto;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -65,6 +74,35 @@
   white-space: nowrap;
 }
 
+/* A pill at the row's end for what Apply downloads or removes: the checkbox and the name stay as any other's, so
+   only the pills stand out, and their word reads without the tint too. Each tint lies on the dialog's own surface,
+   so a hovered or selected row's tint doesn't mix into it and dim the word. */
+.marker {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 18px;
+  margin-inline-start: auto;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.marker[data-change='load'] {
+  border-color: var(--positive-border);
+  background: linear-gradient(var(--positive-soft), var(--positive-soft)), var(--bg-surface-raised);
+  color: var(--positive-text);
+}
+
+.marker[data-change='unload'] {
+  border-color: var(--danger-border);
+  background: linear-gradient(var(--danger-soft), var(--danger-soft)), var(--bg-surface-raised);
+  color: var(--danger-text);
+}
+
 .failed {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -78,7 +116,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 120px;
   color: var(--text-secondary);
 }
 
@@ -95,8 +132,9 @@
   margin-bottom: var(--space-2);
 }
 
-/* What the search finds stands where the tree was, in the same frame. */
+/* What the search finds stands where the tree was, in the same frame, its list filling it (`--go-to-file-height`). */
 .found {
+  --go-to-file-height: 100%;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-2);

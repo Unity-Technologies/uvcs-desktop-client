@@ -38,6 +38,40 @@ export function formatDay(isoDate: string, { locale, timeZone }: DayFormat = {})
   return new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', year: 'numeric', timeZone }).format(date);
 }
 
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+/**
+ * A moment as a compact list column says it, a few characters wide: "now", "12m", "3h", "2d" within a week, then its
+ * day ("Oct 14"), or its month and year before this year ("Oct 2025"). A moment ahead of `now` (a server's clock
+ * running ahead) is "now". The full date goes in a tooltip.
+ */
+export function formatShortAge(isoDate: string, now: number, { locale, timeZone }: DayFormat = {}): string {
+  const time = Date.parse(isoDate);
+  if (Number.isNaN(time)) return '';
+  const age = Math.max(0, now - time);
+  if (age < MINUTE) return 'now';
+  if (age < HOUR) return `${Math.floor(age / MINUTE)}m`;
+  if (age < DAY) return `${Math.floor(age / HOUR)}h`;
+  if (age < 7 * DAY) return `${Math.floor(age / DAY)}d`;
+  const options: Intl.DateTimeFormatOptions = isSameYear(time, now, timeZone) ? { month: 'short', day: 'numeric' } : { month: 'short', year: 'numeric' };
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(time);
+}
+
+/** A day in a short line ("Nov 9"), with its year when it isn't this year ("Nov 9, 2025"); empty for a date it can't read. */
+export function formatShortDay(isoDate: string, now: number, { locale, timeZone }: DayFormat = {}): string {
+  const time = Date.parse(isoDate);
+  if (Number.isNaN(time)) return '';
+  const year: Intl.DateTimeFormatOptions = isSameYear(time, now, timeZone) ? {} : { year: 'numeric' };
+  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', ...year, timeZone }).format(time);
+}
+
+function isSameYear(a: number, b: number, timeZone: string | undefined): boolean {
+  const year = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone });
+  return year.format(a) === year.format(b);
+}
+
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];

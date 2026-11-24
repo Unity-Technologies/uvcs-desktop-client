@@ -7,5 +7,7 @@ export function createSettingsService({ settings }: ServiceContext): SettingsApi
     update: async (changes) => settings.update(changes),
     rememberRecentWorkspace: async (workspacePath) => settings.rememberRecentWorkspace(workspacePath),
     forgetRecentWorkspace: async (workspacePath) => settings.forgetRecentWorkspace(workspacePath),
+    rememberRecentComment: async (repository, comment) => settings.rememberRecentComment(repository, comment),
+    setFavoriteOrganization: async (server, favorite) => settings.setFavoriteOrganization(server, favorite),
   };
 }

@@ -13,13 +13,3 @@ export function useCmAvailability() {
 export function useSetupCheck(cmAvailable: boolean) {
   return useQuery({ queryKey: queryKeys.cmSetup, queryFn: () => api.system.checkSetup(), enabled: cmAvailable, staleTime: Infinity });
 }
-
-/** Whether `cm` is signed in to `server` and reaches it (null when it does); asked for the open workspace's server only. */
-export function useConnectionCheck(server: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.serverConnection(server ?? ''),
-    queryFn: () => api.system.checkConnection(server ?? ''),
-    enabled: server !== undefined,
-    staleTime: Infinity,
-  });
-}

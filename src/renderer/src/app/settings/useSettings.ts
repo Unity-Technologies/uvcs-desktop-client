@@ -45,7 +45,28 @@ export async function rememberRecentWorkspace(workspacePath: string): Promise<vo
   queryClient.setQueryData(queryKeys.settings, await api.settings.rememberRecentWorkspace(workspacePath));
 }
 
+/**
+ * Puts a check-in's comment first among its repository's recent ones. The main process changes the list, so a window
+ * checking in to another repository meanwhile keeps its own. A store that can't save it says so.
+ */
+export async function rememberRecentComment(repository: string, comment: string): Promise<void> {
+  try {
+    queryClient.setQueryData(queryKeys.settings, await api.settings.rememberRecentComment(repository, comment));
+  } catch (error) {
+    toast.error("Couldn't save the settings", error);
+  }
+}
+
 /** Drops a workspace from the recent list, e.g. once it's removed or its folder is gone for good. */
 export async function forgetRecentWorkspace(workspacePath: string): Promise<void> {
   queryClient.setQueryData(queryKeys.settings, await api.settings.forgetRecentWorkspace(workspacePath));
+}
+
+/** Adds an organization to the favorites the home sidebar lists first, or removes it. A store that can't save it says so. */
+export async function setFavoriteOrganization(server: string, favorite: boolean): Promise<void> {
+  try {
+    queryClient.setQueryData(queryKeys.settings, await api.settings.setFavoriteOrganization(server, favorite));
+  } catch (error) {
+    toast.error("Couldn't save the settings", error);
+  }
 }

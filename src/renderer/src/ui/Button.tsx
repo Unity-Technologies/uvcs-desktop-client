@@ -10,13 +10,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   icon?: ReactNode;
   loading?: boolean;
+  /** Without its drop shadow, its focus ring kept: for a band it sits in, where the shadow weighs its lower edge. */
+  flat?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'secondary', size = 'medium', icon, loading = false, className, children, disabled, type = 'button', ...rest },
+  { variant = 'secondary', size = 'medium', icon, loading = false, flat = false, className, children, disabled, type = 'button', ...rest },
   ref,
 ) {
-  const classes = classNames(styles.button, styles[variant], size !== 'medium' && styles[size], !children && styles.iconOnly, className);
+  const classes = classNames(styles.button, styles[variant], size !== 'medium' && styles[size], !children && styles.iconOnly, flat && styles.flat, className);
 
   return (
     <button ref={ref} type={type} className={classes} disabled={disabled || loading} {...rest}>

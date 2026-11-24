@@ -31,6 +31,10 @@ describe('wordMatchQuality', () => {
     expect(wordMatchQuality('Bamboo plugin part 1', 'bamboo plugin')).toBe(0.9);
     expect(wordMatchQuality('Fix the bamboo plugin', 'bamboo plugin')).toBe(0.8);
     expect(wordMatchQuality('Plugin for bamboo', 'bamboo plugin')).toBe(0.6);
+  });
+
+  it('takes any run of spaces typed between the words as one, as a name match does', () => {
+    expect(wordMatchQuality('Fix the bamboo plugin', '  bamboo   plugin ')).toBe(0.8);
     expect(wordMatchQuality('Unrelated', 'bamboo')).toBe(0);
   });
 });

@@ -14,9 +14,15 @@ function quietWatcher(workspacePath: string): Watcher {
 function setUp() {
   const reads: string[] = [];
   const branchNames = new BranchNamesCache(
-    async (place) => {
-      reads.push(placeId(place));
-      return [{ id: 1, name: '/main' }];
+    {
+      every: async (place) => {
+        reads.push(placeId(place));
+        return [{ id: 1, name: '/main' }];
+      },
+      one: async (place, id) => {
+        reads.push(placeId(place));
+        return { id, name: '/main' };
+      },
     },
     Date.now,
     (place) => place.kind === 'workspace' && isShown(watchers, place.workspacePath),

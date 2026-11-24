@@ -14,7 +14,7 @@ vi.mock('../branches/branchOperations', () => ({
 }));
 vi.mock('../merge/mergeOperations', () => ({ openMerge: (request: unknown) => recorded.openedMerges.push(request) }));
 
-import { mergeDestinationIntoTask, resolveOnDestination } from './resolveTaskInWorkspace';
+import { mergeDestinationIntoTask, offersResolvingInWorkspace, resolveOnDestination } from './resolveTaskInWorkspace';
 
 const ws = '/ws';
 
@@ -39,5 +39,18 @@ describe('resolving a task in the workspace', () => {
     await resolveOnDestination(ws, '/main/task001', 'br:/main/task001', '/main');
     expect(recorded.switchesTo).toEqual(['/main', '/main']);
     expect(recorded.openedMerges).toEqual([{ kind: 'merge', sourceSpec: 'br:/main/task001' }]);
+  });
+});
+
+describe('offering to resolve a task in the workspace', () => {
+  it('offers it when the merge on the server conflicts, in a workspace that can merge', () => {
+    for (const workspaceKind of ['standard', 'dynamic', undefined] as const) {
+      expect(offersResolvingInWorkspace({ conflicting: true, workspacePath: ws, workspaceKind })).toBe(true);
+    }
+    expect(offersResolvingInWorkspace({ conflicting: false, workspacePath: ws, workspaceKind: 'standard' })).toBe(false);
+  });
+
+  it('never in a partial workspace, which cm refuses to merge into', () => {
+    expect(offersResolvingInWorkspace({ conflicting: true, workspacePath: ws, workspaceKind: 'partial' })).toBe(false);
   });
 });

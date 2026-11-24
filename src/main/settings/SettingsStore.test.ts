@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { recentCommentsFor } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { SettingsStore } from './SettingsStore';
 
@@ -60,6 +61,38 @@ describe('SettingsStore recent branches', () => {
   });
 });
 
+describe('SettingsStore recent comments', () => {
+  it("keeps both repositories' comments when two windows check in to them one right after the other", () => {
+    const { settings, filePath } = store();
+    const changed: string[][] = [];
+    settings.onChanged((_settings, changes) => changed.push(Object.keys(changes)));
+
+    settings.rememberRecentComment('game@local', 'Fix cs:4207');
+    settings.rememberRecentComment('art@local', 'New textures');
+
+    const stored = new SettingsStore(filePath).get();
+    expect(recentCommentsFor(stored, 'game@local')).toEqual(['Fix cs:4207']);
+    expect(recentCommentsFor(stored, 'art@local')).toEqual(['New textures']);
+    expect(changed).toEqual([['recentCommentsByRepository'], ['recentCommentsByRepository']]);
+  });
+});
+
+describe('SettingsStore favorite organizations', () => {
+  it('keeps every window’s favorites when they change one after another', () => {
+    const { settings, filePath } = store();
+    settings.setFavoriteOrganization('acme@unity', true);
+    settings.setFavoriteOrganization('games@cloud', true);
+    settings.setFavoriteOrganization('acme@unity', false);
+
+    expect(settings.get().favoriteOrganizations).toEqual(['games@cloud']);
+    expect(JSON.parse(readFileSync(filePath, 'utf8')).favoriteOrganizations).toEqual(['games@cloud']);
+  });
+
+  it('starts with none', () => {
+    expect(store().settings.get().favoriteOrganizations).toEqual([]);
+  });
+});
+
 describe('SettingsStore reading its file', () => {
   it("keeps a file it can't read as settings aside, named for when, and starts from the defaults", () => {
     const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
@@ -78,6 +111,26 @@ describe('SettingsStore reading its file', () => {
 
     expect(new SettingsStore(join(folder, 'settings.json')).get()).toEqual(DEFAULT_SETTINGS);
     expect(readdirSync(folder)).toEqual([]);
+  });
+
+  it('reads a file from before recent comments were per repository, keeping its comments for the repositories without their own', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
+    const filePath = join(folder, 'settings.json');
+    writeFileSync(filePath, JSON.stringify({ theme: 'dark', recentComments: ['Older comment'] }));
+
+    const settings = new SettingsStore(filePath).get();
+
+    expect(settings).toMatchObject({ recentComments: ['Older comment'], recentCommentsByRepository: {} });
+    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Older comment']);
+  });
+
+  it('keeps the repositories checked in to last first across a restart, so the one left longest is forgotten first', () => {
+    const { settings, filePath } = store();
+    settings.rememberRecentComment('game@local', 'In game');
+    settings.rememberRecentComment('art@local', 'In art');
+    settings.rememberRecentComment('game@local', 'Again in game');
+
+    expect(Object.keys(new SettingsStore(filePath).get().recentCommentsByRepository)).toEqual(['game@local', 'art@local']);
   });
 
   it('turns off Gravatar pictures saved on only by the old default, until the user chooses', () => {
@@ -108,5 +161,18 @@ describe('SettingsStore reading its file', () => {
     settings.update({ showGravatar: true, gravatarChoiceAsked: true });
 
     expect(new SettingsStore(filePath).get()).toMatchObject({ showGravatar: true, gravatarChoiceAsked: true });
+  });
+});
+
+describe('SettingsStore and the choice of cm', () => {
+  it('moves a file’s choice from before the automatic one to it once, and keeps the user’s choice after that', () => {
+    const { settings, filePath } = store();
+    writeFileSync(filePath, JSON.stringify({ ...DEFAULT_SETTINGS, cmChoice: 'managed', cmDeclinedUpdateFor: undefined }));
+    const migrated = new SettingsStore(filePath);
+    expect(migrated.get().cmChoice).toBe('automatic');
+
+    migrated.update({ cmChoice: 'managed' });
+    expect(new SettingsStore(filePath).get().cmChoice).toBe('managed');
+    expect(settings.get().cmChoice).toBe('automatic');
   });
 });

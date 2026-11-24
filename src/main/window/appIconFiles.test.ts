@@ -55,10 +55,9 @@ describe('the app icons', () => {
     expect(readText(join(BUILD, 'icon.svg'))).toBe(appIconSvg('edgeToEdge'));
   });
 
-  it('give macOS every size from 16 to 512 points, at 1x and 2x', () => {
+  // No `icp4` or `icp5`: Activity Monitor draws their PNG as noise (why: `ICNS_TYPES`, scripts/icons/makeAppIcons.mjs).
+  it('give macOS every size from 16 to 512 points at 2x, and from 128 at 1x, all in entries macOS reads as PNG', () => {
     expect(icnsEntries(readFileSync(join(BUILD, 'icon.icns')))).toEqual([
-      ['icp4', 16],
-      ['icp5', 32],
       ['ic11', 32],
       ['ic12', 64],
       ['ic07', 128],

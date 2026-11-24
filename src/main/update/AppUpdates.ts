@@ -1,4 +1,5 @@
-import type { ReleaseNotes, UpdateStatus } from '@shared/domain/appUpdate';
+import type { InstalledCmUpdate, ReleaseNotes, UpdateStatus } from '@shared/domain/appUpdate';
+import type { CmPrefetch } from '../cmRuntime/CmRuntime';
 import type { ReleaseFile } from './installerAsset';
 import { releaseNotesOf, type FeedReleaseNotes } from './releaseNotes';
 import { describeUpdateError, UpdateFailure, updateErrorForLog } from './updateError';
@@ -15,6 +16,9 @@ export interface UpdateFeed {
   quitAndInstall(isSilent: boolean, isForceRunAfter: boolean): void;
   on(event: 'download-progress', listener: (progress: { percent: number }) => void): unknown;
 }
+
+/** The share of an update's progress its own download takes when its `cm` downloads too. */
+export const APP_SHARE_WITH_CM = 0.5;
 
 /** What `AppUpdates` reads of the update a check found. */
 export interface FoundUpdate {
@@ -47,6 +51,13 @@ export interface AppUpdatesDependencies {
   writesFinished: () => Promise<void>;
   /** Called just before quitting to install (`Quitting.restartToInstall`): the windows reopen where they were. */
   beforeRestart: () => void;
+  /**
+   * What the update of `version` needs of `cm`, downloaded with it (docs/features/cm-runtime.md "Updates bring their
+   * cm"), so restarting into it never waits on a setup or the update screen: the app's own of its version, or the
+   * installed one's installer, run before the restart; null when it needs nothing more. A failure here, in its download
+   * or in the installer never stops the update: its first start sets the app's own up, or shows the update screen.
+   */
+  cmPrefetchFor: (version: string) => Promise<CmPrefetch | null>;
   /** Tells every window where the update stands. */
   push: (status: UpdateStatus) => void;
   /** Keeps the cause of a failed check or download, which the window shows only in a sentence (`describeUpdateError`). */
@@ -71,6 +82,12 @@ export class AppUpdates {
   private installerPath: string | null = null;
   private notes: ReleaseNotes[] = [];
   private feedLoaded: Promise<UpdateFeed> | null = null;
+  /** The share of the progress the app's own download takes: all of it, or half when its `cm` downloads too. */
+  private appShare = 1;
+  /** The installed `cm`, older than the update needs, as the windows hear of it; none when the update needs nothing of it. */
+  private installedCm: InstalledCmUpdate | null = null;
+  /** Runs the installed `cm`'s installer, downloaded with the update, before restarting into it (`install`). */
+  private installCm: (() => Promise<boolean>) | null = null;
 
   constructor(private readonly dependencies: AppUpdatesDependencies) {
     this.current = dependencies.packaged ? { state: 'idle' } : { state: 'unavailable' };
@@ -125,30 +142,97 @@ export class AppUpdates {
     const ready = this.current;
     if (ready.state !== 'ready') return;
     if (this.dependencies.writesRunning()) {
-      this.setStatus({ ...ready, state: 'waitingToInstall' });
+      this.setStatus({ ...ready, state: 'waitingToInstall', waitingFor: 'operation' });
       await this.dependencies.writesFinished();
     }
+    await this.installCmFirst(ready);
     this.dependencies.beforeRestart();
     if (this.installerPath) await this.dependencies.openInstaller(this.installerPath);
     // Silent: the Windows installer runs with no wizard (a per-user install asks for no elevation), then the app starts again.
     else (await this.feed()).quitAndInstall(true, true);
   }
 
+  /**
+   * The installed `cm`'s installer, downloaded with the update, runs before the restart (the windows hear it waits for
+   * it). Declined or failed, the update still installs: its first start shows the update screen.
+   */
+  private async installCmFirst(ready: Extract<UpdateStatus, { state: 'ready' }>): Promise<void> {
+    const installCm = this.installCm;
+    if (!installCm) return;
+    this.setStatus({ ...ready, state: 'waitingToInstall', waitingFor: 'installedCm' });
+    try {
+      if (!(await installCm())) this.dependencies.logFailure(`[updates] The installed cm wasn't updated for ${ready.version}; its first start asks to update it.`);
+    } catch (error) {
+      this.dependencies.logFailure(`[updates] The installed cm's installer failed for ${ready.version}; its first start asks to update it: ${updateErrorForLog(error)}`);
+    }
+  }
+
   private async download({ version, files, releaseNotes, releaseDate }: FoundUpdate): Promise<void> {
     this.notes = releaseNotesOf(releaseNotes, version, releaseDate);
-    this.setStatus({ state: 'downloading', version, percent: 0 });
+    this.installedCm = null;
+    this.installCm = null;
+    this.setStatus(this.downloading(version, 0));
+    const cm = await this.cmPrefetchFor(version);
+    if (cm && cm.kind !== 'own') {
+      this.installedCm = { installedVersion: cm.installed.version, neededVersion: cm.neededVersion, by: cm.kind === 'installed' ? 'installer' : 'command' };
+      this.setStatus(this.downloading(version, 0));
+    }
+    const downloadsCm = cm !== null && cm.kind !== 'installedByCommand';
+    this.appShare = downloadsCm ? APP_SHARE_WITH_CM : 1;
+    const install = await this.downloadApp(version, files);
+    if (downloadsCm) await this.downloadCm(version, cm);
+    this.setStatus({ state: 'ready', version, install, ...this.withInstalledCm() });
+  }
+
+  /** The download's status, saying what the update needs of the installed `cm`, if anything. */
+  private downloading(version: string, percent: number): UpdateStatus {
+    return { state: 'downloading', version, percent, ...this.withInstalledCm() };
+  }
+
+  private withInstalledCm(): { installedCm?: InstalledCmUpdate } {
+    return this.installedCm ? { installedCm: this.installedCm } : {};
+  }
+
+  private async downloadApp(version: string, files: ReleaseFile[]): Promise<'restart' | 'installer'> {
     this.manualInstall ??= this.dependencies.needsManualInstall();
     if (!(await this.manualInstall)) {
       await (await this.feed()).downloadUpdate();
-      this.setStatus({ state: 'ready', version, install: 'restart' });
-      return;
+      return 'restart';
     }
     const installer = this.dependencies.installerOf(files);
     if (!installer) throw new UpdateFailure(`Version ${version} has no installer for this Mac.`);
     this.installerPath = await this.dependencies.downloadInstaller(installer, version, (percent) =>
-      this.setStatus({ state: 'downloading', version, percent }),
+      this.setStatus(this.downloading(version, Math.floor(percent * this.appShare))),
     );
-    this.setStatus({ state: 'ready', version, install: 'installer' });
+    return 'installer';
+  }
+
+  private async cmPrefetchFor(version: string): Promise<CmPrefetch | null> {
+    try {
+      return await this.dependencies.cmPrefetchFor(version);
+    } catch (error) {
+      this.dependencies.logFailure(`[updates] The cm of ${version} couldn't be read; it's set up as it starts: ${updateErrorForLog(error)}`);
+      return null;
+    }
+  }
+
+  /**
+   * The rest of the progress. A failure only means the update sets its `cm` up as it starts, or, for the installed one's
+   * installer, that its first start shows the update screen: the card no longer says it updates it.
+   */
+  private async downloadCm(version: string, cm: Exclude<CmPrefetch, { kind: 'installedByCommand' }>): Promise<void> {
+    const from = Math.floor(100 * this.appShare);
+    try {
+      await cm.download((fraction) => {
+        const percent = from + Math.floor((100 - from) * fraction);
+        if (this.current.state === 'downloading' && percent !== this.current.percent) this.setStatus(this.downloading(version, percent));
+      });
+      if (cm.kind === 'installed') this.installCm = cm.install;
+    } catch (error) {
+      this.installedCm = null;
+      const after = cm.kind === 'installed' ? 'its first start asks to update the installed one' : "it's set up as it starts";
+      this.dependencies.logFailure(`[updates] The cm of ${version} didn't download; ${after}: ${updateErrorForLog(error)}`);
+    }
   }
 
   /** The feed, loaded once (`loadFeed`). */
@@ -156,7 +240,7 @@ export class AppUpdates {
     this.feedLoaded ??= this.dependencies.loadFeed().then((feed) => {
       // electron-updater reports fractions many times a second: windows hear whole percents only.
       feed.on('download-progress', (progress) => {
-        const percent = Math.floor(progress.percent);
+        const percent = Math.floor(progress.percent * this.appShare);
         if (this.current.state === 'downloading' && percent !== this.current.percent) this.setStatus({ ...this.current, percent });
       });
       return feed;

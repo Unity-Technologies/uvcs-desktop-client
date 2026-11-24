@@ -1,6 +1,5 @@
 import { GitGraph } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
@@ -8,6 +7,7 @@ import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { usePlaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { offersMerges } from '../../components/mergesOffered';
 import { branchWorkedOn } from '../../components/workingObject';
 import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
 import { pluralize } from '../../lib/text';
@@ -15,7 +15,8 @@ import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
-import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
+import { useBranchReviews } from '../codeReviews/useBranchReviews';
+import { useBranchesNearView } from './useBranchesNearView';
 import { BRANCH_EXPLORER_DETAILS_KEY, useAppliedExplorerRules, useAppliedUserColors, useBranchExplorerPreferences, useBranchPins, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights, type TimelineInputs } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
@@ -56,6 +57,7 @@ import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import { useCreatedBranchReveal } from './useCreatedBranchReveal';
 import { useGraphLayout } from './useGraphLayout';
+import { useFirstHitArrival } from './useFirstHitArrival';
 import { useGraphSearch } from './useGraphSearch';
 import { useOpeningView } from './useOpeningView';
 import { usePendingChangeset } from './usePendingChangeset';
@@ -66,7 +68,6 @@ import { TimelineToggleButton } from './timeline/TimelineToggleButton';
 import { useTimelineSlideIn } from './timeline/useTimelineSlideIn';
 import styles from './BranchExplorerView.module.css';
 
-const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
 
 export function BranchExplorerView() {
   const place = usePlace();
@@ -141,8 +142,9 @@ export function BranchExplorerView() {
   );
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => historyAuthors(data)) : []), [data]);
   const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);
-  // Asked for once the graph is in, so it never waits on the reviews.
-  const { data: reviews } = useReviewsByBranch(data !== undefined);
+  // Only the branches whose headers are in view or near it, as the canvas reports them, read in blocks.
+  const [branchesNear, reportBranchesNear] = useBranchesNearView();
+  const reviews = useBranchReviews(branchesNear);
   // What the hits light up, found once per search: selecting and stepping through the hits only moves `active`.
   const searchLit = useMemo(
     () => (search.shown.trim() && fullLayout ? searchHighlight(fullLayout, searchHits, null) : null),
@@ -159,7 +161,7 @@ export function BranchExplorerView() {
       search: searchLit && { ...searchLit, active: activeHit },
       searchQuery: search.shown.trim(),
       options: viewOptions,
-      reviews: reviews ?? NO_REVIEWS,
+      reviews,
     }),
     [selections, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, viewOptions, reviews],
   );
@@ -236,10 +238,12 @@ export function BranchExplorerView() {
     const hit = search.step(direction, fullLayout, searchHits);
     if (hit) goToHit(hit);
   };
+  useFirstHitArrival(search, fullLayout, searchHits, goToHit);
 
   const menuFor = (target: GraphTarget | null) =>
     graphMenu(target, {
       place,
+      workspaceKind: workspace?.kind,
       layout: layout!,
       currentBranch: currentBranch ?? undefined,
       loadedChangeset: workspace?.loadedChangeset,
@@ -269,7 +273,7 @@ export function BranchExplorerView() {
       select: setSelection,
       homeChangeset,
       repository,
-      inWorkspace: place.kind === 'workspace',
+      mergesOffered: offersMerges({ place, workspaceKind: workspace?.kind }),
       canvas: canvasRef,
       goHome,
       find,
@@ -371,6 +375,7 @@ export function BranchExplorerView() {
               ref={canvasRef}
               layout={layout}
               highlights={highlights}
+              onBranchesNearView={reportBranchesNear}
               ruleColors={ruleColors}
               onSelect={select}
               onActivate={activate}

@@ -3,6 +3,7 @@ import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse, type RemoteError } from '@shared/ipc';
 import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import { CmError } from '../cm/CmError';
+import { CmSignInError } from '../cm/CmSignInError';
 import { apiMethods } from './apiMethods';
 import { runForCaller } from './caller';
 import type { EarlyCalls } from './EarlyCalls';
@@ -28,6 +29,7 @@ export function registerApi(api: UvcsApi, early?: EarlyCalls): void {
 }
 
 function toRemoteError(error: unknown): RemoteError {
+  if (error instanceof CmSignInError) return { message: error.message, command: clippedCommand(error.command), signIn: error.problem };
   if (error instanceof CmError) return { message: error.message, command: clippedCommand(error.command) };
   if (error instanceof Error) return { message: error.message };
   return { message: String(error) };

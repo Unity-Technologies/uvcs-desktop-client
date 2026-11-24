@@ -80,7 +80,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
                     title="No workspaces yet"
                     description="Create a workspace to download a repository and start working with its files."
                     action={
-                      <Button variant="primary" onClick={() => openCreateWorkspaceDialog({ onCreated: onOpen })}>
+                      <Button variant="primary" icon={<FolderPlus size={14} />} onClick={() => openCreateWorkspaceDialog({ onCreated: onOpen })}>
                         New workspace
                       </Button>
                     }

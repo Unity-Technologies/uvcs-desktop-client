@@ -1,4 +1,4 @@
-/* Sits on the parent's top border, with a taller invisible grab area. */
+/* Sits on the parent's top border (or its bottom one, `data-edge`), with a taller invisible grab area. */
 .handle {
   position: absolute;
   top: -1px;
@@ -7,6 +7,11 @@
   height: 1px;
   cursor: row-resize;
   z-index: 1;
+}
+
+.handle[data-edge='bottom'] {
+  top: auto;
+  bottom: -1px;
 }
 
 .handle::after {

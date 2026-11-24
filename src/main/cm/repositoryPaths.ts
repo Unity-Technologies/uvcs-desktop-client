@@ -18,8 +18,8 @@ export function repositoryPathsArgs(treeSpec: string): string[] {
  */
 export const readListedPath: ReadRecord<FoundPath> = ([type, path]) => {
   const relative = path?.replaceAll('\\', '/').replace(/^\//, '') ?? '';
-  // An xlink is a folder of the tree: the listing walks into it.
-  return relative ? { path: relative, isDirectory: type === 'dir' || type === 'xlink' } : undefined;
+  // `cm ls` lists an xlink as a folder (`dir`) of the tree, and walks into it.
+  return relative ? { path: relative, isDirectory: type === 'dir' } : undefined;
 };
 
 /**

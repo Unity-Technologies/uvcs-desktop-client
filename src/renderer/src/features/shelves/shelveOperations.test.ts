@@ -12,15 +12,18 @@ vi.mock('../../components/EditCommentDialog', () => ({
 
 import { workspacePlace } from '@shared/domain/place';
 import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
+import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { useNavigation } from '../../app/navigation/navigationStore';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { cachedShelve } from './cachedShelve';
 import { applyShelve, deleteShelve, editShelveComment, saveShelveComment, shelveAway } from './shelveOperations';
 
 const ws = '/ws';
+const PARTIAL_WORKSPACE: WorkspaceInfo = { name: 'ws', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 5, kind: 'partial' };
 const confirmTitles = () => askedDialogs().map((dialog) => dialog.title);
 
 /** `shelves.apply` answers each call with the next outcome. */
@@ -64,6 +67,21 @@ describe('applyShelve', () => {
     expect(await applyShelve(ws, 12, true)).toBe(false);
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:12', deleteShelve: true } }]);
     expect(shownToasts()).toEqual([]);
+  });
+
+  it('says where the shelve can merge when a partial workspace, which takes no merge, conflicts with it', async () => {
+    queryClient.setQueryData(workspaceInfoQuery(ws).queryKey, PARTIAL_WORKSPACE);
+    applyAnswers({ kind: 'conflicts' });
+
+    expect(await applyShelve(ws, 12, true)).toBe(false);
+    expect(whereTheWindowIs().pages).toEqual([]);
+    expect(shownToasts()).toEqual([
+      {
+        kind: 'info',
+        title: 'Shelve 12 wasn’t applied',
+        detail: 'It needs a merge, which a partial workspace can’t take: apply it in a standard workspace.',
+      },
+    ]);
   });
 
   it('asks before a second shelve in conflict replaces the merge of the first one, and keeps it on Cancel', async () => {

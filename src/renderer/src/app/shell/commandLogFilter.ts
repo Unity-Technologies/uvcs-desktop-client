@@ -2,7 +2,7 @@ import type { CommandLogEntry } from '@shared/events';
 import { withControlPictures } from '../../lib/controlPictures';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import type { NumberedLog } from './commandLogNumbering';
-import { entryEnding } from './commandEnding';
+import { entryEnding } from '@shared/commandEnding';
 import type { Place } from '@shared/domain/place';
 import { ranInPlace, type CommandLogScope } from './commandLogScope';
 

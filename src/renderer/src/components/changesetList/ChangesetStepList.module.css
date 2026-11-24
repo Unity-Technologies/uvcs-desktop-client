@@ -1,0 +1,62 @@
+/* As tall as its toolbar and its rows (`changesetRowsHeight`): what's under it gets the rest. Its bottom border is the
+   splitter that sizes the rows (`ResizeHandle`), so it's positioned. */
+.list {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  min-height: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* The files' filter bar's measures (`useChangeFilter`), so the two bars of the column read alike. */
+.bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--pane-toolbar-height);
+  padding: 0 var(--space-2);
+}
+
+/* The rows scroll inside past `mostRows`, or the height dragged (`changesetRowsHeight`). */
+.rows {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* One line per row, as a commit picker lists them: the comment takes what the age leaves. */
+.row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--text-primary);
+}
+
+/* What the user reviewed reads a step quieter than what's new to them. */
+.row[data-quiet] {
+  color: var(--text-secondary);
+}
+
+.comment {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.row[data-quiet] .comment :global(*) {
+  color: inherit;
+}
+
+/* A fixed column, so the comments end in one place whatever the age says ("now", "12m", "Oct 2025"). */
+.age {
+  flex: none;
+  width: 52px;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

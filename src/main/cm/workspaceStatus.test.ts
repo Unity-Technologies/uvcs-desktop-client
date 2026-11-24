@@ -1,5 +1,7 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadedChangesetOf, parseWorkspaceStatus, selectorName } from './workspaceStatus';
+import { fakeCmClient } from './testing/fakeCmClient';
+import { loadedChangesetOf, parseWorkspaceStatus, readWorkspaceOrigin, selectorName } from './workspaceStatus';
 
 describe('selectorName', () => {
   it('removes the repository spec even when the name repeats in the server', () => {
@@ -29,6 +31,31 @@ describe('parseWorkspaceStatus', () => {
       printedServer: 'acme@cloud',
       selector: { kind: 'branch', name: '/main/TASK1008897' },
       loadedChangeset: 278638,
+      partial: false,
+    });
+  });
+
+  it('reads a partial workspace on a changeset, which cm prints as changeset -1', () => {
+    const partialOnChangeset = `<?xml version="1.0" encoding="utf-8"?>
+<StatusOutput>
+  <WorkspaceStatus>
+    <Status>
+      <RepSpec>
+        <Server>local</Server>
+        <Name>lib</Name>
+      </RepSpec>
+      <Changeset>-1</Changeset>
+    </Status>
+  </WorkspaceStatus>
+  <WkConfigType>Changeset</WkConfigType>
+  <WkConfigName>3@lib@local</WkConfigName>
+</StatusOutput>`;
+    expect(parseWorkspaceStatus(partialOnChangeset)).toEqual({
+      repositoryName: 'lib',
+      printedServer: 'local',
+      selector: { kind: 'changeset', name: '3' },
+      loadedChangeset: 3,
+      partial: true,
     });
   });
 
@@ -66,6 +93,7 @@ describe('parseWorkspaceStatus', () => {
       printedServer: 'local',
       selector: { kind: 'shelve', name: '3' },
       loadedChangeset: null,
+      partial: false,
     });
   });
 
@@ -97,14 +125,15 @@ describe('parseWorkspaceStatus', () => {
       printedServer: 'local',
       selector: { kind: 'branch', name: '/main' },
       loadedChangeset: null,
+      partial: true,
     });
   });
 
-  it('fails on changeset -1 on a label or a changeset, which loads one changeset', () => {
+  it('reads changeset -1 on a label or a changeset as a partial workspace there', () => {
     const onLabel = partial.replace('<WkConfigType>Branch', '<WkConfigType>Label').replace('/main@', 'v1@');
     const onChangeset = partial.replace('<WkConfigType>Branch', '<WkConfigType>Changeset').replace('/main@', '12@');
-    expect(() => parseWorkspaceStatus(onLabel)).toThrow(/cm status/);
-    expect(() => parseWorkspaceStatus(onChangeset)).toThrow(/cm status/);
+    expect(parseWorkspaceStatus(onLabel)).toMatchObject({ selector: { kind: 'label', name: 'v1' }, loadedChangeset: null, partial: true });
+    expect(parseWorkspaceStatus(onChangeset)).toMatchObject({ selector: { kind: 'changeset', name: '12' }, loadedChangeset: 12, partial: true });
   });
 
   it('fails on output without a status, instead of returning an empty branch and changeset -1', () => {
@@ -121,15 +150,48 @@ describe('loadedChangesetOf', () => {
     expect(loadedChangesetOf(-1, { kind: 'shelve', name: '1' })).toBeNull();
     expect(loadedChangesetOf(-1, { kind: 'branch', name: '/main' })).toBeNull();
     expect(loadedChangesetOf(-2, { kind: 'branch', name: '/main' })).toBeUndefined();
-    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
     expect(loadedChangesetOf(-5, { kind: 'changeset', name: '-5' })).toBeUndefined();
     expect(loadedChangesetOf(Number.NaN, { kind: 'shelve', name: '3' })).toBeUndefined();
   });
 
-  it("takes -1 on a branch as a partial workspace's, which has no one changeset, but on no other selector", () => {
+  it("takes -1 on a branch as a partial workspace's, which has no one changeset", () => {
     expect(loadedChangesetOf(-1, { kind: 'branch', name: '/main' })).toBeNull();
     expect(loadedChangesetOf(-2, { kind: 'branch', name: '/main' })).toBeUndefined();
-    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeUndefined();
+  });
+
+  it('takes -1 on a changeset as a partial workspace on that changeset, which is what everything it loads is at', () => {
+    expect(loadedChangesetOf(-1, { kind: 'changeset', name: '3' })).toBe(3);
     expect(loadedChangesetOf(-1, { kind: 'changeset', name: '-1' })).toBeUndefined();
+    expect(loadedChangesetOf(-2, { kind: 'changeset', name: '3' })).toBeUndefined();
+  });
+
+  it("takes -1 on a label as a partial workspace's, whose changeset the label names but cm doesn't print", () => {
+    expect(loadedChangesetOf(-1, { kind: 'label', name: 'v1' })).toBeNull();
+    expect(loadedChangesetOf(-2, { kind: 'label', name: 'v1' })).toBeUndefined();
+  });
+});
+
+describe('readWorkspaceOrigin', () => {
+  const ROOT = join('/wkspaces', 'game');
+
+  it("reads a workspace's root and server with two local reads that name their folder and run in any directory", async () => {
+    const { cm, commands } = fakeCmClient({
+      'getworkspacefrompath': `${ROOT}\n`,
+      'status --header --machinereadable': 'STATUS|12|game|acme@cloud\n',
+    });
+
+    expect(await readWorkspaceOrigin(cm, join(ROOT, 'Assets'))).toEqual({ root: ROOT, server: 'acme@cloud' });
+
+    // No folder given: a failure of these never asks to learn a server, so learning never waits on itself.
+    expect(commands.map(({ args, options }) => [args[0], options])).toEqual([
+      ['getworkspacefrompath', { anyDirectory: true }],
+      ['status', { anyDirectory: true }],
+    ]);
+  });
+
+  it('reads none for a folder in no workspace', async () => {
+    const { cm } = fakeCmClient({ getworkspacefrompath: '' });
+
+    expect(await readWorkspaceOrigin(cm, '/elsewhere')).toBeUndefined();
   });
 });

@@ -5,6 +5,11 @@
   z-index: 10;
 }
 
+/* A card the pointer moves into (a merge request's summary): it takes the pointer, as a caption's card does. */
+.tooltip[data-enterable] {
+  pointer-events: auto;
+}
+
 .tooltip[data-flip='true'] {
   transform: translateX(-100%);
 }

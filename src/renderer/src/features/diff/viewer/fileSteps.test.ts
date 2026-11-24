@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adjacentKey, fileSteps, pendingArrival, selectNow, settlingOnOf } from './fileSteps';
+import { arrivedByStep, adjacentKey, fileSteps, pendingArrival, selectNow, settlingOnOf } from './fileSteps';
 
 describe('settlingOnOf', () => {
   const a = { path: 'src/a.ts' };
@@ -158,6 +158,25 @@ describe('fileSteps', () => {
     expect(selected).toEqual(['b']);
   });
 
+  it('names the file a step would go to, selecting nothing, and none past the ends', () => {
+    const { steps, selected } = list('b');
+    expect([steps.neighbor(-1), steps.neighbor(1)]).toEqual(['src/a.ts', 'src/c.ts']);
+    expect(list('c').steps.neighbor(1)).toBeNull();
+    expect(selected).toEqual([]);
+  });
+
+  it("names the files around a folder or group selected, given the list's rows, for the arrows shown with no diff", () => {
+    const list = { select: (_key: string, done: () => void) => selectNow(done, () => undefined), pathOf: (key: string) => key, rowOrder: ['Changed', 'a', 'Art', 'b'] };
+    expect([fileSteps(['a', 'b'], 'Art', list, pendingArrival()).neighbor(-1), fileSteps(['a', 'b'], 'Art', list, pendingArrival()).neighbor(1)]).toEqual(['a', 'b']);
+    expect([fileSteps(['a', 'b'], 'Changed', list, pendingArrival()).neighbor(-1), fileSteps(['a', 'b'], 'Changed', list, pendingArrival()).neighbor(1)]).toEqual([null, 'a']);
+  });
+
+  it("says where the file shown stands in the list, and nothing for a row that isn't a file", () => {
+    expect(list('b').steps.position).toEqual({ index: 1, count: 3 });
+    const rows = { select: (_key: string, done: () => void) => selectNow(done, () => undefined), pathOf: (key: string) => key, rowOrder: ['a', 'Art', 'b'] };
+    expect(fileSteps(['a', 'b'], 'Art', rows, pendingArrival()).position).toBeNull();
+  });
+
   it('selects nothing past the ends', () => {
     const { steps, selected } = list('c');
     expect(steps.canStep(1)).toBe(false);
@@ -184,5 +203,15 @@ describe('fileSteps', () => {
     pending.kept.push('src/b.ts', -1);
     fileSteps(['a', 'b', 'c'], 'b', { select: SELECTS, pathOf: (key) => `src/${key}.ts` }, pending).listMoved();
     expect([pending.kept.take('src/a.ts'), pending.kept.take('src/b.ts')]).toEqual([undefined, -1]);
+  });
+});
+
+describe('arrivedByStep', () => {
+  it('says a file shown was reached by a step from the file beside it, not picked, nor the same file shown again', () => {
+    expect(arrivedByStep('a.ts', 'b.ts', 'b.ts')).toBe(true);
+    expect(arrivedByStep('a.ts', 'b.ts', null)).toBe(false);
+    expect(arrivedByStep('b.ts', 'b.ts', 'b.ts')).toBe(false);
+    // A header drawn anew by the step (from an xlink's, which has its own).
+    expect(arrivedByStep(null, 'b.ts', 'b.ts')).toBe(true);
   });
 });

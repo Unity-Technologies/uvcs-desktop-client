@@ -2,7 +2,7 @@
 // draws: run it after changing the mark, and commit what it writes (`appIcons.test.ts` fails until the icons match).
 // Usage: npm run icons
 //   build/icon-macOS.svg, build/icon.svg   the sources, on macOS's icon grid and edge to edge
-//   build/icon.icns                        macOS (electron-builder's mac.icon), 16 to 1024 pixels
+//   build/icon.icns                        macOS (electron-builder's mac.icon), 32 to 1024 pixels
 //   build/icon.ico                         Windows (win.icon), 16 to 256 pixels
 //   build/icons/<size>x<size>.png          Linux (linux.icon), and the Linux window's icon (main/window/appIcon.ts)
 //   build/icon-macOS.png                   the Dock's icon while the app runs unpackaged (npm run dev, npm start)
@@ -19,12 +19,13 @@ import { appIconSvg } from '../../src/shared/appMark.ts';
 const BUILD = fileURLToPath(new URL('../../build/', import.meta.url));
 
 /**
- * The icns entry types that hold a PNG, by the pixels each holds (Apple's `IconFamily` types: 16 to 512 points, at 1x
- * and 2x). Not `icp6`: macOS reads it as 48 pixels, a size no Retina Mac asks for.
+ * The icns entry types that hold a PNG, by the pixels each holds (Apple's `IconFamily` types: 16 to 512 points at 2x,
+ * 128 to 512 at 1x). Not `icp4` and `icp5` (16 and 32 pixels): Activity Monitor and `iconutil` draw a PNG in them as
+ * noise, though NSImage and ImageIO read it (Apple's `iconutil` writes those sizes as ARGB `ic04` and `ic05`, which
+ * would need raw pixels and an RLE encoder here); without them macOS scales the 2x entries down. Not `icp6`: macOS
+ * reads it as 48 pixels, a size no Retina Mac asks for.
  */
 const ICNS_TYPES = [
-  ['icp4', 16],
-  ['icp5', 32],
   ['ic11', 32],
   ['ic12', 64],
   ['ic07', 128],

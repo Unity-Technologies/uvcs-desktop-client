@@ -1,11 +1,16 @@
 import type { Place } from '@shared/domain/place';
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
-import { type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
+import type { CodeReviewFilter, CodeReviewSummary } from '@shared/domain/codeReview';
+import { branchTargetIdsOf, withTargetNamed } from '@shared/domain/reviewTargetNames';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
 import { FOUND_REVIEWS, LISTED_REVIEWERS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
+import { branchTargetsCondition } from '../cm/branchTargetsCondition';
+import { CmError } from '../cm/CmError';
+import { createdMergeRequestOf, createMergeRequestArgs, mergeRequestDestinationArgs, mergeRequestStateArgs, recordMergedArgs } from '../cm/mergeRequestArgs';
+import { parseReviewSubscription, reviewSubscriptionArgs, setSubscriptionArgs } from '../cm/reviewSubscription';
 import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
@@ -23,9 +28,14 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   function findListedReviews(place: Place, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
       ...(filter.id !== undefined ? [`id = ${filter.id}`] : []),
+      // A branch's name can't hold a quote, which `cm find` can't read: its spec is matched exactly.
+      ...(filter.targetBranch !== undefined ? [equalsCondition('target', `br:${filter.targetBranch}`)] : []),
+      ...(filter.targetBranchIds !== undefined ? [branchTargetsCondition(filter.targetBranchIds)] : []),
       // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
       ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
+      // `{mergerequeststatusname}`'s English name, as `cm find` takes it; one state per query, as for the status.
+      ...(filter.mergeRequestState ? [equalsCondition('mergerequeststatus', filter.mergeRequestState)] : []),
     ];
     return findReviews(place, conditions, {
       owners: filter.owners,
@@ -36,32 +46,25 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   }
 
   /**
-   * `cm` reports branch targets only by object id; the names come from the branch lists already read, or from the
-   * names of every branch, read once in a while (`BranchNamesCache`).
+   * `cm` reports branch targets only by object id; the names come from the branch lists already read, else one id
+   * alone is read by itself and two or more from the names of every branch, read once in a while (`BranchNamesCache`).
    */
-  async function resolveTargets(place: Place, reviews: RawCodeReview[]): Promise<CodeReview[]> {
-    const branchIds = reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId);
-    const names = branchIds.length > 0 ? await branchNames.resolve(place, branchIds) : new Map<number, string>();
-
-    return reviews.map((review) => ({
-      ...summaryOf(review),
-      target: targetOf(review, names),
-    }));
+  async function branchNamesOf(place: Place, branchIds: number[]): Promise<Record<number, string>> {
+    if (branchIds.length === 0) return {};
+    return Object.fromEntries(await branchNames.resolve(place, branchIds));
   }
 
   return {
-    async list(place, filter) {
-      return resolveTargets(place, await findListedReviews(place, filter));
-    },
-
     async listSummaries(place, filter) {
       return (await findListedReviews(place, filter)).map(summaryOf);
     },
 
+    branchNames: branchNamesOf,
+
     async get(place, reviewId) {
-      const [review] = await resolveTargets(place, await findReviewById(place, reviewId));
+      const [review] = (await findReviewById(place, reviewId)).map(summaryOf);
       if (!review) throw new Error(`Code review ${reviewId} was not found.`);
-      return review;
+      return withTargetNamed(review, await branchNamesOf(place, branchTargetIdsOf([review])));
     },
 
     reviewers(place, reviewId) {
@@ -108,6 +111,52 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       const at = cmPlace(place);
       await cm.query(deleteReviewsArgs(reviewIds, at), at.options);
     },
+
+    async subscription(place, reviewId) {
+      const at = cmPlace(place);
+      return parseReviewSubscription(await cm.query(reviewSubscriptionArgs(reviewId, at), at.options));
+    },
+
+    async subscribe(place, reviewId) {
+      const at = cmPlace(place);
+      await cm.query(setSubscriptionArgs(reviewId, true, at), at.options);
+    },
+
+    async unsubscribe(place, reviewId) {
+      const at = cmPlace(place);
+      await cm.query(setSubscriptionArgs(reviewId, false, at), at.options);
+    },
+
+    async createMergeRequest(place, request) {
+      const at = cmPlace(place);
+      const create = (descriptionFile?: string): Promise<string> => cm.query(createMergeRequestArgs(request, descriptionFile, at), at.options);
+      try {
+        const output = request.description?.trim() ? await withTempFile(request.description, create) : await create();
+        const created = createdMergeRequestOf(output, false);
+        if (!created) throw new Error("The server didn't say which merge request it created.");
+        return created;
+      } catch (error) {
+        // A description that failed after the request was made: `cm` printed its id and exited 1. It exists.
+        const created = error instanceof CmError ? createdMergeRequestOf(error.command.output, true) : undefined;
+        if (!created) throw error;
+        return created;
+      }
+    },
+
+    async setMergeRequestState(place, reviewId, state) {
+      const at = cmPlace(place);
+      await cm.query(mergeRequestStateArgs(reviewId, state, at), at.options);
+    },
+
+    async setMergeRequestDestination(place, reviewId, branch) {
+      const at = cmPlace(place);
+      await cm.query(mergeRequestDestinationArgs(reviewId, branch, at), at.options);
+    },
+
+    async recordMerged(place, reviewId, changesetId) {
+      const at = cmPlace(place);
+      await cm.query(recordMergedArgs(reviewId, changesetId, at), at.options);
+    },
   };
 }
 
@@ -117,12 +166,4 @@ function summaryOf({ targetType, targetId, ...summary }: RawCodeReview): CodeRev
   if (targetType === 'changeset') return { ...summary, target: { kind: 'changeset', changesetId: targetId } };
   if (targetType === 'shelve') return { ...summary, target: { kind: 'shelve', shelveId: targetId } };
   return summary;
-}
-
-function targetOf({ targetType, targetId }: RawCodeReview, branchNames: ReadonlyMap<number, string>): CodeReviewTarget {
-  if (targetType === 'changeset') return { kind: 'changeset', changesetId: targetId };
-  if (targetType === 'shelve') return { kind: 'shelve', shelveId: targetId };
-  const branch = targetType === 'branch' ? branchNames.get(targetId) : undefined;
-  if (branch !== undefined) return { kind: 'branch', branch };
-  return { kind: 'unknown', description: targetType === 'branch' ? 'an unknown branch' : 'changes of an unknown kind' };
 }

@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, ChevronUp, X } from 'lucide-react';
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useNewValuesLayoutEffect } from '../../../lib/useNewValuesEffect';
+import { useRef, type ReactNode, type RefObject } from 'react';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { listScrollTop } from '../../../lib/scrollPlacement';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -18,6 +19,7 @@ import { threadKindName } from '../conversation/threadBadges';
 import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
 import {
   commentPosition,
+  commentsFilterChoices,
   commentsPanelCounts,
   foldAllEntry,
   shownFolds,
@@ -34,10 +36,11 @@ import {
   threadKindChipLabel,
   threadKindCounts,
   type CommentsFilter,
+  type NewThreads,
   type CommentsSearch,
   type ThreadKind,
 } from './commentsPanel';
-import type { LineThread } from './fileThreads';
+import { isLineThread, type FileThread } from './fileThreads';
 import { CommentsOrderMenu } from './CommentsOrderMenu';
 import type { ReviewComments } from './reviewComments';
 import styles from './ReviewCommentsPanel.module.css';
@@ -46,11 +49,13 @@ interface ReviewCommentsPanelProps {
   comments: ReviewComments;
   /** What it lists, kept by the Changes tab so the keys go through the same comments while it's hidden. */
   filter: CommentsFilter;
+  /** The threads new to the user since their last review, which New lists; none before they gave one. */
+  newIds: NewThreads;
   onFilterChange: (filter: CommentsFilter) => void;
   /** The words and kinds the filter row narrows it to, kept by the Changes tab too. */
   search: CommentsSearch;
   onSearchChange: (search: CommentsSearch) => void;
-  listed: readonly LineThread[];
+  listed: readonly FileThread[];
   /** How they're ordered, kept for every review; in the code's order, `listed` under their files (`groups`). */
   order: CommentsOrder;
   onOrderChange: (order: CommentsOrder) => void;
@@ -59,7 +64,7 @@ interface ReviewCommentsPanelProps {
   folded: FoldedFiles;
   onFoldedChange: (folded: FoldedFiles) => void;
   /** Every comment, in the order the panel lists them: where one that left the list sat. */
-  all: readonly LineThread[];
+  all: readonly FileThread[];
   /** Goes to the comment after or before the one gone to (`steppedThread`). */
   onStep: (direction: 1 | -1) => void;
   onClose: () => void;
@@ -80,8 +85,8 @@ export function ReviewCommentsPanel({ comments, ...props }: ReviewCommentsPanelP
   );
 }
 
-function PanelBody({ comments, threads, filter, onFilterChange, search, onSearchChange, listed, order, onOrderChange, groups, folded, onFoldedChange, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
-  const counts = commentsPanelCounts(threads);
+function PanelBody({ comments, threads, filter, newIds, onFilterChange, search, onSearchChange, listed, order, onOrderChange, groups, folded, onFoldedChange, all, onStep, onClose }: ReviewCommentsPanelProps & { threads: NonNullable<ReviewComments['threads']> }) {
+  const counts = commentsPanelCounts(threads, newIds);
   const empty = emptyCommentsText(filter, counts);
   const current = comments.focus?.threadId;
   const { seeInContext } = comments;
@@ -96,15 +101,12 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
           label="Comments to list"
           value={filter}
           onChange={onFilterChange}
-          segments={[
-            { value: 'open', label: `Open ${counts.open}`, title: 'Change requests to apply or discard, and questions to answer' },
-            { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
-          ]}
+          segments={commentsFilterChoices(counts, newIds)}
         />
         {/* As the diff header's toggle does: the panel stays hidden until it's shown again. */}
         <IconButton size="small" icon={<X size={14} />} label="Hide Comments panel" onClick={onClose} />
       </header>
-      {counts.all > 0 && <SearchRow search={search} onChange={onSearchChange} kindCounts={threadKindCounts(threads, filter)} />}
+      {counts.all > 0 && <SearchRow search={search} onChange={onSearchChange} kindCounts={threadKindCounts(threads, filter, newIds)} />}
       {listed.length > 0 && (
         <div className={styles.stepper}>
           <span className={styles.position}>{commentPosition(listed, current, groups)}</span>
@@ -131,7 +133,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
                         thread={thread}
                         current={current === thread.root.id}
                         onOpen={() => comments.goToThread(thread)}
-                        onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+                        onSeeApplied={seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined}
                         excerpt={matchExcerpt(thread, search.query)}
                       />
                     </li>
@@ -148,7 +150,7 @@ function PanelBody({ comments, threads, filter, onFilterChange, search, onSearch
                     thread={thread}
                     current={current === thread.root.id}
                     onOpen={() => comments.goToThread(thread)}
-                    onSeeApplied={seeInContext && (() => seeInContext(thread, { startsOn: 'since' }))}
+                    onSeeApplied={seeInContext && isLineThread(thread) ? () => seeInContext(thread, { startsOn: 'since' }) : undefined}
                     excerpt={matchExcerpt(thread, search.query)}
                   />
                 </li>
@@ -230,8 +232,9 @@ function SearchRow({ search, onChange, kindCounts }: SearchRowProps) {
  * comment no longer the current one. Drawn without a ring (`focusVisible`), it keeps a keyboard user's place in the list.
  */
 function useFollowedCard(listRef: RefObject<HTMLElement | null>, focusSeq: number | undefined, order: CommentsOrder): void {
-  // Before the paint: the ring the key drew on the card left never shows.
-  useLayoutEffect(() => {
+  // Before the paint: the ring the key drew on the card left never shows. For a new place only: not again as the view
+  // shows again, which would pull the list back from where the user scrolled it.
+  useNewValuesLayoutEffect(() => {
     const list = listRef.current;
     if (!list || focusSeq === undefined) return;
     const card = list.querySelector('[data-current]');

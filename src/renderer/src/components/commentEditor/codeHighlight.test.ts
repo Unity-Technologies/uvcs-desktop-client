@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { editorState } from './commentEditorTesting';
 import { fencedCodeIn, tokenMarks } from './codeHighlight';
+import { withCommentedFile } from './commentedFileLanguage';
 
 describe('fencedCodeIn', () => {
   it('finds each code block with a language, and its code', () => {
@@ -10,11 +11,29 @@ describe('fencedCodeIn', () => {
       { from: 54, text: 'var c;', language: 'c#' },
     ]);
   });
+
+  it('finds a block far into a long comment, once the editor has read it all', () => {
+    const intro = 'Some words before the code.\n'.repeat(200);
+    expect(fencedCodeIn(editorState(`${intro}\`\`\`ts\nlet a = 1;\n\`\`\``))).toEqual([{ from: intro.length + 6, text: 'let a = 1;', language: 'ts' }]);
+  });
+});
+
+describe('fencedCodeIn, for a suggestion', () => {
+  const suggestion = 'Say it:\n```suggestion\nLog($"Switched to {target}");\n```';
+
+  it("colors a suggestion's code in the language of the file the comment is on", () => {
+    expect(fencedCodeIn(editorState(suggestion, withCommentedFile('Assets/Scripts/SwitchFlow.cs')))).toEqual([{ from: 22, text: 'Log($"Switched to {target}");', language: 'csharp' }]);
+  });
+
+  it('leaves it plain on no file, or one whose language is not known', () => {
+    expect(fencedCodeIn(editorState(suggestion))).toEqual([]);
+    expect(fencedCodeIn(editorState(suggestion, withCommentedFile('notes.unknownext')))).toEqual([]);
+  });
 });
 
 describe('fencedCodeIn, for a block too big to highlight', () => {
   it('leaves a pasted log past the comments’ limit plain, as the shown comment does', () => {
-    // One long line: the parse reads it at once, where thousands of lines would take it past its time budget.
+    // One long line, past the comments' limit: thousands of lines would only make the parse slower.
     const log = 'Build step done. '.repeat(1250);
     expect(fencedCodeIn(editorState(`\`\`\`text\n${log}\n\`\`\``))).toEqual([]);
   });

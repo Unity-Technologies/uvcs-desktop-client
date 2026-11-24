@@ -1,3 +1,4 @@
+import type { CmChoice } from './cmRuntime';
 import { AUTO_APP, type CustomEditor } from './externalApps';
 import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
@@ -35,10 +36,29 @@ export interface AppSettings {
   pendingChanges: PendingChangesFilter;
   /** Ask for confirmation before checking in without a comment. */
   warnOnEmptyComment: boolean;
-  /** Recent checkin comments, newest first. */
+  /**
+   * The check-in comments kept before they were per repository, newest first: offered, never written again, to a
+   * repository with no list of its own yet (`recentCommentsFor`).
+   */
   recentComments: string[];
+  /**
+   * Recent check-in comments of each repository, newest first, by `repositoryKey`; the repository checked in to last
+   * comes first (`withRecentComment`).
+   */
+  recentCommentsByRepository: Record<string, string[]>;
   /** Automatically refresh pending changes when files change on disk. */
   autoRefresh: boolean;
+  /**
+   * Which `cm` the app runs: the one installed on the computer when there is one, or its own (`automatic`, the
+   * default until the user chooses), the installed one (`installed`), or always its own (`managed`) (Settings ›
+   * Workspaces, docs/features/cm-runtime.md "Which cm runs").
+   */
+  cmChoice: CmChoice;
+  /**
+   * The pinned version (the oldest `cm` the app runs) for which the user chose the app's own over updating an older
+   * installed one ("Use the included version for now"): not asked again until the pin moves. Null when never chosen.
+   */
+  cmDeclinedUpdateFor: string | null;
   /** Folder new workspaces are created in; empty means the home folder. */
   defaultWorkspaceRoot: string;
   /** What to do with pending changes when switching the workspace. */
@@ -63,6 +83,16 @@ export interface AppSettings {
   gravatarChoiceAsked: boolean;
   /** Show an OS notification when someone checks in to the loaded branch while the window is in the background. */
   notifyOnIncoming: boolean;
+  /**
+   * The Unity account last picked in a home screen's account switcher (its `UserAccount.id`), which a home screen
+   * shows unless something on it names another (`homeAccountOf`); empty until one is picked. It changes nothing in `cm`.
+   */
+  homeAccount: string;
+  /**
+   * The organizations the home sidebar lists first, under Favorites, by server (`acme@unity`, `acme@cloud`), changed
+   * one at a time by the main process (`withFavoriteOrganization`). It changes nothing in `cm`.
+   */
+  favoriteOrganizations: string[];
   /** The merge tool files no rule matches open in: `auto` (the UVCS merge tool, else the first found) or a tool id. */
   mergeTool: string;
   /** Which tool opens which files, tried in order before `mergeTool` (Settings › Merge). */
@@ -115,7 +145,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pendingChanges: DEFAULT_PENDING_CHANGES_FILTER,
   warnOnEmptyComment: true,
   recentComments: [],
+  recentCommentsByRepository: {},
   autoRefresh: true,
+  cmChoice: 'automatic',
+  cmDeclinedUpdateFor: null,
   defaultWorkspaceRoot: '',
   pendingChangesOnSwitch: 'ask',
   restoreLeftChangesAutomatically: true,
@@ -125,6 +158,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showGravatar: false,
   gravatarChoiceAsked: false,
   notifyOnIncoming: false,
+  homeAccount: '',
+  favoriteOrganizations: [],
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
   mergeToolArgs: {},

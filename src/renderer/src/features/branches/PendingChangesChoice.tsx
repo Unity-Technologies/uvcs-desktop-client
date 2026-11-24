@@ -1,7 +1,7 @@
 import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { OptionCards, type OptionCard } from '../../ui/OptionCards';
-import { pendingChangesPronoun } from './pendingChangesWords';
+import { pendingChangesPronoun, UNDO_CHANGES_DESCRIPTION } from './pendingChangesWords';
 import type { SwitchChoice } from './switchOptions';
 
 interface PendingChangesChoiceProps {
@@ -43,7 +43,7 @@ export function PendingChangesChoice({ source, destination, choice, count, value
     {
       value: 'discard',
       title: <>Undo {them}</>,
-      description: 'Your edits are lost, with no shelve to restore. Added files stay in the folder as private files.',
+      description: UNDO_CHANGES_DESCRIPTION,
       disabled: !choice.discard.enabled,
     },
   ];

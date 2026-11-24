@@ -13,7 +13,7 @@ import { DetailsBadge } from '../../ui/DetailsBadge';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import type { Property } from '../../ui/PropertyList';
-import { AttributeChips } from '../attributes/AttributeChips';
+import { AttributesDetailsSection } from '../attributes/AttributesDetailsSection';
 import { BranchChip } from '../branches/BranchChip';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { ChangedFilesSection } from './ChangedFilesSection';
@@ -67,7 +67,6 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
           )}
         </>
       }
-      attributes={<AttributeChips key={changeset.id} objectSpec={spec.changeset(changeset.id)} />}
       primaryAction={
         <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => openChangesetDiff(changeset)}>
           Open diff
@@ -84,6 +83,8 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
         ...relations,
       ]}
       changes={withChangedFiles && <ChangedFilesSection target={{ kind: 'changeset', changesetId: changeset.id }} onOpen={(path) => openChangesetDiff(changeset, path)} />}
-    />
+    >
+      <AttributesDetailsSection objectSpec={spec.changeset(changeset.id)} />
+    </DetailsPanel>
   );
 }

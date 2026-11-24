@@ -3,8 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
+import { ALL_CHANGES_KEY, ALL_CHANGES_SELECTION, selectedChangesetIds, type ChangesetListFocus } from '../../components/changesetList/changesetStepListModel';
+import { useChangesetStepList } from '../../components/changesetList/useChangesetStepList';
 import { MetaDiffButton } from '../../components/MetaDiffButton';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
+import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { rangeLength } from '../../lib/itemRange';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
@@ -23,6 +26,7 @@ import { changesetDiffPage } from '../changesets/changesetOperations';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
 import { FileStepsContext, selectNow, useFileSteps, usePendingArrival } from '../diff/viewer/fileSteps';
+import { StepsAroundEmptyState } from '../diff/viewer/StepsAroundEmptyState';
 import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
@@ -35,7 +39,8 @@ import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
 import { incomingFileMenu } from './incomingFileMenu';
 import { incomingSubtitle } from './incomingSubtitle';
-import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingFilesSummary, type IncomingScope } from './incomingScope';
+import { incomingFilesLabel } from './incomingFilesLabel';
+import { collidesWithLocal, firstIncomingFile, incomingScopeOf } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
 import { IncomingPanes } from './IncomingPanes';
 import { UpdateBar } from './UpdateBar';
@@ -52,21 +57,47 @@ interface IncomingSessionProps {
   header: (subtitle: string) => ReactNode;
 }
 
+/** Incoming opens on all the incoming changes, and its list is never asked to select anything else. */
+const ALL_INCOMING_FOCUS: ChangesetListFocus = { kind: 'all' };
+
 /**
- * Changesets came in: what they bring, all of it or one changeset's, what collides with local changes, and the update
- * that takes them. A changeset selected shows its details, as in History, and its files in the list.
+ * Changesets came in: what they bring, all of it, one changeset's or several's, what collides with local changes, and
+ * the update that takes them. A changeset selected shows its details, as in History, and its files in the list.
  */
 export function IncomingSession({ workspacePath, incoming, header }: IncomingSessionProps) {
   const conflictedFiles = useMemo(() => updateConflictFiles(incoming.conflicts), [incoming.conflicts]);
   const { states, decide, reset, resolveInTool, openFile } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
-  const [scope, setScope] = useState<IncomingScope>(ALL_INCOMING);
-  // The right-hand side shows the changeset just picked, until a file is.
+  // The right-hand side shows the changesets just picked, until a file is.
   const [showsChangeset, setShowsChangeset] = useState(false);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const { changesetsCollapsed, toggleChangesets } = useIncomingViewStore();
+  const changesetsOpen = !changesetsCollapsed;
   const changesetList = useIncomingChangesetList(incoming);
+  // Picking changesets starts their files afresh; one changeset's details show until a file is picked, several open on
+  // their first file, as the whole update does.
+  const changesetSteps = useChangesetStepList({
+    changesets: changesetList.changesets,
+    focus: ALL_INCOMING_FOCUS,
+    // Folded, a step would change the files out of sight.
+    stepsEnabled: changesetsOpen,
+    onSelect: (picked) => {
+      setShowsChangeset(selectedChangesetIds(picked).length === 1);
+      setSelection(EMPTY_SELECTION);
+    },
+  });
+  const { choice } = changesetSteps;
+  const scope = incomingScopeOf(choice);
+  const showAll = (): void => changesetSteps.select(ALL_CHANGES_SELECTION, ALL_CHANGES_KEY);
+  const showAllRef = useRef(showAll);
+  showAllRef.current = showAll;
+  // Folding goes back to the whole update, as a branch diff's fold does (`toggledFold`): a changeset selected out of
+  // sight would leave files the row doesn't name.
+  const toggleChangesetFold = (): void => {
+    if (changesetsOpen) showAll();
+    toggleChangesets();
+  };
   const { mergerFor, othersFor } = useFileMergers();
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
@@ -77,7 +108,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   // Resolving the files one by one: the selection follows while the user stays on the file it opened.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
     if (previousKey && selectionRef.current.anchor !== previousKey) return;
-    setScope(ALL_INCOMING);
+    showAllRef.current();
     setShowsChangeset(false);
     setSelection(singleSelection(key));
   }, []);
@@ -85,6 +116,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
   const diffExpanded = useDiffExpanded();
+  const workspaceKind = useWorkspaceInfoOf(workspacePath).data?.kind;
 
   const pendingConflictPaths = useMemo(() => new Set(states.filter((state) => !state.resolution).map((state) => state.file.key)), [states]);
   // A conflicting file's arrows go on past its first or last conflict to the files around it that need merging.
@@ -104,7 +136,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   });
   // A file's diff goes on past its last or first change to the files around it, as the list shows them.
   const fileKeys = useMemo(() => fileRowKeys(rows), [rows]);
-  const fileSteps = useFileSteps({ keys: fileKeys, current: selection.anchor, select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))), pathOf: (key) => key, pending: arrival });
+  // Every row in list order: from a folder or group selected, the arrows go on to the files around it (`adjacentKey`).
+  const rowOrder = useMemo(() => rows.map((row) => row.key), [rows]);
+  const fileSteps = useFileSteps({ keys: fileKeys, rowOrder, current: selection.anchor, select: (key, selected) => selectNow(selected, () => selectFiles(singleSelection(key))), pathOf: (key) => key, pending: arrival });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
 
@@ -116,18 +150,13 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const focusedMeta = focusedFile && metaOf(focusedFile);
   const diffedFile = focusedFile && diffedItem(focusedFile, focusedMeta, metaShownFor);
   const focusedGroup = focusedFile ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
-  const firstFile = files && scope.kind === 'all' ? firstIncomingFile(files, collides) : undefined;
+  const firstFile = files && firstIncomingFile(scope, files, collides);
 
-  // The whole update opens on the first file that needs merging, or the first file.
+  // The whole update opens on the first file that needs merging, or the first file; several changesets on their first.
   useEffect(() => {
     if (!showsChangeset && !focusedFile && !focusedGroup && firstFile) setSelection(singleSelection(diffEntryKey(firstFile)));
   }, [showsChangeset, focusedFile, focusedGroup, firstFile]);
 
-  const changeScope = (next: IncomingScope): void => {
-    setScope(next);
-    setShowsChangeset(next.kind === 'changeset');
-    setSelection(EMPTY_SELECTION);
-  };
   const selectFiles = (next: SelectionState): void => {
     setSelection(next);
     setShowsChangeset(false);
@@ -147,7 +176,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
       else if (resolutions) await updateResolvingConflicts(workspacePath, incoming, resolutions);
     });
 
-  const menuContext = { place: workspacePlace(workspacePath), loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
+  const menuContext = { place: workspacePlace(workspacePath), workspaceKind, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
   const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   useShowInFollowingWindow(showsChangeset && scopedChangeset ? changesetDiffPage(scopedChangeset) : null);
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
@@ -201,7 +230,11 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     }
     if (focusedGroup) {
       const name = focusedGroup.type === 'group' ? focusedGroup.label : focusedGroup.path;
-      return <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(rangeLength(focusedGroup.held), 'change')}. Select a file to see its diff.`} />;
+      return (
+        <StepsAroundEmptyState fileSteps={fileSteps} selectedKey={focusedGroup.key}>
+          <EmptyState icon={<Folder size={24} />} title={name} description={`${pluralize(rangeLength(focusedGroup.held), 'change')}. Select a file to see its diff.`} />
+        </StepsAroundEmptyState>
+      );
     }
     return <EmptyState title="Select a changeset or a file" />;
   };
@@ -224,20 +257,18 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
         list={
           <>
             <IncomingChangesetList
+              list={changesetSteps}
               changesets={changesetList.changesets}
               more={changesetList.more}
               older={changesetList.more ? { loading: changesetList.loading, onShowMore: changesetList.showMore } : undefined}
-              scope={scope}
-              onScope={changeScope}
-              collapsed={changesetsCollapsed}
-              onToggleCollapsed={toggleChangesets}
-              changesetMenu={(changeset) => changesetMenu(menuContext, [changeset])}
+              open={changesetsOpen}
+              onToggle={toggleChangesetFold}
+              onSelectAll={showAll}
+              changesetMenu={(changesets) => changesetMenu(menuContext, changesets)}
             />
             <IncomingFiles
-              changeset={scopedChangeset}
-              onShowAll={() => changeScope(ALL_INCOMING)}
+              label={incomingFilesLabel(choice)}
               files={files}
-              summary={incomingFilesSummary(scope, files?.length ?? 0, files && scope.kind === 'all' ? files.filter(collides).length : 0)}
               rows={rows}
               tree={tree}
               toggleCollapsed={toggleFolder}

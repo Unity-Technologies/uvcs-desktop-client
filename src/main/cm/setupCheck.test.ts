@@ -17,7 +17,7 @@ describe('checkSetup', () => {
   it('finds no problem when cm has a configuration, asking only the local profiles read', async () => {
     const { profiles, commands } = profilesAnswering('local\n');
 
-    expect(await checkSetup(profiles)).toBeNull();
+    expect(await checkSetup(profiles, '/store/11.0.16.10659/client/cm')).toBeNull();
     expect(commands).toMatchObject([{ args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`] }]);
   });
 
@@ -25,14 +25,14 @@ describe('checkSetup', () => {
     const { profiles, commands } = profilesAnswering('local\n');
     await profiles.read();
 
-    expect(await checkSetup(profiles)).toBeNull();
+    expect(await checkSetup(profiles, '/store/11.0.16.10659/client/cm')).toBeNull();
     expect(commands).toHaveLength(1);
   });
 
   it('shares the profiles read the accounts started', async () => {
     const { profiles, commands } = profilesAnswering('local\n');
 
-    const [, problem] = await Promise.all([profiles.read(), checkSetup(profiles)]);
+    const [, problem] = await Promise.all([profiles.read(), checkSetup(profiles, '/store/11.0.16.10659/client/cm')]);
 
     expect(problem).toBeNull();
     expect(commands).toHaveLength(1);
@@ -41,13 +41,13 @@ describe('checkSetup', () => {
   it('reports a client that was never configured, with what cm printed', async () => {
     const { profiles } = profilesAnswering(cmFails(NOT_CONFIGURED));
 
-    expect(await checkSetup(profiles)).toEqual({ commandLine: 'cm profile list', output: NOT_CONFIGURED });
+    expect(await checkSetup(profiles, '/store/11.0.16.10659/client/cm')).toEqual({ commandLine: 'cm profile list', output: NOT_CONFIGURED, cmPath: '/store/11.0.16.10659/client/cm' });
   });
 
   it('takes any other failure as no setup problem: the views tell what fails', async () => {
     const { profiles } = profilesAnswering(cmFails('Error: The profiles file is corrupt'));
 
-    expect(await checkSetup(profiles)).toBeNull();
+    expect(await checkSetup(profiles, '/store/11.0.16.10659/client/cm')).toBeNull();
   });
 
   it("fails when cm couldn't even be started", async () => {
@@ -55,6 +55,6 @@ describe('checkSetup', () => {
       throw Object.assign(new Error('spawn cm ENOENT'), { code: 'ENOENT' });
     });
 
-    await expect(checkSetup(profiles)).rejects.toThrow('spawn cm ENOENT');
+    await expect(checkSetup(profiles, '/store/11.0.16.10659/client/cm')).rejects.toThrow('spawn cm ENOENT');
   });
 });

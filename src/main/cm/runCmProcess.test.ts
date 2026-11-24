@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RecordReader } from './formatRecords';
 import { textLimitOf } from './outputLimit';
-import { runCmProcess } from './runCmProcess';
+import { MAX_OUTPUT_LINE_LENGTH, runCmProcess } from './runCmProcess';
 import { formatOutput } from './testing/cmOutput';
 
 /** Runs a Node script standing in for `cm`. */
@@ -20,6 +20,14 @@ describe('runCmProcess', () => {
     const result = await runScript("process.stdout.write('a\\r\\nb\\rc\\nd')", (line) => lines.push(line));
     expect(lines).toEqual(['a', 'b', 'c', 'd']);
     expect(result.exitCode).toBe(0);
+  });
+
+  it('reports a line that never ends in pieces of at most MAX_OUTPUT_LINE_LENGTH, instead of keeping it whole', async () => {
+    const length = MAX_OUTPUT_LINE_LENGTH * 2 + 10;
+    const lines: string[] = [];
+    await runScript(`process.stdout.write('x'.repeat(${length}) + 'y\\n')`, (line) => lines.push(line));
+    expect(Math.max(...lines.map((line) => line.length))).toBeLessThanOrEqual(MAX_OUTPUT_LINE_LENGTH);
+    expect(lines.join('')).toBe(`${'x'.repeat(length)}y`);
   });
 
   it("gives Windows line breaks as the app's, and leaves the \\r of a rewritten line", async () => {
@@ -48,6 +56,27 @@ describe('runCmProcess', () => {
     expect(output.endsWith('\nError: the end')).toBe(true);
     expect(output).toContain('more characters');
     expect(output.length).toBeLessThan(1100);
+  });
+});
+
+/**
+ * A Node script standing in for `cm` asking which system to sign in with, as it does when the user's session expired:
+ * with its input closed, each answer it reads is empty, so it asks again, and again, without pausing.
+ */
+const ASKING_TO_SIGN_IN = [
+  "process.stdout.write('Select the system you want to use to sign in to: codice@cloud\\n0 - Okta Unity\\n1 - Unity ID\\n');",
+  "const ask = () => process.stdout.write('Select your system [0-1] '.repeat(50), ask);",
+  'ask();',
+].join(' ');
+
+describe('runCmProcess when cm asks to sign in', () => {
+  it('stops an answer asking again and again, and says cm waits for input', async () => {
+    await expect(runCmProcess(process.execPath, ['-e', ASKING_TO_SIGN_IN], {})).rejects.toThrow('cm is waiting for input ("Select your system [0-1]")');
+  });
+
+  it('stops a list asking again and again, which no record would ever end', async () => {
+    const reading = { stream: new RecordReader((fields) => fields) };
+    await expect(runCmProcess(process.execPath, ['-e', ASKING_TO_SIGN_IN], { reading })).rejects.toThrow('cm is waiting for input ("Select your system [0-1]")');
   });
 });
 

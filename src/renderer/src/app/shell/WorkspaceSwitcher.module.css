@@ -1,9 +1,11 @@
 .popover {
   display: flex;
   flex-direction: column;
-  /* Wide enough for an editor and a terminal side by side in the actions below ("Open in Visual Studio Code",
+  /* As wide as the branch switcher's popover (features/branches/WorkingObjectButton.module.css), and wide enough for
+     an editor and a terminal side by side in the actions below ("Open in Visual Studio Code",
      "Open in Windows Terminal"). */
-  width: 420px;
+  width: 460px;
+  max-width: calc(100vw - 24px);
   max-height: min(480px, calc(100vh - 80px));
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
@@ -46,20 +48,31 @@
   text-align: center;
 }
 
-.item {
+/* A workspace: the button that opens it, then its actions' "…" on the highlighted one (`RowActionsButton`). */
+.row {
   display: flex;
   flex: none;
   align-items: center;
+  padding-right: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.row[data-highlighted='true'] {
+  background: var(--accent-soft);
+}
+
+.item {
+  display: flex;
+  flex: 1;
+  align-self: stretch;
+  align-items: center;
+  min-width: 0;
   gap: var(--space-2);
   padding: 6px var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background: none;
   text-align: left;
-}
-
-.item[data-highlighted='true'] {
-  background: var(--accent-soft);
 }
 
 .item:focus-visible {

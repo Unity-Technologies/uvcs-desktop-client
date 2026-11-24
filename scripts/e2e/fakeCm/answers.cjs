@@ -1,11 +1,16 @@
 // What the fake `cm` answers to each command, from the synthetic repository. A command, subcommand or `--format`
 // field it doesn't know fails, naming it: the smoke test then fails and says what to teach it.
-const { writeFileSync } = require('node:fs');
+const { existsSync, readFileSync, writeFileSync } = require('node:fs');
 const { formatRecords } = require('./format.cjs');
 const repository = require('./repository.cjs');
 const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
+const { signInFailure } = require('./signIn.cjs');
 const { matching } = require('./where.cjs');
+const { version: PINNED_CM_VERSION } = require('../../../cm-version.json');
+
+/** A command `cm` itself refuses, as it would the real one: it fails, but the fake knew what to answer. */
+class CmRefusal extends Error {}
 
 /** What `cm find <object>` searches. */
 const FINDABLE = {
@@ -24,9 +29,16 @@ const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REPOSITORY_SPEC, REVISIO
 
 /** A Unity organization the user signed in to, besides the workspace's server: the home screen lists its projects. */
 const ORGANIZATION = 'studio@unity';
+/** A cloud organization of the owner's too: with two, the owner's account is the one Home shows first (`mainAccountOf`). */
+const OWNER_CLOUD_ORGANIZATION = 'workshop@cloud';
+/** A second Unity account, with one organization of its own: Home's account switcher, tried by hand, lists both. */
+const OTHER_USER = 'zoe@example.com';
+const OTHER_ORGANIZATION = 'arcade@unity';
 const ACCOUNTS = [
   { name: SERVER, server: SERVER, user: OWNER, workingmode: 'UPWorkingMode' },
   { name: ORGANIZATION, server: ORGANIZATION, user: OWNER, workingmode: 'SSOWorkingMode' },
+  { name: OWNER_CLOUD_ORGANIZATION, server: OWNER_CLOUD_ORGANIZATION, user: OWNER, workingmode: 'SSOWorkingMode' },
+  { name: OTHER_ORGANIZATION, server: OTHER_ORGANIZATION, user: OTHER_USER, workingmode: 'SSOWorkingMode' },
 ];
 /** As `cm repository list --type=all` prints a Unity organization: its projects, their repositories, a deleted one, and storage. */
 const ORGANIZATION_REPOSITORIES = [
@@ -41,8 +53,18 @@ const ORGANIZATION_REPOSITORIES = [
 /** The workspace as `cm workspace list` and `cm getworkspacefrompath` print it: a standard one (`type`, `dynamic`). */
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid, type: 'regular', dynamic: 'static' }];
 
+/**
+ * The version it prints: the one the app pins, or what `UVCS_FAKE_CM_VERSION_FILE` names (read on every command), to be
+ * an installed `cm` older than the app needs: the update screen (docs/features/cm-runtime.md "The update screen").
+ */
+function version() {
+  const file = process.env.UVCS_FAKE_CM_VERSION_FILE;
+  const named = file && existsSync(file) ? readFileSync(file, 'utf8').trim() : '';
+  return `${named || PINNED_CM_VERSION}\n`;
+}
+
 const COMMANDS = {
-  version: () => '11.0.16.9000\n',
+  version,
   checkconnection: () => 'Test connection executed successfully\n',
   whoami: () => `${OWNER}\n`,
   // Without --format: the local setup check (`checkSetup`), which reads only whether it succeeds.
@@ -63,7 +85,31 @@ const COMMANDS = {
   acl: () => 'Command finished successfully\n',
   setowner: () => '',
   'codereview reviewer': reviewerList,
+  'codereview subscription': reviewSubscription,
+  // A merge request's state or destination: `cm` prints nothing. No smoke step moves one; it stays for trying it by hand.
+  'mergerequest edit': () => '',
+  // A new merge request: `cm` prints its id alone. The fake keeps no new review: the lists read stay as they are.
+  'mergerequest create': () => `${NEW_MERGE_REQUEST_ID}\n`,
+  merge: mergeRefusedByRules,
 };
+
+/** The id the fake gives a merge request it is asked to create: after every review `repository.REVIEWS` holds. */
+const NEW_MERGE_REQUEST_ID = 90;
+
+/**
+ * `cm merge <branch> --to=<branch>`, previewed: refused by the server's merge rules, as `cm` words them in English
+ * (docs/features/merge-requests.md "Merging"). task-001, with an open merge request, isn't reviewed yet; task-002 has
+ * none. The fake merges nothing else.
+ */
+function mergeRefusedByRules([source, ...options]) {
+  const to = options.find((option) => option.startsWith('--to='));
+  if (options.includes('--merge') || !to) throw new Error('The fake cm only previews merges to a branch');
+  const [branch, destination] = [source.replace(/^br:/, ''), to.slice('--to=br:'.length)];
+  const rules = 'Cannot perform the merge because of the Merge Rules.';
+  if (branch === '/main/task-001') throw new CmRefusal(`${rules} Review the branch '${branch}' to merge it to '${destination}'.`);
+  if (branch === '/main/task-002') throw new CmRefusal(`${rules} Branch '${branch}' needs an open merge request to '${destination}'.`);
+  throw new Error(`The fake cm doesn't merge ${source}`);
+}
 
 /** The server's groups, as `cm listusers --onlygroups` lists them. */
 const GROUPS = ['Developers', 'Artists'];
@@ -80,6 +126,18 @@ function reviewerList(args) {
     return { user, status: pair.slice(colon + 1), type: GROUPS.includes(user) ? 'group' : 'user' };
   });
   return formatted(args, reviewers);
+}
+
+/**
+ * `cm codereview subscription <id> --format=…`: the user gets a review's emails as one of its reviewers, and the
+ * repository sends them, so the review's page shows Notifications.
+ */
+function reviewSubscription(args) {
+  const [id] = args;
+  const review = repository.REVIEWS.find((each) => String(each.id) === id);
+  if (!review) throw new Error(`The specified code review '${id}' could not be found`);
+  const reviewer = review.reviewers.split(',').some((pair) => pair.startsWith(`${OWNER}:`));
+  return formatted(args, [{ subscribed: reviewer ? 'yes' : 'no', reason: reviewer ? 'reviewer' : 'none', emails: 'enabled' }]);
 }
 
 /**
@@ -179,13 +237,19 @@ function commandOf(args) {
   return { reply: COMMANDS[args[0]], rest: args.slice(1) };
 }
 
-/** The answer to `cm <args>`: its output and exit code. */
+/**
+ * The answer to `cm <args>`: its output and exit code, or the prompt it waits at. A server whose session ended
+ * (`signIn.cjs`) is answered as `cm` would, which is no command the fake doesn't know.
+ */
 function answer(args) {
+  const signIn = signInFailure(args, { workspaceServer: SERVER, otherServers: [ORGANIZATION] });
+  if (signIn) return { ...signIn, refused: true };
   const { reply, rest } = commandOf(args);
   try {
     if (!reply) throw new Error("The fake cm doesn't know this command");
     return { output: reply(rest), exitCode: 0 };
   } catch (error) {
+    if (error instanceof CmRefusal) return { output: `${error.message}\n`, exitCode: 1, refused: true };
     return { output: `${error.message}: cm ${args.join(' ')}\n`, exitCode: 1 };
   }
 }

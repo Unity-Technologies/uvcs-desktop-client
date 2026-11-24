@@ -16,8 +16,8 @@ const useViewSelectionStore = create<ViewSelectionStore>((set) => ({
 }));
 
 /**
- * The selection of a view's main list, kept while the view is away (views unmount when another one shows), so
- * coming back with ⌘1… or the sidebar finds the rows it left, ready for the arrows.
+ * The selection of a view's main list, kept while the view is away (a view past `MOUNTED_VIEWS` unmounts, and a
+ * link may show a view's list), so coming back with ⌘1… or the sidebar finds the rows it left, ready for the arrows.
  */
 export function useViewSelection(view: ViewId): [SelectionState, (selection: SelectionState) => void] {
   const key = selectionKey(usePlace(), view);

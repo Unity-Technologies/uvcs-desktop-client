@@ -287,7 +287,7 @@ describe('merging to another branch', () => {
 
   it('carries a task branch to the merge page, which then also offers to finish it', async () => {
     asked.picked = { name: '/main/other', headChangeset: 3 };
-    const task = { branch: { id: 7, name: '/main/task', parent: '/main', comment: '' }, choices: { markReviewed: false, hideBranch: false } };
+    const task = { branch: { name: '/main/task', comment: '' }, choices: { markReviewed: false, hideBranch: false } };
 
     await mergeTo('br:/main/task', '/main/task', task);
 

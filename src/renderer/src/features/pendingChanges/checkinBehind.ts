@@ -14,10 +14,11 @@ export interface BehindBranch {
 
 /**
  * How far the workspace is behind the branch it checks in to, as the incoming check last saw, when checking in updates
- * first; null when it isn't behind, or `merging`: checking in completes a pending merge as it is.
+ * first; null when it isn't behind, or `merging`: checking in completes a pending merge as it is. A partial workspace
+ * checks in without updating first, so it is never behind here.
  */
 export function behindBranch(summary: IncomingSummary | undefined, branch: string | undefined, merging: boolean): BehindBranch | null {
-  if (merging || !summary || !branch || summary.branch !== branch || summary.changesetCount === 0) return null;
+  if (merging || !summary || 'partial' in summary || !branch || summary.branch !== branch || summary.changesetCount === 0) return null;
   return { count: summary.changesetCount, countCapped: summary.countCapped, authors: summary.authors };
 }
 

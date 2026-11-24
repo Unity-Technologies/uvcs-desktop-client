@@ -9,8 +9,10 @@ import {
   ArrowUpDown,
   ArrowUpFromLine,
   Binary,
+  CheckCheck,
   Cherry,
   CircleCheck,
+  CircleDashed,
   CircleDot,
   ClipboardPaste,
   CodeXml,
@@ -47,6 +49,9 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestArrow,
+  GitPullRequestClosed,
+  GitPullRequestDraft,
+  HardDriveDownload,
   Hash,
   History,
   Layers,
@@ -55,7 +60,7 @@ import {
   LockOpen,
   Merge,
   MessageSquare,
-  MessageSquareCode,
+  MessageSquareDiff,
   MessageSquarePlus,
   MessageSquareText,
   Minus,
@@ -71,12 +76,15 @@ import {
   Scissors,
   Search,
   ServerCog,
+  Star,
+  StarOff,
   ShieldCheck,
+  Signpost,
   Square,
   SquareArrowOutUpRight,
   SquareCheckBig,
   SquareTerminal,
-  Tag,
+  TagPlus,
   Telescope,
   Text,
   TextSelect,
@@ -89,6 +97,7 @@ import {
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
 import { OPEN_IN_FILE_MANAGER_LABEL, REVEAL_LABEL } from '../lib/platform';
+import { GitPullRequestPlus } from './GitPullRequestPlus';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
@@ -151,6 +160,7 @@ export const MENU_WORDS = {
   taskWorkspace: word('act', FolderGit2, 'Work on this branch in a new workspace…'),
   // A partial workspace's files on disk, chosen in its tree (`openChooseDownloads`).
   chooseDownloads: word('act', FolderDown, 'Choose what to download…'),
+  downloadWholeBranch: word('act', HardDriveDownload, 'Download the whole branch…'),
   revert: word('act', RotateCcw),
   apply: word('act', ArchiveRestore),
   applyAndDelete: word('act', ArchiveRestore, 'Apply and delete'),
@@ -184,6 +194,17 @@ export const MENU_WORDS = {
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
   changeReviewers: word('act', UserPlus, 'Change reviewers…'),
+  // Where a merge request merges, picked from the branches (`changeableDestinationOf` says when it can change).
+  changeDestination: word('act', Signpost, 'Change destination…'),
+  // A merge request's state (`mergeRequestMoves`), each in the glyph of the state it moves to. Closing isn't a danger:
+  // Reopen undoes it.
+  readyForReview: word('act', GitPullRequest, 'Ready for review'),
+  convertToDraft: word('act', GitPullRequestDraft, 'Convert to draft'),
+  closeMergeRequest: word('act', GitPullRequestClosed, 'Close merge request'),
+  reopenMergeRequest: word('act', GitPullRequest, 'Reopen merge request'),
+  // A review's change request marked by hand (`changeRequestMarkOf`): applied in a changeset picked, or open again.
+  markApplied: word('act', CheckCheck, 'Mark as applied…'),
+  markNotApplied: word('act', CircleDashed, 'Mark as not applied'),
   // Sync: the words name the other repository ("Push to game@cloud").
   push: word('act', ArrowUpFromLine),
   pull: word('act', ArrowDownToLine),
@@ -192,6 +213,8 @@ export const MENU_WORDS = {
   merge: word('merge', GitMerge, MERGE_INTO_WORKSPACE),
   mergeTask: word('merge', GitPullRequest),
   mergeTo: word('merge', GitPullRequestArrow, serverMergeLabel()),
+  // An open merge request merged into its destination on the merge page: the words name it ("Merge into main…").
+  mergeInto: word('merge', GitMerge),
   cherryPick: word('merge', Cherry),
   subtractive: word('merge', Minus, 'Subtractive merge (remove its changes)'),
   cherryPickRange: word('merge', Cherry),
@@ -199,8 +222,11 @@ export const MENU_WORDS = {
 
   // New things from it.
   newBranch: word('create', GitBranchPlus, 'New branch from here…'),
-  newLabel: word('create', Tag, 'New label…'),
-  newCodeReview: word('create', MessageSquareCode, 'New code review…'),
+  newLabel: word('create', TagPlus, 'New label…'),
+  // A merge request of a branch that can merge somewhere; a code review of anything (the only kind for a branch with
+  // nowhere to merge, `/main`).
+  newMergeRequest: word('create', GitPullRequestPlus, 'New merge request…'),
+  newCodeReview: word('create', MessageSquarePlus, 'New code review…'),
   newFile: word('create', FilePlus, 'New file…'),
   newFolder: word('create', FolderPlus, 'New folder…'),
   // A folder showing another repository (docs/features/xlinks.md).
@@ -210,6 +236,8 @@ export const MENU_WORDS = {
   newWindow: word('create', AppWindow, 'New window'),
   // A place's own action on a line of code (`lineMenu`, `DiffAnnotations.lineAction`): a review's "Comment on line 42".
   lineAction: word('create', MessageSquarePlus),
+  // Its other way (`LineAction.variant`): a review's "Suggest change on line 42".
+  lineActionVariant: word('create', MessageSquareDiff),
 
   // Other views of it.
   changes: word('navigate', FileDiff, 'Show changes'),
@@ -274,6 +302,9 @@ export const MENU_WORDS = {
   hide: word('edit', EyeOff),
   unhide: word('edit', Eye),
   forget: word('edit', X, 'Remove from list'),
+  // An organization listed first in the home sidebar (`AppSettings.favoriteOrganizations`).
+  favorite: word('edit', Star, 'Add to favorites'),
+  unfavorite: word('edit', StarOff, 'Remove from favorites'),
   // Who may do what with it (docs/features/permissions.md).
   permissions: word('edit', ShieldCheck, 'Permissions…'),
   pathPermissions: word('edit', FolderLock, 'Path permissions…'),
@@ -320,6 +351,7 @@ export const NEEDS_A_WORKSPACE = [
   'merge',
   'mergeTask',
   'mergeTo',
+  'mergeInto',
   'cherryPick',
   'subtractive',
   'cherryPickRange',

@@ -1,6 +1,6 @@
 import '../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { formatShortcut, matchesShortcut } from './shortcuts';
+import { formatShortcut, matchesShortcut, sharingModifiers } from './shortcuts';
 
 function press(key: string, code: string, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers } as KeyboardEvent;
@@ -84,5 +84,21 @@ describe('formatShortcut', () => {
     expect(formatShortcut('tab', false)).toEqual(['Tab']);
     expect(formatShortcut('mod+,', false)).toEqual(['Ctrl+,']);
     expect(formatShortcut('pageup', false)).toEqual(['Page Up']);
+  });
+});
+
+describe('sharingModifiers', () => {
+  it('writes the modifiers the shortcuts share once, on the first', () => {
+    expect(sharingModifiers(['mod+alt+left', 'mod+alt+right'])).toEqual(['mod+alt+left', 'right']);
+    expect(sharingModifiers(['alt+left', 'alt+right'])).toEqual(['alt+left', 'right']);
+  });
+
+  it('reads the modifiers in any order', () => {
+    expect(sharingModifiers(['mod+alt+left', 'alt+mod+right'])).toEqual(['mod+alt+left', 'right']);
+  });
+
+  it('keeps shortcuts whole when their modifiers differ, or they have none', () => {
+    expect(sharingModifiers(['mod+up', 'ctrl+home'])).toEqual(['mod+up', 'ctrl+home']);
+    expect(sharingModifiers(['up', 'down'])).toEqual(['up', 'down']);
   });
 });

@@ -1,0 +1,9 @@
+{
+  "version": "11.0.16.10694",
+  "bundles": {
+    "win32-x64": { "file": "client-windows.zip", "sha256": "9db011620060663c4bdc030d50e29035b7a25983735e423be0f5d3a70dcd7037" },
+    "darwin-x64": { "file": "client-macos.tar.gz", "sha256": "4050cfcd761d1721ad96762e0466374c2b171830f491f26d16c0c4bda526283d" },
+    "darwin-arm64": { "file": "client-macos-arm64.tar.gz", "sha256": "bfefea8c267750045fa475d94cd63b3a8532730a02e9f4d387918597d8f6b75a" },
+    "linux-x64": { "file": "client-linux.tar.gz", "sha256": "dda698a72ec0868fb2438400f84ef669e306d8c67ae17b1e28bd6831cf054df1" }
+  }
+}

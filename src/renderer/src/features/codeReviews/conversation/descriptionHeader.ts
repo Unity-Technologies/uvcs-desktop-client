@@ -5,7 +5,7 @@ import type { ReviewDescription } from '@shared/domain/reviewConversation';
 export interface DescriptionHeader {
   author: string;
   /** What its band says after the author's name: what they did then. */
-  action: 'wrote the description' | 'opened the review';
+  action: 'wrote the description' | 'opened the review' | 'opened the merge request';
   date: string;
   editedDate?: string;
   /** The pencil's label: to edit the description, or to write the first one. */
@@ -14,11 +14,11 @@ export interface DescriptionHeader {
   text?: string;
 }
 
-export function descriptionHeader(review: Pick<CodeReview, 'owner' | 'date'>, description: ReviewDescription | undefined): DescriptionHeader {
+export function descriptionHeader(review: Pick<CodeReview, 'owner' | 'date' | 'mergeRequest'>, description: ReviewDescription | undefined): DescriptionHeader {
   const text = description?.text.trim() ? description.text : undefined;
   return {
     author: description?.author ?? review.owner,
-    action: text !== undefined ? 'wrote the description' : 'opened the review',
+    action: text !== undefined ? 'wrote the description' : review.mergeRequest ? 'opened the merge request' : 'opened the review',
     date: description?.date ?? review.date,
     ...(description?.editedDate && { editedDate: description.editedDate }),
     editLabel: description ? 'Edit description' : 'Add a description',

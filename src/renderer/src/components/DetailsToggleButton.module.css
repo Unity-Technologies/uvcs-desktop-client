@@ -1,0 +1,13 @@
+/* What the panel has waiting, as the sidebar counts a view's items (`SidebarNav`'s badge): a quiet bubble. */
+.count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  text-align: center;
+}

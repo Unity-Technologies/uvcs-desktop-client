@@ -1,14 +1,13 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import { History } from 'lucide-react';
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo, useRef, useState } from 'react';
 import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { EntryAnnotatorProps } from '../../diff/entryAnnotator';
-import type { ChangedLine } from '../../diff/viewer/changeBlocks';
-import { DiffAnnotationsContext, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
+import { DiffAnnotationsContext, type ChangedLines, type DiffAnnotations, type LineAction, type LineMarker } from '../../diff/viewer/diffAnnotations';
 import type { MapTick } from '../../diff/viewer/mapTicks';
 import type { ReviewComments } from './reviewComments';
 import { ReviewCommentsContext } from './reviewComments';
-import { comparedFile, hasComments, isCommentable, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
+import { comparedFile, isCommentable, openedAsCommentsToggle, openedOnFocus, openedOnSend, type OpenedLines } from './fileAnnotation';
 import { annotationRowsOf, fileCommentsOf, holdsThread, openedOutdated, OUTDATED_ROW, outdatedKey, threadPlace, topSideOf, versionsToRead, type FileComments } from './fileComments';
 import type { ContextView } from './commentContext';
 import { reviewDiffViewOf, type LineThread, type VersionText } from './fileThreads';
@@ -16,7 +15,7 @@ import { CommentMarkerContent } from './CommentMarkerContent';
 import { CommentsInCodeButton } from './CommentsInCodeButton';
 import { InlineThreads, OutdatedThreads, ThreadsRow } from './InlineThreads';
 import { NewLineCommentCard } from './NewLineCommentCard';
-import { lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, withNewLineCommentBands, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
+import { crossesCommentBeingWritten, lineCommentAt, lineCommentLabel, lineRowContent, newLineCommentSpot, newLineCommentsIn, nextSpotScroll, diffScrollTarget, openedSpotRow, withNewLineCommentBands, type SpotScroll, withNewLineCommentRows, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
 import { useReviewCommentsStore } from './reviewCommentsStore';
 import { commentMapTicks, commentMapTip } from './commentMapTicks';
@@ -25,6 +24,13 @@ import { outdatedMarkerOf, type OutdatedMarker } from './outdatedMarker';
 import { markerIsOpen, markerLabel, shownThreadRows, type LineThreads } from './threadRows';
 import { lineBandsOf, scrollsToFocus, threadOpenedFrom } from './threadSelection';
 import { useFileVersionTexts } from './useFileVersionTexts';
+import { useReviewImageAnnotations } from './useReviewImageAnnotations';
+import { useReviewModelAnnotations } from './useReviewModelAnnotations';
+import { ImageAnnotationsContext } from '../../diff/viewer/image/imageAnnotations';
+import { ModelAnnotationsContext } from '../../diff/viewer/model/modelAnnotations';
+import { RepresentationCommentsContext } from '../../diff/viewer/representationComments';
+import { fileCommentsSummaryOf } from './fileRepresentation';
+import { suggestLineLabel } from '../suggestions/suggestButton';
 
 const NO_REVISIONS: number[] = [];
 
@@ -36,7 +42,9 @@ const NO_REVISIONS: number[] = [];
  * comments on takes a new comment (`lineCommentAt`), from the "+" in its gutter or the code's menu, written under it
  * (`NewLineCommentCard`), kept while the window lives (`useNewLineCommentsStore`).
  * One on an earlier version is seen in context in a dialog (`ReviewComments.seeInContext`), which leaves this diff as
- * it is.
+ * it is. An image's comments are pins on it (`useReviewImageAnnotations`, through `ImageAnnotationsContext`), a 3D
+ * model's too (`useReviewModelAnnotations`, `ModelAnnotationsContext`), and a file shown either as code or as what it
+ * draws (an SVG, an OBJ) says where its comments are (`fileCommentsSummaryOf`).
  */
 export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorProps) {
   const comments = useContext(ReviewCommentsContext);
@@ -46,6 +54,13 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const setInCode = useReviewCommentsStore((state) => state.setInCode);
   // Per file: the lines opened while comments are hidden are a way to read one file.
   const [opened, setOpened] = useState<OpenedLines>({ path: entry.path, keys: NO_KEYS });
+  // Hiding comments closes every line opened (`openedAsCommentsToggle`).
+  const [shownBefore, setShownBefore] = useState(inCode);
+  if (shownBefore !== inCode) {
+    setShownBefore(inCode);
+    const next = openedAsCommentsToggle(opened, shownBefore, inCode);
+    if (next !== opened) setOpened(next);
+  }
   const openedKeys = opened.path === entry.path ? opened.keys : NO_KEYS;
 
   const threads = comments && isCommentable(entry, placeRepository) ? comments.threads : undefined;
@@ -73,7 +88,7 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   }
   // A new place to scroll to only when a thread is gone to: a refetch, a line opened, comments hidden or a card picked
   // in the code (`inPlace`, on screen already) scroll nothing.
-  const scrollTo = useMemo(
+  const threadScrollTo = useMemo(
     () => (focusPlace && scrollsToFocus(focus) ? { side: focusPlace.side, lineNumber: focusPlace.lineNumber } : null),
     [focus?.seq, focus?.inPlace, focusPlace?.side, focusPlace?.lineNumber],
   );
@@ -87,15 +102,34 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
   const allSpots = useNewLineCommentsStore((state) => state.spots);
   const openSpot = useNewLineCommentsStore((state) => state.open);
   const spots = useMemo(() => (comments && view && threads ? newLineCommentsIn(allSpots, comments.review.id, view, file) : NO_SPOTS), [allSpots, comments, threads, fileKey]);
+  // A comment just opened is brought into view, if it isn't: unfolding what it was stretched over may push it far down.
+  const focusRequest = useNewLineCommentsStore((state) => state.focusRequest);
+  const [spotScroll, setSpotScroll] = useState<SpotScroll | null>(null);
+  const nextScroll = nextSpotScroll(spotScroll, openedSpotRow(spots, focusRequest), focus?.seq);
+  if (nextScroll !== spotScroll) setSpotScroll(nextScroll);
+  const scrollTo = diffScrollTarget(spotScroll, focus?.seq, threadScrollTo);
   const reviewId = comments?.review.id;
+  // Read when offered, not a dependency: new comments being written would make a new action, and Pierre lay out anew.
+  const spotsNow = useRef(spots);
+  spotsNow.current = spots;
   const lineAction = useMemo<LineAction | undefined>(() => {
     if (reviewId === undefined || !view || !threads) return undefined;
     return {
-      offers: (line: ChangedLine) => lineCommentAt(view, file, line) !== null,
+      offers: (lines: ChangedLines) => {
+        const at = lineCommentAt(view, file, lines);
+        return at !== null && !crossesCommentBeingWritten(spotsNow.current, at);
+      },
       label: lineCommentLabel,
-      run: (line: ChangedLine) => {
-        const at = lineCommentAt(view, file, line);
-        if (at) openSpot(newLineCommentSpot(reviewId, file.path, line.side, at));
+      run: (lines: ChangedLines) => {
+        const at = lineCommentAt(view, file, lines);
+        if (at) openSpot(newLineCommentSpot(reviewId, file.path, lines.side, at));
+      },
+      variant: {
+        label: suggestLineLabel,
+        run: (lines: ChangedLines) => {
+          const at = lineCommentAt(view, file, lines);
+          if (at) openSpot(newLineCommentSpot(reviewId, file.path, lines.side, at), { suggests: true });
+        },
       },
     };
   }, [reviewId, threads !== undefined, fileKey, openSpot]);
@@ -134,8 +168,30 @@ export function ReviewFileAnnotator({ target, entry, children }: EntryAnnotatorP
     return { rows, render, markers, mapTicks, mapTickTip, scrollTo, opensAtRow, bands, lineAction };
   }, [comments, entry, fileComments, inCode, openedKeys, topSide, mapTicks, scrollTo, opensAtRow, spots, lineAction]);
 
-  const controls = hasComments(fileComments) && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
-  return <DiffAnnotationsContext.Provider value={annotations}>{children({ controls })}</DiffAnnotationsContext.Provider>;
+  // An image's comments, pins on it: read only by the image viewer, so a text file's diff ignores them.
+  const onImage = useReviewImageAnnotations({ comments, threads, view, file, inCode });
+
+  // A model's, pins on it: read only by the model viewer.
+  const onModel = useReviewModelAnnotations({ comments, threads, view, file, inCode });
+
+  // Where the file's comments are, and, for a file shown either as code or as what it draws (an SVG, an OBJ), which
+  // view a thread gone to is on.
+  const summary = useMemo(
+    () => fileCommentsSummaryOf({ fileComments, imageThreadIds: onImage.threadIds, modelThreadIds: onModel.threadIds, focus, reviewId: comments?.review.id ?? 0 }),
+    [fileComments, onImage.threadIds, onModel.threadIds, focus, comments?.review.id],
+  );
+  const representationComments = summary.representation;
+
+  const controls = summary.hasComments && <CommentsInCodeButton shown={inCode} onChange={setInCode} />;
+  return (
+    <DiffAnnotationsContext.Provider value={annotations}>
+      <ImageAnnotationsContext.Provider value={onImage.annotations}>
+        <ModelAnnotationsContext.Provider value={onModel.annotations}>
+          <RepresentationCommentsContext.Provider value={representationComments}>{children({ controls })}</RepresentationCommentsContext.Provider>
+        </ModelAnnotationsContext.Provider>
+      </ImageAnnotationsContext.Provider>
+    </DiffAnnotationsContext.Provider>
+  );
 }
 
 const NO_KEYS: readonly string[] = [];
@@ -195,8 +251,8 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
       />
     );
   }
-  const { line, spot } = lineRowContent(row.metadata, context.shownLines, context.spots);
-  const newComment = spot && <NewLineCommentCard key={spot.key} spot={spot} onSent={() => context.onSent(row.metadata)} />;
+  const { line, spots } = lineRowContent(row.metadata, context.shownLines, context.spots);
+  const newComment = spots.length > 0 && spots.map((spot) => <NewLineCommentCard key={spot.key} spot={spot} onSent={() => context.onSent(row.metadata)} />);
   if (!line) return newComment ? <ThreadsRow>{newComment}</ThreadsRow> : null;
   return (
     <InlineThreads comments={comments} line={line} focus={focus} onClose={context.onClose && (() => context.onClose!(line.key))} onSeeInContext={context.onSeeInContext}>
@@ -204,3 +260,4 @@ function renderRow(row: DiffLineAnnotation<string>, context: RowContext) {
     </InlineThreads>
   );
 }
+

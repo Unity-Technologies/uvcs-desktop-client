@@ -65,17 +65,21 @@ interface RevisionCatOptions {
    * after the I/O callbacks at hand, with no timer's delay.
    */
   schedule?: (run: () => void) => void;
+  /** `MAX_QUICK_BACKLOG`; a test passes a small one, so it reaches it writing a few files, not dozens. */
+  maxQuickBacklog?: number;
 }
 
 export class RevisionCat {
   private readonly cm: Pick<CmClient, 'query' | 'execute'>;
   private readonly schedule: (run: () => void) => void;
+  private readonly maxQuickBacklog: number;
   /** By place (`placeId`). */
   private readonly places = new Map<string, WorkspaceReads>();
 
-  constructor({ cm, schedule = (run) => void setImmediate(run) }: RevisionCatOptions) {
+  constructor({ cm, schedule = (run) => void setImmediate(run), maxQuickBacklog = MAX_QUICK_BACKLOG }: RevisionCatOptions) {
     this.cm = cm;
     this.schedule = schedule;
+    this.maxQuickBacklog = maxQuickBacklog;
   }
 
   /**
@@ -115,7 +119,7 @@ export class RevisionCat {
    */
   private runWaiting(place: Place, reads: WorkspaceReads): void {
     while (reads.running < MAX_RUNNING_CATS && reads.waiting.length > 0) {
-      const limits = reads.waiting.length > MAX_QUICK_BACKLOG ? {} : { maxReads: MAX_QUICK_CAT };
+      const limits = reads.waiting.length > this.maxQuickBacklog ? {} : { maxReads: MAX_QUICK_CAT };
       const { batch, group } = nextCatBatch(reads.waiting, (read) => read, reads.lastGroup, limits);
       if (isQuick(batch) && reads.quickRunning) break;
       const taken = new Set(batch);

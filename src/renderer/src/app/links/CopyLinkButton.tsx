@@ -4,6 +4,7 @@ import type { Page } from '../navigation/pages';
 import { useSession } from '../workspace/sessionStore';
 import { copyPageObjectLink } from './copyPageLink';
 import { objectLinkLabel, pageObjectTarget } from './shownLink';
+import { useReviewKindTarget } from './useReviewKindTarget';
 import { useShownFile } from './useShownFile';
 
 /**
@@ -13,7 +14,8 @@ import { useShownFile } from './useShownFile';
  */
 export function CopyLinkButton({ page, className }: { page: Page; className?: string }) {
   const place = useSession((state) => state.place);
-  const target = pageObjectTarget(page, useShownFile(page));
+  // Named as the link it copies: a merge request's once its page read it (`useReviewKindTarget`).
+  const target = useReviewKindTarget(place, pageObjectTarget(page, useShownFile(page)));
   if (!target || !place) return null;
   return <IconButton className={className} size="small" icon={<Link size={14} />} label={objectLinkLabel(target)} onClick={() => void copyPageObjectLink(place, page)} />;
 }

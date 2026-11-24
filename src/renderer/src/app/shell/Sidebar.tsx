@@ -1,5 +1,4 @@
 import { Settings } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { NavFooter, NavGroups, NavItem, Sidebar as SidebarColumn, type NavSection } from '../../ui/nav/SidebarNav';
 import { showsMerge } from '../navigation/mergeInProgress';
 import { useNavigation } from '../navigation/navigationStore';
@@ -12,10 +11,10 @@ import { MergeInProgressItem } from './MergeInProgressItem';
 import { SidebarToggleItem } from './SidebarToggleItem';
 
 /**
- * The sidebar: the place's card (`card`), the merge in progress (`MergeInProgress`) while there is one, the place's
- * views by group (`viewsOf`), then Settings and the rail toggle.
+ * The sidebar: the merge in progress (`MergeInProgress`) while there is one, the place's views by group (`viewsOf`),
+ * then Settings and the rail toggle.
  */
-export function Sidebar({ card }: { card: ReactNode }) {
+export function Sidebar() {
   const place = usePlace();
   const rail = useSidebarCollapsed();
   const { view: activeView, pages, merge } = useNavigation();
@@ -29,8 +28,6 @@ export function Sidebar({ card }: { card: ReactNode }) {
 
   return (
     <SidebarColumn rail={rail}>
-      {card}
-
       <NavGroups sections={sections} />
 
       <NavFooter>
@@ -42,7 +39,7 @@ export function Sidebar({ card }: { card: ReactNode }) {
 }
 
 function SidebarViewItem({ view }: { view: ViewDefinition }) {
-  const { view: activeView, pages, goToView } = useNavigation();
+  const { view: activeView, pages, returnToView } = useNavigation();
   const badge = view.useBadge?.();
   const dot = view.useDot?.();
   const Icon = view.icon;
@@ -57,7 +54,7 @@ function SidebarViewItem({ view }: { view: ViewDefinition }) {
       active={active}
       dimmed={active && pages.length > 0}
       shortcut={view.shortcut}
-      onClick={() => goToView(view.id)}
+      onClick={() => returnToView(view.id)}
     />
   );
 }

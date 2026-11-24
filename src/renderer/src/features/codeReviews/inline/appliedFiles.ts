@@ -1,7 +1,7 @@
 import { MessageSquare } from 'lucide-react';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { EntryFlag } from '../../diff/entryFlag';
-import { appliedChangeset, entryOfThread, type ContextView } from './commentContext';
+import { settlingChangeset, entryOfThread, type ContextView } from './commentContext';
 import type { ContextComparisonState } from './contextComparisonState';
 import type { LineThread } from './fileThreads';
 
@@ -18,7 +18,7 @@ import type { LineThread } from './fileThreads';
 export type AppliedFiles = 'withComment' | 'withoutComment' | 'none';
 
 export function appliedFilesOf(thread: LineThread, entries: readonly DiffEntry[] | undefined): AppliedFiles {
-  if (appliedChangeset(thread) === undefined || !entries) return 'none';
+  if (settlingChangeset(thread) === undefined || !entries) return 'none';
   const commented = entryOfThread(entries, thread);
   const others = entries.some((entry) => entry !== commented && entry.itemType !== 'directory');
   if (!others) return 'none';
@@ -72,7 +72,7 @@ export function isCommentedEntry(entry: DiffEntry, thread: LineThread): boolean 
  * when it didn't change the commented file (`withoutComment`), that it applied it in other files.
  */
 export function appliedFilesDescription(thread: LineThread, files: AppliedFiles): string {
-  const changeset = appliedChangeset(thread);
+  const changeset = settlingChangeset(thread);
   return files === 'withoutComment' ? `Changeset ${changeset} applied it in other files` : `Changeset ${changeset}, which applied it`;
 }
 

@@ -1,15 +1,12 @@
 /*
- * Fills the hovered line's row, the button on the edge between its number and its code (`GUTTER_CSS`). No pop-in: Pierre
- * moves the slot from line to line, and a node moved restarts its animation, so it flickered on every line.
+ * By the hovered line's number, over the edge into its code (`lineActionSpot`), above the outlines around commented
+ * lines (`LineBands`) and their markers (`LineMarkers`). No pop-in: it moves from line to line, and an animation
+ * restarted on every line flickered.
  */
-.slot {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  padding-inline: 2px;
-}
-
 .button {
+  position: absolute;
+  translate: 0 -50%;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -26,4 +23,9 @@
 
 .button:hover {
   background: var(--accent-fill-hover);
+}
+
+/* A drag's "+" on its first and last line (`LineActionDragMarks`): drawn as the button, never in the pointer's way. */
+.button[data-mark] {
+  pointer-events: none;
 }

@@ -16,7 +16,7 @@ import { navigation } from '../navigation/navigationStore';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../queryClient';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
-import { branchResult, changesetResult, exactCodeReviewResult, exactShelveResult, fileResult, labelResult, shelveResult, type ResultContext } from './objectResults';
+import { branchResult, changesetResult, codeReviewResultDetail, exactCodeReviewResult, exactShelveResult, fileResult, labelResult, shelveResult, type ResultContext } from './objectResults';
 import { whereTheWindowIs } from '../../testing/operationOutcome';
 
 const change: PendingChange = { path: 'src/app.ts', kinds: ['changed'], itemType: 'file', size: 1, lastModified: '2026-01-01T00:00:00Z' };
@@ -26,7 +26,7 @@ const changeset = (comment: string): Changeset => ({ id: 12, comment, guid: 'c',
 const shelve = (comment: string): Shelve => ({ id: 4, comment, guid: 's', owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
 
 function contextFor(term: string, changes: PendingChange[] = []): ResultContext {
-  return { place: workspacePlace('/ws'), term, currentBranch: '/main', loadedChangeset: 1, changelists: [], changeAt: (path) => changes.find((candidate) => candidate.path === path) };
+  return { place: workspacePlace('/ws'), workspaceKind: undefined, term, currentBranch: '/main', loadedChangeset: 1, changelists: [], changeAt: (path) => changes.find((candidate) => candidate.path === path) };
 }
 
 function actionIn(menu: MenuEntry[], id: string): Action | undefined {
@@ -151,5 +151,12 @@ describe('a shelve or code review typed by number', () => {
 
     exactCodeReviewResult(311).run();
     expect(whereTheWindowIs().pages.at(-1)).toMatchObject({ kind: 'codeReview', reviewId: 311 });
+  });
+});
+
+describe("a review's row", () => {
+  it('says where a merge request merges, between its status and its author', () => {
+    expect(codeReviewResultDetail({ status: 'Under review', owner: 'ana', mergeRequest: { state: 'Open', destination: '/main' } })).toBe('Under review · → /main · Ana');
+    expect(codeReviewResultDetail({ status: 'Reviewed', owner: 'ana' })).toBe('Reviewed · Ana');
   });
 });

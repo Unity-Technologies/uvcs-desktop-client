@@ -17,7 +17,7 @@ const onLine = (id: number, revisionId: number, line: number, fields: Partial<Re
   date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`,
   text: `Comment ${id}`,
   kind: 'changeRequest',
-  anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line },
+  anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: line, lastLine: line },
   ...fields,
 });
 
@@ -38,6 +38,14 @@ describe('fileCommentsOf', () => {
       ['additions:3', [2]],
     ]);
     expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([3]);
+  });
+
+  it('places a range on an earlier version where all its lines are unchanged since, else keeps it apart, outdated', () => {
+    const onRange = (id: number, firstLine: number, lastLine: number) => onLine(id, 20, firstLine, { anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', firstLine, lastLine } });
+    // Lines 1–2 of revision 20 (a, b) are lines 2–3 now; line 3 (c) was edited, so 2–3 changed.
+    const comments = fileCommentsOf({ threads: threadsOf([onRange(1, 1, 2), onRange(2, 2, 3)]), review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => TEXTS.get(revision) });
+    expect(comments.lines.map((line) => [line.key, line.firstLine, line.threads.map((entry) => entry.thread.root.id)])).toEqual([['additions:3', 2, [1]]]);
+    expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([2]);
   });
 
   it('shows an outdated thread in the view it was written in only', () => {
@@ -80,9 +88,39 @@ describe('fileCommentsOf', () => {
   });
 });
 
+describe('fileCommentsOf, in the changeset that settled a thread', () => {
+  // Written on revision 20, before other changesets of the branch; changeset 9 changed its line ("c"), on revision 25 still.
+  const BEFORE_FIX = text('new', 'a', 'b', 'c', 'd');
+  const FIX: ShownFile = { path: 'src/Player.cs', originalRevision: 25, modifiedRevision: 30 };
+  const IN_FIX = { kind: 'changeset', changesetId: 9 } as const;
+  const textOf = (revision: number): string | undefined => (revision === 25 ? BEFORE_FIX : TEXTS.get(revision));
+  const answeredInFix = threadsOf([onLine(1, 20, 3, { kind: 'question' }), { ...onLine(2, 20, 3), anchor: { kind: 'review' }, parentId: 1, kind: 'comment', text: 'Fixed in cs:9.' }]);
+
+  it("shows a question answered in it at its line before the fix, on the older side, though written on an earlier version", () => {
+    const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf });
+    expect(comments.lines.map((line) => line.key)).toEqual(['deletions:4']);
+    expect(comments.outdated).toEqual([]);
+  });
+
+  it('waits for the version before the fix', () => {
+    const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf: (revision) => (revision === 25 ? undefined : textOf(revision)) });
+    expect([comments.lines, comments.outdated, comments.reading.length]).toEqual([[], [], 1]);
+  });
+
+  it('shows it outdated, not hidden, when its line had changed before the fix too', () => {
+    const changedBefore = (revision: number): string | undefined => (revision === 25 ? text('new', 'a', 'b', 'c changed', 'd') : TEXTS.get(revision));
+    const comments = fileCommentsOf({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX, textOf: changedBefore });
+    expect(comments.outdated.map((entry) => entry.thread.root.id)).toEqual([1]);
+  });
+
+  it('reads the version before the fix to place it', () => {
+    expect(versionsToRead({ threads: answeredInFix, review: BRANCH, view: IN_FIX, file: FIX })).toEqual([20, 30, 25]);
+  });
+});
+
 describe('annotationRowsOf', () => {
   const [thread] = threadsOf([onLine(1, 30, 2)]);
-  const rows = lineThreadsOf([{ thread: thread as never, side: 'additions', line: 2 }]);
+  const rows = lineThreadsOf([{ thread: thread as never, side: 'additions', firstLine: 2, line: 2 }]);
 
   it('names each line by its key', () => {
     expect(annotationRowsOf({ rows }, [], 'additions')).toEqual([{ side: 'additions', lineNumber: 2, metadata: 'additions:2' }]);
@@ -91,8 +129,8 @@ describe('annotationRowsOf', () => {
   it("lists the lines placed once an earlier version is read after the others, and the outdated ones last: Pierre keys rows by their place", () => {
     const [onShown, onEarlier] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3)]);
     const lines = lineThreadsOf([
-      { thread: onEarlier as never, side: 'additions', line: 4, earlier: { thread: onEarlier as never, revisionId: 20 } },
-      { thread: onShown as never, side: 'additions', line: 9 },
+      { thread: onEarlier as never, side: 'additions', firstLine: 4, line: 4, earlier: { thread: onEarlier as never, revisionId: 20 } },
+      { thread: onShown as never, side: 'additions', firstLine: 9, line: 9 },
     ]);
     const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
     expect(annotationRowsOf({ rows: lines }, outdated, 'additions').map((row) => row.metadata)).toEqual(['additions:9', 'additions:4', OUTDATED_ROW]);
@@ -100,7 +138,7 @@ describe('annotationRowsOf', () => {
 
   it('lists, while comments are hidden, only what was opened, outdated threads too, in the order they were opened', () => {
     const [onShown, onEarlier] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3)]);
-    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', line: 9 }]);
+    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', firstLine: 9, line: 9 }]);
     const outdated = [{ thread: onEarlier as never, revisionId: 20 }];
     const metadataOf = (opened: string[]) => annotationRowsOf({ rows: lines }, outdated, 'additions', opened).map((row) => row.metadata);
     expect(metadataOf(['additions:9'])).toEqual(['additions:9']);
@@ -111,7 +149,7 @@ describe('annotationRowsOf', () => {
 
   it('holds every outdated thread opened in one row above the code, where the first was opened', () => {
     const [onShown, first, second] = threadsOf([onLine(1, 30, 9), onLine(2, 20, 3), onLine(3, 20, 5)]);
-    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', line: 9 }]);
+    const lines = lineThreadsOf([{ thread: onShown as never, side: 'additions', firstLine: 9, line: 9 }]);
     const outdated = [
       { thread: first as never, revisionId: 20 },
       { thread: second as never, revisionId: 20 },
@@ -147,7 +185,7 @@ describe('openedOutdated', () => {
 });
 
 describe('holdsThread', () => {
-  const threads = threadsOf([onLine(1, 30, 2), onLine(3, 20, 3), onLine(5, 20, 3, { anchor: { kind: 'line', revisionId: 40, itemId: 8, path: '/src/Enemy.cs', line: 1 } })]);
+  const threads = threadsOf([onLine(1, 30, 2), onLine(3, 20, 3), onLine(5, 20, 3, { anchor: { kind: 'line', revisionId: 40, itemId: 8, path: '/src/Enemy.cs', firstLine: 1, lastLine: 1 } })]);
 
   it('holds a thread at its line, outdated, or on an earlier version not read yet, so the diff opens at it rather than at its first change', () => {
     const read = fileCommentsOf({ threads, review: BRANCH, view: WHOLE, file: PLAYER, textOf: (revision) => TEXTS.get(revision) });

@@ -69,3 +69,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A group's count, sized and weighted as Changes' group headers draw theirs (`ChangesList.module.css` `.count`). */
+.groupCount {
+  composes: count;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}

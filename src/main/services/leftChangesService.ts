@@ -4,7 +4,7 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createLeftChangesService({ operations }: ServiceContext, { leftChanges }: SwitchContext): LeftChangesApi {
   return {
-    find: (workspacePath) => leftChanges.find(workspacePath),
+    find: (workspacePath, branch) => leftChanges.find(workspacePath, branch),
     restore: (workspacePath, shelveId, operationId) => operations.run(operationId, (context) => leftChanges.restore(workspacePath, shelveId, context)),
     discard: (workspacePath, shelveIds) => leftChanges.discard(workspacePlace(workspacePath), shelveIds),
   };

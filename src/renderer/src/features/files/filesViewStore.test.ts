@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
-import { revealRequestIn, useFilesViewStore } from './filesViewStore';
+import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
+import { FILES_DETAILS_KEY, fileViewForAnnotateCommand, revealRequestIn, showFileView, toggleAnnotated, useFilesViewStore } from './filesViewStore';
 
 const revealRequestFor = (workspacePath: string) => revealRequestIn(useFilesViewStore.getState(), workspacePlace(workspacePath));
 
@@ -40,5 +41,52 @@ describe('reveal requests', () => {
     useFilesViewStore.getState().revealed(older);
 
     expect(revealRequestFor('/ws')?.path).toBe('src/b.ts');
+  });
+});
+
+// Annotate or Show changes with the details hidden used to change a panel no one saw, and seemed to do nothing.
+describe('showing the selected file', () => {
+  const filesDetailsHidden = () => detailsHidden(useDetailsPaneStore.getState(), FILES_DETAILS_KEY);
+
+  beforeEach(() => {
+    useFilesViewStore.setState({ fileView: 'diff' });
+    useDetailsPaneStore.setState({ hidden: {}, startedHidden: {} });
+  });
+
+  it('shows the hidden details it shows the file in', () => {
+    useDetailsPaneStore.getState().toggleHidden(FILES_DETAILS_KEY);
+
+    showFileView('annotate');
+
+    expect(useFilesViewStore.getState().fileView).toBe('annotate');
+    expect(filesDetailsHidden()).toBe(false);
+  });
+
+  it("leaves other views' hidden details hidden", () => {
+    useDetailsPaneStore.getState().toggleHidden('branches');
+
+    showFileView('diff');
+
+    expect(detailsHidden(useDetailsPaneStore.getState(), 'branches')).toBe(true);
+  });
+
+  it('switches between the diff and the annotations while the details show', () => {
+    expect(fileViewForAnnotateCommand('diff', false)).toBe('annotate');
+    expect(fileViewForAnnotateCommand('annotate', false)).toBe('diff');
+  });
+
+  it('annotates the file when the details were hidden, even if they were hidden on its annotations', () => {
+    expect(fileViewForAnnotateCommand('diff', true)).toBe('annotate');
+    expect(fileViewForAnnotateCommand('annotate', true)).toBe('annotate');
+  });
+
+  it('shows the annotations the Annotate command switches to with the details hidden', () => {
+    useFilesViewStore.setState({ fileView: 'annotate' });
+    useDetailsPaneStore.getState().toggleHidden(FILES_DETAILS_KEY);
+
+    toggleAnnotated();
+
+    expect(useFilesViewStore.getState().fileView).toBe('annotate');
+    expect(filesDetailsHidden()).toBe(false);
   });
 });

@@ -3,8 +3,8 @@ import { Copy } from 'lucide-react';
 import { memo } from 'react';
 import { withControlPictures } from '../../lib/controlPictures';
 import { Highlight } from '../../ui/Highlight';
-import { entryEnding } from './commandEnding';
-import { CommandLineText } from './CommandLineText';
+import { entryEnding } from '@shared/commandEnding';
+import { FoldableCommandLine } from './FoldableCommandLine';
 import styles from './CommandLogPanel.module.css';
 
 interface CommandLogEntryRowProps {
@@ -17,7 +17,8 @@ interface CommandLogEntryRowProps {
 }
 
 /**
- * One command, colored by its parts (`CommandLineText`), its number, its duration and, when it failed, how it ended
+ * One command, colored by its parts, a long run of ORed conditions folded until expanded (`FoldableCommandLine`; Copy
+ * takes the whole line), its number, its duration and, when it failed, how it ended
  * (`entryEnding`) and its output, the filter's words marked in each (the texts of `commandLogFilterTexts`).
  * Memoized: a new command renders only its own row.
  */
@@ -30,7 +31,7 @@ export const CommandLogEntryRow = memo(function CommandLogEntryRow({ entry, numb
       </span>
       <span className={styles.duration}>{entry.durationMs} ms</span>
       <span className={styles.command}>
-        <CommandLineText line={withControlPictures(entry.commandLine)} />
+        <FoldableCommandLine line={entry.commandLine} />
         {cwd && (
           <span className={styles.cwd}>
             in <Highlight text={cwd} />

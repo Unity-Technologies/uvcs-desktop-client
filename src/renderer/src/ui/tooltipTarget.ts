@@ -1,8 +1,7 @@
-import type { TipText } from './followTip';
-import { readTipAttributes } from './tipAttributes';
+import { readTipAttributes, type TipAttributes } from './tipAttributes';
 
 /** A tooltip found on the page, read from its attributes (`readTipAttributes`). */
-export interface FoundTip extends TipText {
+export interface FoundTip extends TipAttributes {
   /** The element the tip is read from: followed while it shows. */
   host: Element;
 }

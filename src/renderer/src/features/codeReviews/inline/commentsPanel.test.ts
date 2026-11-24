@@ -7,6 +7,7 @@ import {
   diffWidthBesidePanel,
   commentsPanelStartsHidden,
   commentPosition,
+  commentsFilterChoices,
   commentsPanelCounts,
   commentsByFile,
   commentsOrderTip,
@@ -34,7 +35,7 @@ function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: '', kind: 'changeRequest', anchor: { kind: 'review' }, ...fields };
 }
 
-const onLine = (id: number, path: string, line: number, fields: Partial<ReviewComment> = {}) => comment(id, { anchor: { kind: 'line', revisionId: 1, itemId: 1, path, line }, ...fields });
+const onLine = (id: number, path: string, line: number, fields: Partial<ReviewComment> = {}) => comment(id, { anchor: { kind: 'line', revisionId: 1, itemId: 1, path, firstLine: line, lastLine: line }, ...fields });
 
 const THREADS = threadsOf([
   comment(1, { kind: 'general' }),
@@ -48,6 +49,12 @@ const THREADS = threadsOf([
 describe('commentsPanelThreads', () => {
   it('lists every thread on a line, files as the diff lists them, each by line', () => {
     expect(commentsPanelThreads(THREADS, 'all').map((thread) => thread.root.id)).toEqual([4, 3, 5, 2]);
+  });
+
+  it('lists a range where the code shows it: under its last line, before a line below it', () => {
+    const onRange = (id: number, firstLine: number, lastLine: number) => comment(id, { anchor: { kind: 'line', revisionId: 1, itemId: 1, path: '/a.cs', firstLine, lastLine } });
+    const threads = threadsOf([onRange(1, 2, 9), onRange(2, 5, 5), onRange(3, 7, 9), onRange(4, 10, 10)]);
+    expect(commentsPanelThreads(threads, 'all').map((thread) => thread.root.id)).toEqual([2, 1, 3, 4]);
   });
 
   it('lists only what is still open', () => {
@@ -243,7 +250,7 @@ describe('matchExcerpt', () => {
 
 describe('commentsPanelCounts', () => {
   it('counts the threads on lines, and the open ones; the comments on the whole review are not on the code', () => {
-    expect(commentsPanelCounts(THREADS)).toEqual({ open: 1, all: 4 });
+    expect(commentsPanelCounts(THREADS)).toEqual({ open: 1, new: 0, all: 4 });
   });
 });
 
@@ -256,8 +263,8 @@ describe('initialCommentsFilter', () => {
 
 describe('emptyCommentsText', () => {
   it('tells a review with no comments on its code from one with nothing left to answer', () => {
-    expect(emptyCommentsText('all', { open: 0, all: 0 }).title).toBe('No comments on the code yet');
-    expect(emptyCommentsText('open', { open: 0, all: 3 }).title).toBe('Nothing left to answer');
+    expect(emptyCommentsText('all', { open: 0, new: 0, all: 0 }).title).toBe('No comments on the changes yet');
+    expect(emptyCommentsText('open', { open: 0, new: 0, all: 3 }).title).toBe('Nothing left to answer');
   });
 });
 
@@ -337,5 +344,66 @@ describe('diffWidthBesidePanel', () => {
   it('is what the tab leaves the diff: its width less the files and the panel', () => {
     // A 900 px window leaves the tab about 820: 820 - 340 - 340 = 140, which read as a strip of code.
     expect(diffWidthBesidePanel({ tabWidth: 820, filesWidth: 340, panelWidth: 340 })).toBe(140);
+  });
+});
+
+describe('New', () => {
+  const threads = threadsOf([
+    onLine(1, '/a.cs', 1, { appliedInChangeset: 9 }),
+    onLine(2, '/a.cs', 2),
+    onLine(3, '/b.cs', 1, { kind: 'comment' }),
+    comment(4, { kind: 'general' }),
+  ]);
+  const newIds = new Set([1, 3, 4]);
+
+  it("lists the threads on code new to the user since their last review, and counts them", () => {
+    expect(commentsPanelThreads(threads, 'new', NO_COMMENTS_SEARCH, 'code', newIds).map((thread) => thread.root.id)).toEqual([1, 3]);
+    expect(commentsPanelCounts(threads, newIds)).toEqual({ open: 1, new: 2, all: 3 });
+    expect(threadKindCounts(threads, 'new', newIds)).toEqual({ changeRequest: 1, question: 0, comment: 1 });
+  });
+
+  it('is a choice only for a user back after a review of theirs', () => {
+    expect(commentsFilterChoices(commentsPanelCounts(threads), undefined).map((choice) => choice.label)).toEqual(['Open 1', 'All 3']);
+    expect(commentsFilterChoices(commentsPanelCounts(threads, newIds), newIds).map((choice) => choice.label)).toEqual(['Open 1', 'New 2', 'All 3']);
+  });
+
+  it('opens on New for a reviewer back for another round, and as before otherwise', () => {
+    expect(initialCommentsFilter(threads, newIds)).toBe('new');
+    expect(initialCommentsFilter(threads, new Set())).toBe('open');
+    expect(initialCommentsFilter(threads, undefined)).toBe('open');
+  });
+
+  it('says when nothing is new', () => {
+    expect(emptyCommentsText('new', { open: 0, new: 0, all: 3 }).title).toBe('Nothing new since your last review');
+  });
+});
+
+describe('threads on 3D models in the panel', () => {
+  const onModel = (id: number, path: string, fields: Partial<ReviewComment> = {}) =>
+    comment(id, { anchor: { kind: 'model', revisionId: 1, itemId: 2, path, spot: { point: { x: id, y: 0, z: 0 } } }, ...fields });
+
+  it("lists them with the threads on lines, by file, a model's in the order they were started", () => {
+    const threads = threadsOf([onModel(5, '/Art/Car.fbx'), onLine(1, '/src/Player.cs', 9), onModel(3, '/Art/Car.fbx'), comment(7)]);
+    expect(commentsPanelThreads(threads, 'all').map((thread) => thread.root.id)).toEqual([3, 5, 1]);
+  });
+
+  it('counts them under each filter', () => {
+    const threads = threadsOf([onModel(1, '/Art/Car.fbx'), onModel(2, '/Art/Car.fbx', { kind: 'comment' }), onLine(3, '/src/Player.cs', 2)]);
+    expect(commentsPanelCounts(threads)).toMatchObject({ open: 2, all: 3 });
+  });
+});
+
+describe('threads on images in the panel', () => {
+  const onImage = (id: number, path: string, fields: Partial<ReviewComment> = {}) =>
+    comment(id, { anchor: { kind: 'image', revisionId: 1, itemId: 2, path, spot: { x: 10 - id, y: 0 } }, ...fields });
+
+  it('lists them with the threads on lines, by file, an image\'s in the order they were started', () => {
+    const threads = threadsOf([onImage(5, '/Art/Hero.png'), onLine(1, '/src/Player.cs', 9), onImage(3, '/Art/Hero.png'), comment(7)]);
+    expect(commentsPanelThreads(threads, 'all').map((thread) => thread.root.id)).toEqual([3, 5, 1]);
+  });
+
+  it('counts them under each filter', () => {
+    const threads = threadsOf([onImage(1, '/Art/Hero.png'), onImage(2, '/Art/Hero.png', { kind: 'comment' }), onLine(3, '/src/Player.cs', 2)]);
+    expect(commentsPanelCounts(threads)).toMatchObject({ open: 2, all: 3 });
   });
 });

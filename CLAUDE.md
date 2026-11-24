@@ -28,6 +28,11 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 - **`cm` economy: protect the server.** `cm` is not `git`: almost every command is a network round trip to a server
   many people share (a large production repository holds ~280k changesets, ~20k branches). See "Every `cm` command
   earns its place".
+- **Written for people.** Every text a person reads (pull request titles and bodies, release notes, commit messages,
+  error messages, toasts, labels, docs) says exactly what it does for that reader, in plain English, in the fewest
+  words: the effect first, one idea, no comparisons they didn't ask for. Write it with the `writing-for-people` skill
+  (`.claude/skills/writing-for-people`), then run it through the `humanizer` skill (`.claude/skills/humanizer`), which
+  takes out the habits that make text sound machine-written.
 
 ## Read before changing code
 
@@ -87,12 +92,14 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
    output": "No list is one string").
 6. **What does it refresh?** An operation declares what it `affects` (`refreshScopes.ts`); reads refresh nothing.
 7. **Check it.** Watch the command log (⌘⇧L) while exercising the change and count the commands. Development builds
-   warn `[server budget]` in the console when a server command repeats more than twice in ten seconds.
+   warn `[server budget]` in the console when a server command repeats more than twice in ten seconds, and the smoke
+   test fails when one step sends the same command line twice from the same folder.
 
 ## Safety
 
-- **Secrets never show**: the command log, `CmError`s and console warnings hide passwords (`main/cm/hideSecrets.ts`).
-  A new `cm` option carrying a secret joins `SECRET_OPTIONS`; never log, toast or store a credential yourself.
+- **Secrets never show**: the command log, the log file, `CmError`s and console warnings hide passwords
+  (`main/cm/hideSecrets.ts`). A new `cm` option carrying a secret joins `SECRET_OPTIONS`; never log, toast or store a
+  credential yourself.
 - **The renderer is untrusted**: keep `contextIsolation` and `sandbox` on, and give it capabilities only as typed
   `UvcsApi` methods, never a generic "run this" channel.
 - **Nothing external opens by itself**: `cm` never opens a merge or diff tool, and background work never opens anything.
@@ -102,7 +109,8 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
 
 ## Commands
 
-npm (Node ≥ 22.12; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). `cm` must be installed and signed in; set `UVCS_CM_PATH` to use a `cm` that isn't found.
+npm (Node ≥ 22.18; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). The app downloads its own `cm` on the first run (docs/features/cm-runtime.md); sign in once with it or an installed
+one. `UVCS_CM_PATH` runs another `cm`, and `UVCS_CM_BUNDLES_URL` downloads the app's own from another site.
 
 ```bash
 npm run dev          # the app with hot reload
@@ -111,17 +119,24 @@ npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts and scripts/build/**/*.test.ts
-npm run e2e          # the smoke test, every view of the real app against a fake cm, over a development build then a production one (~30 s)
+npm run e2e          # the smoke test, every view of the real app against a fake cm, and the first run's setup screen, over a development build then a production one (~60 s)
+npm run e2e:development   # the smoke test over the development build only (~30 s): the one to run while working
 npm run dist         # the installer for this OS, into dist/
 npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
+npm run cm:bump <version>   # pin the cm the app runs (cm-version.json), from the published bundles
+npm run cm:check            # check the pinned bundles are still published as pinned
+npm run cm:setup-check      # set the pinned cm up on this machine with the app's own code, as a first run does
 ```
 
 **Done means** a pull request that passes the QA gate (see "Delivering work: a pull request"): `npm run typecheck`
 and `npm test` pass (and CI, on every OS), the new code is tested (see "Tests are the quality gate"), the change is
 seen working in the app (anything visible), a clean-context review has passed, and the docs say what's now true (see
 "Docs"). There is no linter or formatter: match the surrounding code. Anything that touches startup, navigation or
-many views passes `npm run e2e` too.
+many views passes `npm run e2e:development` too. Its StrictMode catches what the production build hides, and CI runs
+both builds before a merge. The two builds differ only in whether the renderer bundles React's and its libraries'
+development or production code, so a change to `electron.vite.config.ts`, or an upgrade of a library the renderer
+bundles (React above all), runs the full `npm run e2e`.
 
 ## Seeing the app (Playwright)
 
@@ -130,14 +145,18 @@ app; don't just trust types and tests. **Always use the `playwright-cli` skill**
 don't hand-roll Playwright calls. Build, start the app as a background process, attach, and stop it when done:
 
 ```bash
-npm run build && UVCS_CDP_PORT=9333 npm run app:debug    # in the background
+npm run build && UVCS_CDP_PORT=9333 npm run app:debug -- --background    # in the background
 npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click <ref>, screenshot, console
 ```
 
+- **`--background` when you open the app on your own.** To check your work, launch it with `--background`: its
+  windows show but never take the focus (`windowsStayInBackground`), so the person keeps working while you look.
+  When the person asks to see the app, run it or try something in it, launch it without `--background`, as they'd
+  open it. `npm run dev` and `npm start` never take it; the smoke test and `scripts/screenshot.mjs` always do.
 - Check **both themes** and a narrow window, and that the console shows no errors (`playwright-cli console`).
 - Check a **development build** too, where StrictMode mounts every component twice (ARCHITECTURE.md "Effects survive a
-  second mount"): `npx electron-vite build --mode development`, then `npm run app:debug`; or `npx electron-vite dev
-  --remoteDebuggingPort 9333` and attach. A production build alone hid a crash of the model diff.
+  second mount"): `npx electron-vite build --mode development`, then `npm run app:debug` (`-- --background` when on
+  your own); or, only while the person watches, `npx electron-vite dev --remoteDebuggingPort 9333` and attach. A production build alone hid a crash of the model diff.
 - Parallel agents: a distinct `UVCS_CDP_PORT` and `-s=<session>` each.
 - One-shot screenshots: `node scripts/screenshot.mjs /tmp/shot.png open:<workspace> key:Meta+3` (steps in its header;
   it prints renderer errors as `[renderer]` and `[pageerror]`).
@@ -162,8 +181,13 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks),
   `code-reviews.sh` (a review holding every kind of comment: change requests pending, applied and discarded, questions
   answered and not, comments on a deleted file, under one changeset and on an older revision; a description, a rename
-  and a status change; reviews of a changeset and a shelve), `workspace-kinds.sh` (a standard, a partial and, on Windows,
-  a dynamic workspace of one repository: the chips that tell them apart).
+  and a status change; comments on a car GLB and an OBJ, on points and whole parts, one on a part gone, one on a door
+  a take swings, one on a skinned antenna's tip a take bends; reviews of a changeset and a shelve), `merge-requests.sh`
+  (a task branch per merge request case: none, draft, open with and without reviewers, in rework, reviewed and clean,
+  reworked then reviewed with check-ins after, reviewed and conflicting, closed, merged, two of one branch, a nested
+  branch into its parent, a destination changed; plain reviews of a branch, a changeset and a shelve),
+  `workspace-kinds.sh` (a standard, a partial and, on Windows, a dynamic workspace of one repository: the chips that
+  tell them apart).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
@@ -222,7 +246,8 @@ The suite runs after every change, so it must take seconds, not minutes. A test 
 - **The smoke test** (`npm run e2e`, `scripts/e2e/README.md`) drives the built app over a fake `cm` and a temp
   workspace: startup, every sidebar view, a diff, the palette, Settings, a theme switch; it fails on renderer errors
   and on any `cm` command the fake doesn't know. A view that starts running a new command teaches it to the fake
-  (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`.
+  (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`. It stays a pass through the
+  views plus what only the real app shows; what a module decides is a unit test (its README, "What belongs here").
 - **The renderer's fakes** are in `renderer/src/testing/`: `fakeWindow` (`window.uvcs`; `fakeApi` answers the calls a
   test declares and fails it on any other), `fakeDialogs` (confirm and prompt), `operationOutcome` (the toasts, where
   the window went, the views refreshed), `queryProbes`.
@@ -251,6 +276,8 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
+| `scripts/e2e/smoke.mjs` (`duplicateReport`)               | no step sends the same command line twice from the same folder (scripts/e2e/README.md, "Duplicate server commands") |
+| `main/cm/noStickyShellOptions.test.ts`                    | no option a `cm shell` keeps for its session (`--username`, `--server`…: `STICKY_SHELL_OPTIONS`) reaches a pooled shell |
 | `main/cm/commandOutputs.test.ts`, `testing/fakeCmClient.test.ts` | no list is read as one string; every command says how it's read (`COMMAND_OUTPUTS`) |
 | `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
 | `renderer/src/rendererTiers.test.ts`                      | `lib/` and `ui/` never import the tiers above them                |
@@ -259,9 +286,20 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `renderer/src/noAiLookalikeIcons.test.ts`                 | no sparkles or wands: "Automatic" never reads as an AI feature    |
+| `renderer/src/hoverKeepsLayout.test.ts`                   | no hover rule changes a box's size: a box that grows on hover can wrap away from the pointer and flicker |
+| `renderer/src/viewWrappersMakeNoStackingContext.test.ts`  | the boxes the views sit in make no stacking context: a view's overlay lies over the window |
 | `renderer/src/codeScrollsSideways.test.ts`                | every place showing code with Pierre has `PaneScrollbars`         |
 | `renderer/src/effectsReturnCleanUps.test.ts`              | no effect returns what a DOM call gives (`scrollIntoView`'s promise), which React takes for its clean-up |
+| `renderer/src/elementsKeptWhileHidden.test.ts`            | an element held in state comes from `useKeptElement`, kept while a view's `Activity` hides it |
+| `renderer/src/noDocumentWideIds.test.ts`                  | no component writes out an element id: views kept mounted would share it (`useId`) |
+| `renderer/src/chipsAreLinks.test.ts`                      | a comment's chips are links, except where a click belongs to what holds them (`CHIPS_NOT_LINKS` says why for each) |
 | `renderer/src/detailsPanelsHide.test.ts`                  | every details panel has the header button that hides it (`DetailsToggleButton`) |
+| `renderer/src/detailsPanelsShowAttributesInSection.test.ts` | every details panel shows attributes in its Attributes section (`AttributesDetailsSection`), never as chips in its header |
+| `renderer/src/splittersRemembered.test.ts`               | every splitter remembers where it was dragged, under a key of its own (`RememberedSplitPane`) |
+| `renderer/src/listViewsRefresh.test.ts`                   | every list view (`ObjectListView`) has the Refresh button in its header (`ViewRefreshButton`) |
+| `renderer/src/placesCoveredBySignIn.test.ts`              | every window showing a place's views or pages covers them with the sign-in screen (`SignInCover`) |
+| `renderer/src/rowActionsEverywhere.test.ts`               | every list driven from its filter whose results have actions (`isRowMenuKey`) shows the "…" (`RowActionsButton`) and opens it on a right click |
+| `renderer/src/newButtonsShowTheirObject.test.ts`          | every "New …" button shows what it creates with a plus (an icon named `…Plus`, like `TagPlus`), never the bare `Plus` |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/cm/noCmInternalFiles.test.ts`                       | nothing reads `cm`'s own files (`.plastic/`, the config folder); only the first-run import reads the config, never writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
@@ -292,7 +330,9 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
   32,767-character command lines (ARCHITECTURE.md "Parsing `cm` output"). What can't be run here is tested with each
   OS's own input (its paths, its tools' output), and `UVCS_RENDERER_PLATFORM` previews another OS's UI.
 - **Copy**: plain words, short. Labels name things, tooltips define them, no sentence restates what the screen shows.
-  UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags.
+  UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags. Error
+  messages say what happened and what to do next. All of it is written with the `writing-for-people` skill, then the
+  `humanizer` skill (see "Written for people", in Principles).
 - **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
   `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
   Colors, motion and focus only through `styles/tokens.css`.
@@ -328,7 +368,7 @@ Commit like a careful human. The history should show *how* the work happened.
 - A refactor commit stands alone, with no other change, and keeps the tests green.
 - A commit message says what the user can now do or see, in the product's words, not which files changed ("The
   Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
-  change in a short line.
+  change in a short line. Plain words, by the `writing-for-people` skill.
 - **Public text says what changed, never why internally.** The repository is public: commit messages, branch names,
   pull requests, comments and docs never mention internal reviews, approvals, requests or tickets (Legal, Privacy,
   security, compliance), nor the reasoning they gave. Say what the user can now do or see, and what the code does.
@@ -347,43 +387,45 @@ A Claude Code hook refusing local writes to `main` was tried and dropped: GitHub
 them on the server, and reading shell command lines cost more to keep right than it saved.
 
 1. **Branch first.** Before the first edit: `git pull --ff-only` then `git switch -c <kind>/<topic>` in the main
-   checkout, or rename a worktree's generated branch (see "Commits"). One task, one branch, one pull request.
+   checkout, or rename a worktree's generated branch (see "Commits"). One task, one branch, one pull request. A change
+   users will see: decide its release note's picture now (the `release-notes` skill, "Pictures"), since a "before"
+   can only be taken before the change.
 2. **Build it** in small commits (see "Commits"), adjusting every place the change reaches: callers, other views that
    share a component, menus, shortcuts, the e2e fake, the docs.
-3. **Verify it yourself**: `npm run typecheck` and `npm test`; `npm run e2e` when it touches startup, navigation or
-   many views; anything visible seen in the app with Playwright (see "Seeing the app": both themes, a narrow window, a
-   development build, a clean console).
+3. **Verify it yourself**: `npm run typecheck` and `npm test`; the smoke test when it touches startup, navigation or
+   many views (which build: "Done means"); anything visible seen in the app with Playwright (see "Seeing the app":
+   both themes, a narrow window, a development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for, how you verified it and its release note (written now, with the `release-notes` skill: step 6).
+   the change is for, how you verified it, its release note (written now, with the `release-notes` skill: step 6)
+   with its pictures' paths, or the skill's row that made it none, and the pull request's title and body as drafted.
    A fresh context sees what the author's can't. The reviewer only reads: it runs no tests, builds or app, since step 3
-   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch,
-   folder, verification and release note; the agent that started it runs the review, then resumes it (Claude Code:
-   `SendMessage`) to do steps 5 and 6, or does them itself.
+   and CI already do. A subagent that can't start agents of its own stops after step 3 and reports its branch, folder,
+   verification, release note, pictures' paths, and drafted pull request title and body; the agent that started it
+   runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
    (`.github/pull_request_template.md`): the behavior before and after, how it was implemented (the approach, the
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
-   what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
-   message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
+   what the review found and what changed for it, the docs. **The title says exactly what the pull request does**,
+   as an order with its effect (the `writing-for-people` skill's "Pull request titles" holds the rule), and nothing in it names an internal review or approval ("Public text says
+   what changed", in Commits). The title, the body and the release note are written with the `writing-for-people`
+   skill, then run through the `humanizer` skill.
    **Every pull request carries its release note**, written with the `release-notes` skill
    (`.claude/skills/release-notes`): the `## Release note` section, `### New:`, `Improved:` or `Fixed:` and a title,
    then a short description, or `None:` and why users have nothing to read. It is what users read in What's New and on
    the releases page, so it is written for them, apart from the title and the rest of the body, which are for
    reviewers: the app's words, never the code's. The Release note check (`readReleaseNote`) fails a pull request
    without one.
-   **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
-   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the light theme, the pointer
-   out of the way). One is the rule: not every state, theme or window size, only a second shot when the feature can't
-   be understood without it (a before and after, a theme-specific change). When a still can't show it (motion, a
-   flow, something that must *not* move), a short GIF or video instead. Whether the release note gets a picture, a
-   still or a GIF, and which part of the screen, is the `release-notes` skill's call. When it does, that picture sits
-   inside `## Release note` and serves reviewers too; otherwise the reviewers' shot goes under "Behavior with this pull
-   request". Either way, reference it where it goes as `![alt](./shot.png)` and attach it with `gh pr create --attach
-   ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`): an unreferenced
-   attachment lands after the closing line, outside every section, and a reference to a file not attached stays
-   broken; the Release note check (`misplacedPicture`) fails both. Never commit them to the repository.
+   **Pictures**: the `release-notes` skill decides whether the note gets one, which kind (the element, a region, the
+   window, a before and after, a GIF) and how it's framed, from what the user would see, a fix of something drawn
+   wrong included; it is also what reviewers look at. A change visible in the app whose note needs none still shows
+   reviewers one screenshot of the outcome under "Behavior with this pull request" (a sandbox, the light theme), or a
+   short GIF when a still can't show it. Reference each where it goes as `![alt](./shot.png)` and attach it with `gh
+   pr create --attach ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`):
+   an unreferenced attachment lands after the closing line, outside every section, and a reference to a file not
+   attached stays broken; the Release note check (`misplacedPicture`) fails both. Never commit them to the repository.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.

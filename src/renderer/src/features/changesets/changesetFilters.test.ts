@@ -13,6 +13,7 @@ import {
   type BranchScope,
   CHANGESET_SESSION_FILTERS,
   changesetChoices,
+  changesetChoicesEmptyText,
   changesetsCap,
   CLEARED_CHANGESET_FILTERS,
   CURRENT_BRANCH,
@@ -187,6 +188,20 @@ describe('changesetsCap', () => {
   });
 });
 
+describe('changesetChoicesEmptyText', () => {
+  it('points to older changesets when the newest were listed', () => {
+    expect(changesetChoicesEmptyText(null, 'newest')).toBe('No changesets found. Type a number to pick an older one.');
+  });
+
+  it("points to any other when a branch's were listed, which may have none", () => {
+    expect(changesetChoicesEmptyText(null, 'some')).toBe('No changesets found. Type a number to pick any other.');
+  });
+
+  it('says why the read failed, and how to pick one anyway', () => {
+    expect(changesetChoicesEmptyText(new Error('Server down'), 'some')).toBe("Couldn't read the changesets: Server down. Type a number to pick one.");
+  });
+});
+
 describe('changesetChoices', () => {
   const changeset = (id: number, comment = '', branch = '/main'): Changeset => ({ id, guid: `g${id}`, branch, comment, owner: 'ana', date: '', parent: id - 1, repository: 'game@local' });
   const recent = [changeset(50, 'Fix the menu'), changeset(42, 'Add the menu\nWith its icons', '/main/ui'), changeset(41, 'Ship 42 levels')];
@@ -221,6 +236,11 @@ describe('changesetChoices', () => {
     expect(choices('7')).toEqual([{ id: 7, missing: true }]);
     expect(choices('45', recent, 3)).toEqual([{ id: 45, missing: true }]);
     expect(choices('60', recent, 3)).toEqual([{ id: 60, missing: true }]);
+  });
+
+  it("offers any number typed by its number alone when those read are some of the repository's, not its newest (a branch's)", () => {
+    expect(changesetChoices(recent, undefined, 50, '45')).toEqual([{ id: 45 }]);
+    expect(changesetChoices(recent, undefined, 50, '42')).toEqual([{ id: 42, changeset: recent[1] }, { id: 41, changeset: recent[2] }]);
   });
 
   it('offers any number typed while the changesets are unread, or the read failed', () => {

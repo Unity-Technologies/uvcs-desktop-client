@@ -1,9 +1,14 @@
+import { useId } from 'react';
 import { FileDiff } from 'lucide-react';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { navigation } from '../../../app/navigation/navigationStore';
+import { reviewDetailsSections } from '../reviewDetailsSections';
+import { BranchAttributesSection } from './BranchAttributesSection';
+import { NotificationsSection } from './NotificationsSection';
 import { ReviewersSection } from './ReviewersSection';
 import type { OpenItem } from './threadPick';
 import { ThreadKindIcon } from './ThreadKindIcon';
+import { threadKindName } from './threadBadges';
 import styles from './ReviewConversation.module.css';
 
 interface ReviewSideRailProps {
@@ -14,13 +19,19 @@ interface ReviewSideRailProps {
   onPick: (threadId: number) => void;
 }
 
-/** Beside the conversation: who reviews it and the status each gave, and the change requests and questions still open. */
+/**
+ * Beside the conversation: who reviews it and the status each gave, the change requests and questions still open,
+ * whether the user gets its emails, and the reviewed branch's attributes (`reviewDetailsSections`).
+ */
 export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
+  // Its own per page: a review may show in two views kept mounted (`KeptView`).
+  const titleId = useId();
+  const { branchAttributes } = reviewDetailsSections(review);
   return (
     <aside className={styles.rail}>
       <ReviewersSection review={review} />
-      <section className={styles.railSection} aria-labelledby="review-open">
-        <h2 id="review-open" className={styles.railTitle}>
+      <section className={styles.railSection} aria-labelledby={titleId}>
+        <h2 id={titleId} className={styles.railTitle}>
           Open <span className={styles.railCount}>{open.length}</span>
         </h2>
         {open.length === 0 && <p className={styles.railEmpty}>Nothing left to answer</p>}
@@ -28,7 +39,7 @@ export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
           {open.map((item) => (
             <li key={item.threadId} className={styles.openItem} data-current={item.current || undefined}>
               <button type="button" className={styles.openItemPick} aria-current={item.current || undefined} onClick={() => onPick(item.threadId)}>
-                <ThreadKindIcon root={item.thread.root} />
+                <ThreadKindIcon kind={threadKindName(item.thread.root)} />
                 <span className={styles.openText}>{item.text}</span>
               </button>
               {item.inChanges && <ShowInChangesButton inChanges={item.inChanges} />}
@@ -36,6 +47,8 @@ export function ReviewSideRail({ review, open, onPick }: ReviewSideRailProps) {
           ))}
         </ul>
       </section>
+      <NotificationsSection reviewId={review.id} />
+      {branchAttributes && <BranchAttributesSection branchSpec={branchAttributes} />}
     </aside>
   );
 }

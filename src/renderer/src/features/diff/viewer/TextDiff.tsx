@@ -18,7 +18,7 @@ import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
 import { linesLayoutOf } from './keptPlace';
 import { linesSelectable, shownSelection } from './lineLinkMode';
-import { selectedRangeOf } from './linkedLines';
+import { linkedLinesOf, selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { scrollToAnnotationRow } from './annotationRowScroll';
 import { LineBands } from './LineBands';
@@ -29,7 +29,10 @@ import { useDiffAnnotations } from './useDiffAnnotations';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
 import { useLineActionButton } from './LineActionButton';
+import { releasingSelection } from './lineMenu';
 import { useCodeMenu } from './useCodeMenu';
+import { CodeFindBar } from './CodeFindBar';
+import { useCodeFind } from './useCodeFind';
 import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
@@ -231,6 +234,12 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     markedLines,
   });
   // The lines selected offer a link to them (a chip by them) and their menu, where they are selected for links.
+  const selectedForAction = useMemo(() => linkedLinesOf(lineLinks.range), [lineLinks.range]);
+  const latestSelected = useRef(selectedForAction);
+  latestSelected.current = selectedForAction;
+  const placeAction = annotations?.lineAction;
+  const select = lineLinks.select;
+  const placeLineAction = useMemo(() => placeAction && releasingSelection(placeAction, () => latestSelected.current, () => select(null)), [placeAction, select]);
   const lineTools = useLineTools({
     containerRef: container,
     layout,
@@ -239,20 +248,31 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     selectable: lineLinks.selectedLines !== undefined,
     publishes: lineLinks.publishes,
     textOf: (side) => (side === 'old' ? original : diffedText),
-    lineAction: annotations?.lineAction,
+    lineAction: placeLineAction,
   });
-  // What the place does with a line (a review's comment on it), in the gutter of the line under the pointer.
-  const lineAction = useLineActionButton(annotations?.lineAction, lineLinks.options, container);
+  // What the place does with a line (a review's comment on it), a button by the line under the pointer.
+  const lineAction = useLineActionButton(placeLineAction, lineLinks.options, container, layout, selectedForAction);
+  const codeSides = textDiffSides({ wholeFile, sides, editable, editorAttached: edit });
+  // ⌘F and Find in the menu, on either side; ⌥⌘F (Ctrl+H) and Replace in the text typed into.
+  const codeFind = useCodeFind({
+    containerRef: container,
+    textOf: (side) => (side === 'deletions' ? original : current),
+    onlySide: codeSides.onlySide,
+    typedInto: codeSides.typedInto,
+    editor,
+    scrollTo: scrollToShownLine,
+  });
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,
     scrollTo: scrollToShownLine,
     fileName,
     textOf: (side) => (side === 'deletions' ? original : current),
-    sides: textDiffSides({ wholeFile, sides, editable, editorAttached: edit }),
+    sides: codeSides,
     editor,
     lines: menuLinesOf(lineLinks),
     lineMenu: lineMenuOf(lineTools.menu),
+    findOn: codeFind.openFind,
   });
   const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, fileName, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
@@ -292,6 +312,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const expandedFocus = useExpandedDiffFocus();
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
+    codeFind.onKeyDownCapture(event);
+    if (event.isPropagationStopped()) return;
     const typesText = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
     if (typesText && typeWhileAttaching(event.key)) return event.preventDefault();
     if (!isTyping() || !matchesShortcut(event.nativeEvent, hotkey('leaveEditor'))) return;
@@ -331,6 +353,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           onPointerDown={discard.onPointerDown}
           onPointerDownCapture={(event) => {
             pointerFocus.onPointerDownCapture(event);
+            codeFind.onPointerDownCapture(event);
             if (!editable || edit || wholeFile) return;
             const place = modifiedTextPositionAt(container.current, { x: event.clientX, y: event.clientY });
             if (place) focusAt(place);
@@ -357,8 +380,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                     fileDiff={fileDiff}
                     options={options}
                     selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
-                    // A workspace file's diff discards from its gutter; a committed one (a review's) acts on a line there.
-                    renderGutterUtility={discard.renderGutterUtility ?? lineAction.renderGutterUtility}
+                    // A workspace file's diff discards from its gutter.
+                    renderGutterUtility={discard.renderGutterUtility}
                     lineAnnotations={annotations?.rows}
                     renderAnnotation={annotations?.render}
                     edit={edit}
@@ -377,8 +400,10 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           {annotations?.bands && annotations.bands.length > 0 && <LineBands containerRef={container} bands={annotations.bands} layout={layout} />}
           {annotations && annotations.markers.length > 0 && <LineMarkers containerRef={container} markers={annotations.markers} layout={layout} />}
           {movedCode}
+          {lineAction.overlay}
         </div>
       </ActionContextMenu>
+      {codeFind.bar && <CodeFindBar bar={codeFind.bar} />}
     </div>
   );
 }

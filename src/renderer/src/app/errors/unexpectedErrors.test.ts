@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeWindowError, unexpectedErrorIssueUrl } from './unexpectedErrors';
+import { describeWindowError, renderError, unexpectedErrorIssueUrl } from './unexpectedErrors';
 
 const INFO = {
   version: '1.4.0',
@@ -33,6 +33,19 @@ describe('describeWindowError', () => {
   it("reads a window error whose error is null by its message, as Chromium reports a ResizeObserver's", () => {
     expect(describeWindowError(null, 'ResizeObserver loop completed with undelivered notifications.')).toBeNull();
     expect(describeWindowError(null, 'Script error.')).toEqual({ message: 'Script error.', details: 'Script error.' });
+  });
+});
+
+describe('renderError', () => {
+  it('adds the components it was thrown in, for the log file', () => {
+    const error = new Error('Cannot read properties of undefined');
+    error.stack = 'TypeError: Cannot read properties of undefined\n    at Row (Row.tsx:4)';
+
+    expect(renderError(error, '\n    at Row\n    at List')).toEqual({
+      message: 'Cannot read properties of undefined',
+      details: 'TypeError: Cannot read properties of undefined\n    at Row (Row.tsx:4)\nIn components:\n    at Row\n    at List',
+    });
+    expect(renderError('thrown text')).toEqual({ message: 'thrown text', details: 'thrown text' });
   });
 });
 

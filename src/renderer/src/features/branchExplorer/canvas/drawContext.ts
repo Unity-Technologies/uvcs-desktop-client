@@ -1,4 +1,5 @@
-import type { GraphChangeset } from '@shared/domain/branchExplorer';
+import type { GraphChangeset, MergeLink } from '@shared/domain/branchExplorer';
+import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
@@ -24,6 +25,8 @@ export interface GraphScene {
   selectedChangesets: ReadonlySet<number>;
   selectedBranches: ReadonlySet<string>;
   hoveredChangeset: number | null;
+  /** The merge link (or merge in progress) under the pointer, lit as when the pointer is on one of its changesets. */
+  hoveredMergeLink: MergeLink | PendingMergeLink | null;
   /** The branch whose header or band is under the pointer. */
   hoveredBranch: string | null;
   /** The code review whose chip is under the pointer. */
@@ -113,6 +116,8 @@ export interface DrawContext {
   detail: DetailLevel;
   pixelRatio: number;
   drawn: DrawnTargets;
+  /** The view's zoom, for what fades with it rather than switching at a detail level (the merge links' glow). */
+  zoom: number;
 }
 
 /** Comments are fully shown from this zoom, and fade out as a whole just below it: never one by one. */

@@ -41,13 +41,13 @@ describe('Show changesets', () => {
     const branch: Branch = { id: 7, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '2026-09-01T00:00:00Z', headChangeset: 5, guid: 'g', repository: 'game@local' };
     const entryOf = (menu: ReturnType<typeof branchMenu>) => menu.find((entry) => typeof entry === 'object' && 'id' in entry && entry.id === 'changesets');
 
-    const fromList = entryOf(branchMenu(workspacePlace(WORKSPACE), [branch], '/main'));
+    const fromList = entryOf(branchMenu({ place: workspacePlace(WORKSPACE), workspaceKind: undefined, currentBranch: '/main' }, [branch]));
     expect(fromList).toMatchObject({ label: 'Show changesets' });
     (fromList as { run: () => void }).run();
     expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/task' });
 
     const layout = layoutGraph(sampleHistory());
-    const context = { place: workspacePlace(WORKSPACE), layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {}, selections: [], positions: { pins: [], setPins: () => {} } };
+    const context = { place: workspacePlace(WORKSPACE), workspaceKind: undefined, layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {}, selections: [], positions: { pins: [], setPins: () => {} } };
     const fromGraph = entryOf(graphMenu({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! }, context));
     (fromGraph as { run: () => void }).run();
     expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/a' });
@@ -56,7 +56,7 @@ describe('Show changesets', () => {
 
   it('is offered for one branch at a time', () => {
     const branch: Branch = { id: 7, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid: 'g', repository: 'game@local' };
-    const ids = branchMenu(workspacePlace(WORKSPACE), [branch, { ...branch, id: 8, name: '/main/other' }], '/main').map((entry) => typeof entry === 'object' && 'id' in entry && entry.id);
+    const ids = branchMenu({ place: workspacePlace(WORKSPACE), workspaceKind: undefined, currentBranch: '/main' }, [branch, { ...branch, id: 8, name: '/main/other' }]).map((entry) => typeof entry === 'object' && 'id' in entry && entry.id);
     expect(ids).not.toContain('changesets');
   });
 });

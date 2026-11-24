@@ -13,12 +13,12 @@ function thread(id: number): LineThread {
     date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`,
     text: 'Text',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', line: 1 },
+    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', firstLine: 1, lastLine: 1 },
   };
   return threadsOf([root])[0] as LineThread;
 }
 
-const at = (side: ThreadSide, line: number, entry: LineThread): PlacedThread => ({ thread: entry, side, line });
+const at = (side: ThreadSide, line: number, entry: LineThread): PlacedThread => ({ thread: entry, side, firstLine: line, line });
 
 describe('selectedInPlace', () => {
   it('selects a thread where it shows, without scrolling to it', () => {
@@ -70,6 +70,11 @@ describe('lineBandsOf', () => {
       { key: 'deletions:4', side: 'deletions', lineNumber: 4, selected: false },
       { key: 'additions:9', side: 'additions', lineNumber: 9, selected: false },
     ]);
+  });
+
+  it('outlines a range from its first line to the line its row is under', () => {
+    const range = lineThreadsOf([{ ...at('additions', 9, thread(1)), firstLine: 5 }]);
+    expect(lineBandsOf(range, null)).toEqual([{ key: 'additions:9', side: 'additions', lineNumber: 9, firstLineNumber: 5, selected: false }]);
   });
 
   it('selects the line holding the focused thread, whichever of its threads it is', () => {

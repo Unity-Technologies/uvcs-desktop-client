@@ -1,10 +1,11 @@
+import { commandsWhileCovered } from '../signIn/coveredCommands';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { registeredCommands, type Command } from './commandStore';
 import type { SearchResult } from './searchResults';
 
 /** The commands the palette offers: every one registered and enabled, but the one opening the palette, which would do nothing there. */
-export function paletteCommands(commandsByOwner: ReadonlyMap<string, readonly Command[]>): Command[] {
-  return registeredCommands(commandsByOwner).filter((command) => !command.disabled && command.id !== 'app.commandPalette');
+export function paletteCommands(commandsByOwner: ReadonlyMap<string, readonly Command[]>, covered = false): Command[] {
+  return commandsWhileCovered(registeredCommands(commandsByOwner), covered).filter((command) => !command.disabled && command.id !== 'app.commandPalette');
 }
 
 /** The command's group reads after it ("Changes · Go to"), so commands with the same name in different groups can be told apart. */

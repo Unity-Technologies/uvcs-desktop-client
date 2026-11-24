@@ -13,7 +13,7 @@ import { useIncomingSummary } from './useIncomingSummary';
 export function useKnownIncomingSummary(): IncomingSummary | undefined {
   const { data: summary } = useIncomingSummary();
   const { data: changes } = useIncomingChanges({ enabled: false });
-  const read = changes?.branch ? changes : undefined;
+  const read = changes?.branch && !('partial' in changes) ? changes : undefined;
   const pages = useReadOlderIncomingPages(read);
   return knownIncomingSummary(summary, changes, read && pages && listedIncomingChangesets(read, pages));
 }

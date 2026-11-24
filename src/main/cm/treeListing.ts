@@ -38,7 +38,7 @@ export const readListedItem: ReadRecord<ListedItem> = ([wkPath = '', type = '', 
   if (!Number.isInteger(revision) || revision < 0) return undefined;
   return {
     path: wkPath.replaceAll('\\', '/').replace(/^\/+/, ''),
-    isFolder: type === 'dir' || type === 'xlink',
+    isFolder: type === 'dir', // an xlink too: `cm ls` lists it as a folder
     size: Number(size) || 0,
     revision: { revisionId: revision, repository: repository.replace(/^rep:/, '') },
     hash,

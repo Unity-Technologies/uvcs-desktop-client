@@ -1,6 +1,6 @@
 import type { DiffTarget } from '@shared/domain/diff';
 import type { LinkLines } from '@shared/links/link';
-import type { MergeRequest } from '@shared/domain/merge';
+import type { MergeOperation } from '@shared/domain/merge';
 import type { RevisionRef } from '@shared/domain/revision';
 import type { TaskMerge } from '../../features/mergeTask/taskMerge';
 
@@ -34,16 +34,35 @@ export type Page =
       sideNames?: readonly [DiffSideName, DiffSideName];
     }
   /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */
-  | { kind: 'merge'; request: MergeRequest; task?: TaskMerge }
+  | { kind: 'merge'; request: MergeOperation; task?: TaskMerge }
   /**
    * `tab`: what it opens on, its conversation unless it names a file (`focusPath`), which its changes show.
    * `focusThread`: a comment thread (its first comment's id) to bring into view and mark, in the tab it opens on.
-   * `focusChangeset`: on a branch's review, its changes open changeset by changeset, on that changeset: where a
-   * comment written there is.
+   * `focusReply`: a reply of that thread to go to in the conversation, the one a link names.
+   * `focusChangeset`: on a branch's review, its changes open on that changeset, selected in the list of the branch's
+   * changesets: where a comment written there is.
+   * `focusChangesets`: on a branch's review, its changes open with every changeset of the span selected in that list,
+   * as one diff: those new to a reviewer since their review. No link names it: one names the review alone.
    */
-  | { kind: 'codeReview'; reviewId: number; tab?: ReviewTab; focusPath?: string; focusLines?: FocusedLines; focusThread?: number; focusChangeset?: number }
+  | {
+      kind: 'codeReview';
+      reviewId: number;
+      tab?: ReviewTab;
+      focusPath?: string;
+      focusLines?: FocusedLines;
+      focusThread?: number;
+      focusReply?: number;
+      focusChangeset?: number;
+      focusChangesets?: ChangesetSpan;
+    }
   /** `focusPath` selects an item of the tree there (a repository path, as `DiffEntry.path`), `focusLines` its lines. */
   | { kind: 'browseRepository'; changesetId: number; focusPath?: string; focusLines?: FocusedLines };
+
+/** A span of a branch's changesets, by the numbers of its ends: the oldest and the newest, both in it. */
+export interface ChangesetSpan {
+  oldest: number;
+  newest: number;
+}
 
 /** A code review page's tabs: what was said on it, and the changes it reviews. */
 export type ReviewTab = 'conversation' | 'changes';

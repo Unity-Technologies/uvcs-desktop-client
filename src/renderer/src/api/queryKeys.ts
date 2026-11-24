@@ -34,7 +34,12 @@ export const queryKeys = {
   appInfo: ['appInfo'] as const,
   releaseNotes: (version: string) => ['releaseNotes', version] as const,
   cmSetup: ['cmSetup'] as const,
-  serverConnection: (server: string) => ['serverConnection', server] as const,
+  /** The `cm` installed on the computer, offered in Settings beside the app's own (`api.cmRuntime.installedCm`). */
+  installedCm: ['cmRuntime', 'installed'] as const,
+  /** The version of the app's own `cm`, fixed for this version of the app. */
+  pinnedCmVersion: ['cmRuntime', 'pinned'] as const,
+  serverSession: (server: string) => ['serverSession', server] as const,
+  serverSessions: ['serverSessions'] as const,
   homeDirectory: ['homeDirectory'] as const,
   /** Whether this computer can create dynamic workspaces (`api.workspaces.canCreateDynamic`). */
   dynamicWorkspaces: ['dynamicWorkspaces'] as const,
@@ -43,6 +48,7 @@ export const queryKeys = {
   everyWorkspaceHeads: ['workspaceHeads'] as const,
   /** Keyed by the workspace's path and guid: a workspace recreated in the same folder may hold its files another way. */
   workspaceKind: (path: string, guid: string) => ['workspaceKind', path, guid] as const,
+  workspaceKindsOf: (path: string) => ['workspaceKind', path] as const,
   workspaceRepository: (path: string) => ['workspaceRepository', path] as const,
   missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,

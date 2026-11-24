@@ -1,9 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
 import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
 import type { BranchInfo } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
-import { cmVersionQuery } from '../../app/startup/useCmAvailability';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { commentDraftKey, DetailsHeading } from '../../components/DetailsHeading';
 import { placeId } from '@shared/domain/place';
@@ -15,11 +13,16 @@ import { Button } from '../../ui/Button';
 import { DetailsBadge } from '../../ui/DetailsBadge';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import type { Property } from '../../ui/PropertyList';
-import { AttributeChips } from '../attributes/AttributeChips';
+import { AttributesDetailsSection } from '../attributes/AttributesDetailsSection';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
+import { openReview } from '../codeReviews/codeReviewOperations';
+import { asMergeRequest } from '../codeReviews/mergeRequestState';
+import { useBranchReview } from '../codeReviews/useBranchReviews';
+import { useSettled } from '../../lib/useSettled';
+import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard';
+import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
 import { diffBranch, saveBranchComment } from './branchOperations';
-import { editsBranchComments } from './editsBranchComments';
 
 interface BranchDetailsProps {
   branch: BranchInfo;
@@ -33,15 +36,15 @@ interface BranchDetailsProps {
 export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const place = usePlace();
-  const { data: cmVersion } = useQuery(cmVersionQuery);
+  // The review its chip shows, read with the branches in view (`useBranchReview`): a merge request gets a section.
+  const request = asMergeRequest(useBranchReview(branch.id, useSettled()) ?? undefined);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
-  const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
 
   return (
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={saveComment} draftKey={commentDraftKey(placeId(place), 'branch', branch.id)} />}
+      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} onSave={(comment) => saveBranchComment(place, branch, comment)} draftKey={commentDraftKey(placeId(place), 'branch', branch.id)} />}
       author={{ user: branch.owner, date: branch.date }}
       meta={[
         branch.parent && (
@@ -61,7 +64,6 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
           {branch.isHidden && <DetailsBadge>Hidden</DetailsBadge>}
         </>
       }
-      attributes={<AttributeChips key={branch.name} objectSpec={spec.branch(branch.name)} />}
       primaryAction={
         <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => diffBranch(branch)}>
           Open diff
@@ -78,6 +80,13 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
         ...relations,
       ]}
       changes={<ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />}
-    />
+    >
+      {request && (
+        <DetailsSection title="Merge request">
+          <MergeRequestSummaryCard request={request} onOpen={() => openReview(request)} />
+        </DetailsSection>
+      )}
+      <AttributesDetailsSection objectSpec={spec.branch(branch.name)} />
+    </DetailsPanel>
   );
 }

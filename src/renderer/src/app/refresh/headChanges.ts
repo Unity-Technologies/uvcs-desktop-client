@@ -23,9 +23,12 @@ export function workspaceInfoKeyMoved(part: WorkspaceInfoPart, before: LoadedSta
 
 /**
  * Someone else checked in to the loaded branch: its head moved while the workspace stayed where it was.
- * Our own checkins and updates move the loaded changeset too, and refresh everything by themselves.
+ * Our own checkins and updates move the loaded changeset too, and refresh everything by themselves. A partial workspace
+ * loads no one changeset, so its own checkin moves only the head: what tells someone else's is that the head now brings
+ * items.
  */
 export function branchHeadMovedOnServer(before: IncomingSummary, after: IncomingSummary): boolean {
-  if (!before.branch || !after.branch) return false;
-  return before.branch === after.branch && before.loadedChangeset === after.loadedChangeset && before.headChangeset !== after.headChangeset;
+  if (!before.branch || !after.branch || before.branch !== after.branch || before.headChangeset === after.headChangeset) return false;
+  if ('partial' in before || 'partial' in after) return 'partial' in before && 'partial' in after && after.itemCount > 0;
+  return before.loadedChangeset === after.loadedChangeset;
 }

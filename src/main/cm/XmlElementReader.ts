@@ -1,4 +1,5 @@
 import { child, parseXml, type XmlNode } from './parseXml';
+import { CmItemTooLargeError, MAX_ITEM_BYTES } from './outputLimit';
 import type { StreamReader } from './outputReading';
 
 /** What a caller builds of each element read (a revision); undefined leaves it out. */
@@ -20,9 +21,11 @@ export class XmlElementReader<T> implements StreamReader {
   /** The bytes after the last element read: the one still arriving, and whatever came before it. */
   private carried = Buffer.alloc(0);
 
+  /** `maxItemBytes`: past it, an element still arriving fails the command (`CmItemTooLargeError`). */
   constructor(
     private readonly name: string,
     private readonly readElement: ReadElement<T>,
+    private readonly maxItemBytes = MAX_ITEM_BYTES,
   ) {
     this.openTag = Buffer.from(`<${name}>`, 'utf8');
     this.closeTag = Buffer.from(`</${name}>`, 'utf8');
@@ -44,6 +47,8 @@ export class XmlElementReader<T> implements StreamReader {
       if (open >= consumed) this.readElementIn(bytes.toString('utf8', open, end));
       consumed = end;
     }
+    // An output that never closes an element would be carried whole.
+    if (bytes.length - consumed > this.maxItemBytes) throw new CmItemTooLargeError(this.maxItemBytes);
     // A copy, not a slice: what is carried keeps no chunk alive.
     this.carried = Buffer.from(bytes.subarray(consumed));
   }

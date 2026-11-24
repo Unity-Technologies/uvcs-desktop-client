@@ -20,9 +20,14 @@ describe('cmPlace on a repository without a workspace', () => {
   const onRepository = cmPlace(repositoryPlace('game@local'));
 
   it('runs outside every workspace and names the repository, as no folder tells cm which', () => {
-    expect(onRepository.options).toEqual({ outsideWorkspaces: true });
+    expect(onRepository.options).toEqual({ outsideWorkspaces: true, server: 'local' });
     expect(onRepository.repository).toBe('game@local');
     expect(onRepository.repositoryOption).toEqual(['--repository=game@local']);
+  });
+
+  it("names the repository's server for the sign-in gate, a cloud organization's whole", () => {
+    expect(cmPlace(repositoryPlace('game@acme@cloud')).options.server).toBe('acme@cloud');
+    expect(cmPlace(repositoryPlace('game')).options).toEqual({ outsideWorkspaces: true });
   });
 
   it('puts the repository on every object and point spec', () => {

@@ -20,6 +20,25 @@ describe('selectorObjectRef', () => {
     expect(lines()).toEqual([foundLine(FOUND_BRANCHES, "where name = 'task1'")]);
   });
 
+  it('names a branch already read by its id, asking nothing', async () => {
+    const { cm, lines } = fakeCmClient({});
+
+    expect(await selectorObjectRef(cm, '/work', { kind: 'branch', name: '/main/task1' }, { name: '/main/task1', id: 37 })).toBe('br:37');
+    expect(lines()).toEqual([]);
+  });
+
+  it('looks the branch up when the one already read is another: the workspace moved since', async () => {
+    const { cm, lines } = fakeCmClient({ 'find branch': branchesFound({ name: '/main/task2', id: 52 }) });
+
+    expect(await selectorObjectRef(cm, '/work', { kind: 'branch', name: '/main/task2' }, { name: '/main/task1', id: 37 })).toBe('br:52');
+    expect(lines()).toEqual([foundLine(FOUND_BRANCHES, "where name = 'task2'")]);
+  });
+
+  it('looks a label up even with a branch already read', async () => {
+    const { cm } = fakeCmClient({ 'find label': LABEL_V1 });
+    expect(await selectorObjectRef(cm, '/work', { kind: 'label', name: 'v1' }, { name: 'v1', id: 37 })).toBe('lb:812');
+  });
+
   it("looks a name holding a quote up with a wildcard in its place, and takes only the object of that very name", async () => {
     const { cm, lines } = fakeCmClient({ 'find branch': branchesFound({ name: '/main/ana-s', id: 41 }), 'find label': LABEL_V1 });
 

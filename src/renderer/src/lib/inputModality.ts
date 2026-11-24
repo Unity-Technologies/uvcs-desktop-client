@@ -25,7 +25,14 @@ export function isPointerReturnFocus(target: Pick<Element, 'hasAttribute'>, last
 /** Marks triggers focus comes back to after a click, for as long as they keep it and the keyboard stays still. */
 export function trackPointerReturnFocus(): void {
   let lastInput: Input = 'pointer';
-  document.addEventListener('pointerdown', () => void (lastInput = 'pointer'), true);
+  // Only the user's own presses: the sign-in screen presses outside the menus it closes (`SignInCover`).
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (event.isTrusted) lastInput = 'pointer';
+    },
+    true,
+  );
   document.addEventListener(
     'keydown',
     (event) => {

@@ -19,7 +19,7 @@ function threadOn(revisionId: number, fields: Partial<ReviewComment> = {}): Line
     date: '2026-11-06T10:00:00Z',
     text: 'Rename it',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line: 12 },
+    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 12 },
     ...fields,
   };
   return threadsOf([root])[0] as LineThread;
@@ -32,7 +32,7 @@ describe('contextComparisonState', () => {
   it('compares from the diff on screen, reading nothing', () => {
     const state = contextComparisonState({ thread: open, view: 'commented', repository: REPOSITORY, onScreen: ON_SCREEN, source: { kind: 'onScreen' }, read: {} });
 
-    expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'additions', line: 12 } });
+    expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'additions', firstLine: 12, lastLine: 12 } });
   });
 
   it('waits for the diff it reads, and says why when that read fails', () => {
@@ -65,5 +65,24 @@ describe('contextComparisonState', () => {
     const state = contextComparisonState({ thread: open, view: 'since', repository: REPOSITORY, onScreen: null, source: { kind: 'none' }, read: {} });
 
     expect(state).toMatchObject({ kind: 'comparison', comparison: { modified: { kind: 'empty' }, side: 'deletions' } });
+  });
+
+  describe('a file the changeset that applied it replaced', () => {
+    const replaced: ShownEntry = { ...PLAYER, baseRevisionId: 20, revisionId: 25, replaced: true };
+    const moved: ShownEntry = { ...PLAYER, oldPath: 'src/Score.cs', baseRevisionId: 5 };
+    const WHOLE: ContextEntry = { kind: 'read', target: { kind: 'branch', branch: '/main/task' } };
+    const input = { thread: applied, view: 'since', repository: REPOSITORY, onScreen: null, source: READ, read: { data: [replaced] } } as const;
+
+    it("waits for the review's whole diff, then shows the move it made", () => {
+      expect(contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: {} } })).toEqual({ kind: 'reading' });
+      expect(contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: { data: [OTHER, moved] } } })).toMatchObject({ kind: 'comparison', comparison: { moved: { from: 'src/Score.cs' }, side: 'additions' } });
+    });
+
+    it('compares it as any other file when that read fails: the move is a detail, never a dead end', () => {
+      const state = contextComparisonState({ ...input, replacedHistory: { source: WHOLE, read: { error: new Error('offline') } } });
+
+      expect(state).toMatchObject({ kind: 'comparison', comparison: { side: 'deletions' } });
+      expect(state.kind === 'comparison' && state.comparison.moved).toBeUndefined();
+    });
   });
 });

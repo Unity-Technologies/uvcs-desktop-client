@@ -28,6 +28,10 @@ interface Placed {
   transform: number[];
 }
 
+// Node has no Path2D: the review chips stroke their glyphs' paths through one (`strokeGlyphOn`); the recording context
+// counts the stroke and needs nothing from the path itself.
+if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class {} as unknown as typeof Path2D;
+
 /** A 2D context that records what is placed where, the transforms, and how often it strokes and fills with each ink. Everything else does nothing. */
 function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; transforms: number[][]; inks: Map<unknown, number> } {
   const placed: Placed[] = [];
@@ -82,8 +86,9 @@ const palette: GraphPalette = {
   labelText: INK,
   labelMark: INK,
   badgeShadow: INK,
-  mergeLinks: { interval: INK, cherryPick: INK, intervalCherryPick: INK, subtractive: INK, intervalSubtractive: INK },
+  mergeLinks: { merge: INK, interval: INK, cherryPick: INK, intervalCherryPick: INK, subtractive: INK, intervalSubtractive: INK },
   reviewStatus: { 'Under review': INK, Reviewed: INK, 'Rework required': INK },
+  mergeRequestState: { Draft: INK, Open: INK, Merged: INK, Closed: INK },
   avatars: Object.fromEntries(AVATAR_COLORS.map((token) => [token, INK])) as GraphPalette['avatars'],
   avatarLetter: INK,
   fontUi: 'sans-serif',
@@ -133,6 +138,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     hoveredBranch: lane.branch.name,
     hoveredReview: null,
     hoveredPending: false,
+    hoveredMergeLink: null,
     homeChangeset: focus.changeset.id,
     pendingChangeCount: 0,
     currentBranch: lane.branch.name,
@@ -140,7 +146,7 @@ function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search:
     search,
     searchQuery,
     searchPing: 0.3,
-    reviews: new Map([[lane.branch.id, codeReviewSummary({ id: 1, title: 'Review', status: 'Reviewed', owner: 'jane' })]]),
+    reviews: new Map([[lane.branch.id, codeReviewSummary({ id: 1, title: 'Review', status: 'Reviewed', owner: 'jane', mergeRequest: { state: 'Draft', destination: '/main' } })]]),
   };
   const drawn: DrawnTargets = {
     reviewChips: new DrawnBoxes(),
@@ -219,6 +225,7 @@ function drawSample(options: Partial<GraphViewOptions> = {}, selection: Partial<
     hoveredBranch: null,
     hoveredReview: null,
     hoveredPending: false,
+    hoveredMergeLink: null,
     homeChangeset: null,
     pendingChangeCount: 0,
     currentBranch: null,

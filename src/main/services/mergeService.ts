@@ -1,21 +1,22 @@
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { MergeApi } from '@shared/api/merge';
-import type { MergeRequest } from '@shared/domain/merge';
-import { readIncomingChangesetPage, readIncomingChanges, readIncomingSummary } from '../merge/incoming';
+import type { MergeOperation } from '@shared/domain/merge';
+import { readBranchHead, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary, workspaceLoadAt } from '../merge/incoming';
 import { DirectoryDecisions } from '../merge/directoryDecisions';
 import { findMergedInto } from '../merge/mergedInto';
+import { countMergeConflicts } from '../merge/mergeConflictCounts';
 import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import { updateWithMerge } from '../merge/updateWithMerge';
 import { shelveBlockedAndUpdate } from '../workspace/shelveBlockedAndUpdate';
-import { kindFromHeaders } from '../workspace/shelveFlowDependencies';
+import { kindDependencies } from '../workspace/shelveFlowDependencies';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createMergeService({ cm, operations, workspaceCopies, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
   const directoryDecisions = new DirectoryDecisions(cm, workspaceCopies);
-  const kindOf = kindFromHeaders(headers);
+  const { kindOf, forgetKind } = kindDependencies(headers);
 
   return {
     preview: async (workspacePath, request) => {
@@ -23,6 +24,7 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
       directoryDecisions.previewed(workspacePath, request, plan);
       return plan;
     },
+    conflictCounts: (workspacePath, source, destination) => countMergeConflicts(cm, workspacePath, source, destination),
     decideDirectoryConflicts: (workspacePath, request, decisionsId, decisions) => directoryDecisions.decide(workspacePath, request, decisionsId, decisions),
     discardDirectoryDecisions: (decisionsId) => directoryDecisions.discard(decisionsId),
     run: (workspacePath, request, resolutions, operationId) =>
@@ -38,19 +40,21 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
       }),
     mergedInto: (workspacePath, sourceChangeset, destinationBranch) => findMergedInto(cm, workspacePath, sourceChangeset, destinationBranch),
     incomingSummary: (workspacePath, loaded) => readIncomingSummary(cm, workspacePath, loaded),
-    incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
+    branchHead: (workspacePath, branch) => readBranchHead(cm, workspacePath, branch),
+    // Where the workspace stands, as the renderer told it, or else from the header the workspace info shares.
+    incomingChanges: async (workspacePath, at) => readIncomingChanges(cm, workspacePath, at ? workspaceLoadAt(at) : await headers.status(workspacePath)),
     incomingChangesets: (workspacePath, request) => readIncomingChangesetPage(cm, workspacePath, request),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, async (context) => updateWithMerge(cm, workspacePath, await kindOf(workspacePath), resolutions, backupsRoot, context)),
     shelveBlockedAndUpdate: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, (context) =>
-        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot, kindOf }, workspacePath, resolutions, context),
+        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot, kindOf, forgetKind }, workspacePath, resolutions, context),
       ),
   };
 }
 
 /** The shelve a merge applies to the workspace (`sh:12`), or null for any other source or a merge into a branch. */
-function shelveAppliedToWorkspace({ sourceSpec, destinationBranch }: MergeRequest): number | null {
+function shelveAppliedToWorkspace({ sourceSpec, destinationBranch }: MergeOperation): number | null {
   const shelve = /^sh:(\d+)$/.exec(sourceSpec);
   return shelve && !destinationBranch ? Number(shelve[1]) : null;
 }

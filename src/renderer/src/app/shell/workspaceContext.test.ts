@@ -51,6 +51,19 @@ describe('workspaceContext', () => {
     });
   });
 
+  it('counts the items the branch head brings a partial workspace, which loads no one changeset', () => {
+    const partial = (itemCount: number): IncomingSummary => ({ branch: '/main', partial: true, headChangeset: 20, itemCount });
+    const onMain = info({ kind: 'branch', name: '/main' }, null);
+
+    expect(workspaceContext(onMain, partial(2))).toEqual({
+      changeset: null,
+      repository: 'game@local',
+      sync: { kind: 'behind', count: 2, label: '2 incoming', tip: '2 items changed on /main: review them in Incoming' },
+    });
+    expect(workspaceContext(onMain, partial(0)).sync).toEqual({ kind: 'upToDate', label: 'Up to date', tip: 'Nothing new on /main' });
+    expect(workspaceContext(onMain, undefined).sync).toBeNull();
+  });
+
   it('leaves the sync state out while unknown or checked for another branch', () => {
     expect(workspaceContext(info({ kind: 'branch', name: '/main' }), undefined).sync).toBeNull();
     expect(workspaceContext(info({ kind: 'branch', name: '/main/task' }), summary(2)).sync).toBeNull();

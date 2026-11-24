@@ -3,9 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { BranchNamesCache } from '../cm/BranchNamesCache';
+import { cmBranchNameReads } from '../cm/branchNames';
 import { findQueryArgs } from '../cm/findQuery';
+import { FOUND_CHANGE_REQUEST_THREADS } from '../cm/changeRequestThreads';
 import { FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
-import { recordsOutput } from '../cm/testing/cmOutput';
+import { formatOutput, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createReviewCommentsService } from './reviewCommentsService';
 import { readingFileOption } from './testing/readingFileOption';
@@ -15,9 +18,16 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const IN_WORKSPACE = workspacePlace(WORKSPACE);
 const ON_REPOSITORY = repositoryPlace('game@local');
 
+/** Wired as `createServices` wires it: branch ids in the server's notes are named by the cache, which reads every branch only when it must. */
 function reviewComments(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  return { ...fake, service: createReviewCommentsService(serviceContext(fake.cm)) };
+  const branchNames = new BranchNamesCache(cmBranchNameReads(fake.cm));
+  return { ...fake, service: createReviewCommentsService(serviceContext(fake.cm), { branchNames }) };
+}
+
+/** A note of the server's, as `cm find changereviewcomment` prints it. */
+function timelineNote(id: number, comment: string) {
+  return { id, guid: `t${id}`, owner: 'ana', date: '2026-11-16T10:00:00+01:00', modifieddate: '2026-11-16T10:00:00+01:00', comment, type: 'timeline', parent: -1, revisionid: -1, location: -1, changeset: -1, appliedinchangeset: -1 };
 }
 
 describe('reading a review conversation', () => {
@@ -25,8 +35,8 @@ describe('reading a review conversation', () => {
     const { service, commands } = reviewComments({
       'find changereviewcomment': recordsOutput(
         FOUND_REVIEW_COMMENTS,
-        { id: 43, guid: 'd1', owner: 'ana', date: '2026-11-06T10:00:00+01:00', modifieddate: '2026-11-06T10:00:00+01:00', comment: '[description]Why', type: 'timeline', parent: -1, revisionid: -1, line: '', changeset: -1, appliedinchangeset: -1 },
-        { id: 44, guid: 'c1', owner: 'bob', date: '2026-11-06T10:05:00+01:00', modifieddate: '2026-11-06T10:05:00+01:00', comment: 'Nice', type: 'conversation', parent: -1, revisionid: -1, line: '', changeset: -1, appliedinchangeset: -1 },
+        { id: 43, guid: 'd1', owner: 'ana', date: '2026-11-06T10:00:00+01:00', modifieddate: '2026-11-06T10:00:00+01:00', comment: '[description]Why', type: 'timeline', parent: -1, revisionid: -1, location: -1, changeset: -1, appliedinchangeset: -1 },
+        { id: 44, guid: 'c1', owner: 'bob', date: '2026-11-06T10:05:00+01:00', modifieddate: '2026-11-06T10:05:00+01:00', comment: 'Nice', type: 'conversation', parent: -1, revisionid: -1, location: -1, changeset: -1, appliedinchangeset: -1 },
       ),
     });
 
@@ -49,6 +59,68 @@ describe('reading a review conversation', () => {
   });
 });
 
+describe("naming the branches a merge request's notes name", () => {
+  const EVERY_BRANCH_NAME: Record<string, CmAnswer> = {
+    'find branch': ({ line }) => (line.includes("hidden = 'true'") ? formatOutput(['26', '/main/task1']) : formatOutput(['4', '/main/release'], ['19', '/main'])),
+  };
+
+  it('reads no branch when no note names one', async () => {
+    const { service, lines } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[mergerequest-status-draft-to-open]'), timelineNote(2, '[mergerequest-status-open-to-merged]6')),
+    });
+
+    await service.conversation(IN_WORKSPACE, 41);
+
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('names every branch the notes name with one lookup, hidden branches too', async () => {
+    const { service, lines } = reviewComments({
+      'find changereviewcomment': recordsOutput(
+        FOUND_REVIEW_COMMENTS,
+        timelineNote(1, '[changed-mergerequest-destination]4;19'),
+        timelineNote(2, '[hidden-mergerequest-branch]26'),
+        timelineNote(3, '[unhidden-mergerequest-branch]26'),
+      ),
+      ...EVERY_BRANCH_NAME,
+    });
+
+    const { events } = await service.conversation(IN_WORKSPACE, 41);
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([
+      { kind: 'destinationChanged', from: { id: 4, name: '/main/release' }, to: { id: 19, name: '/main' } },
+      { kind: 'branchHidden', branch: { id: 26, name: '/main/task1' } },
+      { kind: 'branchUnhidden', branch: { id: 26, name: '/main/task1' } },
+    ]);
+    // The cache's one read of every branch: the visible ones, then the hidden.
+    expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
+  });
+
+  it("still reads the conversation when the branches' names can't be read, its branches by id alone", async () => {
+    const { service } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[changed-mergerequest-destination]4;19')),
+      'find branch': () => {
+        throw new Error('Connection refused');
+      },
+    });
+
+    const { events } = await service.conversation(IN_WORKSPACE, 41);
+
+    expect(events.map(({ id, author, date, ...change }) => change)).toEqual([{ kind: 'destinationChanged', from: { id: 4 }, to: { id: 19 } }]);
+  });
+
+  it('keeps a branch deleted since by its id alone', async () => {
+    const { service } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_REVIEW_COMMENTS, timelineNote(1, '[changed-mergerequest-destination]77;19')),
+      ...EVERY_BRANCH_NAME,
+    });
+
+    const { events } = await service.conversation(IN_WORKSPACE, 41);
+
+    expect(events[0]).toEqual(expect.objectContaining({ kind: 'destinationChanged', from: { id: 77 }, to: { id: 19, name: '/main' } }));
+  });
+});
+
 describe('writing on a review', () => {
   it('adds a comment on the whole review, its text in a file deleted afterwards', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
@@ -65,7 +137,7 @@ describe('writing on a review', () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = reviewComments({ 'codereview comment add': answer });
 
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 42, kind: 'changeRequest' }, 'Rename this.');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 42, lastLine: 42, kind: 'changeRequest' }, 'Rename this.');
 
     expect(commands).toMatchObject([
       { via: 'query', args: ['codereview', 'comment', 'add', '41', `-commentsfile=${seen.file}`, '--revision=revid:812', '--line=42', '--type=Change'] },
@@ -74,15 +146,48 @@ describe('writing on a review', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('adds a comment on a range of lines, by its first and last line', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment add': '' });
+
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 12, lastLine: 18, kind: 'comment' }, 'All of these.');
+
+    expect(commands).toMatchObject([{ via: 'query', args: expect.arrayContaining(['--revision=revid:812', '--line=12-18', '--type=Comment']) }]);
+  });
+
   it("writes a question or a comment as cm types them, in the diff of the changeset it's written in", async () => {
     const { service, commands } = reviewComments({ 'codereview comment add': '' });
 
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'question', changesetId: 9 }, 'Why?');
-    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, line: 1, kind: 'comment' }, 'Nice.');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 1, lastLine: 1, kind: 'question', changesetId: 9 }, 'Why?');
+    await service.addOnLine(IN_WORKSPACE, 41, { revisionId: 812, firstLine: 1, lastLine: 1, kind: 'comment' }, 'Nice.');
 
     expect(commands.map(({ args }) => args.slice(5))).toEqual([
       ['--revision=revid:812', '--line=1', '--type=Question', '--changeset=cs:9'],
       ['--revision=revid:812', '--line=1', '--type=Comment'],
+    ]);
+  });
+
+  it('adds a comment on a point or an area of an image, by its revision', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment add': '' });
+
+    await service.addOnImage(IN_WORKSPACE, 41, { revisionId: 812, spot: { x: 120, y: 80 }, kind: 'question' }, 'Too dark?');
+    await service.addOnImage(IN_WORKSPACE, 41, { revisionId: 812, spot: { x: 4, y: 6, size: { width: 30, height: 12 } }, kind: 'changeRequest', changesetId: 9 }, 'Crop this.');
+
+    expect(commands.map(({ via, args }) => [via, ...args.slice(5)])).toEqual([
+      ['query', '--revision=revid:812', '--location=image:120,80', '--type=Question'],
+      ['query', '--revision=revid:812', '--location=image:4,6,30,12', '--type=Change', '--changeset=cs:9'],
+    ]);
+  });
+
+  it('adds a comment on a point or a part of a 3D model, by its revision', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment add': '' });
+
+    await service.addOnModel(IN_WORKSPACE, 41, { revisionId: 812, spot: { point: { x: 0.5, y: 1.25, z: -3 } }, kind: 'question' }, 'Chipped?');
+    const wheel = { point: { x: 1, y: 0, z: 2 }, node: { path: ['Car', 'Wheel FL'], local: { x: 0, y: 0, z: 0.5 } }, wholePart: true as const };
+    await service.addOnModel(IN_WORKSPACE, 41, { revisionId: 812, spot: wheel, kind: 'changeRequest', changesetId: 9 }, 'Too small.');
+
+    expect(commands.map(({ via, args }) => [via, ...args.slice(5)])).toEqual([
+      ['query', '--revision=revid:812', '--location=model:0.5,1.25,-3', '--type=Question'],
+      ['query', '--revision=revid:812', '--location=model:1,0,2;node=Car/Wheel%20FL;local=0,0,0.5;part', '--type=Change', '--changeset=cs:9'],
     ]);
   });
 
@@ -115,6 +220,16 @@ describe('writing on a review', () => {
     expect(seen.content).toBe('Static class reads well.');
   });
 
+  it("edits what a reviewer said with their status, the status kept: cm restores no marker but the description's", async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = reviewComments({ 'codereview comment edit': answer });
+
+    await service.editStatusComment(IN_WORKSPACE, 's1', 'Reviewed', 'LGTM, ship it.');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'edit', 's1', `-commentsfile=${seen.file}`] }]);
+    expect(seen.content).toBe('[status-reviewed]LGTM, ship it.');
+  });
+
   it('deletes a comment', async () => {
     const { service, lines } = reviewComments({ 'codereview comment delete': '' });
 
@@ -133,17 +248,72 @@ describe('writing on a review', () => {
     expect(seen.content).toBe('');
   });
 
+  it('marks a change request applied in the changeset picked, with one quick command', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment apply': '' });
+
+    await service.markApplied(IN_WORKSPACE, 'c1', 12);
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'apply', 'c1', '--changeset=cs:12'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('marks a change request as not applied, with one quick command', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment unapply': '' });
+
+    await service.markNotApplied(IN_WORKSPACE, 'c1');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'unapply', 'c1'] }]);
+  });
+
+  it("names the changeset in the review's repository outside a workspace", async () => {
+    const { service, commands } = reviewComments({ 'codereview comment apply': '' });
+
+    await service.markApplied(ON_REPOSITORY, 'c1', 12);
+
+    expect(commands[0]?.args).toEqual(['codereview', 'comment', 'apply', 'c1', '--changeset=cs:12@game@local', '--repository=game@local']);
+  });
+
   it('names the repository in every write outside a workspace', async () => {
     const { service, commands } = reviewComments({ codereview: '' });
 
     await service.add(ON_REPOSITORY, 41, 'a');
-    await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, line: 3, kind: 'comment' }, 'a');
+    await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, firstLine: 3, lastLine: 3, kind: 'comment' }, 'a');
     await service.reply(ON_REPOSITORY, 'c1', 'b');
     await service.edit(ON_REPOSITORY, 'c1', 'c');
     await service.remove(ON_REPOSITORY, 'c1');
     await service.setDescription(ON_REPOSITORY, 41, 'd');
+    await service.markApplied(ON_REPOSITORY, 'c1', 12);
+    await service.markNotApplied(ON_REPOSITORY, 'c1');
 
-    expect(commands.map(({ args }) => args.at(-1))).toEqual(Array(6).fill('--repository=game@local'));
+    expect(commands.map(({ args }) => args.at(-1))).toEqual(Array(8).fill('--repository=game@local'));
     expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
+  });
+});
+
+describe("finding a change request's thread", () => {
+  it('finds the request a check-in names by its first eight digits with one cm find, read as it arrives', async () => {
+    const { service, commands } = reviewComments({
+      'find changereviewcomment': recordsOutput(FOUND_CHANGE_REQUEST_THREADS, { id: 51, reviewid: 43, type: 'change' }),
+    });
+
+    const thread = await service.changeRequestThread(IN_WORKSPACE, 'c0d1ce00');
+
+    expect(commands).toMatchObject([
+      { via: 'query', readsRecords: true, args: findQueryArgs(FOUND_CHANGE_REQUEST_THREADS, "where guid like 'c0d1ce00%' and type = 'change'"), options: { cwd: WORKSPACE } },
+    ]);
+    expect(thread).toEqual({ reviewId: 43, threadId: 51 });
+  });
+
+  it('names the repository outside every workspace', async () => {
+    const { service, commands } = reviewComments({ 'find changereviewcomment': '' });
+
+    expect(await service.changeRequestThread(ON_REPOSITORY, 'c0d1ce00')).toBeNull();
+    expect(commands[0]?.args[2]).toBe("where guid like 'c0d1ce00%' and type = 'change' on repository 'game@local'");
+  });
+
+  it('asks the server nothing for what names no change request', async () => {
+    const { service, commands } = reviewComments({});
+
+    expect(await service.changeRequestThread(IN_WORKSPACE, "x' or '1'='1")).toBeNull();
+    expect(commands).toEqual([]);
   });
 });

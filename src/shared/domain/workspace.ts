@@ -39,7 +39,8 @@ export interface WorkspaceInfo {
   /**
    * The changeset the workspace has loaded. Null when it has none: on a shelve, whose tree is no changeset of the
    * repository (`cm` numbers it as changeset `-id`, never a changeset to query from), and the selector names the
-   * shelve; or in a partial workspace, whose folders may each be at another changeset of its branch (`cm` reports -1).
+   * shelve; or in a partial workspace on a branch, whose folders may each be at another changeset of it, or on a label
+   * (`cm` reports -1: `loadedChangesetOf`).
    * Tell them apart by `selector.kind`, never by this.
    */
   loadedChangeset: number | null;

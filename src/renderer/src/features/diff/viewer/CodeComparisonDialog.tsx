@@ -6,6 +6,7 @@ import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
 import { comparisonSubtitle, type CodeComparison } from './codeComparison';
+import { DiffLayoutSwitch } from './DiffLayoutSwitch';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { LineDiff } from './lineDiff';
 import { PaneScrollbars } from './PaneScrollbars';
@@ -37,6 +38,7 @@ function CodeComparisonDialog({ title, description, comparison, fileName, onClos
       title={title}
       description={comparisonSubtitle(description, comparison)}
       width={1100}
+      headerAction={comparison.kind === 'diff' && <DiffLayoutSwitch />}
       onClose={onClose}
       footer={
         <Button variant="primary" onClick={onClose}>

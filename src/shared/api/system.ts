@@ -1,5 +1,6 @@
 import type { Place } from '../domain/place';
-import type { ConnectionProblem, SetupProblem } from '../domain/setup';
+import type { SetupProblem } from '../domain/setup';
+import type { UnexpectedError } from '../events';
 
 /** A folder being dragged over a window, read while the drag runs (`system.draggedFolder`). */
 export interface DraggedFolder {
@@ -13,8 +14,6 @@ export interface SystemApi {
   cmVersion(): Promise<string>;
   /** Checks, without asking any server, that `cm` is configured; null when it is. */
   checkSetup(): Promise<SetupProblem | null>;
-  /** Checks that `cm` is signed in to a server and reaches it (`cm checkconnection <server>`); null when it does. */
-  checkConnection(server: string): Promise<ConnectionProblem | null>;
   currentUser(): Promise<string>;
   /** Opens a file with the OS's default app for its type (a folder in the file manager); `apps` opens it in a chosen one. */
   openPath(path: string): Promise<void>;
@@ -44,6 +43,11 @@ export interface SystemApi {
    * missing pictures included.
    */
   gravatar(user: string, size: number): Promise<string | null>;
+  /**
+   * Writes an error the window didn't expect (one nothing caught, or a render error) to the log file a user sends with
+   * a bug report, its secrets hidden. The main process logs its own.
+   */
+  logUnexpectedError(error: UnexpectedError): Promise<void>;
   /** Shows an OS notification about incoming changes; clicking it focuses the window and sends `incomingNotificationClicked`. */
   notifyIncoming(workspacePath: string, message: string): Promise<void>;
 }

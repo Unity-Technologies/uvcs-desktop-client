@@ -3,13 +3,16 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommandLogEntry } from '@shared/events';
-import { CmClient, OPENING_SHOW_MS, type CmRunners } from './CmClient';
+import { CmClient, OPENING_SHOW_MS, type CmRunners, type SignInGate } from './CmClient';
 import { CmShellPool } from './CmShellPool';
 import { CmError } from './CmError';
+import { CmSignInError } from './CmSignInError';
+import { WaitingForInputError } from './consolePrompts';
+import type { SignInProblem } from '@shared/domain/signIn';
 import { MAX_LOGGED_COMMAND_LINE } from '@shared/clipForLog';
 import type { CmResult } from './CmResult';
 import { RecordReader } from './formatRecords';
-import { CmOutputTooLargeError, textLimitOf } from './outputLimit';
+import { CmItemTooLargeError, CmOutputTooLargeError, textLimitOf } from './outputLimit';
 import type { OutputReading } from './outputReading';
 import { formatOutput } from './testing/cmOutput';
 import { MAX_QUICK_WRITE_PATHS } from './longCommands';
@@ -36,24 +39,28 @@ type Answer = (options?: CmProcessOptions) => CmResult;
 const doneAnswer: Answer = (options) => ({ output: options?.input ? 'done\nCommandResult 0\n' : 'done\n', exitCode: 0 });
 
 /** A `CmClient` over fake runners: every process and shell command is recorded and answered with `answer`. */
-function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = doneAnswer, outsideWorkspaces = OUTSIDE_WORKSPACES } = {}) {
+function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = doneAnswer, outsideWorkspaces = OUTSIDE_WORKSPACES, answerLater = false } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
   const shellReadings: (OutputReading | undefined)[] = [];
-  const pools: { cmPath: string; disposed: boolean; shown: string[]; warmed: string[]; released: string[] }[] = [];
+  const pools: { cmPath: string; disposed: boolean; restarted: boolean; ended: number; ending: Promise<void>; shownWarmedAgain: number; shown: string[]; warmed: string[]; released: string[] }[] = [];
+  /** With `answerLater`, the commands running, each answered when the test calls `answerRunning`. */
+  const running: (() => void)[] = [];
+  // An answer that throws (a stopped session) rejects, as the real runners do.
+  const answered = <T>(result: () => T): Promise<T> => new Promise((resolve) => (answerLater ? running.push(() => resolve(result())) : resolve(result())));
   const runners: CmRunners = {
-    runProcess: async (cmPath, args, options) => {
+    runProcess: (cmPath, args, options) => {
       processes.push({ cmPath, args, options });
-      return printed(answer(options), options.reading);
+      return answered(() => printed(answer(options), options.reading));
     },
     createShellPool: (cmPath) => {
-      const pool = { cmPath, disposed: false, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
+      const pool = { cmPath, disposed: false, restarted: false, ended: 0, ending: Promise.resolve(), shownWarmedAgain: 0, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
       pools.push(pool);
       return {
-        run: async (cwd, args, reading) => {
+        run: (cwd, args, reading) => {
           shellCommands.push({ cwd, args });
           shellReadings.push(reading);
-          return printed(answer(), reading);
+          return answered(() => printed(answer(), reading));
         },
         isReady: () => warm,
         shownDirectory: () => pool.shown.find((cwd) => !pool.released.includes(cwd)),
@@ -61,13 +68,20 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
         warmUp: (cwd) => void pool.warmed.push(cwd),
         release: (cwd) => void pool.released.push(cwd),
         disposeAll: () => void (pool.disposed = true),
+        restartSessions: () => void (pool.restarted = true),
+        endSessions: () => {
+          pool.ended++;
+          return pool.ending;
+        },
+        warmUpShown: () => void pool.shownWarmedAgain++,
       };
     },
   };
   const cm = new CmClient(() => CM_PATH, outsideWorkspaces, platform, runners);
   const logged: CommandLogEntry[] = [];
   cm.onCommandLogged((entry) => logged.push(entry));
-  return { cm, processes, shellCommands, shellReadings, pools, logged };
+  const answerRunning = (): void => running.splice(0).forEach((answerOne) => answerOne());
+  return { cm, processes, shellCommands, shellReadings, pools, logged, answerRunning };
 }
 
 /** What a runner gives for a command that printed `result.output`: streamed, its reader reads it, and the rest is its output. */
@@ -142,7 +156,7 @@ describe('CmClient routing', () => {
       isReady: true,
       start: async () => undefined,
       run: async () => (ranIn.push(cwd), { output: '', exitCode: 0 }),
-      dispose: () => undefined,
+      dispose: async () => undefined,
     });
     const runProcess = async () => ({ output: '', exitCode: 0 });
     const cm = new CmClient(() => CM_PATH, OUTSIDE_WORKSPACES, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
@@ -583,6 +597,23 @@ describe('CmClient commands that end without an exit code', () => {
       command: { commandLine: 'cm fileinfo a.cs --xml --encoding=utf-8', exitCode: -1, logEntryId: logged[0]?.id },
     });
   });
+
+  it('fails a list whose item never ended with a CmError naming it, run as a process before its shell is ready', async () => {
+    const { cm, logged, processes } = fakeClient({
+      warm: false,
+      answer: () => {
+        throw new CmItemTooLargeError(16 * 1024 * 1024);
+      },
+    });
+
+    const error = await failureOf(cm.queryRecords(['find', 'branch', '--format={name}'], (fields) => fields, { cwd: WORKSPACE }));
+
+    expect(processes).toHaveLength(1);
+    expect(error).toMatchObject({
+      message: 'The command printed more than 16 MB without ending an item of its list, too much to read, and was stopped.',
+      command: { commandLine: 'cm find branch --format={name} --encoding=utf-8', exitCode: -1, logEntryId: logged[0]?.id },
+    });
+  });
 });
 
 describe('CmClient command log', () => {
@@ -667,7 +698,7 @@ describe('CmClient sessions', () => {
       createShellPool: (cmPath) => {
         const pool = { cmPath, disposed: false };
         pools.push(pool);
-        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true) };
+        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true), restartSessions: vi.fn(), endSessions: async () => undefined, warmUpShown: vi.fn() };
       },
     });
 
@@ -686,11 +717,401 @@ describe('CmClient sessions', () => {
     expect(processes).toEqual([locations[0]]);
   });
 
+  it('starts its sessions again once the cm at the same path was replaced by an update, and only then', () => {
+    const { cm, pools } = fakeClient();
+
+    cm.relocate();
+    expect(pools).toMatchObject([{ restarted: false, disposed: false }]);
+
+    cm.relocate({ replaced: true });
+    expect(pools).toMatchObject([{ cmPath: CM_PATH, restarted: true, disposed: false }]);
+  });
+
   it('ends every session on dispose', () => {
     const { cm, pools } = fakeClient();
 
     cm.dispose();
 
     expect(pools[0]?.disposed).toBe(true);
+  });
+
+  it('restarts the sessions in their directories, keeping the pool, once a sign-in changed', () => {
+    const { cm, pools } = fakeClient();
+
+    cm.restartShells();
+
+    expect(pools).toMatchObject([{ restarted: true, disposed: false }]);
+  });
+});
+
+const ENDED: SignInProblem = { kind: 'sessionEnded', server: 'acme@cloud', details: { commandLine: 'cm checkconnection acme@cloud', output: 'Error: The auth token expired. User: dev@acme.com.' } };
+
+/**
+ * A gate that knows `WORKSPACE` is on acme@cloud, learns `LEARNED` is on build:8087 when asked, refuses the servers in
+ * `needsSignIn`, and confirms with `confirmed`.
+ */
+function fakeGate({ needsSignIn = [] as string[], confirmed = null as SignInProblem | null } = {}) {
+  const confirms: string[] = [];
+  const learned: string[] = [];
+  const gate: SignInGate = {
+    serverOf: (workspace, named) => named ?? (workspace === WORKSPACE ? 'acme@cloud' : undefined),
+    learnServerOf: async (cwd) => {
+      learned.push(cwd);
+      return cwd === LEARNED ? 'build:8087' : undefined;
+    },
+    passes: (args) => args[0] === 'checkconnection',
+    refusal: (server) => (needsSignIn.includes(server) ? { ...ENDED, server } : undefined),
+    confirm: async (server, _startedAt, ranInShell) => {
+      confirms.push(ranInShell ? `${server} (shell)` : server);
+      return confirmed;
+    },
+  };
+  return { gate, confirms, learned };
+}
+
+const LEARNED = join(homedir(), 'wkspaces', 'level');
+
+/**
+ * `cm shell` keeps a command's global options for every later command of the session: these would change who a pooled
+ * shell signs in as, or the files it reads its sign-in from.
+ */
+const STICKY = [
+  '--server=acme@cloud',
+  '--username=ana',
+  '--password=secret',
+  '--token=t0k',
+  '--workingmode=UPWorkingMode',
+  '--clientconf=/c.conf',
+  '-clientconf=/c.conf',
+  '--tokensconf=/t.conf',
+  '--cloudregionsconf=/r.conf',
+  '--unityorgsconf=/u.conf',
+  '--cacheserver=cache:8085',
+  '-cacheserver=cache:8085',
+  '--encryptmethod=AES256',
+  '--encryptpassword=k3y',
+  '--encryptserver=acme@cloud',
+  '-wks=/wk',
+  '-path=/elsewhere',
+  // In any case, and bare, with its value in the next argument.
+  '--UserName=ana',
+  '--server',
+];
+
+describe('CmClient held while Unity Version Control updates', () => {
+  /** Runs every callback already due, promises and their follow-ups: a held command must still not have started after them. */
+  function settle(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+  }
+
+  it('ends its shells, starts nothing while held, and runs what waited once resumed, starting the shown shells again', async () => {
+    const { cm, pools, processes, shellCommands } = fakeClient();
+    const resume = (await cm.hold())!;
+    expect(pools[0]).toMatchObject({ ended: 1, disposed: false });
+
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
+    const operation = cm.execute(['update'], { cwd: WORKSPACE });
+    const records = cm.queryRecords(['find', 'branch', '--format={name}#'], (fields) => fields, { cwd: WORKSPACE });
+    cm.warmUp(WORKSPACE);
+    cm.show(WORKSPACE);
+    await settle();
+    expect({ processes, shellCommands, warmed: pools[0]!.warmed, shown: pools[0]!.shown }).toEqual({ processes: [], shellCommands: [], warmed: [], shown: [] });
+
+    resume();
+    await expect(query).resolves.toBe('done\n');
+    await operation;
+    await records;
+    expect(shellCommands.map((command) => command.args[0])).toEqual(['status', 'find']);
+    // The update, a `cm shell` of its own.
+    expect(processes).toHaveLength(1);
+    expect(pools[0]).toMatchObject({ shown: [WORKSPACE], shownWarmedAgain: 1 });
+  });
+
+  it('lets the commands already running end first, queued shell commands too, and only then ends the shells', async () => {
+    const { cm, pools, answerRunning } = fakeClient({ answerLater: true });
+    const inFlight = cm.query(['status', '--header'], { cwd: WORKSPACE });
+    const queued = cm.query(['whoami'], { cwd: WORKSPACE });
+    await settle();
+
+    let holding = false;
+    const held = cm.hold().then((resume) => ((holding = true), resume));
+    await settle();
+    expect({ holding, ended: pools[0]!.ended }).toEqual({ holding: false, ended: 0 });
+
+    answerRunning();
+    await expect(inFlight).resolves.toBe('done\n');
+    await expect(queued).resolves.toBe('done\n');
+    const resume = await held;
+    expect(pools[0]!.ended).toBe(1);
+    resume!();
+  });
+
+  it('holds nothing while an operation runs in a process of its own, which may never end: it says so at once', async () => {
+    const { cm, pools, shellCommands } = fakeClient({ answerLater: true });
+    // Never answered: an operation stuck on the server.
+    void cm.execute(['update'], { cwd: WORKSPACE });
+    await settle();
+
+    await expect(cm.hold()).resolves.toBeNull();
+    expect(pools[0]!.ended).toBe(0);
+    void cm.query(['status', '--header'], { cwd: WORKSPACE });
+    await settle();
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('settles only once its shells’ processes ended, as they hold the files the installer replaces', async () => {
+    const { cm, pools } = fakeClient();
+    let closed = (): void => undefined;
+    pools[0]!.ending = new Promise((resolve) => (closed = resolve));
+    let holding = false;
+    const held = cm.hold().then((resume) => ((holding = true), resume));
+    await settle();
+    expect({ holding, ended: pools[0]!.ended }).toEqual({ holding: false, ended: 1 });
+
+    closed();
+    (await held)!();
+  });
+
+  it('fails a held command whose time ran out as a running one does: an error of its own, logged', async () => {
+    const { cm, logged } = fakeClient();
+    const resume = (await cm.hold())!;
+    const timer = new AbortController();
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE, signal: timer.signal });
+
+    timer.abort(new DOMException('No answer in time', 'TimeoutError'));
+    const error = await query.then(() => undefined, (caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(DOMException);
+    expect((error as Error).message).toBe('The cm command took too long and was stopped.');
+    expect(logged).toMatchObject([{ commandLine: 'cm status --header', exitCode: -1 }]);
+    resume();
+  });
+
+  it('stays held until every hold is resumed, each resume counting once', async () => {
+    const { cm, shellCommands } = fakeClient();
+    const first = (await cm.hold())!;
+    const second = (await cm.hold())!;
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
+
+    first();
+    first();
+    await settle();
+    expect(shellCommands).toEqual([]);
+
+    second();
+    await query;
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('gives up a held command its caller cancels, which never runs', async () => {
+    const { cm, processes } = fakeClient();
+    const resume = (await cm.hold())!;
+    const cancel = new AbortController();
+    const operation = cm.execute(['update'], { cwd: WORKSPACE, signal: cancel.signal });
+
+    cancel.abort();
+    await expect(operation).rejects.toMatchObject({ name: 'AbortError' });
+    resume();
+    await settle();
+    expect(processes).toEqual([]);
+  });
+});
+
+describe('CmClient options that stick to a cm shell', () => {
+  it.each(STICKY)('refuses a quick command carrying %s before any shell runs it', async (option) => {
+    const { cm, shellCommands, processes } = fakeClient();
+
+    await expect(cm.query(['fileinfo', 'a.cs', '--xml', option], { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+    await expect(cm.queryRecords(['find', 'branch', '--format={name}', option], (fields) => fields, { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+    await expect(cm.queryXmlElements(['history', 'a.cs', '--xml', option], 'Revision', (element) => element, { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+    await expect(cm.queryLines(['listusers', 'acme@cloud', option], (line) => line, { cwd: WORKSPACE })).rejects.toThrow(option.split('=')[0]!.toLowerCase());
+
+    expect([...shellCommands, ...processes]).toEqual([]);
+  });
+
+  it('runs the same command in a process of its own, where the option ends with it', async () => {
+    const { cm, processes } = fakeClient();
+
+    await cm.execute(['fileinfo', 'a.cs', '--xml', '--username=ana'], { cwd: WORKSPACE });
+
+    expect(processes).toHaveLength(1);
+  });
+
+  it("refuses no longer an option cm doesn't have", async () => {
+    const { cm, shellCommands } = fakeClient();
+
+    await cm.query(['fileinfo', 'a.cs', '--xml', '--cachesrv=cache:8085'], { cwd: WORKSPACE });
+
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('runs quick commands whose values only look like those options', async () => {
+    const { cm, shellCommands } = fakeClient();
+
+    await cm.query(['fileinfo', 'docs/--server=notes.txt', '--xml'], { cwd: WORKSPACE });
+
+    expect(shellCommands).toHaveLength(1);
+  });
+});
+
+describe('CmClient sign-in gate', () => {
+  it("runs no server command to a server that needs a sign-in, and logs it as not run so the log explains itself", async () => {
+    const { cm, processes, shellCommands, logged } = fakeClient();
+    cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
+
+    const error = await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }));
+
+    expect(error).toBeInstanceOf(CmSignInError);
+    expect((error as CmSignInError).problem).toEqual(ENDED);
+    expect([...processes, ...shellCommands]).toEqual([]);
+    expect(logged).toMatchObject([{ commandLine: 'cm fileinfo a.cs --xml --encoding=utf-8', exitCode: -1, notRun: true, output: 'Not run: sign in to acme@cloud first.' }]);
+    expect(error.command.logEntryId).toBe(logged[0]?.id);
+  });
+
+  it('refuses every read to that server, however many, while it needs a sign-in', async () => {
+    const { cm, processes, shellCommands } = fakeClient();
+    cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
+
+    const reads = Array.from({ length: 5 }, () => cm.query(['fileinfo', 'b.cs', '--xml'], { cwd: WORKSPACE }).catch((error: unknown) => error));
+
+    expect((await Promise.all(reads)).every((error) => error instanceof CmSignInError)).toBe(true);
+    expect([...processes, ...shellCommands]).toEqual([]);
+  });
+
+  it("still runs local commands, another server's commands and the session check itself", async () => {
+    const { cm, shellCommands, processes } = fakeClient();
+    cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
+
+    await cm.query(['status', '--header', '--machinereadable', '--compact'], { cwd: WORKSPACE });
+    await cm.query(['fileinfo', 'a.cs', '--xml'], { outsideWorkspaces: true, server: 'build.acme.com:8087' });
+    await cm.execute(['checkconnection', 'acme@cloud'], { server: 'acme@cloud' });
+
+    expect([...shellCommands, ...processes].map(({ args }) => args[0])).toEqual(['status', 'fileinfo', 'checkconnection']);
+  });
+
+  it("refuses a workspace header that asks the server for its branch's head", async () => {
+    const { cm, shellCommands } = fakeClient();
+    cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
+
+    expect(await failureOf(cm.query(['status', '--header', '--xml'], { cwd: WORKSPACE }))).toBeInstanceOf(CmSignInError);
+    expect(shellCommands).toEqual([]);
+  });
+
+  it("never takes a command that runs in any directory for the shown workspace's: a glance at another workspace runs, and learns nothing", async () => {
+    const { cm, shellCommands, processes } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@acme.com.\n', exitCode: 1 }) });
+    const { gate, learned } = fakeGate({ needsSignIn: ['acme@cloud'] });
+    cm.gateSignIns(gate);
+    cm.show(WORKSPACE);
+
+    const error = await failureOf(cm.query(['status', '--header', '--xml', LEARNED], { anyDirectory: true }));
+
+    expect([...shellCommands, ...processes].map(({ args }) => args.slice(0, 4))).toEqual([['status', '--header', '--xml', LEARNED]]);
+    expect(error).not.toBeInstanceOf(CmSignInError);
+    expect(learned).toEqual([]);
+  });
+
+  it('runs every command of a server it knows nothing of', async () => {
+    const { cm, shellCommands } = fakeClient();
+    cm.gateSignIns(fakeGate({ needsSignIn: ['acme@cloud'] }).gate);
+
+    await cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: join(homedir(), 'elsewhere') });
+
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('fails a command that ran into a sign-in problem as one, once a check of its server confirmed it', async () => {
+    const { cm, logged } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@acme.com.\n', exitCode: 1 }) });
+    const { gate, confirms } = fakeGate({ confirmed: ENDED });
+    cm.gateSignIns(gate);
+
+    const error = await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }));
+
+    // A pooled shell's: the gate restarts the shells should the server turn out signed in.
+    expect(confirms).toEqual(['acme@cloud (shell)']);
+    expect(error).toBeInstanceOf(CmSignInError);
+    expect(error.command).toMatchObject({ exitCode: 1, output: 'Error: The auth token expired. User: dev@acme.com.', logEntryId: logged[0]?.id });
+  });
+
+  it("fails as before when the server's session turns out fine: the sign-in was another server's, an xlink's", async () => {
+    const { cm } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@other.com.\n', exitCode: 1 }) });
+    cm.gateSignIns(fakeGate({ confirmed: null }).gate);
+
+    const error = await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }));
+
+    expect(error).not.toBeInstanceOf(CmSignInError);
+    expect(error.message).toBe('The auth token expired. User: dev@other.com.');
+  });
+
+  it('asks no check for a failure that says nothing of signing in', async () => {
+    const { cm } = fakeClient({ answer: () => ({ output: 'Error: The branch does not exist.\n', exitCode: 1 }) });
+    const { gate, confirms } = fakeGate({ confirmed: ENDED });
+    cm.gateSignIns(gate);
+
+    await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }));
+
+    expect(confirms).toEqual([]);
+  });
+
+  it('tells a command stopped at a prompt as a sign-in problem of its server, once confirmed', async () => {
+    const { cm } = fakeClient({
+      answer: () => {
+        throw new WaitingForInputError('Select your system [0-1]:');
+      },
+    });
+    cm.gateSignIns(fakeGate({ confirmed: ENDED }).gate);
+
+    expect(await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }))).toBeInstanceOf(CmSignInError);
+  });
+
+  it("learns a workspace's server with a local read when a command there fails for a sign-in before its header was read", async () => {
+    const { cm } = fakeClient({ answer: () => ({ output: 'Error: The auth token expired. User: dev@acme.com.\n', exitCode: 1 }) });
+    const { gate, confirms, learned } = fakeGate({ confirmed: { ...ENDED, server: 'build:8087' } });
+    cm.gateSignIns(gate);
+
+    const error = await failureOf(cm.query(['status', '--header', '--xml'], { cwd: LEARNED }));
+
+    expect(learned).toEqual([LEARNED]);
+    expect(confirms).toEqual(['build:8087 (shell)']);
+    expect((error as CmSignInError).problem.server).toBe('build:8087');
+  });
+
+  it('learns nothing for a failure that says nothing of signing in', async () => {
+    const { cm } = fakeClient({ answer: () => ({ output: 'Error: The branch does not exist.\n', exitCode: 1 }) });
+    const { gate, learned } = fakeGate();
+    cm.gateSignIns(gate);
+
+    await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: LEARNED }));
+
+    expect(learned).toEqual([]);
+  });
+
+  it('tells a command stopped at another question (a certificate to trust) as no sign-in problem, asking no check', async () => {
+    const { cm } = fakeClient({
+      answer: () => {
+        throw new WaitingForInputError('Do you want to trust the server certificate? (Y)es / (N)o / (C)ancel:');
+      },
+    });
+    const { gate, confirms } = fakeGate({ confirmed: ENDED });
+    cm.gateSignIns(gate);
+
+    expect(await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }))).not.toBeInstanceOf(CmSignInError);
+    expect(confirms).toEqual([]);
+  });
+
+  it('fails a command stopped at a prompt of a server it knows nothing of with the command, never guessing a server', async () => {
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        throw new WaitingForInputError('Password:');
+      },
+    });
+    const { gate, confirms, learned } = fakeGate({ confirmed: ENDED });
+    cm.gateSignIns(gate);
+
+    const error = await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: join(homedir(), 'elsewhere') }));
+    expect(learned).toEqual([join(homedir(), 'elsewhere')]);
+
+    expect(error).not.toBeInstanceOf(CmSignInError);
+    expect(error).toMatchObject({ message: 'cm is waiting for input ("Password:"). Check your credentials for this server.', command: { exitCode: -1, logEntryId: logged[0]?.id } });
+    expect(confirms).toEqual([]);
   });
 });

@@ -3,7 +3,8 @@ name: Release
 # One button releases the app: Actions ▸ Release ▸ Run workflow, pick the bump (patch, minor, major), and one run
 #   1. bumps the last release's version, commits it on top of main and pushes only the tag v<version>,
 #   2. opens a draft GitHub release whose notes join the release notes of the pull requests merged since the last one,
-#   3. builds the installers on macOS, Windows and Linux and uploads them to the draft, with the latest*.yml files
+#   3. checks the cm it pins (cm-version.json) is published as pinned, and attaches the pin to the draft,
+#   4. builds the installers on macOS, Windows and Linux and uploads them to the draft, with the latest*.yml files
 #      electron-updater reads (electron-builder.yml's `publish`). Linux builds here; macOS and Windows build and sign
 #      in the private Unity-Technologies/uvcs-desktop-client-release-signing, whose Sign workflow this run starts and
 #      waits for: Unity's signing certificates are in Azure Key Vault, which accepts only Unity's networks, and
@@ -40,6 +41,10 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+      # The cm the release pins (cm-version.json) must be downloadable as it was pinned, byte for byte, before anything
+      # is tagged: every new install downloads it (docs/features/cm-runtime.md "The pin").
+      - name: Check the pinned cm bundles
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts check
       # The last release tag, not main's package.json, is the version to bump from: main never gets the bump commit.
       - name: Bump the last release's version, commit, tag and push the tag
         id: bump
@@ -79,6 +84,13 @@ jobs:
           node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/releaseNotes.ts \
             "$RUNNER_TEMP/pull-requests.json" "$changelog" > "$RUNNER_TEMP/notes.md"
           gh release create "$TAG" --draft --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+      # The pin, beside the installers: a running app reads it before restarting into this release, to download the
+      # cm the release runs alongside the update (docs/features/cm-runtime.md "Updates bring their cm").
+      - name: Attach the cm pin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.bump.outputs.tag }}
+        run: gh release upload "$TAG" cm-version.json
 
   # Linux builds from the new tag, whose package.json has the new version, and uploads its installer (unsigned: an
   # AppImage carries no signature the OS checks).
@@ -98,9 +110,8 @@ jobs:
   # macOS and Windows: the signing repo's Sign workflow builds, signs and uploads them to the same draft; this job
   # starts it and fails when it does. It reaches that repository as the Unity-Technologies org's GitHub App
   # uvcs-desktop-release, installed only on the two repositories: each token, minted for this job and revoked when it
-  # ends, may only start and read that repository's workflows (Actions: read and write). A token lasts an hour and a
-  # Sign run can take longer, so the job watches in rounds of at most 50 minutes, each with a new token
-  # (.github/actions/watch-signing-run), up to 150 minutes. The release environment keeps the App's key
+  # ends, may only start, read and cancel that repository's workflows (Actions: read and write). A token lasts an hour,
+  # well past the 30 minutes the job waits for a Sign run. The release environment keeps the App's key
   # (RELEASE_APP_PRIVATE_KEY) and Client ID (RELEASE_APP_CLIENT_ID) to runs from main.
   sign:
     needs: prepare
@@ -109,9 +120,6 @@ jobs:
     env:
       SIGNING_REPO: Unity-Technologies/uvcs-desktop-client-release-signing
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          sparse-checkout: .github/actions
       - name: Get a token for the signing repository
         id: app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
@@ -143,31 +151,26 @@ jobs:
           fi
           echo "Signing: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
-      - name: Wait for the signing run (first 50 minutes)
-        id: watch-1
-        uses: ./.github/actions/watch-signing-run
-        with:
-          run-id: ${{ steps.start.outputs.run-id }}
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - name: Wait for the signing run (up to 100 minutes)
-        id: watch-2
-        if: steps.watch-1.outputs.finished == 'false'
-        uses: ./.github/actions/watch-signing-run
-        with:
-          run-id: ${{ steps.start.outputs.run-id }}
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - name: Wait for the signing run (up to 150 minutes)
-        id: watch-3
-        if: steps.watch-2.outputs.finished == 'false'
-        uses: ./.github/actions/watch-signing-run
-        with:
-          run-id: ${{ steps.start.outputs.run-id }}
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - name: Fail if the signing run is still going
-        if: steps.watch-3.outputs.finished == 'false'
+      # A Sign run takes about 8 minutes (never 10 in 20 releases), and each of its jobs has a time limit of its
+      # own (sign-release.yml). 30 minutes also covers a wait for one of Unity's runners: past it the run is stuck (a
+      # notarization waiting through an Apple outage), so it is cancelled, so it can't upload to the draft later, and
+      # the release fails at once instead of waiting.
+      - name: Wait for the signing run
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RUN_ID: ${{ steps.start.outputs.run-id }}
+          SIGNING_LIMIT_MINUTES: 30
+        # `timeout` ends the watch with 124 when the limit runs out; any other status is the run's own outcome.
         run: |
-          echo "::error::The signing run is still going after 150 minutes, and may still upload to the draft: https://github.com/$SIGNING_REPO/actions/runs/${{ steps.start.outputs.run-id }}"
-          exit 1
+          set +e
+          timeout "${SIGNING_LIMIT_MINUTES}m" gh run watch "$RUN_ID" --repo "$SIGNING_REPO" \
+            --exit-status --interval 30 > /dev/null
+          status=$?
+          set -e
+          # The error comes first: a run that ends just as the limit runs out can't be cancelled any more.
+          if [ "$status" -eq 124 ]; then
+            echo "::error::The signing run took more than $SIGNING_LIMIT_MINUTES minutes and is cancelled: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID"
+            gh run cancel "$RUN_ID" --repo "$SIGNING_REPO" || true
+            exit 1
+          fi
+          exit "$status"

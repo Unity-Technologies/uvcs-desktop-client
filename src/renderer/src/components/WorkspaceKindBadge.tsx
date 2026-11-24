@@ -13,8 +13,8 @@ const BADGE_ICONS: Record<MarkedWorkspaceKind, ComponentType<SVGProps<SVGSVGElem
 
 /**
  * The corner of a workspace's avatar marking its kind, for the same workspaces as its chip (`markedWorkspaceKind`), so
- * a partial or dynamic one stands out even where the chip isn't shown: the collapsed sidebar. `compact` draws it smaller
- * on the smaller avatars, so it never hides the initial.
+ * a partial or dynamic one stands out at a glance, on its avatar wherever it shows. `compact` draws it smaller on the
+ * smaller avatars, so it never hides the initial.
  */
 export function WorkspaceKindBadge({ kind, compact }: { kind: WorkspaceKind | undefined; compact: boolean }) {
   const marked = markedWorkspaceKind(kind);

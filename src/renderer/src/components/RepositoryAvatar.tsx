@@ -19,8 +19,8 @@ interface RepositoryAvatarProps {
 }
 
 /**
- * A white initial on the repository's own solid color, the same on the home screen, in the switcher and on the
- * sidebar's workspace button, so workspaces of the same repository look alike at a glance; a partial or dynamic
+ * A white initial on the repository's own solid color, the same on the home screen, in the switcher and in the
+ * top bar's workspace pill, so workspaces of the same repository look alike at a glance; a partial or dynamic
  * workspace's carries its kind in a corner.
  */
 export function RepositoryAvatar({ repository, label, size, workspaceKind, className }: RepositoryAvatarProps) {

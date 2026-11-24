@@ -11,6 +11,10 @@ describe('commandLineForLog', () => {
     expect(commandLineForLog(args)).toBe('cm sync game@local git https://github.com/team/game.git --user=ana --pwd=•••');
   });
 
+  it.each(['--password=', '--token=', '--encryptpassword='])('hides the value of %s, which a command run in a process of its own may carry', (option) => {
+    expect(commandLineForLog(['find', 'branch', `${option}s3cr:t`])).toBe(`cm find branch ${option}•••`);
+  });
+
   it('hides an empty password too, so its length never shows', () => {
     expect(commandLineForLog(['sync', 'r', 'git', 'u', '--pwd='])).toBe('cm sync r git u --pwd=•••');
   });

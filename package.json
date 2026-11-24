@@ -17,7 +17,7 @@
   "private": true,
   "main": "out/main/boot.js",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "electron-vite dev",
@@ -27,10 +27,15 @@
     "test": "vitest run",
     "app:debug": "node scripts/app-debug.mjs",
     "icons": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/icons/makeAppIcons.mjs",
-    "e2e": "electron-vite build --mode development && node scripts/e2e/smoke.mjs && electron-vite build && node scripts/e2e/smoke.mjs",
+    "e2e": "npm run e2e:development && npm run e2e:production",
+    "e2e:development": "electron-vite build --mode development && node scripts/e2e/smoke.mjs && node scripts/e2e/setupScreen.mjs",
+    "e2e:production": "electron-vite build && node scripts/e2e/smoke.mjs && node scripts/e2e/setupScreen.mjs",
     "postinstall": "install-electron",
     "dist": "electron-vite build && electron-builder",
-    "release": "electron-vite build && electron-builder --publish always"
+    "release": "electron-vite build && electron-builder --publish always",
+    "cm:bump": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts bump",
+    "cm:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build/cmVersion.ts check",
+    "cm:setup-check": "esbuild scripts/build/cmSetupCheck.ts --bundle --platform=node --format=cjs --log-level=warning --alias:@shared=./src/shared --outfile=out/cm-setup-check.cjs && node out/cm-setup-check.cjs"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -62,6 +67,7 @@
     "electron-builder": "^26.15.3",
     "electron-updater": "^6.8.9",
     "electron-vite": "^5.0.0",
+    "esbuild": "0.25.12",
     "gemoji": "^8.1.0",
     "hast-util-from-html": "^2.0.3",
     "hast-util-to-mdast": "^10.1.2",

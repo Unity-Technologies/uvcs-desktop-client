@@ -2,14 +2,16 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import type { Place } from '@shared/domain/place';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
-import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { isRowMenuKey, showsRowActions } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
-import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { RowActionsButton } from '../../ui/menu/RowActionsButton';
 import { ListSkeleton } from '../../ui/Skeleton';
+import { BranchReviewChip } from '../codeReviews/BranchReviewChip';
 import { BranchSearchItem } from './BranchSearchItem';
 import { branchSearchEmptyText, branchSearchRows, type BranchesRead, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
@@ -25,18 +27,26 @@ interface BranchSearchListProps {
   /** Marks a branch, e.g. the one the workspace is on. */
   currentBranch?: string;
   placeholder?: string;
-  /** The context menu of a row. */
+  /** A row's actions: its "…", a right click on it, and Tab on the highlighted one open them. */
   menu?: (branch: Branch) => MenuEntry[];
   /** Next to the filter field, e.g. a "New branch" button. */
   action?: ReactNode;
+  /**
+   * Each row drawn shows its branch's review chip as the Branches view does (`BranchReviewChip`): whose branches they
+   * are, and how to close what holds the list (a popup, a dialog) before a review opens from its chip or card. Left out
+   * for another repository's branches (an xlink's), whose reviews don't matter to the pick.
+   */
+  reviews?: { place: Place; leave: () => void };
   /** Where the branches stand (`branchesRead`): the list keeps its frame while they're read, and says when they can't be. */
   read?: BranchesRead;
 }
 
 /** A searchable, keyboard-driven list of branches in titled groups. Virtualized: repositories can have thousands of branches. */
-export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action, read = 'read' }: BranchSearchListProps) {
+export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, reviews, action, read = 'read' }: BranchSearchListProps) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
+  /** The branch whose actions are open. */
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const movedByKeyboard = useRef(false);
@@ -64,7 +74,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
     if (!event.currentTarget.contains(event.target as Node)) return;
     if (menu && branches[highlighted] && isRowMenuKey(event)) {
       event.preventDefault();
-      openContextMenuOf(listRef.current?.querySelector<HTMLElement>(`[data-branch-index="${highlighted}"]`) ?? null);
+      setMenuFor(branches[highlighted].name);
       return;
     }
     const target = navigationTarget(event.key, highlighted, branches.length);
@@ -126,36 +136,47 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
                   </div>
                 );
               }
-              const item = (
-                <BranchSearchItem
+              const menuOpen = row.branch.name === menuFor;
+              return (
+                <div
                   key={row.branch.name}
-                  branch={row.branch}
-                  current={row.branch.name === currentBranch}
-                  highlighted={row.index === highlighted}
                   id={`${listboxId}-${row.index}`}
                   role="option"
                   aria-selected={row.index === highlighted}
-                  tabIndex={-1}
+                  className={styles.row}
+                  data-highlighted={row.index === highlighted}
                   data-branch-index={row.index}
                   style={position}
                   onMouseEnter={() => setHighlighted(row.index)}
-                  onClick={() => onPick(row.branch)}
-                />
-              );
-              return menu ? (
-                <ActionContextMenu
-                  key={row.branch.name}
-                  entries={() => menu(row.branch)}
-                  // Back to the filter, so typing and the arrow keys carry on.
-                  onCloseAutoFocus={(event) => {
-                    event.preventDefault();
-                    inputRef.current?.focus();
-                  }}
+                  onContextMenu={
+                    menu &&
+                    ((event) => {
+                      event.preventDefault();
+                      setHighlighted(row.index);
+                      setMenuFor(row.branch.name);
+                    })
+                  }
                 >
-                  {item}
-                </ActionContextMenu>
-              ) : (
-                item
+                  <BranchSearchItem
+                    branch={row.branch}
+                    current={row.branch.name === currentBranch}
+                    badge={reviews && <BranchReviewChip place={reviews.place} leave={reviews.leave} branchId={row.branch.id} />}
+                    tabIndex={-1}
+                    onClick={() => onPick(row.branch)}
+                  />
+                  {menu && showsRowActions({ highlighted: row.index === highlighted, menuOpen }) && (
+                    <RowActionsButton
+                      entries={() => menu(row.branch)}
+                      open={menuOpen}
+                      onOpenChange={(open) => setMenuFor(open ? row.branch.name : null)}
+                      // Back to the filter, so typing and the arrow keys carry on.
+                      onCloseAutoFocus={(event) => {
+                        event.preventDefault();
+                        inputRef.current?.focus();
+                      }}
+                    />
+                  )}
+                </div>
               );
             })}
           </div>

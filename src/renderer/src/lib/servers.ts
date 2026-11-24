@@ -1,4 +1,4 @@
-import { serverKind } from '@shared/domain/organizations';
+import { isWildcardServer, serverKind } from '@shared/domain/organizations';
 
 const CLOUD_SERVER = /^(.+)@(cloud|unity)$/i;
 
@@ -19,7 +19,7 @@ const ORGANIZATION_KINDS = { unityOrganization: 'Unity organization', cloudOrgan
 /** `acme@unity` → "acme", a Unity organization; `acme@cloud` → "acme", a cloud organization; `local` → this computer. */
 export function describeServer(server: string): { label: string; detail?: string } {
   if (server === 'local') return { label: 'This computer' };
-  if (server.startsWith('*@')) return { label: 'Any cloud organization', detail: 'Cloud' };
+  if (isWildcardServer(server)) return { label: 'Any cloud organization', detail: 'Cloud' };
   const kind = serverKind(server);
   const organization = cloudOrganization(server);
   if (organization && (kind === 'unityOrganization' || kind === 'cloudOrganization')) return { label: organization, detail: ORGANIZATION_KINDS[kind] };

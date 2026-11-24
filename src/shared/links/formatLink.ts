@@ -73,6 +73,7 @@ function workspacePart(folder: string): string {
 }
 
 function pagePart(page: LinkPage): string {
+  if (page.kind === 'reviewComment') return `comments/${page.commentId}`;
   const word = page.kind === 'view' ? page.view : page.kind === 'diffFile' ? 'files' : page.kind;
   const path = page.path === undefined ? '' : encodePath(page.path);
   return path ? `${word}/${path}` : word;

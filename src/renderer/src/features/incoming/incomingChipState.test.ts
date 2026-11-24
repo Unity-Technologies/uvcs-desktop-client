@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { BranchIncoming, BranchIncomingChanges } from '@shared/domain/incoming';
+import type { BranchIncoming, BranchIncomingChanges, PartialIncoming, PartialIncomingChanges, PartialIncomingItem } from '@shared/domain/incoming';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import type { Changeset } from '@shared/domain/changeset';
-import { cardChangesets, cardCheck, cardFailed, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
+import { cardChangesets, cardCheck, cardItems, cardFailed, cardReadsNewest, chipCount, chipLabel, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
 
 const summary = (changesetCount: number, countCapped = false): BranchIncoming => ({
   branch: '/main',
@@ -190,5 +190,54 @@ describe('cardCheck', () => {
   it('says nothing below the count, where the chip checked up front, or once this head was checked', () => {
     expect(cardCheck(summary(3), undefined, pinned, false)).toBeNull();
     expect(cardCheck(summary(100, true), { ...changes(0, 0, 110) }, pinned, false)).toBeNull();
+  });
+});
+
+describe('in a partial workspace', () => {
+  const partialSummary = (itemCount: number, headChangeset = 13): PartialIncoming => ({ branch: '/main', partial: true, headChangeset, itemCount });
+  const item = (path: string, conflict = false): PartialIncomingItem => ({ kind: 'changed', path, isDirectory: false, conflict, loadedRevisionId: 1, headRevisionId: 2 });
+  const partialChanges = (items: PartialIncomingItem[], headChangeset = 13): PartialIncomingChanges => ({ branch: '/main', partial: true, headChangeset, items });
+
+  it('counts the items the head brings, and those changed locally too as conflicts', () => {
+    const read = partialChanges([item('a.cs'), item('b.cs', true), item('c.cs', true)]);
+    expect(incomingChipState(partialSummary(3), read, undefined)).toEqual({ kind: 'items', branch: '/main', count: 3, conflictCount: 2 });
+    expect(incomingChipState(partialSummary(3), partialChanges([item('a.cs', true)], 12), undefined)).toEqual({ kind: 'items', branch: '/main', count: 3, conflictCount: 0 });
+  });
+
+  it('shows nothing when the head brings no item', () => {
+    expect(incomingChipState(partialSummary(0), partialChanges([]), undefined)).toBeNull();
+  });
+
+  it('lists the first items read for the same head in the card, never changesets', () => {
+    const read = partialChanges(['a', 'b', 'c', 'd', 'e', 'f'].map((path) => item(path)));
+    expect(cardItems(partialSummary(6), read)?.map((one) => one.path)).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(cardItems(partialSummary(6), partialChanges([item('a')], 12))).toBeUndefined();
+    expect(cardItems(summary(3), read)).toBeUndefined();
+    expect(cardChangesets(partialSummary(6), read, undefined)).toBeUndefined();
+  });
+
+  it('reads nothing more for the chip or the card: the check already compared the items', () => {
+    expect(chipReadsIncomingChanges(partialSummary(3), true)).toBe(false);
+    expect(cardReadsNewest(partialSummary(3), undefined, true)).toBe(false);
+    expect(cardCheck(partialSummary(3), undefined, { pinned: true }, false)).toBeNull();
+    expect(cardFailed(partialSummary(3), partialChanges([item('a')]), { open: true, pinned: true }, { changes: true, newest: true })).toBe(false);
+  });
+
+  it('keeps the check as the known summary', () => {
+    expect(knownIncomingSummary(partialSummary(3), partialChanges([item('a')]))).toEqual(partialSummary(3));
+  });
+});
+
+describe("the chip's words", () => {
+  it("counts changesets, at least the check's when it stopped counting, and names the conflicts", () => {
+    expect(chipLabel({ kind: 'incoming', branch: '/main', count: 2, countCapped: false, checked: true })).toBe('2 new changesets');
+    expect(chipCount({ kind: 'incoming', branch: '/main', count: 100, countCapped: true, checked: false })).toBe('100+');
+    expect(chipLabel({ kind: 'conflicts', branch: '/main', count: 3, countCapped: false, conflictCount: 1, mergeCount: 1, blockedCount: 0 })).toBe('3 new changesets, 1 conflict');
+  });
+
+  it('counts items in a partial workspace, and those changed locally too', () => {
+    expect(chipLabel({ kind: 'items', branch: '/main', count: 1, conflictCount: 0 })).toBe('1 incoming item');
+    expect(chipLabel({ kind: 'items', branch: '/main', count: 4, conflictCount: 2 })).toBe('4 incoming items, 2 conflicts');
+    expect(chipCount({ kind: 'items', branch: '/main', count: 4, conflictCount: 2 })).toBe('4');
   });
 });

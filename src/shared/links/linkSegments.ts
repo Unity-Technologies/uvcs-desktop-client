@@ -1,3 +1,5 @@
+import { SERVER_PROTOCOL, serverKey } from '../domain/repository';
+
 /**
  * How a link writes and reads its parts (docs/features/deep-links.md, "Writing the parts"): each segment
  * percent-encoded as UTF-8, a server's organization joined by `.`.
@@ -57,8 +59,6 @@ export function pathOf(segments: readonly string[]): string {
 /** The servers whose `@` a link writes as `.`: Unity organizations (`acme@unity`, `acme@cloud`). */
 const ORGANIZATION_SERVER = /^(.+)@(cloud|unity)$/i;
 const ORGANIZATION_AUTHORITY = /^(.+)\.(cloud|unity)$/i;
-/** A protocol a server may be written with (`ssl://host:8088`), which a link leaves out. */
-const SERVER_PROTOCOL = /^(?:ssl|udt|tcp):\/\//i;
 
 /** A server as a link's authority: `acme@unity` → `acme.unity`, `ssl://host:8088` → `host:8088`, `local` as it is. */
 export function serverAuthority(server: string): string {
@@ -84,5 +84,5 @@ export function serverOf(authority: string): string | null {
  * with (`ssl://host:8088` and `host:8088`), an organization's name in any case.
  */
 export function sameServer(a: string, b: string): boolean {
-  return a.replace(SERVER_PROTOCOL, '').toLowerCase() === b.replace(SERVER_PROTOCOL, '').toLowerCase();
+  return serverKey(a) === serverKey(b);
 }

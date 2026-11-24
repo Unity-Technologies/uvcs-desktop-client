@@ -4,6 +4,7 @@ import type { ItemType } from '@shared/domain/pendingChanges';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { toggled } from './downloadSelection';
 import {
+  downloadChangeMarker,
   downloadKey,
   downloadRows,
   downloadSearchOf,
@@ -53,6 +54,19 @@ function summary(rows: readonly DownloadRow[]): string[] {
 }
 
 describe('downloadTreeOf', () => {
+  it('lists each folder as Files does: folders and xlinks first, then files, each by name', () => {
+    const doc = new Map([
+      ['', [item('doc/drawings.vsd', 'binaryFile'), item('doc/guide-gui', 'directory'), item('doc/Lib', 'xlink'), item('doc/extensions', 'directory'), item('doc/a.md', 'file')]],
+    ]);
+    expect(downloadTreeOf(doc, new Map([['', []]])).items.get('')?.map((found) => found.path)).toEqual([
+      'doc/extensions',
+      'doc/guide-gui',
+      'doc/Lib',
+      'doc/a.md',
+      'doc/drawings.vsd',
+    ]);
+  });
+
   it('takes folders as folders and everything else, xlinks included, as items downloaded whole', () => {
     const tree = downloadTreeOf(listings, new Map([['', []]]));
     expect(tree.items.get('')).toEqual([
@@ -136,6 +150,35 @@ describe('downloadRows', () => {
   it('ticks a loaded folder whose loaded items are being read, and notes it', () => {
     const tree = downloadTreeOf(listings, new Map([['', ['Assets']]]));
     expect(summary(downloadRows(tree, new Map(), new Set(['Assets']), new Map()))[0]).toBe('Assets [x] - …');
+  });
+
+  it('says what Apply changes on each row: what it loads, unloads, keeps, leaves out, or changes in part', () => {
+    const changeOf = (rows: readonly DownloadRow[]) => Object.fromEntries(rows.map((row) => [row.path, row.change]));
+
+    const assetsLoaded = downloadTreeOf(listings, new Map([['', ['Assets']]]));
+    expect(changeOf(downloadRows(assetsLoaded, new Map(), new Set(), new Map()))).toEqual({ Assets: 'kept', Lib: 'none', 'readme.md': 'none' });
+    const swapped = toggled('readme.md', assetsLoaded, toggled('Assets', assetsLoaded, new Map()));
+    expect(changeOf(downloadRows(assetsLoaded, swapped, new Set(), new Map()))).toEqual({ Assets: 'unload', Lib: 'none', 'readme.md': 'load' });
+
+    const heroChosen = toggled('Assets/hero.fbx', nothingLoaded, new Map());
+    expect(changeOf(downloadRows(nothingLoaded, heroChosen, new Set(['Assets']), new Map()))).toEqual({
+      Assets: 'mixed',
+      'Assets/Textures': 'none',
+      'Assets/hero.fbx': 'load',
+      Lib: 'none',
+      'readme.md': 'none',
+    });
+  });
+});
+
+describe('downloadChangeMarker', () => {
+  it('names what Apply downloads and what it removes', () => {
+    expect(downloadChangeMarker('load')).toBe('Download');
+    expect(downloadChangeMarker('unload')).toBe('Remove');
+  });
+
+  it('marks nothing Apply keeps, leaves out or changes in part', () => {
+    for (const change of ['kept', 'none', 'mixed'] as const) expect(downloadChangeMarker(change)).toBeUndefined();
   });
 });
 

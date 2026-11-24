@@ -16,6 +16,13 @@ describe('isFiltering', () => {
     expect(isFiltering({ ...DEFAULTS, status: 'Open' }, { status: 'any' })).toBe(true);
     expect(isFiltering({ ...DEFAULTS, since: 'anyTime' }, { status: 'any' })).toBe(false);
   });
+
+  it('compares a list kept by a filter by its items, so a list equal to the cleared one is no filter', () => {
+    const cleared = { states: ['Draft', 'Open'] };
+    expect(isFiltering({ ...DEFAULTS, states: ['Draft', 'Open'] }, cleared)).toBe(false);
+    expect(isFiltering({ ...DEFAULTS, states: ['Open'] }, cleared)).toBe(true);
+    expect(isFiltering({ ...DEFAULTS, states: ['Open', 'Draft'] }, cleared)).toBe(true);
+  });
 });
 
 describe('clearedFilters', () => {
@@ -44,6 +51,17 @@ describe('restoredFilters', () => {
   it("reads the Branch Explorer's former date ranges, and drops what the view no longer has", () => {
     expect(restoredFilters({ since: 'quarter', gone: 1, layout: 3 }, DEFAULTS)).toEqual({ since: 'last3Months' });
     expect(restoredFilters({ since: 'fortnight' }, DEFAULTS)).toEqual({ since: 'lastMonth' });
+  });
+
+  it("keeps what today's store remembers as it is, so a new version reads every view's filters again harmlessly", () => {
+    const remembered = rememberedFilters({ ...DEFAULTS, people: MINE, since: 'anyTime', status: 'Open', layout: 'tree' });
+    expect(restoredFilters(remembered, DEFAULTS)).toEqual(remembered);
+  });
+
+  it('reads a filter the view renamed as its upgrade says, checked like the rest', () => {
+    const upgrade = (old: Record<string, unknown>) => (old.legacyStatus === true ? { status: 'Open' } : {});
+    expect(restoredFilters({ legacyStatus: true, layout: 'tree' }, DEFAULTS, upgrade)).toEqual({ status: 'Open', layout: 'tree' });
+    expect(restoredFilters({ legacyStatus: false, status: 'Done' }, DEFAULTS, upgrade)).toEqual({ status: 'Done' });
   });
 
   it('never restores people picked by name', () => {

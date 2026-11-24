@@ -3,7 +3,7 @@ import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
 import { ProfileList } from '../cm/ProfileList';
 import { homedir } from 'node:os';
 import { app, nativeImage } from 'electron';
-import { sendEventToCaller } from '../ipc/sendEvent';
+import { sendEvent, sendEventToCaller } from '../ipc/sendEvent';
 import { allBundleIds } from '../system/apps/appIdentities';
 import { diskFileSystem } from '../system/apps/appFileSystem';
 import { AppIcons } from '../system/apps/AppIcons';
@@ -40,6 +40,7 @@ import { createSettingsService } from './settingsService';
 import { createShelvesService } from './shelvesService';
 import { createSyncService } from './syncService';
 import { createSystemService } from './systemService';
+import { createCmRuntimeService } from './cmRuntimeService';
 import { createToolsService } from './toolsService';
 import { createUnityAssetsService } from './unityAssetsService';
 import { createUpdatesService } from './updatesService';
@@ -65,7 +66,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     branches: createBranchesService(context, naming),
     changesets: createChangesetsService(context),
     codeReviews: createCodeReviewsService(context, naming),
-    reviewComments: createReviewCommentsService(context),
+    reviewComments: createReviewCommentsService(context, naming),
     content: createContentService(context),
     diff: createDiffService(context),
     explorer: createExplorerService(context),
@@ -84,11 +85,12 @@ export function createServices(context: ServiceContext): UvcsApi {
     shelves: createShelvesService(context, switching),
     sync: createSyncService(context),
     system: createSystemService(context, profiles),
+    cmRuntime: createCmRuntimeService(context),
     tools: createToolsService(context, launchApp),
     unityAssets: createUnityAssetsService({ watchers: context.watchers, trees: context.repositoryTrees, downloads: context.revisionDownloads }),
     updates: createUpdatesService(context),
     windows: createWindowsService(context),
-    workspaces: createWorkspacesService(context, switching),
+    workspaces: createWorkspacesService(context, switching, (workspacePath) => sendEvent('workspaceKindChanged', { workspacePath })),
     xlinks: createXlinksService(context, switching),
   };
 }

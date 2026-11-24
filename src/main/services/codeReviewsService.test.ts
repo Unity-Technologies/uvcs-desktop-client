@@ -5,12 +5,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { readBranchNames } from '../cm/branchNames';
+import { cmBranchNameReads } from '../cm/branchNames';
 import { FOUND_REVIEWS } from '../cm/codeReviewRecords';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { FIELD_SEPARATOR, RECORD_SEPARATOR } from '../cm/formatRecords';
-import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createCodeReviewsService } from './codeReviewsService';
 import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
@@ -42,22 +42,27 @@ const ON_DELETED_BRANCH = review(8, 'Branch', 'id:99');
 /** Wired as `createServices` wires them: branch names come from the cache, which reads every branch only when it must. */
 function codeReviews(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  const branchNames = new BranchNamesCache((place) => readBranchNames(fake.cm, place));
+  const branchNames = new BranchNamesCache(cmBranchNameReads(fake.cm));
   return { ...fake, branchNames, service: createCodeReviewsService(serviceContext(fake.cm), { branchNames }) };
 }
 
 const user = (name: string): MemberRef => ({ name, kind: 'user' });
 const group = (name: string): MemberRef => ({ name, kind: 'group' });
 
+/** The repository's branches as `cm find branch` lists them: /main/task1 (37), and /main/old (21), hidden. */
 const EVERY_BRANCH_NAME: Record<string, CmAnswer> = {
-  'find branch': ({ line }) => (line.includes("hidden = 'true'") ? formatOutput(['21', '/main/old']) : formatOutput(['37', '/main/task1'])),
+  'find branch': ({ line }) => {
+    const branches = line.includes("hidden = 'true'") ? [['21', '/main/old']] : [['37', '/main/task1']];
+    const id = /where id = (\d+)/.exec(line)?.[1];
+    return formatOutput(...branches.filter(([branchId]) => id === undefined || branchId === id));
+  },
 };
 
 describe('code review list', () => {
   it('lists every review the filters keep with one cm find, filtered on the server, with no cap', async () => {
     const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
-    await service.list(IN_WORKSPACE, { reviewerIsMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
+    await service.listSummaries(IN_WORKSPACE, { reviewerIsMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
 
     expect(commands).toMatchObject([
       {
@@ -71,34 +76,29 @@ describe('code review list', () => {
     ]);
   });
 
-  it('names each target: changesets and shelves by number, branches by the names of every branch, read once', async () => {
-    const { service, lines } = codeReviews({
-      'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET, ON_SHELVE, ON_DELETED_BRANCH),
-      ...EVERY_BRANCH_NAME,
-    });
+  it("names the branches reviews target by their ids from the names of every branch, read once; a deleted one has none", async () => {
+    const { service, lines } = codeReviews(EVERY_BRANCH_NAME);
 
-    const reviews = await service.list(IN_WORKSPACE, {});
-
-    expect(reviews.map((listed) => listed.target)).toEqual([
-      { kind: 'branch', branch: '/main/task1' },
-      { kind: 'changeset', changesetId: 120 },
-      { kind: 'shelve', shelveId: 3 },
-      { kind: 'unknown', description: 'an unknown branch' },
-    ]);
+    expect(await service.branchNames(IN_WORKSPACE, [37, 21, 99])).toEqual({ 37: '/main/task1', 21: '/main/old' });
     expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
 
-    await service.list(IN_WORKSPACE, {});
+    expect(await service.branchNames(IN_WORKSPACE, [37])).toEqual({ 37: '/main/task1' });
     expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
   });
 
-  it('asks nothing more when the branch lists already read name every target', async () => {
-    const { service, branchNames, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
+  it('asks nothing when the branch lists already read name every branch asked for', async () => {
+    const { service, branchNames, lines } = codeReviews({});
     branchNames.remember(IN_WORKSPACE, [{ id: 37, name: '/main/task1' }]);
 
-    const [listed] = await service.list(IN_WORKSPACE, {});
+    expect(await service.branchNames(IN_WORKSPACE, [37])).toEqual({ 37: '/main/task1' });
+    expect(lines()).toEqual([]);
+  });
 
-    expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
-    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'order by date desc')]);
+  it('asks nothing when no branch is asked for', async () => {
+    const { service, lines } = codeReviews({});
+
+    expect(await service.branchNames(IN_WORKSPACE, [])).toEqual({});
+    expect(lines()).toEqual([]);
   });
 
   it('caps a list only when asked, as the palette and the branch chips read the newest reviews', async () => {
@@ -116,6 +116,62 @@ describe('code review list', () => {
 
     expect(found.map((summary) => summary.id)).toEqual([6]);
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
+  });
+
+  it("names a branch review's branch, and a deleted one's as an unknown branch", async () => {
+    const { service } = codeReviews({ 'find review': ({ line }) => recordsOutput(FOUND_REVIEWS, line.includes('id = 5') ? ON_TASK1 : ON_DELETED_BRANCH), ...EVERY_BRANCH_NAME });
+
+    expect((await service.get(IN_WORKSPACE, 5)).target).toEqual({ kind: 'branch', branch: '/main/task1' });
+    expect((await service.get(IN_WORKSPACE, 8)).target).toEqual({ kind: 'unknown', description: 'an unknown branch' });
+  });
+
+  it("names a review's branch by its id alone, never reading every branch's name", async () => {
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1), ...EVERY_BRANCH_NAME });
+
+    await service.get(IN_WORKSPACE, 5);
+
+    expect(lines().filter((line) => line.startsWith('find branch'))).toEqual([expect.stringContaining('find branch where id = 37 ')]);
+  });
+
+  it("finds the reviews of one branch by its spec with one cm find, for the change requests a check-in can apply", async () => {
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
+
+    const found = await service.listSummaries(IN_WORKSPACE, { targetBranch: '/main/task 1' });
+
+    expect(found.map((summary) => summary.id)).toEqual([5]);
+    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, "where target = 'br:/main/task 1' order by date desc")]);
+  });
+
+  it('finds the reviews of a block of branches by their ids with one cm find, for the branches a view shows', async () => {
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
+
+    const found = await service.listSummaries(IN_WORKSPACE, { targetBranchIds: [37, 41] });
+
+    expect(found.map((summary) => summary.targetBranchId)).toEqual([37]);
+    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, "where (targetid = 37 or targetid = 41) and targettype = 'branch' order by date desc")]);
+  });
+
+  it('asks the server for the merge requests in one state, and for no state when none is asked', async () => {
+    const { service, lines } = codeReviews({ 'find review': '' });
+
+    await service.listSummaries(IN_WORKSPACE, { mergeRequestState: 'Merged' });
+    await service.listSummaries(IN_WORKSPACE, { mergeRequestState: 'Closed', status: 'Reviewed' });
+    await service.listSummaries(IN_WORKSPACE, {});
+
+    expect(lines()).toEqual([
+      foundLine(FOUND_REVIEWS, "where mergerequeststatus = 'Merged' order by date desc"),
+      foundLine(FOUND_REVIEWS, "where status = 'Reviewed' and mergerequeststatus = 'Closed' order by date desc"),
+      foundLine(FOUND_REVIEWS, 'order by date desc'),
+    ]);
+  });
+
+  it('carries a merge request’s state and destination in the reviews it lists', async () => {
+    const request = { ...ON_TASK1, mergerequeststatusname: 'Open', destination: 'br:/main' };
+    const { service } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, request, ON_CHANGESET) });
+
+    const [listed, plain] = await service.listSummaries(IN_WORKSPACE, {});
+
+    expect([listed?.mergeRequest, plain?.mergeRequest]).toEqual([{ state: 'Open', destination: '/main' }, undefined]);
   });
 
   it('lists summaries with branch targets by id, never reading branch names', async () => {
@@ -178,6 +234,33 @@ describe('one code review', () => {
     const { service } = codeReviews({ 'find review': '' });
 
     await expect(service.get(IN_WORKSPACE, 6)).rejects.toThrow('Code review 6 was not found.');
+  });
+});
+
+describe("the user's email subscription to a review", () => {
+  it('reads it with one quick cm codereview subscription holding just its three values', async () => {
+    const { service, commands } = codeReviews({ 'codereview subscription': 'yes reviewer enabled\n' });
+
+    expect(await service.subscription(IN_WORKSPACE, 6)).toEqual({ subscribed: true, reason: 'reviewer', emailsEnabled: true });
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'subscription', '6', '--format={subscribed} {reason} {emails}'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('fails on an answer it cannot read, so nothing is shown from a guess', async () => {
+    const { service } = codeReviews({ 'codereview subscription': 'Unknown command\n' });
+
+    await expect(service.subscription(IN_WORKSPACE, 6)).rejects.toThrow('Unexpected answer');
+  });
+
+  it('subscribes and unsubscribes the user with one quick command each', async () => {
+    const { service, commands } = codeReviews({ 'codereview subscribe': '', 'codereview unsubscribe': '' });
+
+    await service.unsubscribe(IN_WORKSPACE, 6);
+    await service.subscribe(IN_WORKSPACE, 6);
+
+    expect(commands).toMatchObject([
+      { via: 'query', args: ['codereview', 'unsubscribe', '6'] },
+      { via: 'query', args: ['codereview', 'subscribe', '6'] },
+    ]);
   });
 });
 
@@ -293,15 +376,103 @@ describe('code review writes', () => {
   });
 });
 
+// `cm mergerequest` only for what `cm codereview` can't change: a merge request's state and destination.
+describe('merge request writes', () => {
+  it("moves a merge request's state with one quick command, which prints nothing", async () => {
+    const { service, commands } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.setMergeRequestState(IN_WORKSPACE, 43, 'Closed');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['mergerequest', 'edit', '43', '--mergerequeststatus=Closed'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('changes its destination with one quick command', async () => {
+    const { service, commands } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.setMergeRequestDestination(IN_WORKSPACE, 43, '/main/release');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['mergerequest', 'edit', '43', '--destination=br:/main/release'] }]);
+  });
+
+  it('records a merge request Merged, with the changeset its merge made, with one quick command', async () => {
+    const { service, commands } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.recordMerged(IN_WORKSPACE, 43, 6);
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['mergerequest', 'edit', '43', '--mergerequeststatus=Merged', '--mergechangeset=cs:6'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('names the repository outside a workspace', async () => {
+    const { service, lines } = codeReviews({ 'mergerequest edit': '' });
+
+    await service.setMergeRequestState(repositoryPlace('game@local'), 43, 'Open');
+    await service.setMergeRequestDestination(repositoryPlace('game@local'), 43, '/main');
+
+    expect(lines()).toEqual(['mergerequest edit 43 --mergerequeststatus=Open --repository=game@local', 'mergerequest edit 43 --destination=br:/main@game@local --repository=game@local']);
+  });
+});
+
+describe('creating a merge request', () => {
+  const REQUEST = { source: '/main/task1', destination: '/main', title: 'Task one', draft: false };
+
+  it('asks with one quick command, which prints the new id', async () => {
+    const { service, commands } = codeReviews({ 'mergerequest create': '40\n' });
+
+    expect(await service.createMergeRequest(IN_WORKSPACE, REQUEST)).toEqual({ id: 40, descriptionSaved: true });
+    expect(commands).toMatchObject([
+      { via: 'query', args: ['mergerequest', 'create', 'br:/main/task1', 'Task one', '--destination=br:/main', '--format={id}'], options: { cwd: WORKSPACE } },
+    ]);
+  });
+
+  it('passes the description in a temp file, deleted afterwards', async () => {
+    const { seen, answer } = readingFileOption('--descriptionfile=', '40\n');
+    const { service, lines } = codeReviews({ 'mergerequest create': answer });
+
+    await service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, description: 'First line\n\n- "quoted" item' });
+
+    expect(lines()).toHaveLength(1);
+    expect(seen.content).toBe('First line\n\n- "quoted" item');
+    expect(existsSync(seen.file)).toBe(false);
+  });
+
+  it('writes no file for a description of blanks', async () => {
+    const { service, lines } = codeReviews({ 'mergerequest create': '40\n' });
+
+    await service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, description: '  \n ' });
+
+    expect(lines()).toEqual(['mergerequest create br:/main/task1 Task one --destination=br:/main --format={id}']);
+  });
+
+  // `cm` makes the request, then writes its description; when that fails it says so, prints the id and exits 1.
+  it('returns a request made whose description failed, rather than failing', async () => {
+    const { answer } = readingFileOption('--descriptionfile=', cmFails('The description of the code review 40 could not be created: Access denied.\n40\n'));
+    const { service } = codeReviews({ 'mergerequest create': answer });
+
+    expect(await service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, description: 'Why' })).toEqual({ id: 40, descriptionSaved: false });
+  });
+
+  it('fails, in plain words, when cm answers with no id', async () => {
+    const { service } = codeReviews({ 'mergerequest create': 'Done\n' });
+
+    await expect(service.createMergeRequest(IN_WORKSPACE, REQUEST)).rejects.toThrow("The server didn't say which merge request it created.");
+  });
+
+  it("fails as cm does when it made nothing: a destination that doesn't exist", async () => {
+    const { service } = codeReviews({ 'mergerequest create': cmFails("The specified branch /main/nope can't be found.\n") });
+
+    await expect(service.createMergeRequest(IN_WORKSPACE, { ...REQUEST, destination: '/main/nope' })).rejects.toThrow("The specified branch /main/nope can't be found.");
+  });
+});
+
 describe('code reviews of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
 
   it('lists them and names their branches naming the repository, outside every workspace', async () => {
     const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1), ...EVERY_BRANCH_NAME });
 
-    const [listed] = await service.list(ON_REPOSITORY, {});
+    const [listed] = await service.listSummaries(ON_REPOSITORY, {});
 
-    expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
+    expect(await service.branchNames(ON_REPOSITORY, [listed?.targetBranchId ?? 0, 21])).toEqual({ 37: '/main/task1', 21: '/main/old' });
     expect(commands.map(({ args }) => args[2])).toEqual([
       "order by date desc on repository 'game@local'",
       "on repository 'game@local'",
@@ -329,5 +500,14 @@ describe('code reviews of a repository explored without a workspace', () => {
       'codereview review 6 --reviewed --repository=game@local',
       'codereview -d 6 7 --repository=game@local',
     ]);
+  });
+
+  it("reads and changes the user's email subscription naming the repository", async () => {
+    const { service, lines } = codeReviews({ 'codereview subscription': 'no none enabled', 'codereview subscribe': '' });
+
+    expect(await service.subscription(ON_REPOSITORY, 6)).toEqual({ subscribed: false, reason: 'none', emailsEnabled: true });
+    await service.subscribe(ON_REPOSITORY, 6);
+
+    expect(lines()).toEqual(['codereview subscription 6 --format={subscribed} {reason} {emails} --repository=game@local', 'codereview subscribe 6 --repository=game@local']);
   });
 });

@@ -6,9 +6,10 @@
   background: var(--bg-app);
 }
 
+/* Where the top bar would be: the window's buttons sit there, and the window drags by it. */
 .dragRegion {
   flex: none;
-  height: 48px;
+  height: var(--topbar-height);
   -webkit-app-region: drag;
 }
 
@@ -22,6 +23,19 @@
   padding: var(--space-6) 0 var(--space-8);
   text-align: center;
   animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
+}
+
+.screen[data-in-card] {
+  background: none;
+}
+
+.screen[data-in-card] .card {
+  width: min(480px, 100% - 2 * var(--space-4));
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
 }
 
 .icon {

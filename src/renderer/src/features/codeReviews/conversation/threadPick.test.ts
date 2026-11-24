@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { openItemsOf, pickedScrollOf, pickOnFocus, pickThread, threadMarkOf } from './threadPick';
+import { cardLightOf, commentElementId, conversationLaidOut, commentLightShown, nextAnswerLight, openItemsOf, type CardLight, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
 import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00+01:00`, text: `Comment ${id}`, kind: 'question', anchor: { kind: 'review' }, ...fields };
@@ -35,6 +35,11 @@ describe('pickOnFocus', () => {
     const picked = pickThread(undefined, 7);
 
     expect(pickOnFocus(picked, 7)).toEqual({ threadId: 7, seq: 2, by: 'page' });
+  });
+
+  it('goes to the reply a link names, in its thread', () => {
+    expect(pickOnFocus(undefined, 7, 9)).toEqual({ threadId: 7, replyId: 9, seq: 1, by: 'page' });
+    expect(pickOnFocus(pickOnFocus(undefined, 7, 9), 7)).toEqual({ threadId: 7, seq: 2, by: 'page' });
   });
 
   it('keeps what was picked when a tab is shown as it is, with no thread to go to', () => {
@@ -71,18 +76,110 @@ describe('threadMarkOf', () => {
     expect(threadMarkOf(3, picked)).toEqual({ highlight: undefined, selected: false });
   });
 
+  it('lights the reply a link names rather than its thread, which it rings', () => {
+    expect(threadMarkOf(7, pickOnFocus(undefined, 7, 9))).toEqual({ highlight: 1, selected: true, litReply: 9 });
+    expect(threadMarkOf(3, pickOnFocus(undefined, 7, 9))).toEqual({ highlight: undefined, selected: false });
+  });
+
   it('marks nothing before a thread is picked', () => {
     expect(threadMarkOf(7, undefined)).toEqual({ highlight: undefined, selected: false });
   });
 });
 
-describe('pickedScrollOf', () => {
-  it('leaves a thread picked in Open where it is when on screen, else glides it to the nearest edge', () => {
-    expect(pickedScrollOf(pickThread(undefined, 7))).toEqual({ block: 'nearest', behavior: 'smooth' });
+describe('conversationLaidOut', () => {
+  it('waits for the conversation and the review\'s changesets: they group the entries into rounds, moving every thread below', () => {
+    expect(conversationLaidOut({ read: false, changesetsSettled: true })).toBe(false);
+    expect(conversationLaidOut({ read: true, changesetsSettled: false })).toBe(false);
+    expect(conversationLaidOut({ read: true, changesetsSettled: true })).toBe(true);
+  });
+});
+
+describe('pickedBehaviorOf', () => {
+  it('glides to a thread picked in Open', () => {
+    expect(pickedBehaviorOf(pickThread(undefined, 7))).toBe('smooth');
   });
 
-  it('opens the page with the thread it goes to centered, at once', () => {
-    expect(pickedScrollOf(pickOnFocus(undefined, 7)!)).toEqual({ block: 'center', behavior: 'auto' });
+  it('jumps to the thread the page opened at, at once', () => {
+    expect(pickedBehaviorOf(pickOnFocus(undefined, 7)!)).toBe('auto');
+  });
+});
+
+describe('cardLightOf', () => {
+  it('lights the reply a link opens the card at, from its first render, not the card', () => {
+    expect(cardLightOf(1, 9, null)).toEqual({ litComment: { replyId: 9, event: 'pick 1', scrolls: false } });
+  });
+
+  it('lights it again when the page moves to it in place, the conversation scrolling to it', () => {
+    expect(cardLightOf(2, 9, null)).toEqual({ litComment: { replyId: 9, event: 'pick 2', scrolls: false } });
+  });
+
+  it('lights the whole card for a later pick naming no reply', () => {
+    expect(cardLightOf(3, undefined, null)).toEqual({ cardHighlight: 3 });
+    expect(cardLightOf(undefined, undefined, null)).toEqual({});
+  });
+
+  it('lights the answer the Answered pill goes to, scrolling it into view', () => {
+    const answer = nextAnswerLight(null, 12, undefined);
+
+    expect(cardLightOf(undefined, undefined, answer)).toEqual({ litComment: { replyId: 12, event: 'answer 0', scrolls: true } });
+  });
+
+  // As before links to replies: the card's light and the answer's are apart, and a pick doesn't put the answer out.
+  it('keeps the answer lit when the card is gone to again without a reply', () => {
+    const answer = nextAnswerLight(null, 12, undefined);
+
+    expect(cardLightOf(4, undefined, answer)).toEqual({ cardHighlight: 4, litComment: { replyId: 12, event: 'answer 0', scrolls: true } });
+  });
+
+  it('lights whichever came last: the answer pressed after a reply was gone to, a reply gone to after the answer', () => {
+    const answer = nextAnswerLight(null, 12, 1);
+
+    expect(cardLightOf(1, 9, answer)).toEqual({ litComment: { replyId: 12, event: 'answer 0', scrolls: true } });
+    expect(cardLightOf(2, 9, answer)).toEqual({ litComment: { replyId: 9, event: 'pick 2', scrolls: false } });
+  });
+});
+
+describe('commentLightShown', () => {
+  /** The lights a card shows in turn, each from the one before: what `data-highlight` (`seq % 2`) reads. */
+  const shownIn = (...lights: CardLight[]) => {
+    const shown: ReturnType<typeof commentLightShown>[] = [];
+    for (const light of lights) shown.push(commentLightShown(shown.at(-1), light));
+    return shown;
+  };
+
+  it('a link goes to the reply the pill lit: its light restarts', () => {
+    const answer = nextAnswerLight(null, 12, 1);
+    const [atReply8, pill, atReply12] = shownIn(cardLightOf(1, 8, null), cardLightOf(1, 8, answer), cardLightOf(2, 12, answer));
+
+    expect(atReply12!.replyId).toBe(pill!.replyId);
+    expect(atReply12!.seq % 2).not.toBe(pill!.seq % 2);
+    expect(pill!.seq % 2).not.toBe(atReply8!.seq % 2);
+  });
+
+  it('the pill goes to the reply a link lit: its light restarts', () => {
+    const [atReply, pill] = shownIn(cardLightOf(1, 12, null), cardLightOf(1, 12, nextAnswerLight(null, 12, 1)));
+
+    expect(pill!.seq % 2).not.toBe(atReply!.seq % 2);
+  });
+
+  it('keeps the light shown, and its count, while nothing new is lit', () => {
+    const light = cardLightOf(1, 9, null);
+    const [first, again] = shownIn(light, light);
+
+    expect(again).toBe(first);
+    expect(shownIn(cardLightOf(3, undefined, null))).toEqual([undefined]);
+  });
+
+  it('scrolls only to the answer the pill goes to', () => {
+    expect(shownIn(cardLightOf(undefined, undefined, nextAnswerLight(null, 12, undefined)))[0]).toMatchObject({ replyId: 12, scrolls: true });
+    expect(shownIn(cardLightOf(1, 9, null))[0]).toMatchObject({ replyId: 9, scrolls: false });
+  });
+});
+
+describe('pickedElementId', () => {
+  it('brings the picked thread into view, or the reply a link names in it', () => {
+    expect(pickedElementId(pickThread(undefined, 7))).toBe(threadElementId(7));
+    expect(pickedElementId(pickOnFocus(undefined, 7, 9)!)).toBe(commentElementId(9));
   });
 });
 
@@ -106,6 +203,11 @@ describe('openItemsOf', () => {
     expect(items[0]!.text).toBe('Rename this');
   });
 
+  it('says a change request that opens with its suggestion as the lines it replaces', () => {
+    const suggestion = openThreads(threadsOf([comment(1, { kind: 'changeRequest', anchor: ON_LINE, text: '```suggestion\n{\n```' })]));
+    expect(openItemsOf(41, suggestion, undefined)[0]!.text).toMatch(/^Suggested change on line/);
+  });
+
   it('marks none current while the picked thread is no longer open', () => {
     expect(openItemsOf(41, open, pickThread(undefined, 9)).some((item) => item.current)).toBe(false);
   });
@@ -120,5 +222,17 @@ describe('openItemsOf', () => {
     expect(byChangeset!.inChanges?.page).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs', focusThread: 3, focusChangeset: 4 });
     // On the whole review, it is in no file.
     expect(general!.inChanges).toBeUndefined();
+  });
+
+  it('shows one on a 3D model in Changes, at its pin', () => {
+    const anchor = { kind: 'model' as const, revisionId: 30, itemId: 24, path: '/Assets/Art/Car.fbx', spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Wheel_FL'] }, wholePart: true as const } };
+    const [onModel] = openItemsOf(41, openThreads(threadsOf([comment(5, { kind: 'question', anchor })])), undefined);
+    expect(onModel!.inChanges).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Car.fbx', focusThread: 5 }, path: 'Assets/Art/Car.fbx' });
+  });
+
+  it('shows one on an image in Changes, at its pin', () => {
+    const anchor = { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Banner.png', spot: { x: 1, y: 2 } } as const;
+    const [onImage] = openItemsOf(41, openThreads(threadsOf([comment(5, { kind: 'question', anchor })])), undefined);
+    expect(onImage!.inChanges).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Banner.png', focusThread: 5 }, path: 'Assets/Art/Banner.png' });
   });
 });

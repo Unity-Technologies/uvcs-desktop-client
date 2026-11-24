@@ -10,6 +10,7 @@ import { queryKeys } from '../../../../api/queryKeys';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
 import { contentQuery } from '../contentQueries';
+import { ModelAnnotationsContext } from './modelAnnotations';
 import { ModelDiffViewer } from './ModelDiffViewer';
 import type { ModelDiffMode } from './modelDiffModes';
 import { readImportSettings } from './modelImportSettings';
@@ -67,14 +68,18 @@ export function ModelMetaDiff({ place, sources, texts, mode, onModelAbsent }: Mo
     return <EmptyState title={`Couldn't read ${modelOfMeta(modelName)?.split(/[\\/]/).pop() ?? 'the model'}`} description="The .meta's own text is in Code." />;
   }
   if (view !== 'model' || !original || !modified) return <CenteredSpinner />;
+  // No comments on the model here: one would be stored on the `.meta`'s revision with a point in the model's space,
+  // which no other client could place. Comments on the model go on the model itself; the `.meta`'s on its text.
   return (
-    <ModelDiffViewer
-      place={place}
-      sources={{ original: modelSources.original ?? { kind: 'empty' }, modified: modelSources.modified ?? { kind: 'empty' } }}
-      original={original}
-      modified={modified}
-      mode={mode}
-      settings={settings}
-    />
+    <ModelAnnotationsContext.Provider value={null}>
+      <ModelDiffViewer
+        place={place}
+        sources={{ original: modelSources.original ?? { kind: 'empty' }, modified: modelSources.modified ?? { kind: 'empty' } }}
+        original={original}
+        modified={modified}
+        mode={mode}
+        settings={settings}
+      />
+    </ModelAnnotationsContext.Provider>
   );
 }

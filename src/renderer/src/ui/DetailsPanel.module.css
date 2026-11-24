@@ -162,6 +162,11 @@
   padding: 0 var(--space-5) var(--space-6);
 }
 
+/* Its sections may all render nothing (no attributes on a server without attribute types): no strip of padding then. */
+.body:empty {
+  display: none;
+}
+
 .panel[data-fill='true'] > .top {
   flex: 1;
   overflow: hidden;

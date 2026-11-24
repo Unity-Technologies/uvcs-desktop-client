@@ -27,6 +27,10 @@ describe('behindBranch', () => {
   it('is null while a merge is pending: checking in completes it as it is, without updating first', () => {
     expect(behindBranch(summary(2, ['ana']), '/main/task', true)).toBeNull();
   });
+
+  it('is null in a partial workspace, which checks in without updating first', () => {
+    expect(behindBranch({ branch: '/main/task', partial: true, headChangeset: 13, itemCount: 2 }, '/main/task', false)).toBeNull();
+  });
 });
 
 describe('behindDescription', () => {

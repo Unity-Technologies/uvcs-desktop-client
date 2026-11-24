@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
+import { NO_BRANCH_NAME_READS } from '../cm/testing/branchNameReads';
 import { roundTripDate } from '../cm/findQuery';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
@@ -26,9 +27,7 @@ function branchExplorer() {
     'find merge': MERGES,
     'find label': LABELS,
   });
-  const branchNames = new BranchNamesCache(async () => {
-    throw new Error('The Branch Explorer read every branch already.');
-  });
+  const branchNames = new BranchNamesCache(NO_BRANCH_NAME_READS);
   return { ...fake, branchNames, service: createBranchExplorerService(serviceContext(fake.cm), { branchNames }) };
 }
 
@@ -115,7 +114,7 @@ describe('Branch Explorer rules', () => {
       'find changeset': formatOutput(['5'], ['7']),
       'find label': formatOutput(['v1.0']),
     });
-    const branchNames = new BranchNamesCache(async () => []);
+    const branchNames = new BranchNamesCache(NO_BRANCH_NAME_READS);
     return { ...fake, service: createBranchExplorerService(serviceContext(fake.cm), { branchNames }) };
   }
 

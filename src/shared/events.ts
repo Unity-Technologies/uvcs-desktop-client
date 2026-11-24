@@ -1,9 +1,11 @@
+import type { CmRuntimeStatus } from './domain/cmRuntime';
 import type { FoundPath, FoundPathsSource } from './domain/explorer';
 import type { UpdateStatus } from './domain/appUpdate';
 import type { OperationProgress } from './domain/operation';
 import type { PageSeed, PageWindowPage } from './domain/pageWindow';
 import type { IssueTrackerSetup } from './domain/issueTrackers';
 import type { AppSettings } from './domain/settings';
+import type { ServerSession } from './domain/signIn';
 import type { KeptAsideFile } from './domain/switchWithChanges';
 import type { WorkspaceChange } from './domain/workspaceChange';
 
@@ -17,6 +19,11 @@ export interface CommandLogEntry {
   viaShell: boolean;
   /** It ran in the app's folder outside every workspace: for a repository explored without one (`CmRunOptions.outsideWorkspaces`). */
   outsideWorkspaces?: true;
+  /**
+   * Refused before it ran: its server needs a sign-in (`SignInGate`), as its output says. Not a failure to point at: the
+   * window shows the sign-in screen instead.
+   */
+  notRun?: true;
   /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
   /**
@@ -51,11 +58,15 @@ export interface UvcsEvents {
   filesKeptAside: { workspacePath: string; files: KeptAsideFile[] };
   /** The workspace's watch broke once started: changes made outside the app no longer show by themselves. */
   workspaceWatchBroken: { workspacePath: string };
+  /** A workspace changed kind (choosing what to download made a standard one partial): every window reads its kind again. */
+  workspaceKindChanged: { workspacePath: string };
   operationProgress: OperationProgressEvent;
   /** The best paths a repository's search (`explorer.findRepositoryPaths`) found so far, as they change. */
   repositoryPathsFound: { searchId: string; paths: FoundPath[]; source: FoundPathsSource };
   /** A tracker was signed in to or out of, a credential stopped working, or a repository's tracker changed. */
   issueTrackersChanged: IssueTrackerSetup;
+  /** A server came to need a sign-in, or was signed in again: every server that needs one now (`ServerSessions`). */
+  serverSessionsChanged: ServerSession[];
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
   /** A workspace was picked from the OS recent documents; `system.takeRequestedPlace` tells which. */
@@ -66,6 +77,8 @@ export interface UvcsEvents {
   incomingNotificationClicked: { workspacePath: string };
   /** Closing the window, quitting or reloading waits for unsaved edits: settle them, then `windows.continueLeaving`. */
   leaveRequested: Record<string, never>;
+  /** The app's `cm` moved on: its setup progressed, failed or finished, or another one runs (`cmRuntime.status`). */
+  cmRuntimeChanged: CmRuntimeStatus;
   /** The app's update moved on (`updates.status`); every window gets it. */
   updateStatusChanged: UpdateStatus;
   /**

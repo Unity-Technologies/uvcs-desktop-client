@@ -12,6 +12,10 @@ export type Arrival = 'first' | 'last';
 export interface FileSteps {
   /** Whether the list has a file after (1) or before (-1) the one shown. */
   canStep: (direction: 1 | -1) => boolean;
+  /** The path of that file, which a step would select (the arrows name it); none past the ends. */
+  neighbor: (direction: 1 | -1) => string | null;
+  /** Where the file shown stands among the list's files ("file 2 of 9" in the arrows' tips); none on another row. */
+  position: { index: number; count: number } | null;
   /**
    * Selects that file, its diff to open at its first or last change; its path, or none past the ends or where the list
    * didn't select it at once (unsaved edits asked about, or kept).
@@ -131,6 +135,11 @@ export function fileSteps(
 ): FileSteps {
   return {
     canStep: (direction) => adjacentKey(keys, current, direction, list.rowOrder) !== null,
+    position: positionOf(keys, current),
+    neighbor: (direction) => {
+      const key = adjacentKey(keys, current, direction, list.rowOrder);
+      return key === null ? null : list.pathOf(key);
+    },
     step: (direction) => {
       const key = adjacentKey(keys, current, direction, list.rowOrder);
       if (key === null) return null;
@@ -177,6 +186,21 @@ export function fileSteps(
  */
 export function settlingOnOf(selected: { path: string } | undefined, diffed: { path: string } | undefined): string | null {
   return selected !== undefined && selected !== diffed ? selected.path : null;
+}
+
+/**
+ * Whether the file now shown (`path`, where `previous` was) was reached by a step from the file beside it, not picked
+ * nor shown again: the step to it is still on its way (`FileSteps.steppingTo`). Its header says so for a moment
+ * (`SteppedDiffFrame`), as ↓ past a file's last change lands in another file.
+ */
+export function arrivedByStep(previous: string | null, path: string, steppingTo: string | null): boolean {
+  return previous !== path && steppingTo === path;
+}
+
+/** Where `current` stands among `keys`; none for a row that isn't one of them (a folder, a group). */
+function positionOf(keys: readonly string[], current: string | null): { index: number; count: number } | null {
+  const index = current === null ? -1 : keys.indexOf(current);
+  return index === -1 ? null : { index, count: keys.length };
 }
 
 /** A list's selection made at once, nothing to ask first: the step it's for is told (`FileStepsOptions.select`). */

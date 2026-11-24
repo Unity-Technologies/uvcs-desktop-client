@@ -3,9 +3,9 @@ import { serverAuthority } from '@shared/links/linkSegments';
 import { branchLabel } from '../../lib/branchLabels';
 import { displayName } from '../../lib/userName';
 import type { CommentReference, ReferencePoint } from '../../lib/comments/commentReferences';
-import { lastSegment } from '../../lib/paths';
+import { lastSegment, parentOf } from '../../lib/paths';
 
-export type ChipIcon = 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' | 'file' | 'link';
+export type ChipIcon = 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' | 'changeRequest' | 'file' | 'link';
 
 /** What a click on a chip opens: an object (or a page of it) in its repository, the place's when none is named. */
 export interface ChipTarget {
@@ -13,6 +13,14 @@ export interface ChipTarget {
   repository?: string;
   object?: LinkObject;
   page?: LinkPage;
+}
+
+/** A file a chip names: "Player.cs" in "/src/game", at "Changeset 12" (none when a link names no version). */
+export interface ChipFile {
+  name: string;
+  /** None for the root itself. */
+  folder?: string;
+  at?: string;
 }
 
 /** How a reference shows in a comment (docs/features/rich-comments.md, "How references show"). */
@@ -26,12 +34,16 @@ export type ChipContent =
       title: string;
       /** The repository it is in, named when it isn't the place's own. */
       repository?: string;
+      /** A file's name, folder and version apart, which its card shows on lines of their own (`chipCard`). */
+      file?: ChipFile;
       target: ChipTarget;
       /** The object as the place's caches hold it, for its summary (`useCachedObject`): one of the place's own only. */
       cachedAs?: CommentReference;
     }
   | { kind: 'user'; name: string }
   | { kind: 'emoji'; glyph: string; name: string }
+  /** A change request a check-in applies, shown and read by `ChangeRequestChip`. */
+  | { kind: 'changeRequest'; guid: string }
   /** An issue of the place's tracker, shown and read by `IssueChip`. */
   | { kind: 'issue'; key: string; bare: boolean };
 
@@ -78,14 +90,17 @@ function chipOf(reference: CommentReference): ChipContent {
       return { kind: 'emoji', glyph: reference.glyph, name: reference.name };
     case 'issue':
       return { kind: 'issue', key: reference.key, bare: reference.bare };
+    case 'changeRequest':
+      return { kind: 'changeRequest', guid: reference.guid };
     case 'link':
       return linkChip(reference.link);
     case 'file': {
       const at = pointWords(reference.at);
-      return objectChip('file', lastSegment(reference.path), `${reference.path} at ${at}`, reference.repository, {
+      const chip = objectChip('file', lastSegment(reference.path), `${reference.path} at ${at}`, reference.repository, {
         object: pointObject(reference.at),
         page: { kind: 'diffFile', path: reference.path },
       });
+      return { ...chip, file: chipFile(reference.path, sentenceCase(at)) };
     }
     default:
       return objectChip(iconOf(reference), labelOf(reference), titleOf(reference), reference.repository, { object: linkObjectOf(reference) });
@@ -94,7 +109,7 @@ function chipOf(reference: CommentReference): ChipContent {
 
 type ObjectReference = Extract<CommentReference, { kind: 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' }>;
 
-function objectChip(icon: ChipIcon, label: string, title: string, repository: string | undefined, target: ChipTarget): ChipContent {
+function objectChip(icon: ChipIcon, label: string, title: string, repository: string | undefined, target: ChipTarget): Extract<ChipContent, { kind: 'object' }> {
   return repository
     ? { kind: 'object', icon, label, title, repository: repositoryName(repository), target: { ...target, repository } }
     : { kind: 'object', icon, label, title, target };
@@ -144,6 +159,16 @@ function pointObject(point: ReferencePoint): LinkObject {
   return point.kind === 'branch' || point.kind === 'label' ? { kind: point.kind, name: point.name } : { kind: point.kind, id: point.id };
 }
 
+/** A server path's item apart from its folder, `/` for one at the root; written with a slash at its end (a folder) too. */
+function chipFile(path: string, at: string | undefined): ChipFile {
+  const item = path.replace(/\/+$/, '');
+  return { name: lastSegment(item || '/'), ...(item && { folder: parentOf(item) || '/' }), ...(at && { at }) };
+}
+
+function sentenceCase(words: string): string {
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
 function pointWords(point: ReferencePoint): string {
   switch (point.kind) {
     case 'changeset':
@@ -165,9 +190,12 @@ function linkChip(link: RepositoryLink): ChipContent {
   const item = path && path !== '/' ? lastSegment(path) : undefined;
   if (link.object) {
     const { icon, label, title } = linkObjectWords(link.object);
-    return { kind: 'object', icon: item ? 'file' : icon, label: item ?? label, title: item ? `${path} in ${title.toLowerCase()}` : title, repository: link.repository, target };
+    if (link.page?.kind === 'reviewComment') return { kind: 'object', icon, label, title: `A comment in ${title.toLowerCase()}`, repository: link.repository, target };
+    if (item && path) return { kind: 'object', icon: 'file', label: item, title: `${path} in ${title.toLowerCase()}`, repository: link.repository, file: chipFile(path, title), target };
+    return { kind: 'object', icon, label, title, repository: link.repository, target };
   }
-  return { kind: 'object', icon: item ? 'file' : 'link', label: item ?? link.repository, title: path ?? link.repository, repository: link.repository, target };
+  if (item && path) return { kind: 'object', icon: 'file', label: item, title: path, repository: link.repository, file: chipFile(path, undefined), target };
+  return { kind: 'object', icon: 'link', label: link.repository, title: path ?? link.repository, repository: link.repository, target };
 }
 
 function linkObjectWords(object: LinkObject): { icon: ChipIcon; label: string; title: string } {
@@ -185,7 +213,7 @@ function linkObjectWords(object: LinkObject): { icon: ChipIcon; label: string; t
     case 'shelve':
       return { icon: 'shelve', label: String(object.id), title: `Shelve ${object.id}` };
     case 'codeReview':
-      return { icon: 'codeReview', label: String(object.id), title: `Code review ${object.id}` };
+      return { icon: 'codeReview', label: String(object.id), title: `${object.asMergeRequest ? 'Merge request' : 'Code review'} ${object.id}` };
   }
 }
 
@@ -222,8 +250,10 @@ export interface CachedRecord {
 export interface ChipCard {
   /** The comment (a review's title) to lead with; none leads with `title`. */
   comment?: string;
-  /** The object in words: "Changeset 4". */
+  /** The object in words: "Changeset 4"; a file's name. */
   title: string;
+  /** A file's folder, on a line of its own under its name. */
+  folder?: string;
   meta: string[];
 }
 
@@ -235,7 +265,8 @@ export type UnreadObject = { kind: 'missing' } | { kind: 'unreadable' } | { kind
  * repository has none by that name, it couldn't be read from (no access, out of reach), or it is on a server the user
  * doesn't work with, which is never read.
  */
-export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string, unread?: UnreadObject): ChipCard {
+export function chipCard(chip: { title: string; repository?: string; file?: ChipFile }, cached: CachedRecord | undefined, ago: (date: string) => string, unread?: UnreadObject): ChipCard {
+  if (chip.file) return fileCard(chip.file, chip.repository && repositoryWords(chip.title, chip.repository, unread));
   const comment = cached?.title || cached?.comment || undefined;
   const meta = [
     ...(comment ? [chip.title] : []),
@@ -245,6 +276,11 @@ export function chipCard(chip: { title: string; repository?: string }, cached: C
     ...(chip.repository ? [repositoryWords(chip.title, chip.repository, unread)] : []),
   ];
   return comment ? { comment, title: chip.title, meta } : { title: chip.title, meta };
+}
+
+/** A file's card: its name, its folder under it, then which version and where ("Changeset 12 · In art"). */
+function fileCard(file: ChipFile, repository: string | undefined): ChipCard {
+  return { title: file.name, ...(file.folder && { folder: file.folder }), meta: [...(file.at ? [file.at] : []), ...(repository ? [repository] : [])] };
 }
 
 function repositoryWords(title: string, repository: string, unread: UnreadObject | undefined): string {

@@ -14,9 +14,9 @@ export function usePageWindowCommands(): void {
 
 /**
  * A page window shows no views: going to one (⌘1…, the palette) brings its workspace window forward on that view
- * (`navigation.goToView` in a page window). The menu bar's workspace commands go there the same way (`useMenuCommands`),
+ * as the user left it (`navigation.returnToView` in a page window). The menu bar's workspace commands go there the same way (`useMenuCommands`),
  * but Refresh, which reads the window's own page again (`refreshCommand`).
  */
 export function pageWindowCommands(place: Place): Command[] {
-  return [...viewCommands(VIEWS, navigation.goToView), refreshCommand(place)];
+  return [...viewCommands(VIEWS, navigation.returnToView), refreshCommand(place)];
 }

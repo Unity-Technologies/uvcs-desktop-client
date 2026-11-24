@@ -18,7 +18,13 @@ const JOINED_WITH_OR = /\.join\(\s*(['"`])\s*or\s*\1\s*\)/i;
 const ORED_ID_LITERAL = /['"`][^'"`\n]*\bid\s*=\s*[^'"`\n]*\bor\b[^'"`\n]*['"`]/i;
 
 /** Owners are names picked by hand, a few at most (`ownersCondition`): ORing them is one bounded scan, not a lookup per id. */
-const OWNERS_CONDITION = /\bowner = |equalsCondition\('owner'/;
+const ONE_SCAN_CONDITION = /\bowner = |equalsCondition\('owner'/;
+
+/**
+ * The one file allowed to OR ids: the reviews of a block of branches, at most `BRANCH_REVIEWS_BLOCK`, whose `targetid`s
+ * the server matches in one scan (`branchTargetsCondition`, which enforces the bound). docs/ARCHITECTURE.md "Queries".
+ */
+const ALLOWED_FILES = new Set([join('main', 'cm', 'branchTargetsCondition.ts')]);
 
 function oredIdLookups(source: string): string[] {
   // Most sources hold neither: matched whole first, so only the few that do are read line by line.
@@ -28,7 +34,7 @@ function oredIdLookups(source: string): string[] {
     if (ORED_ID_LITERAL.test(line)) return true;
     if (!JOINED_WITH_OR.test(line)) return false;
     // The conditions joined are built on the line itself or the one before.
-    return !OWNERS_CONDITION.test(`${lines[index - 1] ?? ''}\n${line}`);
+    return !ONE_SCAN_CONDITION.test(`${lines[index - 1] ?? ''}\n${line}`);
   });
 }
 
@@ -43,9 +49,9 @@ describe('no ORed id lookups', () => {
   });
 
   it('no source builds one', () => {
-    const offenders = filesUnder(SOURCE_DIRECTORY, isAppSource).flatMap((file) =>
-      oredIdLookups(readFileSync(file, 'utf8')).map((line) => `${relative(SOURCE_DIRECTORY, file)}: ${line.trim()}`),
-    );
+    const offenders = filesUnder(SOURCE_DIRECTORY, isAppSource)
+      .filter((file) => !ALLOWED_FILES.has(relative(SOURCE_DIRECTORY, file)))
+      .flatMap((file) => oredIdLookups(readFileSync(file, 'utf8')).map((line) => `${relative(SOURCE_DIRECTORY, file)}: ${line.trim()}`));
     expect(offenders).toEqual([]);
   });
 });

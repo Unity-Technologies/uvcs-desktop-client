@@ -1,6 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IncomingSummary } from '@shared/domain/incoming';
+import type { BranchIncoming, BranchIncomingChanges, IncomingSummary } from '@shared/domain/incoming';
 import type { PendingChangesOnSwitch, SwitchPreflight } from '@shared/domain/switchWithChanges';
 
 vi.mock('../../features/branches/SwitchWithChangesDialog', () => ({ askSwitchWithChanges: vi.fn() }));
@@ -8,6 +8,7 @@ vi.mock('../../features/incoming/useIncomingSummary', () => ({ recheckIncoming: 
 vi.mock('../../features/incoming/updateOperations', () => ({ explainUpdateConflicts: vi.fn(() => false), showUpdatedMoment: vi.fn() }));
 
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
+import { incomingChangesFor, incomingChangesKey } from '../../features/incoming/incomingChangesRead';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { shownToasts } from '../../testing/operationOutcome';
@@ -192,6 +193,26 @@ describe('updateUnlessUpToDate', () => {
     expect(showUpdatedMoment).toHaveBeenCalledWith(ws, summary(2));
   });
 
+  it('says a partial workspace is up to date when the branch head changes none of its items', async () => {
+    vi.mocked(recheckIncoming).mockResolvedValue({ branch: '/main', partial: true, headChangeset: 7, itemCount: 0 });
+
+    await updateUnlessUpToDate(ws);
+
+    expect(fakeApi.methods()).not.toContain('workspaces.update');
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Already up to date', detail: 'Your workspace has everything on main.' }]);
+  });
+
+  it('updates a partial workspace whose items the branch head changes', async () => {
+    const partial: IncomingSummary = { branch: '/main', partial: true, headChangeset: 7, itemCount: 2 };
+    vi.mocked(recheckIncoming).mockResolvedValue(partial);
+    fakeApi.answer('workspaces.update', () => undefined);
+
+    await updateUnlessUpToDate(ws);
+
+    expect(fakeApi.methods()).toContain('workspaces.update');
+    expect(showUpdatedMoment).toHaveBeenCalledWith(ws, partial);
+  });
+
   it('still updates when the server could not be asked first', async () => {
     vi.mocked(recheckIncoming).mockRejectedValue(new Error('offline'));
     fakeApi.answer('workspaces.update', () => undefined);
@@ -200,6 +221,36 @@ describe('updateUnlessUpToDate', () => {
 
     expect(fakeApi.methods()).toContain('workspaces.update');
     expect(showUpdatedMoment).not.toHaveBeenCalled();
+  });
+
+  describe('counts what came as the chip does', () => {
+    const checked: BranchIncoming = { branch: '/main', loadedChangeset: 10, headChangeset: 150, changesetCount: 100, countCapped: true, authors: ['ana'] };
+    /** The incoming changes Incoming read for the head `headChangeset`, kept under the key that head gives them. */
+    function readAt(headChangeset: number): void {
+      const read: BranchIncomingChanges = { ...checked, headChangeset, changesetCount: 140, countCapped: false, authors: ['ana', 'bob'], changesets: [], moreChangesets: false, files: [], conflicts: [], blockedPaths: [] };
+      queryClient.setQueryData(incomingChangesKey(ws, incomingChangesFor({ ...checked, headChangeset }, false)), read);
+    }
+
+    beforeEach(() => {
+      vi.mocked(recheckIncoming).mockResolvedValue(checked);
+      fakeApi.answer('workspaces.update', () => undefined);
+    });
+
+    it('further than the check, with the incoming changes read for the head it found', async () => {
+      readAt(150);
+
+      await updateUnlessUpToDate(ws);
+
+      expect(showUpdatedMoment).toHaveBeenCalledWith(ws, { ...checked, changesetCount: 140, countCapped: false, authors: ['ana', 'bob'] });
+    });
+
+    it("as the check alone when the incoming changes were read for an older head: they don't tell this one", async () => {
+      readAt(149);
+
+      await updateUnlessUpToDate(ws);
+
+      expect(showUpdatedMoment).toHaveBeenCalledWith(ws, checked);
+    });
   });
 
   it('shows nothing updated when the update failed on conflicts it explained', async () => {

@@ -1,6 +1,7 @@
 import '../../testing/fakeWindow';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { workspacePlace } from '@shared/domain/place';
+import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
 import { graphMenu } from './graphMenu';
 import type { GraphSelections } from './graphSelection';
@@ -20,6 +21,7 @@ function entryWithId(entries: MenuEntry[], id: string): MenuEntry | undefined {
 function contextWith(selections: GraphSelections) {
   return {
     place: workspacePlace('/work/game'),
+    workspaceKind: undefined,
     layout,
     currentBranch: '/main',
     loadedChangeset: 6,
@@ -87,5 +89,37 @@ describe('graphMenu for several selected', () => {
     );
     expect(labelsOf(menu)).toContain('Delete 2 labels…');
     expect(labelsOf(menu)).not.toContain('Switch to this label');
+  });
+});
+
+describe('graphMenu for the pending changes', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function run(menu: MenuEntry[], label: string): void {
+    const entry = menu.find((each) => typeof each === 'object' && 'label' in each && each.label === label) as { run: () => void } | undefined;
+    expect(entry, label).toBeDefined();
+    entry!.run();
+  }
+
+  it('opens Changes, as Enter and a double-click do', () => {
+    const goToView = vi.spyOn(navigation, 'goToView').mockImplementation(() => {});
+    const menu = graphMenu({ kind: 'pending' }, contextWith([{ kind: 'pending' }]));
+    expect(labelsOf(menu)).toEqual(['Open Changes']);
+    run(menu, 'Open Changes');
+    expect(goToView).toHaveBeenCalledWith('changes');
+  });
+
+  it('goes to the source changeset of a merge in progress', () => {
+    const goneTo: number[] = [];
+    const context = { ...contextWith([]), goToChangeset: (id: number) => goneTo.push(id) };
+    const menu = graphMenu({ kind: 'pendingMergeLink', link: { type: 'merge', sourceChangeset: 4 } }, context);
+    run(menu, 'Go to source changeset');
+    expect(goneTo).toEqual([4]);
+  });
+});
+
+describe('graphMenu for a "+N" node', () => {
+  it('has nothing: a click on it shows the changesets it stands for', () => {
+    expect(graphMenu({ kind: 'collapsed', node: layout.nodes.get(4)! }, contextWith([]))).toEqual([]);
   });
 });

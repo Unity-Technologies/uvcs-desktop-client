@@ -9,6 +9,8 @@ export interface KeyHint {
   keys: string | readonly string[];
   label: string;
   typed?: boolean;
+  /** Set apart at the line's far end, as keys of another kind (the palette's scope after its list's keys). */
+  atEnd?: boolean;
 }
 
 interface KeyHintsProps {
@@ -26,8 +28,8 @@ export function KeyHints({ hints, caption = false, oneLine = false }: KeyHintsPr
   const shown = useHintsThatFit(hints.length, oneLine);
   return (
     <div ref={shown.line} className={classNames(styles.hints, caption && styles.caption, oneLine && styles.oneLine)}>
-      {hints.map(({ keys, label, typed }, index) => (
-        <span key={label} className={styles.hint} hidden={index >= shown.count}>
+      {hints.map(({ keys, label, typed, atEnd }, index) => (
+        <span key={label} className={classNames(styles.hint, atEnd && styles.atEnd)} hidden={index >= shown.count}>
           {(typeof keys === 'string' ? [keys] : keys).map((key) => (
             <Kbd key={key} keys={key} typed={typed} />
           ))}{' '}

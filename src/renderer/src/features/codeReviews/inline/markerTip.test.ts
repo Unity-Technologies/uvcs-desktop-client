@@ -4,7 +4,7 @@ import { threadsOf } from '../conversation/reviewThreads';
 import type { LineThread, PlacedThread } from './fileThreads';
 import { markerTip } from './markerTip';
 
-const ON_LINE = { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Retry.cs', line: 20 } as const;
+const ON_LINE = { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Retry.cs', firstLine: 20, lastLine: 20 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'borja', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: 'Text', kind: 'comment', anchor: ON_LINE, ...fields };
@@ -14,7 +14,7 @@ const reply = (id: number, parentId: number, fields: Partial<ReviewComment> = {}
 
 /** The thread a root and its replies make, at line 20. */
 function placed(root: ReviewComment, ...replies: ReviewComment[]): PlacedThread {
-  return { thread: threadsOf([root, ...replies])[0] as LineThread, side: 'additions', line: 20 };
+  return { thread: threadsOf([root, ...replies])[0] as LineThread, side: 'additions', firstLine: 20, line: 20 };
 }
 
 const tipOf = (...threads: PlacedThread[]) => markerTip({ threads });
@@ -34,6 +34,10 @@ describe('markerTip', () => {
     expect(tipOf(placed(comment(1, { kind: 'changeRequest', text: 'Shelve first.', appliedInChangeset: 4 })))).toBe('Shelve first.\nChange request · Applied · Borja');
     expect(tipOf(placed(comment(1, { kind: 'changeRequest', text: 'Rename it.' }), reply(2, 1, { kind: 'discard' })))).toBe('Rename it.\nChange request · Discarded · Borja · 1 reply');
     expect(tipOf(placed(comment(1, { text: 'Reads well.', author: 'ana.garcia' })))).toBe('Reads well.\nComment · Ana Garcia');
+  });
+
+  it('says a change request that is only a suggestion by the lines it replaces, not its code', () => {
+    expect(tipOf(placed(comment(1, { kind: 'changeRequest', text: '```suggestion\n{\n```' }))).split('\n')[0]).toBe('Suggested change on line 20');
   });
 
   it('reads Markdown as plain text, its lines as one', () => {

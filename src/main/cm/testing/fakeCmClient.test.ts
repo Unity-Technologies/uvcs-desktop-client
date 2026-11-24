@@ -98,3 +98,13 @@ describe('fakeCmClient', () => {
     expect(error).toMatchObject({ message: 'The branch does not exist.', command: { commandLine: 'cm switch br:/x', exitCode: 1 } });
   });
 });
+
+describe('options that stick to a cm shell', () => {
+  it("refuses a quick command carrying one, as CmClient does, and runs it in a process of its own", async () => {
+    const fake = fakeCmClient({ whoami: 'ana\n' });
+
+    await expect(fake.cm.query(['whoami', '--username=a'])).rejects.toThrow('--username');
+    expect(await fake.cm.execute(['whoami', '--username=a'])).toBe('ana\n');
+    expect(fake.lines()).toEqual(['whoami --username=a']);
+  });
+});

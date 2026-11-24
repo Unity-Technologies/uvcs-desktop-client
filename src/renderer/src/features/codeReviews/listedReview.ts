@@ -1,10 +1,11 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
-import type { CodeReview, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewSummary, MergeRequestInfo } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
+import { BRANCH_REVIEW_KEY } from './branchReviewKey';
 
 /**
- * A review as a list already read it (the Code reviews view's), with when that list was read: its page shows it at
+ * A review as a list already read it (the Merge requests view's), with when that list was read: its page shows it at
  * once, as fresh as that list. A summary (the branch chips', the palette's) counts only with its target named: a
  * changeset's or shelve's is, a branch's isn't (`CodeReviewSummary.target`).
  */
@@ -44,14 +45,56 @@ export function withReviewRead(data: unknown, review: CodeReview): unknown {
 }
 
 /**
- * Puts the review just read into the lists already read that hold it (`withReviewRead`), so the Code reviews view under
+ * Puts the review just read into the lists already read that hold it (`withReviewRead`), so the Merge requests view under
  * its page shows what the page does when the user goes back, with no `cm` command of its own. Each list keeps when it
  * was read, so it's read again when it would have been; one an operation marked stale is left to that read.
  */
 export function showReviewReadInListsIn(client: QueryClient, place: Place, review: CodeReview): void {
   for (const query of client.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })) {
     if (query.state.isInvalidated) continue;
-    const updated = withReviewRead(query.state.data, review);
+    const updated = isBranchReviewKey(query.queryKey)
+      ? withStandingReviewUpdated(query.state.data, review.id, (rows) => withReviewRead(rows, review))
+      : withReviewRead(query.state.data, review);
     if (updated !== query.state.data) client.setQueryData(query.queryKey, updated, { updatedAt: query.state.dataUpdatedAt });
   }
+}
+
+/**
+ * A list of reviews with one merge request's state or destination changed as a write just left it, the other rows
+ * as they were read: what a move shows at once, its page opened or not (`setMergeRequestState`). Anything else (not a
+ * list, a list without it, a row that isn't a merge request) comes back as it was.
+ */
+export function withMergeRequestChanged(data: unknown, reviewId: number, change: Partial<MergeRequestInfo>): unknown {
+  if (!Array.isArray(data)) return data;
+  const rows = data as (CodeReview | CodeReviewSummary)[];
+  const at = rows.findIndex((row) => row.id === reviewId && row.mergeRequest !== undefined);
+  if (at === -1) return data;
+  return rows.map((row, index) => (index === at && row.mergeRequest ? { ...row, mergeRequest: { ...row.mergeRequest, ...change } } : row));
+}
+
+/** `withMergeRequestChanged` over every list already read and not marked stale, each keeping when it was read. */
+export function showMergeRequestChangedInListsIn(client: QueryClient, place: Place, reviewId: number, change: Partial<MergeRequestInfo>): void {
+  for (const query of client.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })) {
+    if (query.state.isInvalidated) continue;
+    const updated = isBranchReviewKey(query.queryKey)
+      ? withStandingReviewUpdated(query.state.data, reviewId, (rows) => withMergeRequestChanged(rows, reviewId, change))
+      : withMergeRequestChanged(query.state.data, reviewId, change);
+    if (updated !== query.state.data) client.setQueryData(query.queryKey, updated, { updatedAt: query.state.dataUpdatedAt });
+  }
+}
+
+/**
+ * The review that stands for a branch (`branchReviewQuery`, one review or null) with that review read or changed as
+ * the lists take it (`withReviewRead`, `withMergeRequestChanged`), so the branch's chip shows it too; another review,
+ * or none, as it was.
+ */
+export function withStandingReviewUpdated(data: unknown, reviewId: number, update: (rows: [CodeReviewSummary]) => unknown): unknown {
+  if (typeof data !== 'object' || data === null || Array.isArray(data) || (data as { id?: unknown }).id !== reviewId) return data;
+  const [updated] = update([data as CodeReviewSummary]) as [CodeReviewSummary];
+  return updated;
+}
+
+/** Whether a query holds the review that stands for one branch (`branchReviewQuery`), not a list. */
+function isBranchReviewKey(key: readonly unknown[]): boolean {
+  return key.includes(BRANCH_REVIEW_KEY);
 }

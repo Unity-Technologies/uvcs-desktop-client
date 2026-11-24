@@ -15,7 +15,7 @@ export function linkDescription(text: string): LinkDescription {
   if ('problem' in reading) return { label: 'Open link', detail: text };
   const { link } = reading;
   if (link.kind === 'server') return { label: link.project ?? 'Repositories', detail: link.project ? `Project · ${serverChoiceLabel(link.server)}` : serverChoiceLabel(link.server) };
-  const item = link.page && 'path' in link.page && link.page.path && link.page.path !== '/' ? lastSegment(link.page.path) : undefined;
+  const item = link.page?.kind === 'reviewComment' ? 'Comment' : link.page && 'path' in link.page && link.page.path && link.page.path !== '/' ? lastSegment(link.page.path) : undefined;
   const subject = link.kind === 'repository' ? (link.object ? objectWords(link.object) : link.repository) : lastSegment(link.folder);
   return { label: item ? `${subject} · ${item}` : subject, detail: placeWords(link) };
 }
@@ -35,7 +35,7 @@ function objectWords(object: LinkObject): string {
     case 'shelve':
       return `Shelve ${object.id}`;
     case 'codeReview':
-      return `Code review ${object.id}`;
+      return `${object.asMergeRequest ? 'Merge request' : 'Code review'} ${object.id}`;
   }
 }
 

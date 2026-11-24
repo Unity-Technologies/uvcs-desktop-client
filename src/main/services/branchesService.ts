@@ -39,10 +39,18 @@ export function createBranchesService({ cm, settings, headers }: ServiceContext,
     return branches.sort((a, b) => b.date.localeCompare(a.date));
   }
 
+  /**
+   * `cm find` matches branches by their last name part only. A workspace can be on a hidden branch, but rarely is: the
+   * hidden ones are asked for only when no visible branch has the full name, which saves a server round trip on every
+   * other lookup.
+   */
   async function get(place: Place, name: string): Promise<Branch | null> {
-    // `cm find` matches branches by their last name part only; a workspace can be on a hidden branch.
-    const named = await findVisibleAndHidden(place, {}, [equalsCondition('name', shortBranchName(name))], true);
-    return named.find((branch) => branch.name === name) ?? null;
+    const byShortName = [equalsCondition('name', shortBranchName(name))];
+    const withFullName = (branches: Branch[]) => branches.find((branch) => branch.name === name);
+    const visible = withFullName(await find(place, {}, [...byShortName, "hidden = 'false'"]));
+    if (visible) return visible;
+    const hidden = withFullName(await find(place, {}, [...byShortName, "hidden = 'true'"]));
+    return hidden ? { ...hidden, isHidden: true } : null;
   }
 
   function create(place: Place, request: CreateBranchRequest): Promise<void> {

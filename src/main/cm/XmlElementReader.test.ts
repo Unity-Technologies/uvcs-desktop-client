@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { text } from './parseXml';
+import { CmItemTooLargeError } from './outputLimit';
 import { XmlElementReader } from './XmlElementReader';
 
 const HISTORY = [
@@ -68,5 +69,19 @@ describe('XmlElementReader', () => {
     reader.read(Buffer.from('<Revision><Changeset', 'utf8'));
     expect(reader.count).toBe(1000);
     expect(reader.takeRest()).toBe('<Revision><Changeset');
+  });
+
+  it('fails an element still arriving past its limit: an output that never closes one would be kept whole', () => {
+    const reader = new XmlElementReader('Revision', () => 'read', 1000);
+    reader.read(Buffer.from(`<Revision>${'x'.repeat(600)}`));
+    expect(() => reader.read(Buffer.from('x'.repeat(600)))).toThrow(CmItemTooLargeError);
+  });
+
+  it('reads an element as long as its limit, arriving in chunks', () => {
+    const reader = new XmlElementReader('Revision', () => 'read', 1000);
+    const element = `<Revision><Comment>${'x'.repeat(1000 - '<Revision><Comment></Comment></Revision>'.length)}</Comment></Revision>`;
+    reader.read(Buffer.from(element.slice(0, -1)));
+    reader.read(Buffer.from(element.slice(-1)));
+    expect(reader.finish()).toEqual(['read']);
   });
 });

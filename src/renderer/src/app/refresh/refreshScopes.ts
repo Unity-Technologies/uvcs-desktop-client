@@ -1,3 +1,4 @@
+import { appliesChangeRequests } from '@shared/applyChange';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
 import type { QueryFilter } from '@shared/domain/query';
@@ -77,10 +78,22 @@ function isIncomingChangesetPage(key: QueryKey): boolean {
 const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeValues', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
 
 /**
+ * What the check-in's change requests to apply are read from (`useBranchChangeRequests`): the branch's reviews and the
+ * conversations read. A check-in, an update or a switch may bring changesets that applied some (someone else's check-in
+ * among them), so they're read again then; the other lists of reviews aren't. Only the shown ones are read again.
+ */
+function isBranchChangeRequests(key: QueryKey): boolean {
+  if (area(key) !== 'codeReviews') return false;
+  const filter = key[4];
+  return detail(key) === 'conversation' || (detail(key) === 'summaries' && typeof filter === 'object' && filter !== null && 'targetBranch' in filter);
+}
+
+/**
  * This workspace checked in, updated, or merged from a branch or changeset: everything but the objects those leave
  * alone, and changesets already read (only editing a comment changes one).
  */
 export function isAffectedByCheckinOrUpdate(key: QueryKey): boolean {
+  if (isBranchChangeRequests(key)) return true;
   if (area(key) === 'changesets' && detail(key) === 'byId') return false;
   if (isIncomingChangesetPage(key)) return false;
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
@@ -120,23 +133,48 @@ export function isAffectedByPermissions(kind: string, ownerChanged: boolean): (k
   return (key) => areas.includes(area(key) as string);
 }
 
-/** A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list. */
+/**
+ * A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list.
+ * Not the user's email subscription to a review, which only taking part in it changes (`isAffectedByTakingPartInReview`).
+ */
 export function isAffectedByCodeReviews(key: QueryKey): boolean {
+  return area(key) === 'codeReviews' && detail(key) !== 'subscription';
+}
+
+/**
+ * A write that makes the user take part in a review: a comment or a reply from them (a discard is one), reviewers added
+ * (them, or a group they're in), their own status (which makes them a reviewer). What any review write reads, and the
+ * user's email subscription too, as the server subscribes them again then. Of any review, not only the one written on:
+ * a reply names its comment, not its review, and only the subscription on screen is read now.
+ */
+export function isAffectedByTakingPartInReview(key: QueryKey): boolean {
   return area(key) === 'codeReviews';
 }
 
-/** What a code review's page reads about the review itself, by its number: the review, what was said on it, its reviewers. */
-const OF_ONE_REVIEW = ['review', 'conversation', 'reviewers'];
+/** The user subscribed to a review's emails or unsubscribed: whether they get that review's emails, and nothing else. */
+export function isAffectedByReviewSubscription(reviewId: number): (key: QueryKey) => boolean {
+  return (key) => area(key) === 'codeReviews' && detail(key) === 'subscription' && key[4] === reviewId;
+}
+
+/**
+ * What a code review's page reads about the review itself, by its number: the review, what was said on it, its
+ * reviewers, and whether the user gets its emails.
+ */
+const OF_ONE_REVIEW = ['review', 'conversation', 'reviewers', 'subscription'];
 
 /**
  * What a code review's page shows that others can change while it's open (a comment written, a status set, a changeset
- * checked in on its branch): the review, what was said on it and its reviewers, and, for a branch's review, the
- * branch's files and changesets its Changes tab reads. Not the lists of reviews, nor anything else of the window. A
- * changeset's or shelve's changes never change, and refreshes skip them anyway (`isRefreshable`).
+ * checked in on its branch): the review, what was said on it, its reviewers and the user's email subscription (someone
+ * adding them as a reviewer or mentioning them subscribes them), and, for a branch's review, the
+ * branch's files and changesets its Changes tab reads. For a merge request, its `destination` branch too, whose head
+ * keys the check of its conflicts (`useMergeRequestConflicts`; read only once asked). Not the lists of reviews, nor
+ * anything else of the window. A changeset's or shelve's changes never change, and refreshes skip them anyway
+ * (`isRefreshable`).
  */
-export function isShownByCodeReviewPage(reviewId: number, target: CodeReviewTarget | undefined): (key: QueryKey) => boolean {
+export function isShownByCodeReviewPage(reviewId: number, target: CodeReviewTarget | undefined, destination?: string): (key: QueryKey) => boolean {
   return (key) => {
     if (area(key) === 'codeReviews') return OF_ONE_REVIEW.includes(detail(key) as string) && key[4] === reviewId;
+    if (area(key) === 'branches') return destination !== undefined && detail(key) === 'byName' && key[4] === destination;
     if (target?.kind !== 'branch') return false;
     if (area(key) === 'diff') return isBranchDiffOf(detail(key), target.branch);
     return area(key) === 'changesets' && (detail(key) as QueryFilter | undefined)?.branch === target.branch;
@@ -155,6 +193,15 @@ export function isAffectedByLocks(key: QueryKey): boolean {
 
 /** What shows a changeset's comment: the changesets already read too, which only a comment edit changes. */
 const SHOWING_CHANGESET_COMMENTS = ['changesets', 'branchExplorer', 'history', 'annotate', 'workingObjectComment'];
+
+/**
+ * A check-in, or a changeset's comment edited, whose comment applies change requests (`[apply-change:c0d1ce00]`,
+ * `appliesChangeRequests`): `cm` marks them applied, so the code reviews are read again too (their Applied pills,
+ * their open counts, the change requests a check-in can apply). Any other comment: the scope as it is.
+ */
+export function withChangeRequestsApplied(scope: (key: QueryKey) => boolean, comment: string): (key: QueryKey) => boolean {
+  return appliesChangeRequests(comment) ? (key) => scope(key) || isAffectedByCodeReviews(key) : scope;
+}
 
 /** A changeset's comment was edited: only what shows it. */
 export function isAffectedByChangesetComment(key: QueryKey): boolean {
@@ -228,14 +275,21 @@ function isAffectedByWorkspaceEdit(key: QueryKey): boolean {
 
 /**
  * New changesets on the server: repository views (history, branches, incoming...), not the disk, the check that told,
- * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories).
+ * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories). Nor the
+ * incoming changes: those of a workspace at a changeset are keyed by the head the check saw, so the new head is a new
+ * key, and a partial workspace's check compares its items again itself (`useIncomingSummary`).
  */
 export function isAffectedByNewChangesets(key: QueryKey): boolean {
   if ((LOCAL_AREAS as readonly unknown[]).includes(area(key)) || area(key) === 'content') return false;
   // The workspace's own version of a file (no revision spec) changes with the workspace, not with others' checkins.
   if (area(key) === 'annotate' && key[4] == null) return false;
   if (UNTOUCHED_BY_CHECKINS.includes(area(key) as string)) return false;
-  return !isIncomingCheck(key) && !isIncomingChangesetPage(key);
+  return !isIncomingCheck(key) && !isIncomingChangesetPage(key) && !isIncomingChanges(key);
+}
+
+/** What updating brings (`incomingChangesKey`: `['incoming', 'changes', readFor]`). */
+function isIncomingChanges(key: QueryKey): boolean {
+  return area(key) === 'incoming' && detail(key) === 'changes';
 }
 
 /**

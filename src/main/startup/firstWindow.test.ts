@@ -13,10 +13,12 @@ interface Launch {
   namesAFolder?: boolean;
   /** Starting an early read fails (`EarlyCalls.start`). */
   readsFail?: boolean;
+  /** `cm` can run; false while the app's own is set up (`CmRuntime.isReady`), when nothing is read ahead either. */
+  cmReady?: boolean;
 }
 
 /** A launch of the app; returns what happened, in order. */
-function launch({ atLoad, atOpen = atLoad, namesAFolder = false, readsFail = false }: Launch): string[] {
+function launch({ atLoad, atOpen = atLoad, namesAFolder = false, readsFail = false, cmReady = true }: Launch): string[] {
   const steps: string[] = [];
   let firstWorkspace = atLoad;
   let failing = readsFail;
@@ -35,8 +37,10 @@ function launch({ atLoad, atOpen = atLoad, namesAFolder = false, readsFail = fal
     },
     settings: { get: () => SETTINGS },
     commandLog: { windowsOpened: () => void steps.push('send the commands logged so far') },
+    cmReady: () => cmReady,
   };
-  const readAhead = readFirstScreenAhead(sources, namesAFolder);
+  // As the main module does: nothing is read ahead while `cm` can't run.
+  const readAhead = cmReady ? readFirstScreenAhead(sources, namesAFolder) : null;
   steps.push('Electron ready');
   firstWorkspace = atOpen;
   failing = false;
@@ -57,6 +61,10 @@ afterEach(() => {
 });
 
 describe('the first window', () => {
+  it('reads nothing while the app’s own cm is set up: the window opens on the setup, and reads its screen once done', () => {
+    expect(launch({ atLoad: '/wk/game', cmReady: false })).toEqual(['Electron ready', ...OPENED]);
+  });
+
   it("starts the workspace's cm shells, shown while it opens, and its Changes view's reads before Electron is ready", () => {
     expect(launch({ atLoad: '/wk' })).toEqual([CM_VERSION, ...WORKSPACE_READS('/wk'), 'Electron ready', ...OPENED]);
   });
@@ -67,6 +75,7 @@ describe('the first window', () => {
       'warm up the home folder',
       'read workspaces.list []',
       'read repositories.servers []',
+      'read accounts.list []',
       'Electron ready',
       ...OPENED,
     ]);

@@ -1,11 +1,11 @@
 import { fakeApi } from '../../../testing/fakeWindow';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { DecidedMerge, DirectoryConflict, DirectoryDecision, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DecidedMerge, DirectoryConflict, DirectoryDecision, MergeOperation, MergePlan } from '@shared/domain/merge';
 import { shownToasts } from '../../../testing/operationOutcome';
 import { useToastStore } from '../../../ui/toast/toastStore';
 import { applyDirectoryDecision } from './applyDirectoryDecision';
 
-const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/feature' };
+const request: MergeOperation = { kind: 'merge', sourceSpec: 'br:/main/feature' };
 const conflictAt = (path: string, itemId: number): DirectoryConflict => ({
   type: 'divergentMove',
   title: 'Moved to different places',

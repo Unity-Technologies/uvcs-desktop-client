@@ -2,6 +2,9 @@ import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { fakeApi } from '../../testing/fakeWindow';
+import { codeReviewSummary } from '../../testing/codeReviewSummary';
+import { codeReviewKey } from '../../features/codeReviews/codeReviewKey';
+import { queryClient } from '../queryClient';
 import { diffTargetObject, linkCopyText, placeLinkTo, repositoryLinkTo } from './linkTo';
 
 describe('placeLinkTo', () => {
@@ -11,6 +14,17 @@ describe('placeLinkTo', () => {
 
     fakeApi.answer('workspaces.info', async () => ({ repository: 'tools@local' }));
     expect(await placeLinkTo(workspacePlace('/wk/tools'), { object: { kind: 'changeset', id: 3 } })()).toBe('uvcs://local/repos/tools/changesets/3');
+  });
+
+  it('writes a review its page read as a merge request as one, and any other as a code review, reading nothing', async () => {
+    const place = repositoryPlace('game@local');
+    queryClient.setQueryData(codeReviewKey(place, 12), codeReviewSummary({ id: 12, mergeRequest: { state: 'Open', destination: '/main' } }));
+    queryClient.setQueryData(codeReviewKey(place, 13), codeReviewSummary({ id: 13 }));
+
+    const links = await Promise.all([12, 13, 14].map((id) => placeLinkTo(place, { object: { kind: 'codeReview', id } })()));
+
+    expect(links).toEqual(['uvcs://local/repos/game/merge-requests/12', 'uvcs://local/repos/game/code-reviews/13', 'uvcs://local/repos/game/code-reviews/14']);
+    expect(fakeApi.calls()).toEqual([]);
   });
 });
 

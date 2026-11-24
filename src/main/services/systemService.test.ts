@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import type { CmRuntime } from '../cmRuntime/CmRuntime';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { readDraggedPath } from '../system/dragPasteboard';
 import { gravatarUrl } from '../system/gravatar';
@@ -27,10 +28,24 @@ vi.mock('../system/dragPasteboard', () => ({ readDraggedPath: vi.fn(async () => 
 // It needs the app's windows, which only a running app has.
 vi.mock('../window/incomingNotification', () => ({ showIncomingNotification: vi.fn() }));
 
-function system(answers: Record<string, CmAnswer>, settings: Partial<AppSettings> = {}) {
+/** The app's `cm` as the version read sees it: it admits every version unless a test says otherwise. */
+function fakeCmRuntime(overrides: Partial<Pick<CmRuntime, 'admits' | 'isReady' | 'installedRevision'>> = {}): CmRuntime {
+  const runtime: Pick<CmRuntime, 'admits' | 'isReady' | 'pinnedVersion' | 'installedRevision'> = {
+    admits: () => true,
+    isReady: () => true,
+    pinnedVersion: '11.0.16.10659',
+    installedRevision: () => 0,
+    ...overrides,
+  };
+  return runtime as CmRuntime;
+}
+
+function system(answers: Record<string, CmAnswer>, settings: Partial<AppSettings> = {}, cmRuntime = fakeCmRuntime()) {
   const fake = fakeCmClient(answers);
   const relocate = vi.spyOn(fake.cm, 'relocate');
-  return { ...fake, relocate, service: createSystemService(serviceContext(fake.cm, { settings: memorySettings(settings) }), profilesContext(fake.cm)) };
+  const logged: string[] = [];
+  const diagnosticLog = { write: (text: string) => void logged.push(text) };
+  return { ...fake, relocate, logged, service: createSystemService(serviceContext(fake.cm, { cmRuntime, settings: memorySettings(settings), diagnosticLog }), profilesContext(fake.cm)) };
 }
 
 describe('the cm version', () => {
@@ -52,6 +67,131 @@ describe('the cm version', () => {
     await service.cmVersion();
 
     expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('writes the version and where cm is to the log file once, when it answers', async () => {
+    const { service, cm, logged } = system({ version: '11.0.16.9876\n' });
+
+    await service.cmVersion();
+    await service.cmVersion();
+
+    expect(logged).toEqual([`cm 11.0.16.9876 at ${cm.executable}`]);
+  });
+});
+
+describe('the cm version of an installed cm older than the app’s own', () => {
+  const OWN_CM = '/store/cm';
+
+  /** The service over a fake `cm` printing the app's own version at `OWN_CM`, an older one anywhere else. */
+  function systemDroppingOlder() {
+    let running = { executable: 'cm' };
+    const setup = system({ version: () => (running.executable === OWN_CM ? '11.0.16.10659\n' : '11.0.16.9000\n') }, {}, droppingOlder(() => running));
+    running = setup.cm as { executable: string };
+    return setup;
+  }
+
+  /**
+   * As `CmRuntime.admits`: drops the older `cm` running for its own at `OWN_CM`, moving `cm` there as `relocated` would,
+   * and answers yes for any `cm` no longer running.
+   */
+  function droppingOlder(cm: () => { executable: string }): CmRuntime {
+    return fakeCmRuntime({
+      admits: (executable) => {
+        if (executable === OWN_CM || executable !== cm().executable) return true;
+        cm().executable = OWN_CM;
+        return false;
+      },
+    });
+  }
+
+  it('asks the app’s own instead once it runs it, with no other command', async () => {
+    const { service, lines } = systemDroppingOlder();
+
+    expect(await service.cmVersion()).toBe('11.0.16.10659');
+    expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('gives every window opening at once the app’s own version, never the older one they shared', async () => {
+    const { service, lines } = systemDroppingOlder();
+
+    expect(await Promise.all([service.cmVersion(), service.cmVersion()])).toEqual(['11.0.16.10659', '11.0.16.10659']);
+    expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('fails, naming both versions, while the app’s own sets up or where it has none', async () => {
+    const { service } = system({ version: '11.0.16.9000\n' }, {}, fakeCmRuntime({ admits: () => false, isReady: () => false }));
+
+    await expect(service.cmVersion()).rejects.toThrow('The installed Unity Version Control is older than this app needs. Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later');
+  });
+
+  it('asks again on Check Again, as the user may have updated it', async () => {
+    let answer = '11.0.16.9000\n';
+    const { service, lines } = system({ version: () => answer }, {}, fakeCmRuntime({ admits: (_executable, version) => version !== '11.0.16.9000', isReady: () => false }));
+
+    await expect(service.cmVersion()).rejects.toThrow('Installed: 11.0.16.9000');
+    answer = '11.0.16.10700\n';
+
+    expect(await service.cmVersion()).toBe('11.0.16.10700');
+    expect(lines()).toEqual(['version', 'version']);
+  });
+});
+
+describe('the cm version once the installed cm was updated', () => {
+  it('asks it again, rather than take what it answered before, or was answering as it was updated', async () => {
+    let revision = 0;
+    let answer = '11.0.16.10700\n';
+    const { service, lines } = system({ version: () => answer }, {}, fakeCmRuntime({ installedRevision: () => revision }));
+    await service.cmVersion();
+    answer = '11.0.16.10800\n';
+    revision = 1;
+
+    expect(await service.cmVersion()).toBe('11.0.16.10800');
+    expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('asks again when it was updated while the older one answered', async () => {
+    let revision = 0;
+    let answer = '11.0.16.9000\n';
+    const runtime = fakeCmRuntime({ installedRevision: () => revision, admits: (_executable, version) => version !== '11.0.16.9000' });
+    const { service } = system(
+      {
+        version: () => {
+          const given = answer;
+          // The update ends while this one answers.
+          answer = '11.0.16.10800\n';
+          revision = 1;
+          return given;
+        },
+      },
+      {},
+      runtime,
+    );
+
+    expect(await service.cmVersion()).toBe('11.0.16.10800');
+  });
+});
+
+describe('the cm version after choosing another cm', () => {
+  it('asks the newly chosen cm, and logs where it is', async () => {
+    let answer = '11.0.16.10659\n';
+    const { service, cm, logged, lines } = system({ version: () => answer });
+    await service.cmVersion();
+    (cm as { executable: string }).executable = '/usr/local/bin/cm';
+    answer = '11.0.16.9000\n';
+
+    expect(await service.cmVersion()).toBe('11.0.16.9000');
+    expect(lines()).toEqual(['version', 'version']);
+    expect(logged).toEqual(['cm 11.0.16.10659 at cm', 'cm 11.0.16.9000 at /usr/local/bin/cm']);
+  });
+});
+
+describe('a window’s unexpected error', () => {
+  it('goes to the log file with its stack', async () => {
+    const { service, logged } = system({});
+
+    await service.logUnexpectedError({ message: 'boom', details: 'Error: boom\n    at render (App.tsx:3)' });
+
+    expect(logged).toEqual(['Unexpected error in a window: Error: boom\n    at render (App.tsx:3)']);
   });
 });
 
@@ -156,18 +296,4 @@ describe('the setup and connection checks', () => {
     expect(fake.commands).toMatchObject([{ via: 'query', options: { anyDirectory: true } }]);
   });
 
-  it("checks a workspace's server once it answers, for every window, and again while it doesn't", async () => {
-    let reachable = false;
-    const { service, lines } = system({
-      checkconnection: () => (reachable ? 'Test connection executed successfully\n' : cmFails("Error: Can't resolve DNS entry for acme")),
-    });
-
-    expect(await service.checkConnection('acme:8087')).toMatchObject({ kind: 'serverUnreachable', server: 'acme:8087' });
-    reachable = true;
-    expect(await service.checkConnection('acme:8087')).toBeNull();
-    expect(await service.checkConnection('acme:8087')).toBeNull();
-    expect(await service.checkConnection('local')).toBeNull();
-
-    expect(lines()).toEqual(['checkconnection acme:8087', 'checkconnection acme:8087', 'checkconnection local']);
-  });
 });

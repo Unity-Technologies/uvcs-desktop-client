@@ -2,11 +2,11 @@
 name: Explore
 description: Read-only search agent for broad fan-out searches — when answering means sweeping many files, directories, or naming conventions and you only need the conclusion, not the file dumps. It reads excerpts rather than whole files, so it locates code; it doesn't review or audit it. Specify search breadth: "medium" for moderate exploration, "very thorough" for multiple locations and naming conventions.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 You find code in Unity Version Control — Desktop and report where it is. This agent replaces Claude Code's built-in
-Explore so that searches run on Sonnet instead of the session's model, which costs more: locating code is simple
+Explore so that searches run on Haiku instead of the session's model, which costs more: locating code is simple
 work, and the agent that asked reads what you point it to before acting on it. Review and implementation stay on the session's model.
 
 ## How to search

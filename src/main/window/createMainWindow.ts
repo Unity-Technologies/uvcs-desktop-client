@@ -3,7 +3,7 @@ import { app, BrowserWindow, nativeTheme, shell, type Event } from 'electron';
 import type { Place } from '@shared/domain/place';
 import type { PageSeed, PageWindowPage } from '@shared/domain/pageWindow';
 import type { SavedWindow } from '@shared/domain/settings';
-import { pageWindowQuery, startingPlaceQuery } from '@shared/startingPlace';
+import { cmSetupQuery, pageWindowQuery, startingPlaceQuery, type CmSetupStart } from '@shared/startingPlace';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -12,6 +12,7 @@ import { windowIcon } from './appIcon';
 import { cascadedWindowBounds, keepWindowBoundsSaved, loadWindowBounds, reopenedWindowBounds, type SavedBoundsKey } from './savedWindowBounds';
 import { fitWindowControls, followPageZoom } from './pageZoom';
 import { titleBarOptions } from './titleBar';
+import { windowsStayInBackground } from './backgroundWindows';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
 /** Until the user leaves a window somewhere (`loadWindowBounds`). */
@@ -37,6 +38,11 @@ interface MainWindowOptions {
   page?: PageWindowPage;
   /** What the page shows, already read where it opened (`PageSeed`). */
   seed?: PageSeed;
+  /**
+   * The app's own `cm` is still being set up, or updated: its page starts on the setup screen, from its first frame
+   * (`cmSetupQuery`), and opens its place once that's done.
+   */
+  cmSetup?: CmSetupStart | null;
   /** The window was asked to close; the first `close` listener, which may hold it back (`WorkspaceWindows`' `onCloseRequested`). */
   onCloseRequested?: (windowId: number, event: Event) => void;
 }
@@ -47,11 +53,13 @@ interface MainWindowOptions {
  */
 export function createMainWindow(
   settings: SettingsStore,
-  { cascadeFrom, place, reopen, inBackground, page, seed, onCloseRequested }: MainWindowOptions = {},
+  { cascadeFrom, place, reopen, inBackground, page, seed, onCloseRequested, cmSetup = null }: MainWindowOptions = {},
 ): BrowserWindow {
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
   const chrome = windowChrome(process.platform);
+  // Overrides `inBackground`: every window shows without the focus, and leaves the person's saved bounds alone.
+  const keptInBackground = windowsStayInBackground(process.env, app.isPackaged);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
     ...bounds,
@@ -66,16 +74,23 @@ export function createMainWindow(
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       sandbox: true,
+      // A window left behind others still runs its timers and animation frames, and its page reads as visible.
+      ...(keptInBackground ? { backgroundThrottling: false } : {}),
     },
   });
 
   // First: every other `close` listener (the bounds saved, `askBeforeUnloading`, the last window's) sees whether it was held back.
   if (onCloseRequested) window.on('close', (event) => onCloseRequested(window.id, event));
-  keepWindowBoundsSaved(window, settings, boundsKey);
+  if (!keptInBackground) keepWindowBoundsSaved(window, settings, boundsKey);
   followPageZoom(window, chrome);
   window.once('ready-to-show', () => {
     // The page has its zoom by now: the window shows with its controls where the zoomed top bar puts them.
     fitWindowControls(window, chrome);
+    // Never maximized or full screen, which would show it and take the focus.
+    if (keptInBackground) {
+      window.showInactive();
+      return;
+    }
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
     if (inBackground) window.showInactive();
@@ -91,7 +106,7 @@ export function createMainWindow(
     return { action: 'deny' };
   });
 
-  loadPage(window, page && place ? pageWindowQuery(place, page, seed) : startingPlaceQuery(place, reopen?.view));
+  loadPage(window, page && place ? pageWindowQuery(place, page, seed) : { ...startingPlaceQuery(place, reopen?.view), ...cmSetupQuery(cmSetup) });
   return window;
 }
 

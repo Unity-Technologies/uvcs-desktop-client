@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { comparedFile, fileThreadCount, hasComments, isCommentable, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
+import { comparedFile, fileThreadCount, isCommentable, openedAsCommentsToggle, openedOnFocus, openedOnSend, outdatedOpensFor } from './fileAnnotation';
 import type { LineThread } from './fileThreads';
 
 const ENTRY: DiffEntry = { status: 'changed', path: 'src/Player.cs', itemType: 'file', baseRevisionId: 10, revisionId: 30, repository: 'game@local' };
 
 function thread(id: number, extra: Partial<ReviewComment> = {}): LineThread {
-  const root: ReviewComment = { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', line: 3 }, ...extra };
+  const root: ReviewComment = { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 20, itemId: 7, path: '/src/Player.cs', firstLine: 3, lastLine: 3 }, ...extra };
   return threadsOf([root])[0] as LineThread;
 }
 
@@ -27,14 +27,6 @@ describe('isCommentable', () => {
 describe('comparedFile', () => {
   it("is the entry's path and revisions", () => {
     expect(comparedFile(ENTRY)).toEqual({ path: 'src/Player.cs', oldPath: undefined, originalRevision: 10, modifiedRevision: 30 });
-  });
-});
-
-describe('hasComments', () => {
-  it('is any thread at a line or outdated', () => {
-    expect(hasComments(null)).toBe(false);
-    expect(hasComments({ lines: [], outdated: [] })).toBe(false);
-    expect(hasComments({ lines: [], outdated: [{ thread: thread(1), revisionId: 20 }] })).toBe(true);
   });
 });
 
@@ -76,18 +68,18 @@ describe('fileThreadCount', () => {
     date: '2026-11-06T10:00:00Z',
     text: '',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line: 3 },
+    anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: 3, lastLine: 3 },
     ...extra,
   });
   const threads = threadsOf([
     onPlayer(1, 30),
     onPlayer(2, 20),
     onPlayer(3, 10, { changesetId: 8 }),
-    { ...onPlayer(4, 30), anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', line: 1 } },
+    { ...onPlayer(4, 30), anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', firstLine: 1, lastLine: 1 } },
     { ...onPlayer(5, 30), anchor: { kind: 'review' } },
   ]);
 
-  it("counts the file's threads the whole branch shows: on its versions, on earlier ones, and those written changeset by changeset", () => {
+  it("counts the file's threads the whole branch shows: on its versions, on earlier ones, and those written in one changeset's diff", () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, ENTRY)).toBe(3);
   });
 
@@ -98,6 +90,16 @@ describe('fileThreadCount', () => {
   it('counts none on a file without threads, by its path or the one it moved from', () => {
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/Other.cs' })).toBe(0);
     expect(fileThreadCount(threads, BRANCH, { kind: 'whole' }, { ...ENTRY, path: 'src/game/Player.cs', oldPath: 'src/Player.cs' })).toBe(3);
+  });
+
+  it('counts the threads on the image with those on lines', () => {
+    const onImage = onPlayer(9, 30, { anchor: { kind: 'image', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { x: 1, y: 1 } } });
+    expect(fileThreadCount(threadsOf([onPlayer(1, 30), onImage]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
+  });
+
+  it('counts the threads on the model with those on lines', () => {
+    const onModel = onPlayer(9, 30, { anchor: { kind: 'model', revisionId: 30, itemId: 7, path: '/src/Player.cs', spot: { point: { x: 1, y: 1, z: 1 } } } });
+    expect(fileThreadCount(threadsOf([onPlayer(1, 30), onModel]), BRANCH, { kind: 'whole' }, ENTRY)).toBe(2);
   });
 });
 
@@ -116,5 +118,18 @@ describe('openedOnSend', () => {
     const opened = inFile(['additions:9']);
     expect(openedOnSend(opened, 'src/Player.cs', 'additions:9', false)).toBe(opened);
     expect(openedOnSend(opened, 'src/Player.cs', 'additions:3', true)).toBe(opened);
+  });
+});
+
+describe('openedAsCommentsToggle', () => {
+  const opened = { path: 'a.cs', keys: ['additions:3'] };
+
+  it('closes every line as comments hide, those opened while last hidden too', () => {
+    expect(openedAsCommentsToggle(opened, true, false)).toEqual({ path: 'a.cs', keys: [] });
+  });
+
+  it('keeps them as comments show, and with nothing toggled', () => {
+    expect(openedAsCommentsToggle(opened, false, true)).toBe(opened);
+    expect(openedAsCommentsToggle(opened, false, false)).toBe(opened);
   });
 });

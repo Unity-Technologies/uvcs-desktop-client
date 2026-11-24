@@ -29,6 +29,12 @@
   animation: var(--keyframes-pulse) 1.2s ease-in-out infinite alternate;
 }
 
+.line {
+  display: flex;
+  align-items: center;
+  height: 1lh;
+}
+
 .mark {
   width: 14px;
   height: 14px;

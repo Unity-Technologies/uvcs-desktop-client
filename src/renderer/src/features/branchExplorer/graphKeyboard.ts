@@ -26,8 +26,8 @@ export interface GraphKeyboard {
   select: (selection: GraphSelection | null) => void;
   homeChangeset: number | null;
   repository: string;
-  /** The window shows a workspace, which `M` merges into: a repository explored without one has none (`keyboardMergeSource`). */
-  inWorkspace: boolean;
+  /** Merges are offered here (`offersMerges`), so `M` merges into the workspace: never in a repository explored without one, nor in a partial workspace (`keyboardMergeSource`). */
+  mergesOffered: boolean;
   canvas: RefObject<GraphCanvasHandle | null>;
   goHome: () => void;
   find: () => void;
@@ -41,11 +41,11 @@ export interface GraphKeyboard {
 }
 
 /**
- * What `M` merges into the workspace: the changeset or branch selected; nothing with neither selected, nor in a
- * repository explored without a workspace, which has none to merge into (the merge page is a workspace's).
+ * What `M` merges into the workspace: the changeset or branch selected; nothing with neither selected, nor where no
+ * merge is offered (`offersMerges`): a repository explored without a workspace, a partial workspace.
  */
-export function keyboardMergeSource(selection: GraphSelection | null, inWorkspace: boolean): string | null {
-  if (!inWorkspace) return null;
+export function keyboardMergeSource(selection: GraphSelection | null, mergesOffered: boolean): string | null {
+  if (!mergesOffered) return null;
   if (selection?.kind === 'changeset') return spec.changeset(selection.id);
   if (selection?.kind === 'branch') return spec.branch(selection.name);
   return null;
@@ -107,6 +107,7 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
     if (label) canvas.current?.openContextMenu({ kind: 'label', label, more: [] });
     else if (selectedId !== null) canvas.current?.openContextMenu({ kind: 'changeset', id: layout.nodes.get(selectedId)?.changeset.id ?? selectedId });
     else if (selection?.kind === 'branch' && lane) canvas.current?.openContextMenu({ kind: 'branch', lane });
+    else if (selection?.kind === 'pending') canvas.current?.openContextMenu({ kind: 'pending' });
   };
 
   return [
@@ -130,7 +131,7 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
     [
       'graphMerge',
       onLead(() => {
-        const source = keyboardMergeSource(selection, keyboard.inWorkspace);
+        const source = keyboardMergeSource(selection, keyboard.mergesOffered);
         if (source !== null) graphActions.merge('merge', source);
       }),
     ],

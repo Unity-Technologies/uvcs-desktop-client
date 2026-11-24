@@ -10,9 +10,16 @@
 import type { ReactNode } from 'react';
 import { IconButton } from '../../../../ui/IconButton';
 import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
+import type { ImageSide } from './imageAnnotations';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
 import styles from './stage.module.css';
+
+/** What a place draws over a viewport showing the given sides' images: a review's comments (`ImageCommentsOverlay`). */
+export type StageOverlay = (sides: readonly ImageSide[]) => ReactNode;
+
+/** A viewport showing both revisions laid over each other (onion skin, swipe, differences). */
+export const BOTH_SIDES: readonly ImageSide[] = ['old', 'new'];
 
 /** Marks viewport elements, so the pixel inspector can find the one under the cursor. */
 export const VIEWPORT_ATTRIBUTE = 'data-image-viewport';

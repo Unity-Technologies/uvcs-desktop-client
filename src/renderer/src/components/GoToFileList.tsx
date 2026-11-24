@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { CenteredSpinner } from '../ui/Spinner';
+import { showsRowActions } from '../lib/rowMenu';
 import styles from './GoToFileList.module.css';
 
 interface GoToFileListProps {
@@ -10,25 +11,47 @@ interface GoToFileListProps {
   onPick: (path: string) => void;
   /** The result as its tree shows it. */
   row: (path: string) => ReactNode;
-  /** What the highlighted result offers beside it (the workspace's actions). */
-  highlightedExtra?: (path: string) => ReactNode;
+  /** A result's actions (`RowActionsButton`), shown on the highlighted result and on the one whose menu is open. */
+  actions?: (path: string) => ReactNode;
+  /** The result whose actions menu is open, if any. */
+  actionsOpenFor?: string | null;
+  /** A right click on a result: opens its actions, as its "…" and Tab do. */
+  onOpenActions?: (index: number) => void;
+  /** A control before each result, outside the button that picks it (Choose what to download's checkbox). */
+  lead?: (path: string) => ReactNode;
+  /** What shows at each result's end (Choose what to download's Download or Remove pill). */
+  end?: (path: string) => ReactNode;
   loading: boolean;
   /** What shows instead of results, or beside the first ones (none, the dialog having nothing to say). */
   note: string | null;
 }
 
 /** Go to file's results, a workspace's or a repository's: the highlighted one picked with Enter (`goToFileKey`) or a click. */
-export function GoToFileList({ paths, highlighted, onHighlight, onPick, row, highlightedExtra, loading, note }: GoToFileListProps) {
+export function GoToFileList({ paths, highlighted, onHighlight, onPick, row, actions, actionsOpenFor, onOpenActions, lead, end, loading, note }: GoToFileListProps) {
   return (
     <div className={styles.results}>
       {loading && <CenteredSpinner />}
       {note && <div className={styles.empty}>{note}</div>}
       {paths.map((path, index) => (
-        <div key={path} className={styles.resultRow} data-highlighted={index === highlighted} onMouseEnter={() => onHighlight(index)}>
+        <div
+          key={path}
+          className={styles.resultRow}
+          data-highlighted={index === highlighted}
+          onMouseEnter={() => onHighlight(index)}
+          onContextMenu={
+            onOpenActions &&
+            ((event) => {
+              event.preventDefault();
+              onOpenActions(index);
+            })
+          }
+        >
+          {lead && <span className={styles.lead}>{lead(path)}</span>}
           <button type="button" className={styles.result} onClick={() => onPick(path)}>
             {row(path)}
           </button>
-          {index === highlighted && highlightedExtra?.(path)}
+          {end?.(path)}
+          {showsRowActions({ highlighted: index === highlighted, menuOpen: path === actionsOpenFor }) && actions?.(path)}
         </div>
       ))}
     </div>

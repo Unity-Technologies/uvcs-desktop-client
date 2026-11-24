@@ -1,8 +1,8 @@
-import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
+import { followUpMerge, type MergeOperation, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation, shownMergeId } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
-import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByCodeReviews, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { fileNameOf, listNames, pluralize } from '../../lib/text';
 import { toast } from '../../ui/toast/toastStore';
@@ -21,7 +21,7 @@ import { CLOSE_MERGE_QUESTION, describeSpec } from './mergeDescription';
  */
 export async function completeMerge(
   workspacePath: string,
-  request: MergeRequest,
+  request: MergeOperation,
   resolutions: MergeResolutions,
   finishing?: FinishingTask,
 ): Promise<MergeResult | null> {
@@ -30,7 +30,7 @@ export async function completeMerge(
     title: 'Merging',
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
-    affects: mergeRefreshScope(request),
+    affects: mergeRefreshScope(request, finishing !== undefined),
     success: (merged) => mergeSuccess(request, finishing?.task.branch.name, merged),
   });
   if (!result) return null;
@@ -47,8 +47,12 @@ export async function completeMerge(
   return null;
 }
 
-/** What a merge can change: the workspace and what a checkin changes, or only what a new changeset on the server does. */
-function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]) => boolean {
+/**
+ * What a merge can change: the workspace and what a checkin changes, or only what a new changeset on the server does.
+ * A task's merge leaves the reviews to `finishMergedTask`, which reads them once its merge requests are recorded.
+ */
+function mergeRefreshScope(request: MergeOperation, finishesTask: boolean): (queryKey: readonly unknown[]) => boolean {
+  if (request.destinationBranch && finishesTask) return (key) => isAffectedByServerMerge(key) && !isAffectedByCodeReviews(key);
   if (request.destinationBranch) return isAffectedByServerMerge;
   // Merging a shelve applies it, and may finish the left changes that offered it.
   return request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate;
@@ -58,7 +62,7 @@ function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]
  * How a merge's progress card ends: the workspace has the result to check in, or the server a new changeset, a click
  * away in the Branch Explorer. It goes away in silence while a server merge still needs the one that finishes it.
  */
-function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, result: MergeResult): OperationSuccess | null {
+function mergeSuccess(request: MergeOperation, taskBranch: string | undefined, result: MergeResult): OperationSuccess | null {
   const destination = request.destinationBranch;
   if (!destination) return workspaceMergeSuccess(result);
   if (result.destinationMoved) return null;
@@ -114,7 +118,7 @@ export async function closeMergeAsked(): Promise<void> {
 }
 
 /** Opens the merge page; `task` when it finishes a task branch on the server. */
-export function openMerge(request: MergeRequest, task?: TaskMerge): void {
+export function openMerge(request: MergeOperation, task?: TaskMerge): void {
   navigation.openPage({ kind: 'merge', request, ...(task && { task }) });
 }
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
-import type { DecidedMerge, DirectoryConflict, DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DecidedMerge, DirectoryConflict, DirectoryConflictResolution, MergeOperation, MergePlan } from '@shared/domain/merge';
 import { api } from '../../../api/client';
 import { applyDirectoryDecision } from './applyDirectoryDecision';
 import { changesDecisions, resolutionsByConflict } from './directoryDecisions';
@@ -11,7 +11,7 @@ import { changesDecisions, resolutionsByConflict } from './directoryDecisions';
  * merge `cm` calculates again on them becomes the page's plan, where a decision may have moved, removed or added file
  * conflicts and changes. One is applied at a time. The main process keeps them, named by the page, until it closes.
  */
-export function useDirectoryDecisions(workspacePath: string, request: MergeRequest, initialPlan: MergePlan) {
+export function useDirectoryDecisions(workspacePath: string, request: MergeOperation, initialPlan: MergePlan) {
   const [decisionsId] = useState(() => crypto.randomUUID());
   const [decided, setDecided] = useState<DecidedMerge>({ plan: initialPlan, decisions: [] });
   const [applying, setApplying] = useState<string | null>(null);

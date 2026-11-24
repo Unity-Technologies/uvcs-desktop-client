@@ -14,11 +14,15 @@ export function useReturnFocus(open: boolean): { onCloseAutoFocus: (event: Event
 
   return {
     onCloseAutoFocus: (event) =>
-      focusAfterMenu(event, () => {
-        const element = previous.current;
-        if (!(element instanceof HTMLElement) || element === document.body || !element.isConnected) return;
-        event.preventDefault();
-        element.focus({ preventScroll: true });
-      }),
+      focusAfterMenu(
+        event,
+        () => {
+          const element = previous.current;
+          if (!(element instanceof HTMLElement) || element === document.body || !element.isConnected) return;
+          event.preventDefault();
+          element.focus({ preventScroll: true });
+        },
+        previous.current,
+      ),
   };
 }

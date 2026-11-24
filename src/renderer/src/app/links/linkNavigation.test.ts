@@ -71,12 +71,45 @@ describe('linkNavigation', () => {
       show: { kind: 'change', path: 'a.cs', lines: LINE_42 },
     });
   });
+
+  describe("a review's comment", () => {
+    const target: LinkTarget = { object: { kind: 'codeReview', id: 41 }, page: { kind: 'reviewComment', commentId: 7 } };
+    const comment = { id: 7, guid: 'g7', author: 'ana', date: '', text: '', kind: 'general', anchor: { kind: 'review' } } as const;
+
+    it("reads the review's conversation first, the read its page makes", () => {
+      expect(linkLookup(target)).toEqual({ kind: 'reviewConversation', reviewId: 41 });
+    });
+
+    it('opens the review where the comment is', () => {
+      expect(linkNavigation(target, { conversation: { comments: [comment], events: [] } })).toEqual({
+        kind: 'page',
+        page: { kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7 },
+      });
+    });
+
+    it('opens the review on its conversation for a comment it no longer has, and says so', () => {
+      expect(linkNavigation(target, { conversation: { comments: [], events: [] } })).toEqual({
+        kind: 'page',
+        page: { kind: 'codeReview', reviewId: 41 },
+        notice: { title: 'Comment not found', description: 'Code review 41 has no such comment. It may have been deleted.' },
+      });
+    });
+
+    it('is never named without its review: parseLink reads a comment only after one', () => {
+      expect(() => linkNavigation({ page: { kind: 'reviewComment', commentId: 7 } }, null)).toThrow();
+    });
+
+    it("opens the review alone when its conversation couldn't be read: the review's page says why", () => {
+      expect(linkNavigation(target, { conversation: null })).toEqual({ kind: 'page', page: { kind: 'codeReview', reviewId: 41 } });
+    });
+  });
 });
 
 describe('LINK_VIEW_IDS', () => {
   // A view added to the sidebar gets its link name (docs/features/deep-links.md), and every link view opens one.
-  it('names every view of the sidebar, each once', () => {
+  it('names every view of the sidebar, each once but Merge requests, whose older name code-reviews keeps opening it', () => {
     expect(Object.keys(LINK_VIEW_IDS).sort()).toEqual([...LINK_VIEWS].sort());
-    expect(Object.values(LINK_VIEW_IDS).sort()).toEqual([...VIEW_IDS].sort());
+    expect([...new Set(Object.values(LINK_VIEW_IDS))].sort()).toEqual([...VIEW_IDS].sort());
+    expect(Object.keys(LINK_VIEW_IDS).filter((name) => LINK_VIEW_IDS[name as keyof typeof LINK_VIEW_IDS] === 'codeReviews')).toEqual(['merge-requests', 'code-reviews']);
   });
 });

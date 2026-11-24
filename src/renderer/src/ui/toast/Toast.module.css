@@ -92,11 +92,67 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
-  max-height: 120px;
+  /* Folded to its first lines (`toastDetail`), never a scroll box in the middle of the card. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* Whole, up to a third of the window, so two unfolded at once still fit: only a message longer than that scrolls. */
+.detail[data-unfolded] {
+  display: block;
+  max-height: 30vh;
   overflow: auto;
 }
 
+/* Under the text, so the detail has the card's whole width. */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* As a folded comment's toggle (`FoldedComment`). */
+.toggle {
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+}
+
+.toggle:hover {
+  text-decoration: underline;
+}
+
+/* Copy and the action keep to the right, with or without the toggle. */
+.copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.copy:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.copy + .action {
+  margin-left: 0;
+}
+
 .action {
+  margin-left: auto;
   padding: 2px 8px;
   border: none;
   border-radius: var(--radius-sm);

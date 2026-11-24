@@ -1,0 +1,42 @@
+.cover {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.covered {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Covered, what it covers draws its layers (a model viewer's labels, floating cards) within it, under the screen. Only
+   then: a stacking context around the views keeps their own overlays (a comment's larger editor) under what the page's
+   body draws. */
+.covered[inert] {
+  isolation: isolate;
+}
+
+/* Over the place's sidebar, view and status bar, which show through blurred; the top bar stays, with the window's
+   buttons and the way home. Above all they draw: `.covered` keeps their layers (a model viewer's labels and toolbars,
+   floating cards) in its own stacking context. */
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--scrim-sign-in);
+  backdrop-filter: blur(6px);
+}
+
+/* Without see-through surfaces, the message takes the place's page, opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  .screen {
+    background: var(--bg-app);
+    backdrop-filter: none;
+  }
+}

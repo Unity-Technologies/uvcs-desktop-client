@@ -7,7 +7,9 @@ import {
   isAffectedByAttributes,
   isAffectedByBranchList,
   isAffectedByChangesetComment,
+  withChangeRequestsApplied,
   isAffectedByChangesetMove,
+  isAffectedByCodeReviews,
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
@@ -21,6 +23,8 @@ import {
   isAffectedByShelveComment,
   isAffectedByShelving,
   isAffectedByShelvingAway,
+  isAffectedByTakingPartInReview,
+  isAffectedByReviewSubscription,
   isAffectedByWorkspaceState,
   isShownByCodeReviewPage,
 } from './refreshScopes';
@@ -54,7 +58,6 @@ describe('refresh scopes', () => {
 
   it('refreshes repository views on new changesets, but not the disk or the incoming check itself', () => {
     expect(isAffectedByNewChangesets(key('branchExplorer', {}))).toBe(true);
-    expect(isAffectedByNewChangesets(key('incoming', 'changes'))).toBe(true);
     expect(isAffectedByNewChangesets(key('incoming', 'summary'))).toBe(false);
     expect(isAffectedByNewChangesets(key('pendingChanges'))).toBe(false);
     expect(isAffectedByNewChangesets(key('content', { kind: 'revision' }))).toBe(false);
@@ -89,6 +92,27 @@ describe('refresh scopes', () => {
     expect(isAffectedByCheckinOrUpdate(key('labels', {}))).toBe(false);
     expect(isAffectedByCheckinOrUpdate(key('shelves', { owners: ['me'] }))).toBe(false);
     expect(isAffectedByCheckinOrUpdate(key('changesets', 'byId', 4))).toBe(false);
+  });
+
+  it('refreshes the code reviews too after a check-in or a comment edit whose comment applies a change request', () => {
+    const checkin = withChangeRequestsApplied(isAffectedByCheckinOrUpdate, 'Shelve first [apply-change:c0d1ce00]');
+    expect(checkin(key('codeReviews', 'summaries', { targetBranch: '/main/task' }))).toBe(true);
+    expect(checkin(key('codeReviews', 'conversation', 43))).toBe(true);
+    expect(checkin(key('pendingChanges'))).toBe(true);
+    expect(checkin(key('labels', {}))).toBe(false);
+    expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed [APPLY-CHANGE:c0d1ce00]')(key('codeReviews', {}))).toBe(true);
+  });
+
+  it("refreshes a branch's change requests to apply after any check-in or update: what came in may have applied some", () => {
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', 'summaries', { targetBranch: '/main/task' }))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', 'conversation', 43))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', 'summaries', {}))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('codeReviews', {}))).toBe(false);
+  });
+
+  it('leaves the code reviews alone after a comment that applies none', () => {
+    expect(withChangeRequestsApplied(isAffectedByCheckinOrUpdate, 'Shelve first, see cr:43 and [apply-change:c0d1ce0]')(key('codeReviews', {}))).toBe(false);
+    expect(withChangeRequestsApplied(isAffectedByChangesetComment, 'Fixed')).toBe(isAffectedByChangesetComment);
   });
 
   it('refreshes only the shelve lists after shelving changes that stay in the workspace', () => {
@@ -244,19 +268,48 @@ describe('incoming changeset pages', () => {
     expect(isAffectedByChangesetMove(newest)).toBe(true);
   });
 
-  it('leave the incoming changes themselves to the refreshes', () => {
-    expect(isAffectedByNewChangesets(key('incoming', 'changes'))).toBe(true);
+  it('leave the incoming changes themselves to the refreshes of operations', () => {
     expect(isAffectedByCheckinOrUpdate(key('incoming', 'changes'))).toBe(true);
+  });
+
+  it('never read the incoming changes again on new changesets: the new head is a new key, and a partial check compares again itself', () => {
+    expect(isAffectedByNewChangesets(key('incoming', 'changes', { branch: '/main', loadedChangeset: 41, headChangeset: 43 }))).toBe(false);
+    expect(isAffectedByNewChangesets(key('incoming', 'changes', { branch: '/main', partial: true }))).toBe(false);
+  });
+});
+
+describe("a review's email subscription", () => {
+  it('subscribing or unsubscribing reads that review\'s subscription again, nothing else', () => {
+    const subscription = isAffectedByReviewSubscription(7);
+    expect(subscription(key('codeReviews', 'subscription', 7))).toBe(true);
+    expect(subscription(key('codeReviews', 'subscription', 8))).toBe(false);
+    expect(subscription(key('codeReviews', 'review', 7))).toBe(false);
+    expect(subscription(key('codeReviews', 'list', {}))).toBe(false);
+  });
+
+  // Only taking part (a comment, a reply, a reviewer added, the user's own status) can subscribe the user again.
+  it('is read again by a write that makes the user take part, with the rest of the reviews', () => {
+    expect(isAffectedByTakingPartInReview(key('codeReviews', 'subscription', 7))).toBe(true);
+    expect(isAffectedByTakingPartInReview(key('codeReviews', 'conversation', 7))).toBe(true);
+    expect(isAffectedByTakingPartInReview(key('codeReviews', 'list', {}))).toBe(true);
+    expect(isAffectedByTakingPartInReview(key('branches', {}))).toBe(false);
+  });
+
+  it('is not read again by any other write on a review: a rename, a delete, an edit', () => {
+    expect(isAffectedByCodeReviews(key('codeReviews', 'subscription', 7))).toBe(false);
+    expect(isAffectedByCodeReviews(key('codeReviews', 'conversation', 7))).toBe(true);
   });
 });
 
 describe("a code review's page", () => {
   const branchReview = isShownByCodeReviewPage(7, { kind: 'branch', branch: '/main/task-12' });
 
-  it('reads again the review, what was said on it and its reviewers, of that review only', () => {
+  it("reads again the review, what was said on it, its reviewers and the user's subscription, of that review only", () => {
     expect(branchReview(key('codeReviews', 'review', 7))).toBe(true);
     expect(branchReview(key('codeReviews', 'conversation', 7))).toBe(true);
     expect(branchReview(key('codeReviews', 'reviewers', 7))).toBe(true);
+    expect(branchReview(key('codeReviews', 'subscription', 7))).toBe(true);
+    expect(branchReview(key('codeReviews', 'subscription', 8))).toBe(false);
     expect(branchReview(key('codeReviews', 'conversation', 8))).toBe(false);
     expect(branchReview(key('codeReviews', 'review', 70))).toBe(false);
   });
@@ -285,6 +338,14 @@ describe("a code review's page", () => {
     expect(branchReview(key('changesets', {}))).toBe(false);
   });
 
+  it("reads again a merge request's destination branch, whose head keys the check of its conflicts", () => {
+    const request = isShownByCodeReviewPage(7, { kind: 'branch', branch: '/main/task-12' }, '/main');
+    expect(request(key('branches', 'byName', '/main'))).toBe(true);
+    expect(request(key('branches', 'byName', '/main/other'))).toBe(false);
+    expect(request(key('branches', {}))).toBe(false);
+    expect(branchReview(key('branches', 'byName', '/main'))).toBe(false);
+  });
+
   it("leaves a changeset's or shelve's changes alone, and every diff while the review isn't read yet", () => {
     const changesetReview = isShownByCodeReviewPage(7, { kind: 'changeset', changesetId: 40 });
     const unread = isShownByCodeReviewPage(7, undefined);
@@ -293,5 +354,19 @@ describe("a code review's page", () => {
     expect(isShownByCodeReviewPage(7, { kind: 'shelve', shelveId: 3 })(key('diff', { kind: 'shelve', shelveId: 3 }))).toBe(false);
     expect(unread(key('codeReviews', 'review', 7))).toBe(true);
     expect(unread(key('diff', { kind: 'branch', branch: '/main/task-12' }))).toBe(false);
+  });
+});
+
+describe("the review that stands for a branch", () => {
+  // `branchReviewKey`'s shape: a write on a review or a Refresh reads again the branches shown, in blocks.
+  const ofBranch = key('codeReviews', 'ofBranch', 37);
+
+  it('is read again by a write on any review', () => {
+    expect(isAffectedByCodeReviews(ofBranch)).toBe(true);
+  });
+
+  it("isn't read again by one review page's own refresh, nor by a check-in", () => {
+    expect(isShownByCodeReviewPage(12, { kind: 'branch', branch: '/main/task' })(ofBranch)).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(ofBranch)).toBe(false);
   });
 });

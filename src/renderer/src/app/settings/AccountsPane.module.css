@@ -28,24 +28,55 @@
   list-style: none;
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
-}
-
-.row + .row {
+.account + .account {
   border-top: 1px solid var(--border-subtle);
 }
 
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-1);
+}
+
+/* The chevron's room is kept on a row that doesn't open, so every avatar lines up. */
+.expand {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+}
+
+button.expand:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.chevron {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.expand[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
 /* Remove is only offered on the row being pointed at, so the list reads as accounts, not buttons. */
-.row > button {
+.row > button:last-child,
+.serverRow > button {
   opacity: 0;
 }
 
-.row:hover > button,
-.row > button:focus-visible {
+.row:hover > button:last-child,
+.row > button:last-child:focus-visible,
+.serverRow:hover > button,
+.serverRow > button:focus-visible {
   opacity: 1;
 }
 
@@ -57,18 +88,13 @@
   min-width: 0;
 }
 
-.server {
+.user {
   display: flex;
   align-items: center;
   gap: 6px;
   overflow: hidden;
   font-weight: var(--weight-medium);
   white-space: nowrap;
-}
-
-.server > svg {
-  flex: none;
-  color: var(--text-secondary);
 }
 
 .inUse {
@@ -82,10 +108,37 @@
   line-height: 16px;
 }
 
-.user {
+.detail {
   overflow: hidden;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The organizations, under the user's name, in line with it. */
+.servers {
+  margin: 0;
+  padding: 0 var(--space-2) var(--space-2) calc(var(--space-1) + 22px + var(--space-2) + 28px + var(--space-2));
+  list-style: none;
+}
+
+.serverRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  color: var(--text-secondary);
+}
+
+.serverRow > svg {
+  flex: none;
+}
+
+.serverName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

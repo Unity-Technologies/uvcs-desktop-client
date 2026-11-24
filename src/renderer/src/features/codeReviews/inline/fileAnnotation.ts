@@ -1,9 +1,8 @@
 import { otherRepository } from '@shared/domain/repository';
 import type { DiffEntry } from '@shared/domain/diff';
-import type { FileComments } from './fileComments';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewThread } from '../conversation/reviewThreads';
-import { threadsOfFile, type EarlierThread, type ReviewDiffView, type ShownFile } from './fileThreads';
+import { imageThreadsOfFile, modelThreadsOfFile, threadsOfFile, type EarlierThread, type ReviewDiffView, type ShownFile } from './fileThreads';
 import type { ThreadFocus } from './reviewComments';
 
 /**
@@ -20,19 +19,17 @@ export function comparedFile(entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRe
 }
 
 /**
- * How many threads a file of the review's diff holds in `view` (`threadsOfFile`), for its row's mark in the list. Read
- * from the threads alone, as the list reads no file: an outdated one written changeset by changeset counts in the whole
+ * How many threads a file of the review's diff holds in `view` (on lines, `threadsOfFile`; on its image or model), for its row's mark in the list. Read
+ * from the threads alone, as the list reads no file: an outdated one written in one changeset's diff counts in the whole
  * branch's list too, though only its changeset's diff shows it (`placeEarlier`), a rare case not worth reading versions for.
  */
 export function fileThreadCount(threads: readonly ReviewThread[], review: CodeReviewTarget, view: ReviewDiffView, entry: Pick<DiffEntry, 'path' | 'oldPath' | 'baseRevisionId' | 'revisionId'>): number {
-  const { placed, earlier } = threadsOfFile(threads, review, view, comparedFile(entry));
-  return placed.length + earlier.length;
+  const file = comparedFile(entry);
+  const onLines = threadsOfFile(threads, review, view, file);
+  const onSpots = [imageThreadsOfFile(threads, review, view, file), modelThreadsOfFile(threads, review, view, file)];
+  return onLines.placed.length + onLines.earlier.length + onSpots.reduce((count, { placed, earlier }) => count + placed.length + earlier.length, 0);
 }
 
-/** Whether a file shows anything of its threads: some at their lines, or outdated ones. */
-export function hasComments(comments: Pick<FileComments, 'lines' | 'outdated'> | null): comments is FileComments {
-  return comments !== null && (comments.lines.length > 0 || comments.outdated.length > 0);
-}
 
 /**
  * The lines opened while comments are hidden, once a thread on one is gone to: its line opens, after the others (the
@@ -49,6 +46,14 @@ export function openedOnFocus(opened: readonly string[], focus: ThreadFocus, lin
 export interface OpenedLines {
   path: string;
   keys: readonly string[];
+}
+
+/**
+ * The lines opened as comments show or hide: hiding them closes every line, those opened while they were last hidden
+ * too, so Hide always leaves the diff alone (a thread selected as they hide included, as on an image or a model).
+ */
+export function openedAsCommentsToggle(opened: OpenedLines, wasInCode: boolean, inCode: boolean): OpenedLines {
+  return wasInCode && !inCode && opened.keys.length > 0 ? { path: opened.path, keys: [] } : opened;
 }
 
 /**

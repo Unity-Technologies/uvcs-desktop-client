@@ -1,0 +1,42 @@
+/* After the branch's name in its pill, as a branch's chip after its name in the Branches view. */
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+/* Outlined on hover, as a branch's chip in the lists (`CodeReviewStatusBadge.module.css`'s `.chip`). */
+.chip:hover > [data-state] {
+  filter: brightness(0.95);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.card {
+  composes: card from '../../ui/ToolbarSegment.module.css';
+
+  display: flex;
+  flex-direction: column;
+  /* The summary card's width (`MergeRequestSummaryCard.module.css`, `.framed`), with the top bar's footer under it. */
+  width: 320px;
+}
+
+/* The summary (`MergeRequestSummaryCard`), then what's open, then the actions. */
+.summary {
+  padding: var(--space-3);
+}
+
+/* Under the review's lines, past its disc. */
+.openItems {
+  margin: 2px 0 0 calc(22px + var(--space-2));
+  color: var(--text-secondary);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}

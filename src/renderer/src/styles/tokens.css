@@ -36,7 +36,9 @@
 
   --row-height: 30px;
   --control-height: 28px;
-  --topbar-height: 44px;
+  --topbar-height: 52px;
+  /* The top bar's pills (`ToolbarControl`), clear of its edges (ARCHITECTURE.md "Top bar"). */
+  --topbar-control-height: 40px;
   /* What the Windows caption buttons take at the window's top right (they overlay the page there); 0 elsewhere. */
   --caption-buttons-width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
   --view-header-height: 48px;
@@ -77,6 +79,7 @@
   --keyframes-view-enter: view-enter;
   --keyframes-row-enter: row-enter;
   --keyframes-pulse: pulse;
+  --keyframes-heartbeat: heartbeat;
   --keyframes-fade-out: fade-out;
   --keyframes-zoom-in: zoom-in;
   --keyframes-zoom-out: zoom-out;
@@ -126,6 +129,33 @@
      blue tile (Atlassian's logo library). GitHub's mark is one color, the text's, so it takes no token. */
   --brand-jira-tile: #1868db;
   --brand-jira-mark: #ffffff;
+
+  /* What sets an image comment's bubble apart from the image under it (`ImageCommentsOverlay`), whatever its colors:
+     a thin white edge around its state's color, then a soft dark shadow, in both themes, as the image is the same in
+     both. A thin state border on the theme's surface vanished over an image of that color. */
+  --image-pin-rim: #ffffff;
+  --image-pin-shadow: rgba(0, 0, 0, 0.45);
+
+  /* The thin dark rim on both sides of an image comment's area line (`ImageCommentsOverlay`), in both themes, as the
+     image is the same in both: it keeps the line apart from an image of its own color, and fades into a dark one,
+     where the line reads alone. A light halo was tried and read as a washed-out double border. */
+  --image-area-rim: rgba(0, 0, 0, 0.3);
+  /* An area's line in each of its states, bright in both themes as the image is the same: the light theme's own state
+     colors, dark for text on white, turned into a heavy dark band beside the rim. Settled, waiting for an answer,
+     selected or being written. */
+  --image-area-settled: #d0d7de;
+  --image-area-waiting: #d29922;
+  --image-area-selected: #388bfd;
+
+  /* The pointer marking a comment's spot on an image (`ImageCommentsOverlay`): the bubble a comment is drawn as
+     (`CommentPinIcon`), a plus in it, its square tip the point marked. Light's accent fill with a white rim and plus, so
+     it reads over any image in either theme; a cursor's image can't read tokens, so its colors are written out here. */
+  --cursor-add-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></svg>") 2 22, crosshair;
+  /* The same, drawn up and to the right of its hot spot: aiming at a point of a model, the ring on the surface shows
+     there, clear of it. */
+  --cursor-aim-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(8 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g></svg>") 5 27, crosshair;
+  /* The same with a dot on its hot spot: commenting on a whole part (Shift), with no ring to show the part aimed at. */
+  --cursor-aim-part: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(8 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g><circle cx='5' cy='27' r='2.5' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/></svg>") 5 27, crosshair;
 }
 
 :root,
@@ -151,6 +181,10 @@
   --danger-hover: #a40e26;
 
   --status-added: #1a7f37;
+  /* Branch Explorer merge links, a fixed color per kind (`GraphPalette.mergeLinks`): merges a green lighter than
+     --status-added, which looks heavy on a white graph, still 3:1 on it as a line; cherry picks violet. */
+  --graph-merge-link: #2ea043;
+  --graph-cherry-pick-link: #8250df;
   --status-changed: #9a6700;
   --status-deleted: #cf222e;
   --status-moved: #0e7c86;
@@ -175,6 +209,17 @@
   --danger-text: #cf222e;
   --danger-soft: rgba(207, 34, 46, 0.07);
   --danger-border: rgba(207, 34, 46, 0.28);
+  /* A plain comment on a line, as a review thread's kind (its pill): a muted violet no thread state takes, nor a
+     link's blue. */
+  --comment-kind-text: #5e4f8a;
+  --comment-kind-border: #b9b0d4;
+
+  /* A merge request's state (`MergeRequestStateIcon`, its badge): gray while a draft, green open, violet merged, red
+     closed. The violet is fuller than --comment-kind-text's, so a merged request never reads as a comment. */
+  --merge-request-draft: #59636e;
+  --merge-request-open: #1a7f37;
+  --merge-request-merged: #8250df;
+  --merge-request-closed: #cf222e;
 
   /* File change badges, in the colors and letters of the Plastic desktop GUI. */
   --change-added: #1a7f37;
@@ -216,6 +261,8 @@
   --bg-segment-checked: #ffffff;
   /* Text matching a search or filter; unlike the blue selection, it stays visible on selected rows. */
   --bg-match: rgba(255, 196, 0, 0.38);
+  /* The match a search in code shows now, among the others in --bg-match (`CodeFindBar`): orange, as Pierre's editor marks it. */
+  --bg-match-current: rgba(255, 150, 50, 0.6);
   --bg-code: #f6f8fa;
   /* Inline code in rich text (`Markdown`, the comment editor; never a one-line preview): a muted berry, calm enough
      for comments full of identifiers. The dark theme's is the same hue lightened; both read well above 4.5:1. */
@@ -223,8 +270,10 @@
   --border-subtle: #eaeef2;
   --border-default: #d0d7de;
   --border-strong: #afb8c1;
-  /* The indent guides of a tree of files: a hairline under each chevron. */
-  --tree-guide: var(--border-subtle);
+  /* The indent guides of a tree of files: a hairline under each chevron. Translucent, the subtle border's shade on
+     the surface, so it darkens what it crosses: an opaque guide showed as a pale cut through a selected row and its
+     focus ring. */
+  --tree-guide: rgba(31, 35, 40, 0.08);
   /* A review comment in the code and the line it's on, outlined as a pair (`LineBands`, `.thread[data-in-code]`). */
   --border-comment: var(--border-default);
   --text-primary: #1f2328;
@@ -245,6 +294,8 @@
   --diff-removed-bg: rgba(207, 34, 46, 0.08);
   --diff-removed-strong: rgba(207, 34, 46, 0.22);
   --overlay: rgba(31, 35, 40, 0.3);
+  /* Over a place whose server needs a sign-in (`SignInCover`): the work stays in sight, blurred, under the message's card. */
+  --scrim-sign-in: rgba(246, 248, 250, 0.4);
   --label-bg: rgba(191, 135, 0, 0.12);
   --label-text: #8a6100;
   /* A label drawn as a mark rather than text (the Timeline's ticks): the label color, at 3:1 on --bg-subtle. */
@@ -305,6 +356,8 @@
   --danger-hover: #b62324;
 
   --status-added: #3fb950;
+  --graph-merge-link: #3fb950;
+  --graph-cherry-pick-link: #a371f7;
   --status-changed: #d29922;
   --status-deleted: #f85149;
   --status-moved: #39c5cf;
@@ -317,9 +370,15 @@
   --caution-text: #d29922;
   --caution-soft: rgba(210, 153, 34, 0.12);
   --caution-border: rgba(210, 153, 34, 0.34);
-  --danger-text: #f85149;
+  --danger-text: #ff7b72;
   --danger-soft: rgba(248, 81, 73, 0.1);
   --danger-border: rgba(248, 81, 73, 0.32);
+  --comment-kind-text: #a59cc8;
+  --comment-kind-border: #474162;
+  --merge-request-draft: #9198a1;
+  --merge-request-open: #3fb950;
+  --merge-request-merged: #a371f7;
+  --merge-request-closed: #ff7b72;
 
   --change-added: #3fb950;
   --change-changed: #58a6ff;
@@ -353,13 +412,15 @@
   --bg-input: #0d1117;
   --bg-segment-checked: #303844;
   --bg-match: rgba(210, 153, 34, 0.4);
+  --bg-match-current: rgba(255, 150, 50, 0.45);
   --bg-code: #0f141b;
   --text-code: #eab0d4;
   --border-subtle: #212830;
   --border-default: #30363d;
   --border-strong: #484f58;
-  /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. */
-  --tree-guide: var(--border-default);
+  /* A shade up from the light theme's: on a dark surface the subtle border all but disappears. Translucent, the
+     default border's shade on the surface (see the light theme's). */
+  --tree-guide: rgba(240, 246, 252, 0.12);
   /* A shade up from the light theme's: over the dark added and removed tints, the default border all but disappears. */
   --border-comment: var(--border-strong);
   --text-primary: #e6edf3;
@@ -379,6 +440,7 @@
   --diff-removed-bg: rgba(248, 81, 73, 0.12);
   --diff-removed-strong: rgba(248, 81, 73, 0.3);
   --overlay: rgba(1, 4, 9, 0.6);
+  --scrim-sign-in: rgba(13, 17, 23, 0.5);
   --label-bg: rgba(210, 153, 34, 0.16);
   --label-text: #e3b341;
   --label-mark: #d29922;

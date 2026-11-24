@@ -1,5 +1,7 @@
-import type { CodeReviewStatus } from '@shared/domain/codeReview';
-import type { ReviewComment, ReviewCommentKind, ReviewConversation, ReviewEventChange } from '@shared/domain/reviewConversation';
+import { CODE_REVIEW_STATUSES, MERGE_REQUEST_STATES, type CodeReviewStatus, type MergeRequestState } from '@shared/domain/codeReview';
+import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind, ReviewConversation, ReviewEventChange } from '@shared/domain/reviewConversation';
+import { commentedImageSpotOf, commentedLinesOf } from './commentLocation';
+import { commentedModelSpotOf } from './modelCommentLocation';
 import { foundObjects } from './foundObjects';
 import { integerValue } from './formatRecords';
 
@@ -17,19 +19,19 @@ export interface RawReviewComment {
   revisionId: number;
   itemId: number;
   path: string;
-  /** 1-based; -1 when the comment isn't on a line. */
-  line: number;
+  /** Where in the file, as the server stores it (`commentedLinesOf`, `commentedImageSpotOf`, `commentedModelSpotOf`): `-1` when it's on none. */
+  location: string;
   changesetId: number;
   appliedInChangeset: number;
 }
 
 /**
- * Every comment of a review in one `cm find`, with what places it (`{path}`, `{itemid}`, `{line}`, `{changeset}`) and
+ * Every comment of a review in one `cm find`, with what places it (`{path}`, `{itemid}`, `{location}`, `{changeset}`) and
  * what resolves it (`{parent}`, `{appliedinchangeset}`): its replies and its threads are read from the same list.
  */
 export const FOUND_REVIEW_COMMENTS = foundObjects(
   'changereviewcomment',
-  ['id', 'guid', 'owner', 'date', 'modifieddate', 'comment', 'type', 'parent', 'revisionid', 'itemid', 'path', 'line', 'changeset', 'appliedinchangeset'],
+  ['id', 'guid', 'owner', 'date', 'modifieddate', 'comment', 'type', 'parent', 'revisionid', 'itemid', 'path', 'location', 'changeset', 'appliedinchangeset'],
   (value): RawReviewComment => ({
     id: integerValue(value('id')),
     guid: value('guid'),
@@ -42,7 +44,7 @@ export const FOUND_REVIEW_COMMENTS = foundObjects(
     revisionId: integerValue(value('revisionid')),
     itemId: integerValue(value('itemid')),
     path: value('path'),
-    line: integerValue(value('line')),
+    location: value('location'),
     changesetId: integerValue(value('changeset')),
     appliedInChangeset: integerValue(value('appliedinchangeset')),
   }),
@@ -60,6 +62,7 @@ export function conversationOf(records: readonly RawReviewComment[]): ReviewConv
       conversation.comments.push(commentOf(record));
     } else if (record.text.startsWith(DESCRIPTION_PREFIX)) {
       conversation.description = {
+        id: record.id,
         guid: record.guid,
         text: record.text.slice(DESCRIPTION_PREFIX.length),
         author: record.owner,
@@ -85,13 +88,25 @@ function commentOf(record: RawReviewComment): ReviewComment {
     text: record.text,
     kind: kindOf(record),
     ...(record.parentId >= 0 && { parentId: record.parentId }),
-    anchor:
-      record.revisionId >= 0 && record.line > 0
-        ? { kind: 'line', revisionId: record.revisionId, itemId: record.itemId, path: record.path, line: record.line }
-        : { kind: 'review' },
+    anchor: anchorOf(record),
     ...(record.changesetId >= 0 && { changesetId: record.changesetId }),
     ...(record.appliedInChangeset >= 0 && { appliedInChangeset: record.appliedInChangeset }),
   };
+}
+
+/**
+ * Where a comment is: on lines of a revision, on a spot of its image or its 3D model, or the whole review. A comment on a
+ * whole file, or on a location of a kind this app doesn't read, reads as the review's.
+ */
+function anchorOf(record: RawReviewComment): ReviewCommentAnchor {
+  if (record.revisionId < 0) return { kind: 'review' };
+  const revision = { revisionId: record.revisionId, itemId: record.itemId, path: record.path };
+  const lines = commentedLinesOf(record.location);
+  if (lines) return { kind: 'line', ...revision, ...lines };
+  const imageSpot = commentedImageSpotOf(record.location);
+  if (imageSpot) return { kind: 'image', ...revision, spot: imageSpot };
+  const modelSpot = commentedModelSpotOf(record.location);
+  return modelSpot ? { kind: 'model', ...revision, spot: modelSpot } : { kind: 'review' };
 }
 
 /** `{modifieddate}` prints the creation date for a comment never edited. */
@@ -125,7 +140,8 @@ function kindOf(record: RawReviewComment): ReviewCommentKind {
  * reviewers, separated by `;` (an older server wrote `[requested-review-from-<id>]`, which names no one readable).
  */
 function eventChangeOf({ text, guid }: RawReviewComment): ReviewEventChange {
-  for (const [prefix, status] of STATUS_PREFIXES) {
+  for (const status of CODE_REVIEW_STATUSES) {
+    const prefix = STATUS_PREFIXES[status];
     if (text.startsWith(prefix)) return { kind: 'statusChanged', status, comment: text.slice(prefix.length), guid };
   }
   if (text.startsWith('[renamed-title]')) {
@@ -136,14 +152,62 @@ function eventChangeOf({ text, guid }: RawReviewComment): ReviewEventChange {
   if (text.startsWith('[requested-review-from-')) return { kind: 'reviewRequested', reviewers: [] };
   if (text.startsWith('[re-requested-review-from]')) return { kind: 'reviewRequestedAgain', reviewer: text.slice('[re-requested-review-from]'.length) };
   if (text.startsWith('[removed-requested-review-from]')) return { kind: 'reviewerRemoved', reviewer: text.slice('[removed-requested-review-from]'.length) };
-  return { kind: 'other', text };
+  return mergeRequestChangeOf(text) ?? { kind: 'other', text };
 }
 
-const STATUS_PREFIXES: ReadonlyArray<readonly [string, CodeReviewStatus]> = [
-  ['[status-under-review]', 'Under review'],
-  ['[status-reviewed]', 'Reviewed'],
-  ['[status-rework-required]', 'Rework required'],
+/**
+ * A merge request's notes: a state move, lower case (`[mergerequest-status-open-to-merged]6`, the merge's changeset
+ * bare after the move to Merged); a destination changed, by the old and new branch ids (`…destination]4;19`); its
+ * branch hidden or shown again, by its id. Branch ids are named later, all at once (`reviewCommentsService`). A note
+ * this version can't read stays `other`.
+ */
+function mergeRequestChangeOf(text: string): ReviewEventChange | undefined {
+  const move = /^\[mergerequest-status-([a-z]+)-to-([a-z]+)\](.*)$/s.exec(text);
+  if (move) {
+    const from = STATE_WORDS.get(move[1]!);
+    const to = STATE_WORDS.get(move[2]!);
+    if (!from || !to) return undefined;
+    const changesetId = to === 'Merged' ? integerOrUndefined(move[3]!) : undefined;
+    return { kind: 'mergeRequestState', from, to, ...(changesetId !== undefined && { changesetId }) };
+  }
+  if (text.startsWith(DESTINATION_PREFIX)) {
+    const [from, to, ...rest] = text.slice(DESTINATION_PREFIX.length).split(';').map(integerOrUndefined);
+    return from !== undefined && to !== undefined && rest.length === 0 ? { kind: 'destinationChanged', from: { id: from }, to: { id: to } } : undefined;
+  }
+  for (const [prefix, kind] of BRANCH_VISIBILITY_PREFIXES) {
+    if (!text.startsWith(prefix)) continue;
+    const id = integerOrUndefined(text.slice(prefix.length));
+    return id === undefined ? undefined : { kind, branch: { id } };
+  }
+  return undefined;
+}
+
+const STATE_WORDS = new Map<string, MergeRequestState>(MERGE_REQUEST_STATES.map((state) => [state.toLowerCase(), state]));
+
+const DESTINATION_PREFIX = '[changed-mergerequest-destination]';
+
+const BRANCH_VISIBILITY_PREFIXES: ReadonlyArray<readonly [string, 'branchHidden' | 'branchUnhidden']> = [
+  ['[hidden-mergerequest-branch]', 'branchHidden'],
+  ['[unhidden-mergerequest-branch]', 'branchUnhidden'],
 ];
+
+function integerOrUndefined(text: string): number | undefined {
+  return /^\d+$/.test(text.trim()) ? Number.parseInt(text.trim(), 10) : undefined;
+}
+
+const STATUS_PREFIXES: Readonly<Record<CodeReviewStatus, string>> = {
+  'Under review': '[status-under-review]',
+  Reviewed: '[status-reviewed]',
+  'Rework required': '[status-rework-required]',
+};
+
+/**
+ * What a reviewer said with their status, as the server stores it: behind the status's prefix, which `cm codereview
+ * comment edit` writes as given (it puts back only a description's), so an edit that left it out would lose the status.
+ */
+export function statusCommentText(status: CodeReviewStatus, comment: string): string {
+  return STATUS_PREFIXES[status] + comment;
+}
 
 const TITLE_SEPARATOR = '#->#';
 

@@ -13,3 +13,10 @@
 .position:not(:empty) {
   margin-right: var(--space-1);
 }
+
+/* Waiting for the next file's diff, the last count stays put, so "3 of 3" to "1 of 5" swaps in place on a fast read; on
+   a slow one it fades out after a moment, as it no longer counts the file shown. */
+.waiting {
+  opacity: 0;
+  transition: opacity var(--duration-normal) linear var(--duration-slow);
+}

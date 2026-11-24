@@ -46,6 +46,17 @@ export function formatShortcut(shortcut: string, mac = isMac): string[] {
   return mac ? names : [names.join('+')];
 }
 
+/**
+ * Shortcuts that hold the same modifiers, as a hint writes them: the modifiers once, on the first, then only the other
+ * keys (⌥⌘← → for ⌥⌘← and ⌥⌘→); shortcuts that differ in their modifiers stay whole.
+ */
+export function sharingModifiers(shortcuts: readonly string[]): string[] {
+  const modifiersOf = (shortcut: string) => shortcut.split('+').slice(0, -1).sort().join('+');
+  const [first, ...rest] = shortcuts;
+  if (first === undefined || rest.some((shortcut) => modifiersOf(shortcut) !== modifiersOf(first))) return [...shortcuts];
+  return [first, ...rest.map((shortcut) => shortcut.split('+').at(-1)!)];
+}
+
 function keyName(key: string, mac: boolean): string {
   const name = (mac ? MAC_NAMES : OTHER_NAMES)[key] ?? SHARED_NAMES[key];
   return name ?? (key.length === 1 ? key.toUpperCase() : capitalize(key));

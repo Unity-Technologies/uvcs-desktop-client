@@ -1,4 +1,5 @@
 import { Virtualizer } from '@pierre/diffs';
+import { useKeptElement } from '../../lib/useKeptElement';
 import { useCallback, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
@@ -55,7 +56,7 @@ const scrollToAnnotatedLine: ScrollToLine = (container, { lineNumber }) => {
  */
 export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }: AnnotatedCodeProps) {
   const [virtualizer] = useState(() => new Virtualizer());
-  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+  const [scroller, setScroller] = useKeptElement<HTMLDivElement>();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const attachScroller = useCallback(
     (element: HTMLDivElement | null) => {

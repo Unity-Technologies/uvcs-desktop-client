@@ -94,23 +94,37 @@ describe('label operations', () => {
 
 describe('a new label', () => {
   it("labels what the workspace has loaded, asking nothing first", async () => {
-    await newLabel(inWs);
+    for (const workspaceKind of ['standard', 'dynamic', undefined] as const) {
+      asked.dialogs.length = 0;
+      await newLabel({ place: inWs, workspaceKind });
 
-    expect(asked.picker).toEqual([]);
-    expect(asked.dialogs).toEqual([[inWs]]);
-    expect(newLabelActionLabel(inWs)).toBe('Label your workspace changeset');
+      expect(asked.picker).toEqual([]);
+      expect(asked.dialogs).toEqual([[inWs]]);
+      expect(newLabelActionLabel({ place: inWs, workspaceKind })).toBe('Label your workspace changeset');
+    }
   });
 
   it('asks which changeset first in a repository with no workspace, and labels nothing when none is picked', async () => {
     const repository = repositoryPlace('game@local');
 
-    await newLabel(repository);
+    await newLabel({ place: repository, workspaceKind: undefined });
     expect(asked.dialogs).toEqual([]);
 
     asked.picked = 42;
-    await newLabel(repository);
+    await newLabel({ place: repository, workspaceKind: undefined });
     expect(asked.picker).toEqual([{ title: 'Label a changeset' }, { title: 'Label a changeset' }]);
     expect(asked.dialogs).toEqual([[repository, 42]]);
-    expect(newLabelActionLabel(repository)).toBe('Label a changeset');
+    expect(newLabelActionLabel({ place: repository, workspaceKind: undefined })).toBe('Label a changeset');
+  });
+
+  it('asks which changeset first in a partial workspace, which has loaded no one changeset to label', async () => {
+    const partial = { place: inWs, workspaceKind: 'partial' } as const;
+
+    asked.picked = 42;
+    await newLabel(partial);
+
+    expect(asked.picker).toEqual([{ title: 'Label a changeset' }]);
+    expect(asked.dialogs).toEqual([[inWs, 42]]);
+    expect(newLabelActionLabel(partial)).toBe('Label a changeset');
   });
 });

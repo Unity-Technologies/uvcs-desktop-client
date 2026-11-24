@@ -1,5 +1,6 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { markedWorkspaceKind, shownWorkspaceKind, workspaceCardTip, workspaceKindChip, workspaceKindWords } from './workspaceKindWords';
+import { markedWorkspaceKind, shownWorkspaceKind, workspacePillTip, workspaceKindChip, workspaceKindWords } from './workspaceKindWords';
 
 describe('markedWorkspaceKind', () => {
   it('marks a partial and a dynamic workspace, never a standard one nor one whose kind is still unread', () => {
@@ -35,13 +36,19 @@ describe('workspaceKindWords', () => {
   });
 });
 
-describe('workspaceCardTip', () => {
+describe('workspacePillTip', () => {
+  const path = join('projects', 'game');
+
   it('says the kind only when it is not standard', () => {
-    expect(workspaceCardTip({ name: 'game', repository: 'game@local', kind: 'standard' })).toBe('game · game@local');
-    expect(workspaceCardTip({ name: 'game', repository: 'game@local', kind: 'partial' })).toBe('game · game@local · Partial workspace');
+    expect(workspacePillTip({ name: 'game', repository: 'game@local', path, kind: 'standard' }).text).toBe('game · game@local');
+    expect(workspacePillTip({ name: 'game', repository: 'game@local', path, kind: 'partial' }).text).toBe('game · game@local · Partial workspace');
   });
 
   it('says no kind when it is unknown', () => {
-    expect(workspaceCardTip({ name: 'game', repository: 'game@local' })).toBe('game · game@local');
+    expect(workspacePillTip({ name: 'game', repository: 'game@local', path }).text).toBe('game · game@local');
+  });
+
+  it('shows where the workspace is on disk below', () => {
+    expect(workspacePillTip({ name: 'game', repository: 'game@local', path, kind: 'standard' })).toEqual({ text: 'game · game@local', sub: path });
   });
 });

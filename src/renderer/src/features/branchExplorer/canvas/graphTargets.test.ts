@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { codeReviewSummary } from '../../../testing/codeReviewSummary';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { branch, changeset, merge, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
 import { COLUMN_WIDTH, columnX, headerTop, nodePoint, pendingPoint } from './geometry';
 import { pointOnCurve, linkCurve } from './curves';
+import { mergeLinkPath } from './mergeLinkPath';
 import type { DrawnTargets } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
-import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight } from './graphTargets';
+import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight, pointerCardStays } from './graphTargets';
 import { labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
 
@@ -84,9 +86,10 @@ describe('hitTest', () => {
       mergeLinks: [merge(1, 41)],
       labels: [],
     });
-    const curve = linkCurve(nodePoint(long, 1)!, nodePoint(long, 41)!);
-    for (const t of [0.3, 0.37, 0.45, 0.62, 0.7]) {
-      const onLine = pointOnCurve(curve, t);
+    // A flat link runs along the strip between rows (`mergeLinkPath`): its middle piece is the run.
+    const run = mergeLinkPath(nodePoint(long, 1)!, nodePoint(long, 41)!)[1]!;
+    for (const t of [0.05, 0.3, 0.45, 0.62, 0.95]) {
+      const onLine = pointOnCurve(run, t);
       expect(hitTest(long, onLine)).toMatchObject({ kind: 'mergeLink' });
       const offLine = { x: onLine.x, y: onLine.y - 12 };
       expect(hitTest(long, offLine)).not.toMatchObject({ kind: 'mergeLink' });
@@ -225,13 +228,21 @@ describe('hoverCardFor', () => {
 
 describe('hoverHighlight', () => {
   it('lights a "+N" node as its changeset, a branch, a code review chip and the pending changes', () => {
-    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false };
+    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false, hoveredMergeLink: null };
     const node = layout.nodes.get(5)!;
     expect(hoverHighlight(null)).toEqual(none);
     expect(hoverHighlight({ kind: 'collapsed', node })).toEqual({ ...none, hoveredChangeset: node.changeset.id });
     expect(hoverHighlight({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! })).toEqual({ ...none, hoveredBranch: '/main/a' });
     expect(hoverHighlight({ kind: 'codeReview', review: { id: 7 } as CodeReview })).toEqual({ ...none, hoveredReview: 7 });
     expect(hoverHighlight({ kind: 'pending' })).toEqual({ ...none, hoveredPending: true });
+  });
+
+  it('lights a merge link, or a merge in progress, under the pointer as when its changesets are', () => {
+    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false, hoveredMergeLink: null };
+    const link = layout.mergeLinks[0]!;
+    expect(hoverHighlight({ kind: 'mergeLink', link })).toEqual({ ...none, hoveredMergeLink: link });
+    const inProgress = { type: 'merge' as const, sourceChangeset: 7 };
+    expect(hoverHighlight({ kind: 'pendingMergeLink', link: inProgress })).toEqual({ ...none, hoveredMergeLink: inProgress });
   });
 });
 
@@ -249,5 +260,17 @@ describe('hoverCardKey', () => {
     ];
     expect(new Set(keys).size).toBe(keys.length);
     expect(hoverCardKey({ kind: 'mergeLink', link: merge(5, 6) })).toBe(keys[3]);
+  });
+});
+
+describe('pointerCardStays', () => {
+  const review = codeReviewSummary({ id: 1 });
+
+  it("keeps a merge request's summary where it opened, for the pointer to move in and open it", () => {
+    expect(pointerCardStays({ kind: 'codeReview', review: { ...review, mergeRequest: { state: 'Open', destination: '/main' } } })).toBe(true);
+  });
+
+  it('lets every other pointer card follow the pointer, a code review\'s tooltip too', () => {
+    expect(pointerCardStays({ kind: 'codeReview', review })).toBe(false);
   });
 });

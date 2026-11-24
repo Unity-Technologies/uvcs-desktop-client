@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
+import { focusAs } from '../../../lib/focusRing';
 import { MAIN_FOCUS } from '../../../lib/mainFocus';
 import { isModPressed } from '../../../lib/shortcuts';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
@@ -12,11 +13,12 @@ import { GraphTimeline, type GraphTimelineHandle } from '../timeline/GraphTimeli
 import { captionMetrics, captionOnScreen } from './captionCard';
 import { detailLevel, type DrawnTargets, type GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
-import { drawGraph } from './drawGraph';
+import { drawGraph, visibleArea } from './drawGraph';
+import { branchesNearView } from './headersInView';
 import type { RuleColors } from '../model/ruleColors';
 import { withBranchColors, withRuleColors } from './graphPalette';
 import { createGraphCanvasHandle, type GraphCanvasHandle } from './graphCanvasHandle';
-import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
+import { hitTest, hoverCardFor, hoverCardKey, pointerCardStays, hoverHighlight, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, CAPTION_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
 import { wheelGoesTo } from './wheelTarget';
 import { graphExtent } from './laneShape';
@@ -65,6 +67,8 @@ interface GraphCanvasProps {
   contextMenu: (target: GraphTarget | null) => MenuEntry[];
   /** The Timeline over the graph, while shown (`GraphTimeline`), with what only it shows. */
   timeline: TimelineInputs | null;
+  /** After each frame, the branches whose headers are in view or near it (`branchesNearView`): those to read reviews for. */
+  onBranchesNearView?: (branchIds: readonly number[]) => void;
   /** Floating controls drawn over the canvas. */
   children?: ReactNode;
 }
@@ -94,10 +98,12 @@ interface ShownHoverCard {
 const DOUBLE_CLICK_ZOOM = 1.4;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
-  { layout, highlights, ruleColors, onSelect, onActivate, contextMenu, timeline, children },
+  { layout, highlights, ruleColors, onSelect, onActivate, contextMenu, timeline, onBranchesNearView, children },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const nearViewRef = useRef(onBranchesNearView);
+  nearViewRef.current = onBranchesNearView;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sizeRef = useRef<Size>({ width: 0, height: 0 });
   const frameRef = useRef(0);
@@ -118,7 +124,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const [awayFromEnd, setAwayFromEnd] = useState(false);
 
   const hover = hoverHighlight(hovered);
-  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending } = hover;
+  const { hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredMergeLink } = hover;
   /** What the next frame draws, read by callbacks that outlive this render. */
   const sceneRef = useRef({ layout, highlights, palette, hover });
   sceneRef.current = { layout, highlights, palette, hover };
@@ -158,6 +164,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       window.devicePixelRatio,
       drawnRef.current,
     );
+    const viewport = view.viewportRef.current;
+    const drawsHeaders = detailLevel(viewport.zoom, scene.highlights.options).text;
+    nearViewRef.current?.(branchesNearView(scene.layout, visibleArea({ viewport, size: sizeRef.current }), drawsHeaders));
   }, []);
 
   const scheduleDraw = useCallback(() => {
@@ -182,7 +191,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     setAwayFromEnd(awayFromNewest(sceneRef.current.layout, view.viewportRef.current, sizeRef.current));
   }
 
-  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, scheduleDraw]);
+  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, hoveredMergeLink, scheduleDraw]);
   // A filter can reshape, shrink or grow the graph: keep the user's place in it (unless a glide is taking them
   // somewhere) and keep it on screen.
   const laidOutRef = useRef(layout);
@@ -277,10 +286,15 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   /** Floating controls over the canvas handle their own pointer events. */
   const onCanvas = (event: React.SyntheticEvent): boolean => event.target === canvasRef.current;
 
+  /** A click focuses the graph ringless: a plain `focus()` from code shows the keyboard ring once a key was pressed. */
+  const focusByPointer = (): void => {
+    if (containerRef.current) focusAs(containerRef.current, 'pointer');
+  };
+
   const onPointerDown = (event: React.PointerEvent): void => {
     if (!onCanvas(event)) return;
     clippedTip.hide();
-    containerRef.current?.focus();
+    focusByPointer();
     if (event.button === 2) {
       // The menu covers the hover card's place: it would linger under the menu.
       clearHover();
@@ -324,7 +338,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     clippedTip.hide();
     if (!subject) return hoverCard.requestClose();
     const anchor = anchorFor(subject);
-    hoverCard.show({ key: hoverCardKey(subject.target), target: subject.target, anchor, ...point }, anchor === null);
+    hoverCard.show({ key: hoverCardKey(subject.target), target: subject.target, anchor, ...point }, anchor === null && !pointerCardStays(subject.target));
   };
 
   const onDoubleClick = (event: React.MouseEvent): void => {
@@ -353,7 +367,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           selectedBranch={highlights.selectedBranch}
           homeChangeset={highlights.homeChangeset}
           pendingChangeCount={highlights.pendingChangeCount}
-          focusGraph={() => containerRef.current?.focus()}
+          focusGraph={focusByPointer}
         />
       )}
       <ActionContextMenu entries={() => contextMenu(contextTargetRef.current)}>
@@ -374,8 +388,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             clippedTip.hide();
           }}
           onContextMenu={(event) => {
-            // Nothing under the pointer: no menu (preventing the default also stops the menu from opening).
-            if (!onCanvas(event) || !contextTargetRef.current) event.preventDefault();
+            // Nothing under the pointer, or nothing to offer for it (a "+N" node, three changesets selected): no menu, never
+            // an empty one. Preventing the default also stops the menu from opening.
+            const target = contextTargetRef.current;
+            if (!onCanvas(event) || !target || contextMenu(target).length === 0) event.preventDefault();
           }}
           onDoubleClick={onDoubleClick}
         >

@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Size } from './composedFrame';
+import { transformShowing } from './imageSpotGeometry';
 import { followDrag, isDragButton, isOnStageControl } from './pointerDrag';
 import {
   clampPan,
@@ -47,6 +48,8 @@ export interface PanZoom {
   zoomToActualSize: () => void;
   /** Glides to frame `rect` (in image pixels): stepping to a changed region. */
   zoomToRect: (rect: Point & Size) => void;
+  /** Glides to show `rect` (in frame pixels) at the zoom shown, when it doesn't show already (`transformShowing`). */
+  showRect: (rect: Point & Size) => void;
 }
 
 /** How a new transform shows: gliding or at once, and whether it's the fitted view. */
@@ -137,6 +140,11 @@ export function usePanZoom(imageSize: Size | null): PanZoom {
     [move],
   );
 
+  const showRect = useCallback(
+    (rect: Point & Size) => move((current, viewport, image) => transformShowing(current, viewport, image, rect), { animated: true, fitted: false }),
+    [move],
+  );
+
   // One observer for every viewport: a fitted view follows the pane's resizes (a splitter, the window), any other
   // stays within the edges.
   const resizeObserver = useMemo(
@@ -153,6 +161,8 @@ export function usePanZoom(imageSize: Size | null): PanZoom {
 
   const onWheel = useCallback(
     (element: HTMLElement, event: WheelEvent): void => {
+      // A card over the image (a comment's) scrolls its own content.
+      if (isOnStageControl(event)) return;
       // The wheel is ours: not the page's scroll, nor macOS's swipe back.
       event.preventDefault();
       // One gesture at a time: during a drag, or with the wheel button held (`buttons` bit 4), wheel deltas are the
@@ -222,8 +232,8 @@ export function usePanZoom(imageSize: Size | null): PanZoom {
   );
 
   return useMemo(
-    () => ({ transform, viewport, animated, fitted, bindViewport, zoomIn, zoomOut, zoomToFit, zoomToActualSize, zoomToRect }),
-    [transform, viewport, animated, fitted, bindViewport, zoomIn, zoomOut, zoomToFit, zoomToActualSize, zoomToRect],
+    () => ({ transform, viewport, animated, fitted, bindViewport, zoomIn, zoomOut, zoomToFit, zoomToActualSize, zoomToRect, showRect }),
+    [transform, viewport, animated, fitted, bindViewport, zoomIn, zoomOut, zoomToFit, zoomToActualSize, zoomToRect, showRect],
   );
 }
 

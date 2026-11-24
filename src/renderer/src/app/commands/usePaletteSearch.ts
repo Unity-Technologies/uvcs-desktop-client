@@ -91,6 +91,7 @@ export function usePaletteSearch(shown: Place | null, query: string, scope: Pale
     const changeByPath = new Map(changes.map((change) => [change.path, change]));
     const context: ResultContext = {
       place,
+      workspaceKind: workspace.data?.kind,
       term,
       currentBranch: branchWorkedOn(workspace.data?.selector),
       me,

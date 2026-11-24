@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
-import type { DecidedMerge, DirectoryConflictResolution, DirectoryDecision, FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DecidedMerge, DirectoryConflictResolution, DirectoryDecision, FileConflict, MergeOperation, MergePlan } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
 import { readFields } from '../cm/formatRecords';
 import { mergePlanOf, type PrintedMergePlan } from '../cm/mergeOutput';
@@ -82,7 +82,7 @@ export class DirectoryDecisions {
    * Remembers the merge a page previewed (`merge.preview`), so that its first decision starts from it instead of
    * calculating the merge again. Only the last few: a page opened from an older one previews it again anyway.
    */
-  previewed(workspacePath: string, request: MergeRequest, plan: MergePlan): void {
+  previewed(workspacePath: string, request: MergeOperation, plan: MergePlan): void {
     if (plan.status !== 'ready') return;
     const key = mergeKey(workspacePath, request);
     this.previews.delete(key);
@@ -91,7 +91,7 @@ export class DirectoryDecisions {
   }
 
   /** Applies `decisions`, in order, to the merge the page `id` shows, and returns the merge recalculated on them. */
-  async decide(workspacePath: string, request: MergeRequest, id: string, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
+  async decide(workspacePath: string, request: MergeOperation, id: string, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
     decisions.forEach(assertDecisionValid);
     const merge = this.mergeOf(id, mergeKey(workspacePath, request));
     const applying = merge.queue.then(() => this.apply(merge, workspacePath, request, decisions));
@@ -104,7 +104,7 @@ export class DirectoryDecisions {
    * ends, even if the page closes meanwhile. None (`undefined`) before any decision. Refuses decisions made for
    * another merge: the merge would run on that one's state.
    */
-  runOn<T>(id: string | undefined, workspacePath: string, request: MergeRequest, work: (decided: AppliedDirectoryDecisions | undefined) => Promise<T>): Promise<T> {
+  runOn<T>(id: string | undefined, workspacePath: string, request: MergeOperation, work: (decided: AppliedDirectoryDecisions | undefined) => Promise<T>): Promise<T> {
     const merge = id === undefined ? undefined : this.merges.get(id);
     if (!merge) return work(undefined);
     if (merge.merge !== mergeKey(workspacePath, request)) return Promise.reject(new Error('These directory decisions were made for another merge. Review the merge again.'));
@@ -133,7 +133,7 @@ export class DirectoryDecisions {
     return started;
   }
 
-  private async apply(merge: DecidedMergeState, workspacePath: string, request: MergeRequest, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
+  private async apply(merge: DecidedMergeState, workspacePath: string, request: MergeOperation, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
     // Kept only once every decision applied: one `cm` refuses leaves those applied before, as the page still shows them.
     const applied = merge.applied.slice(0, sameDecisionsCount(merge.applied, decisions));
     for (const decision of decisions.slice(applied.length)) {
@@ -156,7 +156,7 @@ export class DirectoryDecisions {
   }
 
   /** The merge before any decision: the one the page previewed, else read again (and its conflicting files listed). */
-  private async initialOf(merge: DecidedMergeState, workspacePath: string, request: MergeRequest): Promise<MergePlan> {
+  private async initialOf(merge: DecidedMergeState, workspacePath: string, request: MergeOperation): Promise<MergePlan> {
     merge.initial ??=
       this.previews.get(merge.merge) ??
       (await withConflictRepositories(this.cm, workspacePath, request, await readMergePlan(this.cm, workspacePath, request), this.copies));
@@ -167,7 +167,7 @@ export class DirectoryDecisions {
   private async resolve(
     merge: DecidedMergeState,
     workspacePath: string,
-    request: MergeRequest,
+    request: MergeOperation,
     before: MergeStateFiles | undefined,
     decision: DirectoryDecision,
     index: number,
@@ -190,8 +190,8 @@ export class DirectoryDecisions {
   }
 }
 
-/** Which merge decisions are for: a workspace and a merge request. */
-function mergeKey(workspacePath: string, request: MergeRequest): string {
+/** Which merge decisions are for: a workspace and a merge operation. */
+function mergeKey(workspacePath: string, request: MergeOperation): string {
   return JSON.stringify([workspacePath, request]);
 }
 

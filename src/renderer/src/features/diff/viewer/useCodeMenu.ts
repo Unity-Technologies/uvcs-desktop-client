@@ -9,6 +9,7 @@ import { hotkey } from '../../../lib/shortcutRegistry';
 import { prompt } from '../../../ui/dialog/prompt';
 import { toast } from '../../../ui/toast/toastStore';
 import type { DiffSide } from './changeBlocks';
+import type { FindMode } from './codeFind';
 import { clipboardComparison, clipboardText, fragmentOfSpan, type CodeFragment } from './clipboardComparison';
 import { openCodeComparisonDialog } from './CodeComparisonDialog';
 import { codeMenu, type CodeMenuActions } from './codeMenu';
@@ -33,7 +34,6 @@ import { goToLineError, goToLineQuestion, lineToGoTo } from './goToLine';
 import type { LineRange } from './lineSelection';
 import type { ScrollToLine } from './useLineLinks';
 import { editorHasFocusIn, pageTextSelection, rowUnderPointer } from './pierreDom';
-import { openPierreSearchPanel } from './pierreSearchPanel';
 import { orderedSpan, shownLineCount, wholeTextSpan, type TextSpan } from './textSpans';
 
 interface CodeMenuOptions {
@@ -53,19 +53,22 @@ interface CodeMenuOptions {
   lines?: { range: LineRange | null; select: (range: LineRange | null) => void };
   /** The lines' own menu, joining the code's where the place selects lines for links (`lineMenuOf`). */
   lineMenu?: { pickLines: (event: MouseEvent) => FocusedLines | null; lineEntries: () => (GroupedEntry | false | undefined)[] };
+  /** Opens the place's search on a side (`useCodeFind`), replacing too where asked (in the text typed into). */
+  findOn?: (mode: FindMode, side: DiffSide) => void;
 }
 
 /**
  * The code's right-click menu (`codeMenu`) and Go to line's key (⌃G, Ctrl+G), on a diff or a text Pierre shows: every
  * choice comes from `codeTarget`, and this only wires it. The text typed into acts through Pierre's editor (its history
- * and edits; its own clipboard handlers, `runEditorClipboard`; its search panel, `openPierreSearchPanel`); read-only
- * text through the page's selection (`pageTextSelection`) and the lines selected by their numbers. The menu reads
+ * and edits; its own clipboard handlers, `runEditorClipboard`); read-only text through the page's selection
+ * (`pageTextSelection`) and the lines selected by their numbers. Find and Replace open the place's search (`findOn`),
+ * the same on every side. The menu reads
  * what's selected as it opens, before focus moves into it.
  */
-export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, editor, lines, lineMenu }: CodeMenuOptions) {
+export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, editor, lines, lineMenu, findOn }: CodeMenuOptions) {
   const opened = useRef<OpenedCode | null>(null);
-  const latest = useRef({ fileName, textOf, sides, lines, lineMenu, scrollTo });
-  latest.current = { fileName, textOf, sides, lines, lineMenu, scrollTo };
+  const latest = useRef({ fileName, textOf, sides, lines, lineMenu, scrollTo, findOn });
+  latest.current = { fileName, textOf, sides, lines, lineMenu, scrollTo, findOn };
 
   const editorNow = (): Editor | null => editor?.current ?? null;
   const editorSelections = (): TextSpan[] => (editorNow()?.getViewState().selections ?? []).map(orderedSpan);
@@ -152,17 +155,13 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
         readOnlyLines?.select({ start: 1, side: target.side, end: count, endSide: target.side });
       },
       goToLine: () => void goToLine(target.side, target.typedInto, goToLineStart(on)),
-      find: () => openSearchPanel('find'),
-      replace: () => openSearchPanel('replace'),
+      find: () => latest.current.findOn?.('find', target.side),
+      replace: () => latest.current.findOn?.('replace', target.side),
       compareWithClipboard: () => {
         const selection = fragmentOf(on);
         if (selection) compareWithClipboard(selection);
       },
     };
-    function openSearchPanel(mode: 'find' | 'replace'): void {
-      typed?.focus();
-      openPierreSearchPanel(containerRef.current, mode);
-    }
   };
 
   /** The menu, with the lines' entries where the place has them. */
@@ -170,11 +169,12 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
     const on = opened.current;
     if (!on) return [];
     const typed = on.target.typedInto ? editorNow() : null;
-    const state = codeMenuState(on, typed && { canUndo: typed.canUndo, canRedo: typed.canRedo }, latest.current.lines !== undefined);
+    const tools = { linesSelectable: latest.current.lines !== undefined, findBar: latest.current.findOn !== undefined };
+    const state = codeMenuState(on, typed && { canUndo: typed.canUndo, canRedo: typed.canRedo }, tools);
     return codeMenu(state, actionsFor(on), latest.current.lineMenu?.lineEntries() ?? []);
   };
 
-  /** Go to line's key, from anywhere in the code: the text typed into (its search box too), else the side whose lines are selected. */
+  /** Go to line's key, from anywhere in the code: the text typed into, else the side whose lines are selected. */
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || !matchesShortcut(event.nativeEvent, hotkey('goToLine'))) return;
     event.preventDefault();

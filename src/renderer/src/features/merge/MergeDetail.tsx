@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { DirectoryConflict, DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DirectoryConflict, DirectoryConflictResolution, MergeOperation, MergePlan } from '@shared/domain/merge';
 import { DirectoryConflictPanel } from './directoryConflicts/DirectoryConflictPanel';
 import { nextOfSameKind } from './directoryConflicts/directoryDecisions';
 import { MergeChangePreview } from './MergeChangePreview';
@@ -17,7 +17,7 @@ interface MergeDetailProps {
   directoryConflicts: readonly DirectoryConflict[];
   plan: MergePlan;
   labels: MergeLabels;
-  request: MergeRequest;
+  request: MergeOperation;
   toolActions: ConflictToolActions;
   onDecideFile: (key: string, decision: FileConflictDecision) => void;
   onStartOverFile: (key: string) => void;

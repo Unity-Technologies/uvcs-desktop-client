@@ -47,6 +47,7 @@ function updates(feed: ReturnType<typeof fakeFeed>, parts: Partial<AppUpdatesDep
     beforeRestart: vi.fn(),
     push: (status) => pushed.push(status),
     logFailure: vi.fn(),
+    cmPrefetchFor: async () => null,
     ...parts,
   };
   return { updates: new AppUpdates(dependencies), pushed, dependencies };
@@ -131,6 +132,168 @@ describe('checking for updates', () => {
 
     expect(feed.checkForUpdates).not.toHaveBeenCalled();
     expect(pushed).toEqual([{ state: 'unavailable' }]);
+  });
+});
+
+describe('an update whose cm is another', () => {
+  /** A prefetch whose download reports `fractions`, then finishes or fails. */
+  function prefetch(fractions: number[], error?: Error) {
+    return {
+      kind: 'own' as const,
+      download: vi.fn(async (onProgress: (fraction: number) => void) => {
+        for (const fraction of fractions) onProgress(fraction);
+        if (error) throw error;
+      }),
+    };
+  }
+
+  it('downloads it after the app, each taking half of the progress, and is ready only then', async () => {
+    const cm = prefetch([0.5, 1]);
+    const { updates: app, pushed } = updates(fakeFeed([found], [50, 100]), { cmPrefetchFor: async () => cm });
+    await app.check();
+    expect(pushed).toEqual([
+      { state: 'checking' },
+      { state: 'downloading', version: '1.2.0', percent: 0 },
+      { state: 'downloading', version: '1.2.0', percent: 25 },
+      { state: 'downloading', version: '1.2.0', percent: 50 },
+      { state: 'downloading', version: '1.2.0', percent: 75 },
+      { state: 'downloading', version: '1.2.0', percent: 100 },
+      { state: 'ready', version: '1.2.0', install: 'restart' },
+    ]);
+  });
+
+  it('splits the progress the same way when a macOS build without a Developer ID downloads the disk image itself', async () => {
+    const { updates: app, pushed } = updates(fakeFeed([found]), { needsManualInstall: vi.fn(async () => true), cmPrefetchFor: async () => prefetch([1]) });
+    await app.check();
+    expect(pushed.map((status) => (status.state === 'downloading' ? status.percent : status.state))).toEqual(['checking', 0, 20, 50, 100, 'ready']);
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'installer' });
+  });
+
+  it('is ready anyway when its cm fails to download: the update sets it up as it starts', async () => {
+    const { updates: app, pushed, dependencies } = updates(fakeFeed([found]), { cmPrefetchFor: async () => prefetch([0.2], new Error('net::ERR_INTERNET_DISCONNECTED')) });
+    await app.check();
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'restart' });
+    expect(dependencies.logFailure).toHaveBeenCalledWith(expect.stringContaining("The cm of 1.2.0 didn't download"));
+  });
+
+  it('is ready anyway when the update’s pin can’t be read', async () => {
+    const { updates: app, pushed } = updates(fakeFeed([found]), {
+      cmPrefetchFor: async () => {
+        throw new Error('HTTP 503');
+      },
+    });
+    await app.check();
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'restart' });
+  });
+});
+
+describe('an update that needs a newer installed cm than the one running', () => {
+  const INSTALLED_CM = { installedVersion: '11.0.16.10659', neededVersion: '11.0.16.10700', by: 'installer' } as const;
+
+  /** The installed one's installer: downloads reporting `fractions` (or failing), and runs with the result `installs` gives. */
+  function installedPrefetch({ fractions = [1], downloadError, installs = async () => true }: { fractions?: number[]; downloadError?: Error; installs?: () => Promise<boolean> } = {}) {
+    const steps: string[] = [];
+    const cm = {
+      kind: 'installed' as const,
+      installed: { path: 'C:\\Program Files\\PlasticSCM5\\client\\cm.exe', version: '11.0.16.10659' },
+      neededVersion: '11.0.16.10700',
+      download: vi.fn(async (onProgress: (fraction: number) => void) => {
+        for (const fraction of fractions) onProgress(fraction);
+        if (downloadError) throw downloadError;
+      }),
+      install: vi.fn(async () => {
+        steps.push('run the installer');
+        return installs();
+      }),
+    };
+    return { cm, steps };
+  }
+
+  it('downloads its installer after the app, saying so from the start, and is ready only then', async () => {
+    const { cm } = installedPrefetch({ fractions: [0.5, 1] });
+    const { updates: app, pushed } = updates(fakeFeed([found], [100]), { cmPrefetchFor: async () => cm });
+    await app.check();
+    expect(pushed).toEqual([
+      { state: 'checking' },
+      { state: 'downloading', version: '1.2.0', percent: 0 },
+      { state: 'downloading', version: '1.2.0', percent: 0, installedCm: INSTALLED_CM },
+      { state: 'downloading', version: '1.2.0', percent: 50, installedCm: INSTALLED_CM },
+      { state: 'downloading', version: '1.2.0', percent: 75, installedCm: INSTALLED_CM },
+      { state: 'downloading', version: '1.2.0', percent: 100, installedCm: INSTALLED_CM },
+      { state: 'ready', version: '1.2.0', install: 'restart', installedCm: INSTALLED_CM },
+    ]);
+  });
+
+  it('runs its installer on Restart & Install, saying it waits for it, then restarts into the update', async () => {
+    const { cm, steps } = installedPrefetch();
+    const feed = fakeFeed([found]);
+    const { updates: app, pushed, dependencies } = updates(feed, {
+      cmPrefetchFor: async () => cm,
+      beforeRestart: vi.fn(() => void steps.push('restart')),
+    });
+    await app.check();
+    await app.install();
+    expect(steps).toEqual(['run the installer', 'restart']);
+    expect(pushed.at(-1)).toEqual({ state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'installedCm', installedCm: INSTALLED_CM });
+    expect(feed.quitAndInstall).toHaveBeenCalledWith(true, true);
+    expect(dependencies.logFailure).not.toHaveBeenCalled();
+  });
+
+  it('waits for the operations changing a workspace before running the installer', async () => {
+    const { cm, steps } = installedPrefetch();
+    let finishWrites = (): void => undefined;
+    const { updates: app } = updates(fakeFeed([found]), {
+      cmPrefetchFor: async () => cm,
+      writesRunning: () => true,
+      writesFinished: () => new Promise<void>((resolve) => (finishWrites = resolve)),
+    });
+    await app.check();
+    const installing = app.install();
+    await Promise.resolve();
+    expect(steps).toEqual([]);
+    finishWrites();
+    await installing;
+    expect(steps).toEqual(['run the installer']);
+  });
+
+  it('installs the update anyway when the installer is declined or fails: its first start asks to update it', async () => {
+    for (const installs of [async () => false, async () => Promise.reject(new Error('spawn EACCES'))]) {
+      const { cm } = installedPrefetch({ installs });
+      const feed = fakeFeed([found]);
+      const { updates: app, dependencies } = updates(feed, { cmPrefetchFor: async () => cm });
+      await app.check();
+      await app.install();
+      expect(feed.quitAndInstall).toHaveBeenCalledWith(true, true);
+      expect(dependencies.logFailure).toHaveBeenCalledWith(expect.stringContaining('its first start asks to update it'));
+    }
+  });
+
+  it('says nothing of it and runs no installer when its download failed', async () => {
+    const { cm, steps } = installedPrefetch({ fractions: [0.3], downloadError: new Error('noUpdate') });
+    const feed = fakeFeed([found]);
+    const { updates: app, pushed } = updates(feed, { cmPrefetchFor: async () => cm });
+    await app.check();
+    expect(pushed.at(-1)).toEqual({ state: 'ready', version: '1.2.0', install: 'restart' });
+    await app.install();
+    expect(steps).toEqual([]);
+    expect(feed.quitAndInstall).toHaveBeenCalled();
+  });
+
+  it('on Linux, says the command is needed after the restart, downloading only the app', async () => {
+    const command = { kind: 'installedByCommand' as const, installed: { path: '/usr/bin/cm', version: '11.0.16.10659' }, neededVersion: '11.0.16.10700' };
+    const feed = fakeFeed([found], [50, 100]);
+    const { updates: app, pushed } = updates(feed, { cmPrefetchFor: async () => command });
+    await app.check();
+    const byCommand = { ...INSTALLED_CM, by: 'command' };
+    expect(pushed.slice(2)).toEqual([
+      { state: 'downloading', version: '1.2.0', percent: 0, installedCm: byCommand },
+      { state: 'downloading', version: '1.2.0', percent: 50, installedCm: byCommand },
+      { state: 'downloading', version: '1.2.0', percent: 100, installedCm: byCommand },
+      { state: 'ready', version: '1.2.0', install: 'restart', installedCm: byCommand },
+    ]);
+    await app.install();
+    expect(pushed.at(-1)?.state).toBe('ready');
+    expect(feed.quitAndInstall).toHaveBeenCalled();
   });
 });
 
@@ -243,12 +406,12 @@ describe('installing', () => {
     pushed.length = 0;
 
     const installing = app.install();
-    expect(pushed).toEqual([{ state: 'waitingToInstall', version: '1.2.0', install: 'restart' }]);
+    expect(pushed).toEqual([{ state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'operation' }]);
     // Asked again, or checked, meanwhile: still waiting, nothing restarts.
     await app.install();
     await app.check();
     expect(feed.quitAndInstall).not.toHaveBeenCalled();
-    expect(app.status()).toEqual({ state: 'waitingToInstall', version: '1.2.0', install: 'restart' });
+    expect(app.status()).toEqual({ state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'operation' });
 
     expect(dependencies.beforeRestart).not.toHaveBeenCalled();
 

@@ -33,10 +33,13 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
-| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), the `cm codereview` commands |
+| `features/code-reviews.md`              | Code reviews: reviewers and the status each gives, the list's columns, the review's page and tabs, the conversation (threads, what's open, who may edit what), rounds (what's new since a reviewer's last status), suggested changes and applying them, email notifications, the `cm codereview` commands |
+| `features/merge-requests.md`            | Merge requests: what makes a review one, creating one, the four states and who changes them, the page and its destination, the merge card and the conflicts check, merging and recording Merged, merge-rule refusals, the Merge requests view (State chip, who waits), which review stands for a branch: its chips, the top bar's chip and the next step in Changes |
 | `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 | `features/issue-trackers.md`            | Issue trackers (Jira Cloud and Data Center, GitHub): connecting per user, each tracker's grammar and provider, secrets, issue references in comments and their chips, the trackers' request budget |
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
+| `features/cm-runtime.md`                | The `cm` the app runs: the installed one first, the pin as the floor (`cm-version.json`, `cm:bump`), the app's own store and setup, the setup and update screens, updates that bring their `cm`, Settings' choice |
+| `features/accounts.md`                  | Accounts and sign-in: how profiles make accounts (a Unity account per user, one per server), Home's account switcher, Settings › Accounts; sign-in state, one per server: how `cm` says a server needs a sign-in, the gate that keeps commands from it, keeping sessions alive, the sign-in screen, operations refused and offered again |
 
 ## How a request flows
 
@@ -61,7 +64,9 @@ you touch:
      first command, so until one in that directory has, the query runs as a process of its own (the first window's
      start as the app loads: `readFirstScreenAhead`). A workspace write that may run long (`runsLong`: more than `MAX_QUICK_WRITE_PATHS`
      paths, recursive, or a transfer) runs as a process of its own too, so it never holds a session every read of the
-     workspace would wait behind.
+     workspace would wait behind. No quick command carries an option a `cm shell` keeps for its whole
+     session (`--username`, `--server`, `-path`…: `STICKY_SHELL_OPTIONS`; docs/features/accounts.md "Options that stick
+     to a shell").
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
    - A command that takes a process runs in a `cm shell` of its own, which reads its command line and exits after
@@ -82,13 +87,16 @@ you touch:
      reads an XML list element by element the same way (`cm history`), and `queryLines()` a list of one item a line
      (`cm listusers`).
    - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
-     it arrives with no size limit, an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
-     (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
-     is never stopped for its size.
+     it arrives with no size limit but one on the item still arriving (`MAX_ITEM_BYTES`), an answer stops past
+     `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError` (`CmOutputTooLargeError`; a session starts a new process), and an
+     operation keeps the ends of what it prints and is never stopped for its size.
+   The one `cm` run apart from it: `cm version` of a `cm` that doesn't run yet, the app's own just unpacked or an
+   installed one offered in Settings (`versionReader`, docs/features/cm-runtime.md), logged in the command log with
+   `CmClient.logEntry`.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
-   (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
-   with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
-   logged: it's no failure. One that gave up waiting is logged (its signal aborted with a `TimeoutError`:
+   (see Renderer: Command log), and written to the log file ("The log file"); one that ended without an exit code
+   (stopped on a prompt, `cm` not found) is logged with -1, which the log and the error dialog word as "Stopped"
+   (`commandEnding`), and one its caller cancelled is not logged: it's no failure. One that gave up waiting is logged (its signal aborted with a `TimeoutError`:
    `gaveUpWaiting`), as every read with a timeout is: a chip's read on another server, the repositories listed once
    (`repositoriesService`), a workspace's repository (`workspaceRepositories`).
 
@@ -183,15 +191,31 @@ and many people use the same server. Every `cm` command other than local reads (
   down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
   per halving, never one per read; when both halves fail, they all fail.
 
+- **Sign-in**: a window coming forward checks its server's session (`cm checkconnection`) only when the last check is
+  ten minutes old, one per server app-wide, which keeps the session alive; and a server that needs a sign-in gets no
+  command at all until signed in again (docs/features/accounts.md "The gate").
 - **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset "... order by changesetid desc
   limit 101" --format={changesetid}{owner}` a minute (every five behind other apps, none while hidden). It takes the
   branch and loaded changeset from the workspace info, which follows `.plastic`, instead of asking `cm status`. It
   counts at most `INCOMING_CHECK_LIMIT` (100) changesets, the 101st telling there are more (`countCapped`, shown as
-  "100+", `pluralizeAtLeast`): a workspace 100,000 changesets behind costs the server what one 100 behind does. Nothing
-  else polls: left changes, locks and lists wait for an event, a focus or an operation.
-- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (the update's `cm diff`
-  and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
-  native client does, and its card lists the newest of what that read brought. At "100+" a hover reads nothing heavy:
+  "100+", `pluralizeAtLeast`): a workspace 100,000 changesets behind costs the server what one 100 behind does. A partial
+  workspace's check reads only its branch head (`limit 1`), comparing its items again only when the head moved
+  (docs/features/incoming.md "A partial workspace"). Nothing else polls: left changes, locks and lists wait for an
+  event, a focus or an operation.
+- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (`useIncomingChanges`:
+  the newest page of changesets, `cm find ... limit 201`, the update's `cm diff cs:<loaded> cs:<head>` and the local
+  `cm status`) once per head, to warn about conflicts before any hover, as the native client does, and its card lists
+  the newest of what that read brought. That read is keyed by the branch, loaded changeset and head the check saw
+  (`incomingChangesFor`, `incomingChangesQuery`): never stale, so focus and mounting never read it again, a new head is
+  a new key (new changesets leave it alone, `isAffectedByNewChangesets`), and only an operation or Refresh reads it again
+  under the same head. It waits for the check rather than run before it. It tells `cm` where the workspace stands, as
+  the workspace info says (`incomingChanges(workspacePath, at)`, `workspaceLoadAt`), so it reads no `cm status
+  --header`. So once per head it runs one find, one diff and one local `cm status --controlledchanged --changed`, which
+  says what collides as it reads. After that, what collides follows Changes' pending changes whenever Changes read
+  them after the incoming changes, never reading them itself (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print, each kind
+  decided on its own (`localChangesForUpdateOf`; a checkout deleted on disk, which Changes lists only as deleted, is
+  the one it misses, and updating checks again), the conflicts worked out again from the diff already read (`withLocalCollisions`,
+  `findUpdateConflicts`), the same object while they come out the same. At "100+" a hover reads nothing heavy:
   the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
   says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
   card (that click), opening Incoming or Update reads the diff, Update again right before updating
@@ -209,7 +233,10 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch
-  Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
+  Explorer is kept five minutes and focus never re-reads all history. Local views (pending changes, the Files view,
+  review marks, the workspace info) keep the client's 30 s too, so showing one again or in a second view reads nothing;
+  focus never re-reads them while the watcher sees the whole workspace with auto refresh on, and always re-reads those
+  on screen otherwise, however fresh (`localQueryDefaults`).
 - **Home**: the repository and branch of every listed workspace come from a `cm wi <path> --machinereadable` of each
   (`workspaces.heads`, `workspaceHeadsReader`), a local read with no form for N ("One command for N things"): `cm` has
   no form that tells several workspaces at once (`cm workspace list --format` prints no selector), and `wi` only reads
@@ -226,7 +253,8 @@ and many people use the same server. Every `cm` command other than local reads (
   How each listed workspace holds its files (standard, partial or dynamic: `WorkspaceKind`) comes from a
   `cm getworkspacefrompath <path> --format={type}…{dynamic}` of each (`workspaces.kinds`, `workspaceKindsReader`,
   `workspaceKindOf`), local too and taking the same one-at-a-time turns (`workspaceReadTurns`). A workspace's kind
-  only changes when the user converts it, so each workspace's is one query kept for the session (`workspaceKindQuery`,
+  only changes when choosing what a standard workspace downloads makes it partial (main sends
+  `workspaceKindChanged`), so each workspace's is one query kept for the session (`workspaceKindQuery`,
   keyed by its path and id): a workspace listed later costs only its own read. A kind `cm` couldn't tell shows as
   none, never as standard, and is asked again the next time it shows. How a partial workspace is created, chosen
   and kept partial: docs/features/partial-workspaces.md.
@@ -235,7 +263,7 @@ and many people use the same server. Every `cm` command other than local reads (
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
   A changeset a list on screen holds is never asked for alone: it shows from the list and follows its re-reads, even
-  while the list is stale (`changesetOnScreen`; a branch review's "Changeset by changeset" reads its list, not each
+  while the list is stale (`changesetOnScreen`; a branch diff's list of changesets reads its list, not each
   changeset). Not `IMMUTABLE_QUERY`: a changeset's comment can be edited.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
@@ -250,13 +278,18 @@ and many people use the same server. Every `cm` command other than local reads (
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
 - **Reuse**: what a command already returned answers later questions instead of another command. Code reviews name
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
-  their branch lists already carry, and share one review list with the palette; the Code reviews view and page name it
-  from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
-  (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
-  `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
-  renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
-  changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
-  from a switch looks for changes to restore only when this app left some there.
+  their branch lists already carry, and share one review list with the palette; the sidebar's count on Merge requests
+  needs no name and reads none (`reviewListSummariesQuery`). The Merge requests view and the review's page name it
+  (`CodeReviewsApi.branchNames`) from the branch lists already read (`BranchNamesCache.remember`); else one branch
+  alone, a review's page, is read by its id (`readBranchName`: `where id = N`, then among the hidden ones only when
+  that finds none), and two or more read every branch's id and name once (`readBranchNames`, two light queries, kept
+  ten minutes, and only while a window shows the workspace: `watchShownWorkspaces`). The top bar takes the branch
+  comment from the branch query. The recent branches and renaming a workspace take its GUID and name from the reads
+  the workspace info shares (`WorkspaceHeaders`). Pending changes share the Locks view's read of every lock
+  (`locksQuery`), and ask which locks are mine only when some lock holds one of them. Left changes look the selector's
+  object id up only when an automatic shelve by another client could match it. On a branch they take the id from the
+  top bar's branch query (`leftChangesQuery`, `KnownBranch`), used only while the workspace is still on that branch
+  (`selectorObjectRef`). Arriving from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
   a changeset's, branch's or shelve's diff, Incoming, update conflicts, a merge's destination version of each
   conflicting file, a model's `.mtl`, `.bin`, `.meta` and textures in any of them, both sides) follows one procedure
@@ -288,12 +321,20 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists
-  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. A list
-  reads just the fields it needs, as records (Parsing).
+  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. One
+  exception, measured: the reviews of the branches a view shows, `targetid`s ORed in blocks of `BRANCH_REVIEWS_BLOCK`
+  (`branchTargetsCondition`), which the server matches in one scan, so a block costs what one branch does
+  (docs/features/merge-requests.md "Where a branch's merge request shows"). A list reads just the fields it needs, as
+  records (Parsing).
   Equivalent filters must share one query key (`compactFilter`). A parse failure must fail, never degrade to an empty
   filter (`parseWorkspaceStatus`): `cm find changeset where changesetid > -1` reads the whole repository.
-- **Guard**: development builds warn in the console (`[server budget]`) when the same server command runs more than
-  twice in ten seconds (`main/cm/repeatedCommands.ts`).
+- **Guards**: one thing is read once. The smoke test fails when the same command line is sent twice from the same
+  folder within one step (opening the workspace, showing a view): one read under two query keys, or two features each
+  reading what one already read. What it checks, what it leaves out and what it can't see: scripts/e2e/README.md,
+  "Duplicate server commands".
+  Development builds also warn in the console (`[server budget]`) when the same server command runs more than twice in
+  ten seconds (`main/cm/repeatedCommands.ts`). A tighter window, a second run within 2 s, was tried and dropped: it
+  flagged the reads a sign-in or a Refresh runs again on purpose, as it can't tell what caused a command.
 
 ## Parsing `cm` output
 
@@ -305,14 +346,18 @@ and many people use the same server. Every `cm` command other than local reads (
     organization's members) is read as it arrives, `queryRecords`/`executeRecords` for `--format` records,
     `queryXmlElements` for an XML list (`XmlElementReader`), `queryLines` for one item a line with no `--format`
     (`LineReader`: `cm listusers`; `cm` writes errors to stderr, and a shell's `CommandResult` line is left out), and
-    never stopped for its size;
+    never stopped for its size. Only the item still arriving is kept, so one that never ends would be kept whole: past
+    `MAX_ITEM_BYTES` (16 MB, far past any real record, line or element) the reader fails the command with a `CmError`
+    (`CmItemTooLargeError`). `cm` asking which system to sign in with, its input closed, asks again and again without
+    a line break, which a process stops sooner ("No external tool opens by itself": `RepeatedPromptWatch`);
   - an **answer** (one small object: `whoami`, a workspace's header, an item's details) is read whole by
     `query`/`execute`, and stopped past `MAX_TEXT_OUTPUT_LENGTH` (4 MB);
   - an **operation** (a write: undo, add, checkin, update, merge, cat...) may print a line per item, so `query`/`execute`
     keep only its start and end (`TextLimit` `keepEnds`, `OutputBuffer`, the middle marked `leftOutMarker`), where
     `cm` prints its result and its error, and never stop it: stopping a checkin halfway is worse than any output.
-    What a caller needs from a long run it takes from its lines as they arrive (`onOutputLine`): a merge keeps the
-    records that tell how it ended (`mergeOutcomeRecordOf`).
+    What a caller needs from a long run it takes from its lines as they arrive (`onOutputLine`, a line past
+    `MAX_OUTPUT_LINE_LENGTH` given in pieces): a merge keeps the records that tell how it ended
+    (`mergeOutcomeRecordOf`).
 
   `query` and `execute` refuse a list and a command missing from `COMMAND_OUTPUTS` (`textOutputKind`), in `CmClient`
   and in `fakeCmClient` alike, so a new list read as text fails its first test, and a new command says how it's read
@@ -402,7 +447,9 @@ and many people use the same server. Every `cm` command other than local reads (
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
-  it, `changesetsService`); merges and labels come either way.
+  it, `changesetsService`); merges and labels come either way. No one `cm find branch` reads both: a `hidden`
+  condition keeps only the hidden ones or leaves them out. So a list wanting both runs two finds, and one branch
+  looked up by name (`branchesService.get`) asks for the hidden ones only when no visible branch has its name.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments (`canRunInShell`).
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
@@ -498,7 +545,10 @@ by name, and never passes it to `cm`.
     `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
     asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
-    (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
+    (`WorkspaceHeaders`): the incoming changes read without a head take it from there (the renderer's
+    `incomingChanges` without `at`: before updating, before catching up a check-in, and a partial workspace's check,
+    `checkPartialIncoming`). Reads that need only what is loaded take
+    `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
     read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace
     (`readWorkspaceGlance`) reads only its branch and pending changes: its row already shows the repository.
@@ -518,7 +568,8 @@ by name, and never passes it to `cm`.
   show.
 - **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
   `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
-  sidebar groups them (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
+  sidebar lists one Unity account's at a time, by its switcher (docs/features/accounts.md "Home"), and groups them
+  (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
   (`ServerIcon`; `OrganizationIcon` is the building Unity's apps draw). Only a Unity organization has projects: a
   repository of type `Project`, which `cm repository list` leaves out unless asked with `--type=all`, and
   `{reptype}` tells apart (`repositoryListArgs`). Neither is in `cm`'s help: `cm` keeps `--type` for its own use and
@@ -552,7 +603,8 @@ by name, and never passes it to `cm`.
 - Not done instead: reading `cm`'s own local table of organizations (a file in its config folder) duplicates what
   `cm` does and is the client's config, which the app doesn't keep reading ("Own config"); keeping a table in the app
   (learned once per organization) was tried and dropped for the same duplication; `cm profile list`'s names cover
-  only organizations with a profile of their own, not those signed in through `*@cloud`.
+  only organizations with a profile of their own, not those signed in through `*@cloud` (docs/features/accounts.md
+  "Known limit").
 
 ## No external tool opens by itself
 
@@ -570,7 +622,14 @@ and the app keeps the decision. An editor or a terminal opens only on the user's
   (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
   only by `mergeToolsService` (which also runs Unity's Smart Merge through it, headless, before the tool the user
   asked for: docs/features/merge.md).
-- `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
+- `cm` processes run with stdin closed, so a console prompt fails instead of hanging. Some questions `cm` asks again at
+  once when the answer it reads is empty (which system to sign in with, `Select your system [0-4]`), printing it again
+  and again without a line break or a pause: `runCmProcess` stops such a command as soon as the end of its stdout is
+  one question repeated (`RepeatedPromptWatch`), with the same "cm is waiting for input" failure a `cm shell` session
+  gives a stalled prompt (`WaitingForInputError`, `main/cm/consolePrompts.ts`). A session's stdin stays open, so there
+  `cm` waits for the answer, and the pause shows the prompt (`CmShellSession.watchForPrompt`). `CmClient` tells such a
+  failure as a sign-in its server needs once a check confirms it, else as a `CmError` with its command
+  (docs/features/accounts.md "The gate").
 
 ## Secrets
 
@@ -579,7 +638,7 @@ hidden before any of them sees it: `commandLineForLog` and `outputForLog` (`main
 the values of `SECRET_OPTIONS` (`--pwd=`, which a Git sync takes) and the whole user info of every URL
 (a user and a password before the host's `@`, or a token alone as the user, as GitHub takes it, both read
 `https://•••@host`; `withoutUrlUserInfo`, `shared/urlUserInfo.ts`). The same goes for the `[server budget]` and `[organization id]`
-warnings, an error nothing caught (`textForLog`) and the lines a push, pull or sync shows as its progress
+warnings, an error nothing caught (`textForLog`), every record of the log file ("The log file") and the lines a push, pull or sync shows as its progress
 (`readActivityProgress`). An scp-like SSH remote (`git@host:path`), an `@` in a path and an `@` after a host with no path (an email beside a URL) are left as they are; an `ssh://` URL loses its user as any other. A new option that
 carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on its command line, so it still shows in
 the process list while the sync runs; never pass a secret where `cm` offers a file instead. The window's own titles
@@ -611,7 +670,8 @@ when it's one the user already works with (one of their profiles, `serverReads`)
 on hover or keyboard focus, in a process of its own (`remoteObjectQuery`, docs/features/rich-comments.md "What a chip
 reads"). A server the user doesn't use is never contacted, as `cm` would sign in there with their own credentials,
 and a comment never makes the app contact another server by being shown.
-There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
+There is no telemetry, analytics or crash reporting: the log file stays on the device until the user attaches it to a
+bug report ("The log file"). `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
 
@@ -642,8 +702,9 @@ dialog never shows.
   error toasts (`runOperation`, `runAction`) whose Details open `ErrorDialog`, with "Report an Issue".
 - **Main, nothing caught**: `main/index.ts` imports `errors/installUnexpectedErrorHandlers` first, so before any other
   module runs `handleUnexpectedErrors` listens to `uncaughtException` and `unhandledRejection` (a listener of the app's
-  own is what keeps Electron's dialog away, and Node from ending the process on a rejection). Each one is logged with
-  its stack, secrets hidden (`textForLog`), and sent to every window (`unexpectedError`) once per message. The app keeps
+  own is what keeps Electron's dialog away, and Node from ending the process on a rejection). Each one is logged to the
+  console with its stack, secrets hidden (`textForLog`), and, once per message, written to the log file ("The log
+  file") and sent to every window (`unexpectedError`). The app keeps
   running. Node warns that state may be inconsistent after an uncaught exception, but here the state that matters lives
   in `cm`, the disk and the settings file (written whole, `replaceFileSync`), and quitting would lose what the windows
   hold (unsaved edits, running operations) for no gain. Code that runs from callbacks, where no promise catches a throw,
@@ -655,8 +716,46 @@ dialog never shows.
   in the browser before sending). The stack never shows on screen. A render error shows `AppErrorBoundary`'s
   `WindowErrorScreen` (Reload, Report an Issue) instead of a blank window: one boundary around the screen, inside the
   dialogs and toasts so they keep working, and one around the whole app as the last resort.
+- **A toast reads as text, never a scroll box**: its detail (an error's message, often a URL or a path) shows its first
+  three lines and a "Show more" when it hides the rest (`detailToggleOf`, measured by `useClippedText`); unfolded, it
+  shows whole and the toast stays until dismissed (`autoDismissMsOf`). The action sits under the text, so the message
+  has the card's whole width (`ToastCard`). An error toast's Copy puts its title and message on the clipboard
+  (`errorCopyTextOf`).
 - `unexpectedErrors.test.ts` checks that the handlers are main's first import, installed in one place, and that every
   timer of `CmShellSession` goes through `guarded`.
+
+## The log file
+
+What a user sends with a bug report: the windows' command logs end with the session, so main keeps one log file,
+`uvcs-desktop.log` (`appLog`, `main/diagnostics/`), in the OS's logs folder for the app (`app.getPath('logs')`:
+`~/Library/Logs/<app>` on macOS, `logs` in the user data folder on Windows and Linux). An app run from the repository
+logs in `logs` in its user data folder on every OS, so the smoke test's temp folder holds its log. Help ▸ Show Log
+Files shows it in the file manager (`showLogFiles`; the folder while there is no file), and the bug report form asks
+for it (`.github/ISSUE_TEMPLATE/bug_report.yml`, `log-file`). It never leaves the device by itself.
+
+- **What it holds**, one timed record each (`logRecord`: local time and offset from UTC, as `cm`'s own log, so the two
+  read side by side; later lines indented): the launch (app version, OS, architecture, Electron: `startedText`), the
+  `cm` that answered (`cmFoundText`, written by `system.cmVersion`, which already runs `cm version`: no command of its
+  own), every command-log entry (`commandText`: its line, folder and time; how a failure ended, `entryEnding`, and the
+  output the command log kept), errors nothing caught in main (`handleUnexpectedErrors`' `record`) and in a window
+  (`system.logUnexpectedError`, `unexpectedErrorTeller`; a render error with its components, `renderError`), each
+  once per message as it's told, so one that repeats doesn't rotate away what led to it,
+  pages and processes that ended unexpectedly and windows that stop responding (`logAppHealth`), and failed updates.
+- **What it doesn't**: levels, categories or tracing. A new record is an event a bug report needs, written with
+  `DiagnosticWriter.write`; anything that repeats per item, frame or keystroke stays out.
+- **Secrets**: every record goes through `textForLog` ("Secrets"); the command lines are already hidden as the command
+  log shows them.
+- **Never in the way**: records wait in memory while one append runs, and go together in the next (`DiagnosticLog`);
+  a failure loses them quietly, and the log never logs its own failures nor throws at its caller. Records still
+  waiting when the app quits or main crashes are lost: writing each one synchronously would stall the main process.
+- **Size**: a record keeps at most `MAX_RECORD_LENGTH` characters, its start and its end (`clipForLog`), whoever sent
+  it. Past 5 MB the file becomes `uvcs-desktop.1.log`, that one `.2.log`, and the oldest is dropped
+  (`rotationRenames`): about 15 MB at most. A file that can't move (held open by a viewer or an antivirus on Windows)
+  takes the records and is moved on a later write; a rename that fails stops the rotation, so no earlier file is
+  overwritten.
+- **No crash dumps**: Electron's `crashReporter` stays off. A minidump holds the process's memory, where a password or
+  a token can be, and reading one needs symbols and tools no user has; the log's `render-process-gone` and
+  `child-process-gone` records tell that a process crashed and why.
 
 ## Own config
 
@@ -715,7 +814,7 @@ each email address shown, and the user decides whether it leaves the machine.
   (`isEmailAddress`).
 - **Asked once, when people show**: the first avatar of someone named by an email address marks people as shown in
   the window (`notePersonShown`, from `avatarImageFor`); the user's own account (the top bar, the account menu,
-  Settings' accounts, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
+  Settings' accounts, Home's account switcher, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
   a card in the toast corner (`GravatarPrompt` on `CornerCard`, `asksAboutGravatar`) asks "Show profile pictures?"
   with "Show pictures" and "Not now". While a dialog opened with `openDialog` or `askDialog` is open (`useDialogStore`:
   Settings, About, confirmations...; the command palette isn't one) it waits, so it never sits over the dialog's
@@ -842,15 +941,17 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   a problem is checked again by the next window, and by Retry. `cm version` says `cm` runs (`CmUnavailableScreen`
   otherwise); `cm profile list`, a local command, says it's configured (`checkSetup`): without a configuration every
   command but `version`, `location`, `configure` and `help` fails at once saying so, and `SetupProblemScreen` takes the
-  app's place. The check costs no command of its own: the accounts, the servers and it share one profiles read
+  app's place. The check costs no command of its own: the profiles, the accounts they make, the servers and it share one profiles read
   (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
   without any. The server of the window's place is checked as
-  it opens, `cm checkconnection <server>` (`checkConnection`, once per server until it answers): a workspace's once its
-  info names it, a repository's explored without one from its spec (`serverOfPlace`). A server out of reach or a failed
-  sign-in show in a corner card naming it (`ConnectionProblemCard`, `connectionProblemShown`), while a workspace works
-  with what's local. Checking the default
+  it opens and as the window comes forward, `cm checkconnection <server>` (`accounts.checkSession`,
+  `useWindowSessionCheck`; at most once every ten minutes per server app-wide, docs/features/accounts.md "Keeping
+  sessions alive"): a workspace's once its info names it, a repository's explored without one from its spec
+  (`serverOfPlace`). A server out of reach shows in a corner card naming it (`ConnectionProblemCard`,
+  `connectionProblemShown`), while a workspace works with what's local; one that needs a sign-in covers the window with
+  the sign-in screen (`SignInCover`). Checking the default
   server at start-up, and stopping the app on its failure, was dropped: it left a user offline unable to open even the
   home screen, and named no server, as `cm checkconnection` prints none.
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
@@ -898,14 +999,14 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
   repository with one local `cm status` each, only while it's open (`workspaces.glance`).
-- A workspace reads the same everywhere it shows (the home screen, the switcher, the sidebar's workspace button): the
+- A workspace reads the same everywhere it shows (the home screen, the switcher, the top bar's workspace pill): the
   repository's avatar (`components/RepositoryAvatar`: a white initial on a solid `--avatar-*` fill, picked by
   `avatarColor` from the repository's short name, the workspace's own until it's known; a neutral square while
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
   in its tooltip), told by `useDescribeWorkspace` (a local `cm wi` of each, `workspaceHeadsReader`; `cm status` only for recent ones it can't tell). A
   partial or dynamic workspace also shows its kind as a chip, with what it means in its tooltip (`WorkspaceKindChip`,
   `workspaceKindChip`), and as a badge in its avatar's corner, a bolt or a half-filled circle in the accent color on a
-  raised disc, which the collapsed sidebar keeps when the chip goes (`WorkspaceKindBadge`; both mark the kinds
+  raised disc, so the avatar itself tells it (`WorkspaceKindBadge`; both mark the kinds
   `markedWorkspaceKind` names, and a missing workspace's neither: `shownWorkspaceKind`); a standard one, the way most
   are, shows none, and its details' Type line says it (`workspaceKindWords`). In the switcher's narrow rows the server
   gives way first, down to its icon, then the branch's name.
@@ -922,7 +1023,7 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    ms), wires the services and, as it loads, before Electron is ready (`cm` needs neither that nor a window), starts
    the `cm shell`s of the workspace the first window reopens (or of the home folder, for the home screen) and that
    screen's first reads (`readFirstScreenAhead`, `readFirstScreen`): `cm version` and the workspace's info and
-   pending changes, or the home screen's workspaces and servers. Their commands run while Electron gets ready (50-60
+   pending changes, or the home screen's workspaces, servers and profiles (the last two one `cm profile list`). Their commands run while Electron gets ready (50-60
    ms) and the window and its page load; the page's identical calls take the answers (`EarlyCalls`, in
    `registerApi`; one nobody takes goes 5 s after the window opened, `EARLY_ANSWER_MS`, `expireUntaken`). A launch
    that names a folder on Windows and Linux (`launchNamesAFolder`, known as the module loads) reads ahead only
@@ -949,11 +1050,18 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
 5. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
    page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
    earlier still.
-6. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
+6. The one thing that gates it: the app's own `cm` not set up yet (the first run, or an update whose `cm` didn't
+   download ahead). Then nothing is read ahead, and the window starts on the setup screen (docs/features/cm-runtime.md
+   "The setup screen"); a launch with it there checks one folder exists, nothing more. An installed `cm` older than the pinned version is
+   caught by the first window's `cm version` instead, which then shows the update screen (cm-runtime.md "The update
+   screen"). A folder named at launch opens
+   once it's set up (`CmRuntime.whenReady`).
+7. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
-   (`useConnectionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
+   (`useWindowSessionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
    avatars when rows show them, the menu bar (built by the first window opening, then once per burst of window
-   changes: `appMenuInstaller`).
+   changes: `appMenuInstaller`), the top bar's merge request (one `cm find review` of the workspace's branch, asked
+   once the pending changes are read: `asksForBranchReviews`).
 
 Reopening the last workspace on an M4 Max (Electron 44), started as the Dock does, warm, median of 14 runs, in ms
 after the process starts, interleaved with a build from before the compile cache, the reads before `app.whenReady`,
@@ -1002,8 +1110,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   when nothing is there and when filters hide everything; only what fills it changes.
   - Its header (title, count, actions, filters, switches) always shows. A filter over what is read waits, disabled,
     until it is read (`useChangeFilter`'s `reading`, History's text); filters that choose what is read (a time range,
-    people, the kinds an object list asks for) stay live. A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
-    "Whole branch | Changeset by changeset").
+    people, the kinds an object list asks for) stay live. A control in a pane's header stays with it (`DiffFrame`: a shelve's actions, a
+    review's Comments panel toggle).
   - Loading: the panes stay, with placeholder rows at the real row height under the list's own column titles
     (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`; a graph's bands, header cards and
     changesets at the graph's own measurements, `GraphSkeleton`), the details as
@@ -1030,7 +1138,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
   its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
   canvas, as disposing one loses its WebGL context for good; `useModelScene` builds its scene in the effect, not in a
-  memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
+  memo. The same holds for a view kept mounted (`KeptView`): its `Activity` runs every clean-up as it hides and the
+  effects again as it shows, and detaches its refs meanwhile, so an element a ref puts in state for what's drawn into
+  it is kept with `useKeptElement` (`elementsKeptWhileHidden.test.ts`). The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
   development build too (scripts/e2e/README.md). An effect returns a clean-up or nothing: an arrow that returns what
   a DOM call gives can hand React a promise (`scrollIntoView` returns one in the Chromium the app runs), which crashes
   the window as the effect runs again (`effectsReturnCleanUps.test.ts`).
@@ -1052,7 +1162,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     skips `ignore.conf` folders (on Linux the folders watched follow its edits, `followSkipRule`) and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
     `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).
-    A watch that sees only part of the workspace refreshes local views on focus instead (`localQueryDefaults`), from the
+    A watch that sees only part of the workspace re-reads the local views on screen on every focus instead, however fresh (`localQueryDefaults`), from the
     start ("Some folders here aren't watched") or once a watch breaks later (`workspaceWatchBroken`: one error toast per
     workspace and session, `noteBrokenWatch`; no polling).
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
@@ -1061,8 +1171,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     A hidden window (minimized, covered, on another desktop) keeps the changes and refreshes once, when it shows again.
     File edits name the folders they touched (up to `MAX_CHANGED_FOLDERS`, else anywhere): the files view re-reads only
     those listings and the ones above them (`isAffectedByFileChangesIn`), not every open folder.
-  - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
-  - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
+  - Locks live on the server, where nothing reports changes: the lock marks of pending changes read them as they show and
+    on focus, at most every 30 s (`LOCKS_STALE_MS`); the watcher's refresh of the changes doesn't read them again.
+  - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views. Local views skip it while
+    the watcher sees everything with auto refresh on, and otherwise are re-read on every focus (`localQueryDefaults`).
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
     older than 20 s. A branch head moved by someone else refreshes the repository views (`isAffectedByNewChangesets`).
   - Refresh, asked for (⌘R, the menu's, a view's `ViewRefreshButton`), reads again what the window shows, or only what
@@ -1072,13 +1184,33 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Top bar**: one bar across the window on every screen (`app/shell/TopBar`), the sidebar under it: the window's
-  buttons, the home button (`HomeButton`), then what the screen adds. A workspace adds its branch pill and
-  incoming chip, the search and the account at the end (`WorkspaceTopBar`); the home screen adds nothing. Sidebars
-  (`ui/nav/SidebarNav`) have no title band of their own.
+  buttons, the home button (`HomeButton`), then what the screen adds. A workspace adds a breadcrumb, outer to inner:
+  the workspace (`WorkspacePill`: its repository's avatar, name and kind chip, the repository under them; it opens
+  the switcher, and a right-click its menu, `currentWorkspaceMenu`), a chevron, its branch pill and incoming chip;
+  then the search and the account at the end (`WorkspaceTopBar`). A repository opened without a workspace shows
+  itself in the same place (`RepositoryPill`, `RepositoryTopBar`). The home screen adds nothing. The bar is 52px
+  tall (`TITLE_BAR_HEIGHT`, `--topbar-height`, which `tokens.test.ts` keeps equal) and its pills 40px
+  (`--topbar-control-height`), 6px clear of its edges, their two lines with no gap between them: 36px pills in a 44px
+  bar read cramped and small, and a 56px bar looked heavier than other apps'. The search and a repository's Create
+  workspace keep the standard 28px (`--control-height`): at 40px the search read as one more card. The macOS traffic
+  lights are centered on the bar as macOS draws them, about 14 points tall (`trafficLightsAt`). The workspace comes
+  before the branch because the branch belongs to it, the order the official client shows; a workspace card in
+  the sidebar, under the branch, read backwards. In a window 1100px wide or less the workspace pill shrinks to
+  its avatar (`PlacePill.module.css`), its tooltip saying the rest and, below, the workspace's folder
+  (`workspacePillTip`), so the branch keeps the room. Sidebars (`ui/nav/SidebarNav`) have no title band of their
+  own, nor a workspace card.
+  - While the workspace's info loads, the pills show what the home screen already read of it (`workspacePreview`:
+    its name, repository and branch, from the cache, never asking `cm`), so opening a workspace from the home screen
+    shows them whole at once; what isn't known yet, and the branch's comment while it loads
+    (`workingObjectCommentLine`), is a placeholder bar as tall as its line (`SkeletonLine`), so the pills don't
+    change height or jump when it arrives. A window opened straight into a workspace (the app's start) shows
+    placeholders until its info is read. A partial or dynamic workspace's kind chip comes only with the info, which
+    widens its pill then. The home screen's account switcher shares the pills' look (`ToolbarControl`) but keeps
+    its own 36px, set by the sidebar's rows.
   - Home is one click (or ⇧⌘H, `app.home`, File ▸ Home) from anywhere: in a workspace it leaves for the home
     screen, on the home screen it goes back to its welcome (`WELCOME`), where the house is lit. It sits in the top
     bar, not the sidebar, so it stays put whether the sidebar is folded or not and costs no sidebar entry. It is a
-    borderless icon button, the bar's 8px gap on each side and nothing between it and the branch pill: a separator
+    borderless icon button, the bar's 8px gap on each side and nothing between it and the first pill: a separator
     there, or a bordered square like the pill's, both looked off balance. It replaced the app's mark and name, which
     opened About: the welcome shows those, and the status bar's version opens About.
   - The way back: on the home screen, after the house, "‹ <workspace>" returns to the workspace the window left
@@ -1086,8 +1218,31 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     navigation stays while on the home screen), as do Back (⌘[, Alt+←) and the mouse's back button. It shows only
     while `cm` lists that workspace (`workspaceToReturnTo`, from the list the home screen reads anyway).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
-  Another view closes the pages, and Back the top one, except a merge in progress, which only steps aside (merge.md
-  "A merge in progress"): it stays mounted, its keys quiet while it doesn't show (`PageShownContext`).
+  Back closes the top page, except a merge in progress, which only steps aside (merge.md "A merge in progress"): it
+  stays mounted, its keys quiet while it doesn't show (`PageShownContext`).
+  - **Views keep their place**: each view keeps the pages it was left with (`KeptViews`, `switchedViews`). The
+    sidebar, ⌘1… and the palette's Go to return to a view as it was left (`navigation.returnToView`), and to its list
+    when it is the view shown. Every other way into a view (a link, "View changes", "Show in Locks", a toast) shows its
+    list, closing the pages it was left with (`navigation.goToView`): it goes there to show something in the list. A
+    page window asks its workspace window for one or the other (`viewCommandId`, `viewListCommandId`); a view its
+    place doesn't show gives the place's first (`viewShownIn`). Another place
+    opening while unsaved edits are asked about keeps nothing of the place left.
+    Leaving a view still settles unsaved edits first (`afterLeaving`), so a view set aside never holds any. A merge in
+    progress belongs to no view: a view keeps only the pages under it. Another place opening forgets them all; the
+    home screen between two visits of one place doesn't.
+  - **The latest views stay mounted**: the view shown and the last ones shown, up to `MOUNTED_VIEWS` (3), are mounted
+    with their top page, each in an `Activity` (`PlaceLayout`, `KeptView`), in the sidebar's order so none moves.
+    Hidden, a view keeps its DOM and React state (a list's scroll and filter, a review's tab, its picked thread, what
+    was typed) while its effects stop: no shortcut, watcher or query observer runs, so it asks `cm` nothing. Shown
+    again, it reads what went stale as a view mounted anew would, and nothing else. Hidden, its queries have no
+    observer, so past their `gcTime` (five minutes) or the bound on unused ones (`boundUnusedQueries`) they're
+    dropped: a view shown again after that reads them anew, showing as loading, its own state (tab, selection, typed
+    text) kept. Effects that scroll to a value run for new values only (`useNewValuesEffect`), never because the
+    view shows again; a row asked for again is a new request (`RowReveal`, `revealAsked`, `DataTable`'s
+    `revealCount`: Go to file on the file selected), and a table shows a selection set while it was hidden, the row
+    already selected too (`selectionSetWhileHidden`, as `selectInView` sets one: Show in Locks). A view past them unmounts and comes back from its pages alone. What's kept hidden is in the DOM: code looks elements up within itself, never by
+    a document-wide id (a review's conversation, `elementById`), and checks what shows (`checkVisibility`, as
+    `focusMain` does).
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
   (`leftChangesSummary`, in the "Welcome back" banner's words).
@@ -1122,8 +1277,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   changesets').
   The changeset comes first, unless the number is past the newest changeset read
   (`UNLIKELY_CHANGESET_QUALITY`): review numbers are object ids, far past every changeset's on a large repository. `#` is
-  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. The footer names the prefixes that work where the palette is open (`offeredPrefixes`),
-  its own at the end of the keys' row and the shared ones on a row of their own. Labels, code reviews and people are
+  the editor's, for issues (docs/features/issue-trackers.md "Suggesting issues"); the palette doesn't read it. Under the search, a chip per prefix that works where
+  the palette is open (`offeredPrefixes`, `scopeChipsFor`), each showing its prefix: All and the sections searched most
+  in a row, the rest under More, which takes the name of the one picked. A chip writes its prefix in place of the one
+  typed, the rest as typed (`queryInScope`), so the text stays the only state and a chip teaches what to type;
+  clicking the chip picked goes back to All (`clickedChip`). ⌥⌘← ⌥⌘→ step through them, Alt+← Alt+→ off Mac
+  (`scopeStepOf`, `steppedChip`): arrows any keyboard layout has, as a browser's tabs, never ⌘ or ⌥ alone, which move
+  the caret. The home screen, which searches only commands, has none. Labels, code reviews and people are
   listed only when asked for (`lb:`, `cr:`, `@`). People are the owners of the lists the palette already reads and
   everyone the views showed (`palettePeople`, `peopleSeenIn`), no command of their own, ranked as a mention's
   suggestions (`indexPeople`); picking one opens the Changesets view on their changesets on every branch, in the time
@@ -1147,11 +1307,16 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
   front (`useCopyLinkCommand`, features/deep-links.md). A menu names a list key (⌘D, ⌘C, ⇧⌘C) only where its list binds
   it: a list on a page that binds none, its keys reaching the view under the page or the page's own object, passes
-  `MenuHost.listKeysElsewhere` (a branch diff's "Changeset by changeset"). Items that open a dialog
+  `MenuHost.listKeysElsewhere` (a branch diff's list of changesets). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
   in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
   clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
+- **Going to a thing**: navigating to a thread or comment in a code review's conversation (`placeInView`) places its top
+  a fifth down the viewport, even when it was already on screen and however tall it is, so it reads with what follows
+  it; the top and the bottom of the scroll range stop it short (`placedScrollTop` in `lib/scrollPlacement.ts`). Not
+  `focusScrollTop`, which bottom-aligns a card taller than two-thirds of the viewport, right for a comment shown in its
+  context, not for going to it.
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
@@ -1172,7 +1337,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   by the character typed (Ctrl+Z on a German keyboard), digits by position. A comment field takes its formatting keys
   (⌘B, ⇧⌘U, ⇧⌘C: the registry's Comments area, `scope: 'commentField'`) before the window's shortcuts, inside a focused
   comment field only (`yieldsToCommentField`; features/rich-comments.md "Writing"). F2
-  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
+  renames the selected file, branch, label or attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A list driven from its filter field (the palette, Go to file, the branch and workspace switchers) offers a result's actions three ways that open one menu, at the "…" (`RowActionsButton`) the highlighted row shows: that button, Tab (or the menu key, `isRowMenuKey`) and a right click on any row, which highlights it first; closing the menu gives focus back to the filter (the test: `rowActionsEverywhere.test.ts`). A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
@@ -1189,17 +1354,20 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
   or Quit (Linux), Help with Check for Updates and About, and `&` marks each item's Alt letter. The menus hold what
   a person looks for there: windows and workspaces (File), the branch work (Branch: switch, new, merges), the palette,
-  the command log and the sidebar (View), the documentation, the shortcuts and reporting an issue (Help); what the
-  screen already offers in place (updating the workspace: the incoming chip) stays out.
+  the command log and the sidebar (View), the documentation, the shortcuts, reporting an issue and the log files to
+  attach to it (Help); what the screen already offers in place (updating the workspace: the incoming chip) stays out.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
   a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
-  the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
+  the action runs first, `runAfterMenuCloses`). A dialog holding the trigger was open before the menu and doesn't
+  count: a result's menu in Go to file gives focus back to its filter. Views keep their list's selection while away (`useViewSelection`).
   Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container. The keyboard
   ring is for focus the keyboard moved (`showsFocusRing`, `lib/focusRing.ts`): Chromium rings any focus a script moves
-  once a key was pressed, and a clicked button at the next key, so focus the app moves on its own (Expand Diff giving
-  the code the keyboard: `focusMain`'s `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
+  once a key was pressed (and before any input at all), and a clicked button at the next key, so focus the app moves on
+  its own (a workspace or repository opening on its first list, which rings at the first key aimed at it as a list
+  reached by a click does: `mainFocusMover`, `ringsAtKey`; Expand Diff giving the code the keyboard: `focusMain`'s
+  `mover`) or a click leaves (the change arrows: `settleClickFocus`) goes through
   `focusAs`, `focus({ focusVisible: false })`, which keeps it ringless until a Tab (Go to line… too). New code uses
   `focusAs` and `settleClickFocus`. Two older marks remain for what they alone can see: a click inside the code, whose
   focus may land in Pierre's shadow root (`usePointerFocusMark`, `data-pointer-focus`, which the code panes' rings
@@ -1240,13 +1408,14 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     once the arrows moved, Esc empties the search then closes). It reads the pick: "Ana Diaz +2", avatars stacked
     (`lib/peopleFilter`: `othersLabel`, `describePick`, `stackedPeople`). The people offered come from the rows: a list read whole
     offers its owners, one read by people on the server everyone it showed this session (`usePeopleSeen`); no query
-    lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Code reviews)
+    lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Merge requests)
     the pick goes into that same query (`pickedOwners`: `me` and names, sorted, one key per pick; `ownersCondition`
     ORs a few owner names, never ids, at most `MAX_PICKED_PEOPLE`), once picking pauses (`PICKING_PAUSE_MS`), and the
     rows already read narrow at once meanwhile (`matchesPeople`). Locks read only the user's (`--onlycurrentuser`)
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
-    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; I'm a reviewer
-    is a chip of its own (`reviewer = 'me'`). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+    (`pickedNames`), History and Attributes filter what they read. Merge requests have two people chips: who created
+    them, and their reviewers (I'm a reviewer is the server's `reviewer = 'me'`; others picked narrow the rows read,
+    code-reviews.md "The list"). `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
   - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
     workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
     over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the
@@ -1283,16 +1452,31 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
+  A popover opened inside a dialog goes through `ui/Popover` (or `FilterPopover`), which is modal there
+  (`InsideDialog`, `useInsideDialog`, set by `Dialog` and `CardDialog`): the dialog's scroll lock takes the mouse
+  wheel from anything outside it, a portaled popover included, and only a lock of the popover's own gives its list the
+  wheel back. Modal, the popover's first click outside only closes it. A raw Radix popover in a dialog doesn't scroll.
+- **Buttons that create something** ("New branch", "New label", "New workspace") show what they create with a plus:
+  Lucide's `GitBranchPlus`, `TagPlus`, `MessageSquarePlus`, `DatabasePlus`, `FolderPlus`, never the bare `Plus`, which
+  only says "add". Where Lucide has no such icon the feature draws one on its grid (`TagsPlus`, `Tags` with a
+  plus). An empty state's "New …" button shows it too, and the menu entry and palette command that make the same
+  thing show the same icon (`newLabel`, `newCodeReview` in `menuWords`). The test reads each `<Button>` with a
+  written "New …" label and wants an icon whose name ends in `Plus` (`newButtonsShowTheirObject.test.ts`).
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton` (`listViewsRefresh.test.ts`). Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
   `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; read as Markdown with chips for what it names, features/rich-comments.md; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
-  date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
-  then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
+  date · spec to copy · branch chip); properties and relations behind "More details". The header says what the object
+  is and nothing more: everything else is a titled section under it (`DetailsSection`, a caps title over a tinted
+  card, a small control such as Add at the title's right), what the object relates to or how it stands first (Merge
+  request, Review, Reviewers, In progress), then its attributes (`AttributesDetailsSection`: "Attributes", or "Branch
+  attributes" on a review; Add at the title's right while there's an attribute to add, the card holding the chips or "No attributes",
+  `attributesSectionOf`; never chips in the header, `detailsPanelsShowAttributesInSection.test.ts`). A
+  panel that is mostly properties (a lock, a folder, the workspace) shows them in a "Details" section instead of behind
+  More details. Then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch, label and shelve
-  comments (a branch's with `cm branch editcomment`, the comment in a file, offered only from cm 11.0.16.10512
-  on, `editsBranchComments`: an older cm takes the unknown subcommand as a branch to create; a label's by applying it again to its
+  comments (a branch's with `cm branch editcomment`, the comment in a file; a label's by applying it again to its
   changeset, `labelCommentArgs`; a shelve's as the changeset below zero it is, `cm changeset editcomment cs:-<number>`,
   `shelveCommentArgs`, see `features/shelves-and-switching.md`). Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
@@ -1316,6 +1500,15 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   its details, calls `useShowInFollowingWindow`), and a link to a file's lines shows Browse repository's details again
   (`showDetails`). Panes that show a diff beside its files (Changes, Incoming, merge, History, a diff) are not details:
   they have no toggle. Their diff expands to the whole window instead, the merge page's aside (features/diff.md "Expanding the diff").
+- **Splitters remember where they were dragged**, across pages and sessions: a details panel's width per view
+  (`detailsKey`), and every other split of a page through `RememberedSplitPane`, its width under a key of its own in the
+  same store (`detailsWidthOf`): Changes' (`pendingChangesList`), Incoming's (`incomingList`), the merge page's
+  (`mergeList`) and History's (`historyList`) lists, and the files beside a diff, one width for every page's diff
+  (`PAGE_DIFF_FILES_WIDTH_KEY`: a merge request, a review, a changeset, a shelve, a branch) and one for a dialog's (`DIALOG_DIFF_FILES_WIDTH_KEY`), which is
+  narrower. A list beside a diff gives way first as the window narrows, the diff keeping 480 px (`restMin`), so a
+  width left in a wide window never squeezes the code in a smaller one. Heights too: the command log's, a details panel's changes (`DetailsChangesPane`), the check-in message's,
+  the changesets above a diff's files. A double-click goes back to the default. `splittersRemembered.test.ts` holds
+  every `SplitPane` to it, each under a key no other splitter or details panel uses. An image's swipe divider isn't a splitter of the layout: it starts in the middle each time.
 - **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
   users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
   a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
@@ -1375,7 +1568,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   a list of changes letters every row, as its filter chips do. In Changes every folder holds changes, so only its own
   change marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source
   did); `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read
-  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list
+  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. Every lock is the
+  Locks view's own query (`locksQuery`, scope `everyone`), one read for both; only the user's locks in this workspace
+  are a read of their own (`mineInThisWorkspace`), asked once a lock holds a change. The Changes list
   renders its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of
   them (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
   whether a shelve takes it, the folder a private file counts in), and how many of the changes each folder holds can go
@@ -1396,19 +1591,23 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and
     sorts only the others (`sortedFromPrevious`): 0.1 s for a million with one file edited. A list and a tree show the files in the same
     order. That path order is the default and the one every list's items come in; a sort is laid over it.
-  - **One sort, chosen**: by path (the default), name, status (in the chips' order, `toneRank`) or extension
+  - **One sort, chosen**: by path (the default), name, status (in the chips' order, `toneRank`), extension or date
     (`fileListOrder`: `FileListSort`). Ties keep the path order: sorting is stable and the items come by path. A list
     sorts all its files; a tree keeps its folders in path order, first, and sorts each folder's files after them
     (`layoutPathItems`, `orderTreeRows`): a sort is about files, and folders keep their place as in a file browser. Only
-    the path order costs nothing. The others put the files in a bucket per name, status or extension and compare only
+    the path order costs nothing. The others put the files in a bucket per name, status, extension or date and compare only
     those (`bucketOrder`): files share names, and a million changes compared one by one by name took 4.5 s (now 3 s
     when every name differs, 0.5 s when names repeat). Every list, filtered as the user types (Changes over up to a
     million changes), ranks all its files once a read (`useRankedOrder`, `rankedOrder`) and picks what the filter
     leaves out of those ranks, a look-up each, never comparing names again: 50,000 files of a diff by name took 85 ms
     a key, now 2 ms. A read after files changed keeps the ranking of the same sort for the files still there and finds
     the others their places by a binary search (`rankList`): a million changes with one edited, 0.3 s. No direction:
-    nobody reads a list of files backwards. A sort by date was left out: `cm status` prints no dates, and a diff's
-    entries have none, so it would mean reading the disk or the server for every file.
+    nobody reads a list of files backwards, except by date, newest first, the files without a date last
+    (`FileListFacts.dateOf`). The dates cost nothing more: a change's is its file's on disk (`PendingChange.lastModified`,
+    which `DiskDetails` already reads; a deleted file or a folder has none), and a diff's file's is its new revision's,
+    which the same `cm diff` prints (docs/features/diff.md, "Dates"). The merge page and a partial workspace's Incoming
+    have no dates: a menu offers Date only where the list's facts have dates (`viewOfferFor`), and shows the files by
+    path while it is the sort chosen.
   - **One view, chosen in a menu**: the layout, List or Tree, the sort, and grouping by status, for every list at once
     and across sessions (`useFileListViewStore`, kept under the key `file-list-layout` it had when it held the layout
     alone, which took the one Changes kept first). Its menu (`FileListViewMenu`, decided by `fileListViewMenu` in
@@ -1484,7 +1683,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
-    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
+    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge). A
+    folder whose Unity `.meta` changed alike stays too, for the meta to ride on its row rather than show alone
+    (`hasMetaAlike`).
   - **A Unity asset with its `.meta`**: Unity writes `X.meta` beside every asset and folder `X`, and the two change
     together, so every list shows the pair as the asset's one row, tagged "+ meta" (`MetaTag`; its tip says so and, in
     Changes, that what the row does takes the meta along), and counts rows (`pairUnityMetas`, `lib/unityMetaPairs`:
@@ -1537,6 +1738,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `{fields}` apart from its separators, and a `cm find` query's keywords, operators, strings and numbers; the line
   is read by its words' shapes, as the log joins arguments unquoted, and a failed command's name turns red.
   Shiki was passed over: no grammar knows `cm`, and a shell grammar colors a find query as plain words.
+  A long run of one field's ORed conditions (a block of branches' reviews: up to 50 `targetid`s) shows folded to
+  its first and last, behind a "…48 more…" button that shows it whole and folds it back (`foldedCommandLine`,
+  `FoldableCommandLine`); Copy takes the whole line, and the filter searches it.
   Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
   (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
@@ -1550,6 +1754,17 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     quieter than the name, pale yellows as much as dark blues. Focus shows with `--focus-ring-visible`, or
     `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
+  - A translucent state tint (pressed, selected) on a control floating over content lies over `--bg-surface-raised`
+    (`linear-gradient(tint, tint) var(--bg-surface-raised)`), so the picture or model behind never shows through it
+    (`StageControls.module.css`).
+  - Overlays lie over the whole window, whatever the page around them. One drawn in the page (a comment's larger
+    editor, `CommentFocusGroup`) draws its backdrop beside its panel, never portaled apart: one parent keeps them in
+    one stacking context (`focusModeSurfaces.test.ts`). The boxes every view sits in (`PlaceLayout`, `SignInCover`,
+    `PageFrame`, `SplitPane`, `Stowable`, `PageWindowScreen`) make no stacking context and no frame for fixed boxes: no
+    `isolation`, `z-index`, `opacity`, `transform`, `filter`, `contain` or `will-change` on them
+    (`viewWrappersMakeNoStackingContext.test.ts`, which names the one allowed: `SignInCover`'s while it covers). One there
+    put every larger editor outside a dialog under its own backdrop; `npm run e2e` checks the panel is what a press at
+    its middle reaches.
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
     A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.

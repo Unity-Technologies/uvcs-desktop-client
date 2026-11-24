@@ -1,5 +1,6 @@
 import type { Account } from '@shared/domain/account';
-import { cloudOrganization, isCloudServer } from '../../lib/servers';
+import { isWildcardServer } from '@shared/domain/organizations';
+import { cloudOrganization, describeServer, isCloudServer } from '../../lib/servers';
 
 const sameName = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
@@ -25,7 +26,7 @@ export function accountForServer(accounts: Account[], server: string): Account |
   if (!organization) return undefined;
   return (
     accounts.find((account) => organizationsIn([account.server, account.name]).some((name) => sameName(name, organization))) ??
-    accounts.find((account) => account.server.startsWith('*@'))
+    accounts.find((account) => isWildcardServer(account.server))
   );
 }
 
@@ -33,6 +34,14 @@ export function accountForServer(accounts: Account[], server: string): Account |
 export function organizationName(server: string, account?: Account): string | null {
   const organizations = organizationsOf(server, account);
   return organizations.find((name) => !isGenesisId(name)) ?? organizations[0] ?? null;
+}
+
+/**
+ * What a profile signs in to, as people name it: an organization by its readable name, never its genesis id
+ * (`acme`, not `1375488836673`), a server as the sidebar names it, "Any cloud organization" for `*@cloud`.
+ */
+export function profileLabel(profile: Account): string {
+  return organizationName(profile.server, profile) ?? describeServer(profile.server).label;
 }
 
 const DASHBOARD_ORGANIZATIONS = 'https://cloud.unity.com/home/organizations';

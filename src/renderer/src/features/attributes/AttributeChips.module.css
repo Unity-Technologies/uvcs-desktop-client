@@ -5,20 +5,6 @@
   min-width: 0;
 }
 
-.loading {
-  width: 120px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  background: var(--bg-active);
-  animation: var(--keyframes-pulse) 1.2s ease-in-out infinite alternate;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loading {
-    animation: none;
-  }
-}
-
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -30,9 +16,11 @@
 .chip {
   --chip-bg: var(--bg-hover);
   --chip-value: var(--text-primary);
+  position: relative;
   display: inline-flex;
   align-items: center;
-  min-width: 0;
+  /* Room for the edit and remove buttons laid over its end, however short its name and value. */
+  min-width: 52px;
   max-width: 100%;
   height: 22px;
   border-radius: var(--radius-full);
@@ -106,29 +94,33 @@
   font-weight: var(--weight-medium);
 }
 
-/* Edit and remove slide out at the end of the chip on hover, so they never cover a short value. */
+/*
+ * Edit and remove appear over the end of the chip on hover, the value fading out under them. They never widen it: a
+ * wider chip would move to the next line, out from under the pointer, and back, over and over (hoverKeepsLayout.test.ts).
+ */
 .chipActions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   gap: 1px;
-  max-width: 0;
-  overflow: hidden;
+  padding-right: 4px;
   opacity: 0;
-  transition:
-    max-width var(--duration-fast) var(--ease-out),
-    opacity var(--duration-fast) var(--ease-out);
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .chip:hover .chipActions,
 .chip:focus-within .chipActions {
-  max-width: 40px;
-  padding-right: 4px;
   opacity: 1;
+  pointer-events: auto;
 }
 
 .chip:hover .chipMain,
 .chip:focus-within .chipMain {
-  padding-right: 4px;
+  mask-image: linear-gradient(to left, transparent 38px, black 50px);
 }
 
 .chipAction {
@@ -193,6 +185,11 @@
   border-radius: var(--radius-lg);
   background: var(--bg-subtle);
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+/* Inside a details section's card, already tinted: the opened value stands out on the surface instead. */
+.attributes[data-in-card='true'] .opened {
+  background: var(--bg-surface);
 }
 
 .openedName {

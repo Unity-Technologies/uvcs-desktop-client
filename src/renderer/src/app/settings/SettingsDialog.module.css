@@ -90,6 +90,25 @@
   background: var(--bg-hover);
 }
 
+.choice:disabled {
+  cursor: default;
+}
+
+/* Faded, except a warning, which says why the card can't be chosen and keeps its contrast (4.5:1). */
+.choice:disabled > svg,
+.choice:disabled .choiceLabel,
+.choice:disabled .choiceDescription:not([data-warning]) {
+  opacity: 0.55;
+}
+
+.choice:disabled:hover {
+  background: var(--bg-subtle);
+}
+
+.choiceDescription[data-warning] {
+  color: var(--caution-text);
+}
+
 .choice[data-selected='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);
@@ -97,6 +116,22 @@
 
 .choice[data-selected='true'] > svg {
   color: var(--accent-text);
+}
+
+/* A card with a button of its own at its end (`SettingsChoice`'s action), laid over the card's right edge. */
+.choiceWithAction {
+  position: relative;
+}
+
+.choiceWithAction > .choice {
+  padding-right: 96px;
+}
+
+.choiceAction {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
 }
 
 /* An app setting's drop-down button (`AppPicker`), drawn as one choice card. */

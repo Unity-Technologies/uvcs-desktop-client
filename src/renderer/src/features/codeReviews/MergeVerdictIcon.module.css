@@ -1,0 +1,18 @@
+/* A merge request's verdict by a branch's name (`MergeVerdictIcon`), in the colors of the merge card's discs. */
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.icon[data-verdict='ready'] {
+  color: var(--status-added);
+}
+
+.icon[data-verdict='blocked'] {
+  color: var(--status-changed);
+}
+
+.icon[data-verdict='waiting'] {
+  color: var(--text-tertiary);
+}

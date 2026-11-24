@@ -29,9 +29,9 @@ export interface ConfirmedCheckin {
  * The steps every check-in takes once its comment is settled, from the Changes panel or from Files: takes the files as
  * they are on disk (unsaved edits are saved first, or dropped, or it waits), asks about a pile of private files and
  * about the changes a folder takes along (`checkinPathsOf`), then checks in (`checkinChanges`). True once a changeset
- * is created.
+ * is created. `again` is the user's whole check-in, offered again should a sign-in refuse it.
  */
-export async function checkinConfirmed(request: ConfirmedCheckin, whileRunning: WhileRunning = justRun): Promise<boolean> {
+export async function checkinConfirmed(request: ConfirmedCheckin, whileRunning: WhileRunning = justRun, again?: () => unknown): Promise<boolean> {
   if (!(await settleBeforeLeaving())) return false;
   if (request.bulkPrivate && !(await confirmBulkPrivateCheckin(request.bulkPrivate))) return false;
   const plan = checkinPathsOf(request.changes, request.allChanges);
@@ -46,6 +46,7 @@ export async function checkinConfirmed(request: ConfirmedCheckin, whileRunning: 
       comment: request.comment,
       updateFirst: request.updateFirst,
       quiet: successCardTellsCheckin(changes, request.allChanges),
+      again,
     }),
   );
 }

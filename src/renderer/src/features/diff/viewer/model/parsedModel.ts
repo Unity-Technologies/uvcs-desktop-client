@@ -14,6 +14,12 @@ export type ModelNodeKind = 'group' | 'mesh' | 'skinnedMesh' | 'bone' | 'light' 
 export interface ModelNode {
   /** The name Unity gives its GameObject, and the last part of its path (`Armature/Hips/Spine`). */
   name: string;
+  /**
+   * The name as the file writes it, where the loader named the node otherwise: GLTFLoader names nodes uniquely and as
+   * animation tracks address them (`Wheel_1`, `Hand_L`), keeping the file's own (`Wheel`, `Hand L`) aside. What a
+   * comment's part is named by (`nodeNamesOf`), as every client reads it from the file.
+   */
+  fileName?: string;
   /** The parent's index in `nodes`, before it; -1 for the model's root. */
   parent: number;
   kind: ModelNodeKind;

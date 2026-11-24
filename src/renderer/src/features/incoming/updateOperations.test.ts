@@ -1,11 +1,11 @@
 import { commandFailure, fakeApi } from '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { BranchIncomingChanges } from '@shared/domain/incoming';
+import type { BranchIncomingChanges, PartialIncomingChanges } from '@shared/domain/incoming';
 import type { Changeset } from '@shared/domain/changeset';
 import { useRunningOperationsStore } from '../../app/operations/runningOperationsStore';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs, type WorkspaceArea } from '../../testing/operationOutcome';
 import { useSuccessMomentStore } from '../pendingChanges/successMoment';
-import { explainUpdateConflicts, shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
+import { explainUpdateConflicts, shelveBlockedAndUpdate, showUpdatedMoment, updatePartialToIncoming, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 
 const ws = '/ws';
 const CONFLICTS = 'The update operation detected conflicts. Please, run the update from the GUI.';
@@ -112,6 +112,74 @@ describe('updateToIncoming', () => {
   });
 });
 
+describe('updatePartialToIncoming', () => {
+  const item = (path: string) => ({ kind: 'changed', path, isDirectory: false, conflict: false, loadedRevisionId: 1, headRevisionId: 2 }) as const;
+  const partialIn = (...paths: string[]): PartialIncomingChanges => ({ branch: '/main', partial: true, headChangeset: 12, items: paths.map(item) });
+
+  it('updates, says how many items came from the branch, and shows them in Changes', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+
+    expect(await updatePartialToIncoming(ws, partialIn('Code/Ship.cs', 'Code/Hull.cs'))).toBe(true);
+
+    expect(fakeApi.argsOf('workspaces.update')).toEqual([[ws, expect.any(String), undefined]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated 2 items from main' }]);
+    expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, detail: '2 items' });
+  });
+
+  it('updates just the paths the checked items need, and counts what they bring', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const changes = partialIn('Code/Ship.cs', 'Code/Hull.cs', 'Art/sky.png');
+
+    expect(await updatePartialToIncoming(ws, changes, { paths: ['Code/Ship.cs'], brought: [changes.items[0]!] })).toBe(true);
+
+    expect(fakeApi.argsOf('workspaces.update')).toEqual([[ws, expect.any(String), ['Code/Ship.cs']]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated 1 item from main' }]);
+    expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, detail: '1 item' });
+  });
+
+  it('does not count the conflicts it brings, which keep the local version', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const changes = partialIn('Code/Ship.cs', 'Code/Hull.cs', 'Art/sky.png');
+    const hull = { ...changes.items[1]!, conflict: true };
+
+    expect(await updatePartialToIncoming(ws, changes, { paths: ['Code'], brought: [changes.items[0]!, hull] })).toBe(true);
+
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated 1 item from main' }]);
+    expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, detail: '1 item' });
+  });
+
+  it('names no path when the selection brings every item', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const changes = partialIn('Code/Ship.cs');
+
+    await updatePartialToIncoming(ws, changes, { paths: 'all', brought: changes.items });
+
+    expect(fakeApi.argsOf('workspaces.update')[0]![2]).toBeUndefined();
+  });
+
+  it('refreshes what an update changes, and nothing it leaves alone', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await updatePartialToIncoming(ws, partialIn('Code/Ship.cs'));
+
+    expect(refreshed()).toEqual(REFRESHED_BY_UPDATE);
+  });
+
+  it('leads to Incoming when local changes collide, instead of failing', async () => {
+    fakeApi.answer('workspaces.update', () => {
+      throw commandFailure(CONFLICTS);
+    });
+
+    expect(await updatePartialToIncoming(ws, partialIn('Code/Ship.cs'))).toBe(false);
+
+    expect(shownToasts()).toEqual([
+      { kind: 'error', title: 'Update needs your decision', detail: 'Some files you changed were also changed, moved or deleted on the branch.', action: 'Open Incoming' },
+    ]);
+    expect(moment()).toBeUndefined();
+  });
+});
+
 describe('explainUpdateConflicts', () => {
   it('explains only an update stopped by colliding changes', () => {
     expect(explainUpdateConflicts(new Error(CONFLICTS))).toBe(false);
@@ -170,5 +238,19 @@ describe('updateResolvingConflicts', () => {
     await updateResolvingConflicts(ws, twoIn, {});
 
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated to cs:12 · 2 changesets from Ana, Bob' }]);
+  });
+});
+
+describe('showUpdatedMoment', () => {
+  it('tells how many items an update brought a partial workspace, and the head it came from', () => {
+    showUpdatedMoment(ws, { branch: '/main', partial: true, headChangeset: 7, itemCount: 2 });
+
+    expect(moment()).toEqual({ verb: 'Updated to', changesetId: 7, detail: '2 items' });
+  });
+
+  it('shows nothing when a partial update brought no item', () => {
+    showUpdatedMoment(ws, { branch: '/main', partial: true, headChangeset: 7, itemCount: 0 });
+
+    expect(moment()).toBeUndefined();
   });
 });

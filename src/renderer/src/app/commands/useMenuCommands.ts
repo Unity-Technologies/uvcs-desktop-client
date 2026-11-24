@@ -1,7 +1,11 @@
 import { api } from '../../api/client';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { isModalDialogOpen } from '../../lib/modalDialog';
+import { navigation } from '../navigation/navigationStore';
+import { viewOfListCommand, viewShownIn } from '../navigation/views';
+import { useSession } from '../workspace/sessionStore';
 import { usePageWindow } from '../pageWindow/pageWindowStore';
+import { commandsWhileCovered, useSignInCover } from '../signIn/coveredCommands';
 import { allCommands, type Command } from './commandStore';
 
 /**
@@ -27,9 +31,23 @@ export function menuCommandTarget(commandId: string, commands: readonly Pick<Com
   return isPageWindow && !registered ? 'workspaceWindow' : 'here';
 }
 
-/** Runs the registered command with this id. Items whose command isn't available, or asked for behind a modal dialog, do nothing. */
+/**
+ * Runs the registered command with this id, or shows the list of the view a page window asked for
+ * (`viewListCommandId`). Items whose command isn't available, asked for behind a modal dialog, or of a place the
+ * sign-in screen covers (`commandsWhileCovered`), do nothing.
+ */
 export function runMenuCommand(commandId: string, root?: Parameters<typeof isModalDialogOpen>[0]): void {
   if (isModalDialogOpen(root)) return;
-  const command = allCommands().find((candidate) => candidate.id === commandId);
+  const covered = useSignInCover.getState().covered;
+  const listOf = viewOfListCommand(commandId);
+  // A view's list is the place's: off while the sign-in screen covers it, as its commands are.
+  if (listOf && covered) return;
+  if (listOf) {
+    // A view's list for a place shown; on the home screen, where no place is, there is no view to show.
+    const place = useSession.getState().place;
+    if (place) navigation.goToView(viewShownIn(place, listOf));
+    return;
+  }
+  const command = commandsWhileCovered(allCommands(), covered).find((candidate) => candidate.id === commandId);
   if (command && !command.disabled) command.run();
 }

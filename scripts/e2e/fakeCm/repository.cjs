@@ -47,7 +47,8 @@ const CHANGESETS = [
   changeset(0, '/main', -1, 30, 'Root dir'),
   changeset(1, '/main', 0, 28, 'Add the project'),
   changeset(2, '/main', 1, 25, 'Add the player'),
-  changeset(3, '/main', 2, 20, 'Tune the camera'),
+  // References a chip opens (the smoke's "A comment's chips open what they name"): a changeset, and review 80's change request.
+  changeset(3, '/main', 2, 20, 'Tune the camera after cs:2, as [apply-change:ffffffff] asked'),
   changeset(4, '/main', 3, 15, 'Release notes'),
   changeset(5, '/main/task-001', 4, 10, 'VCS-12 Player jumps\n\nAlso fixes VCS-13 and VCS-99, as https://acme.atlassian.net/browse/VCS-14 asked.'),
   changeset(6, '/main/task-002', 4, 9, 'Warmer lights'),
@@ -67,6 +68,13 @@ const SHELVES = [
   { shelveid: 1, id: 70, parent: 4, date: daysAgo(8), comment: 'Half-done menu', guid: 'eeeeeeee-0000-0000-0000-000000000001', ...common },
 ];
 
+/**
+ * A merge request's two fields as `cm find review` prints them (`{mergerequeststatusname}`, `{destination}`); a plain
+ * code review prints `None` and nothing. `mergerequeststatus` is what a query's condition names.
+ */
+const mergeRequest = (state, destination) => ({ mergerequeststatusname: state, mergerequeststatus: state, destination: `br:${destination}` });
+const plainReview = { mergerequeststatusname: 'None', mergerequeststatus: 'None', destination: '' };
+
 const REVIEWS = [
   {
     id: 80,
@@ -79,6 +87,7 @@ const REVIEWS = [
     target: 'id:20',
     date: daysAgo(8),
     modifieddate: daysAgo(2),
+    ...mergeRequest('Open', '/main'),
     ...common,
   },
   {
@@ -92,16 +101,51 @@ const REVIEWS = [
     target: 'id:20',
     date: daysAgo(6),
     modifieddate: daysAgo(1),
+    ...plainReview,
+    ...common,
+  },
+  {
+    id: 82,
+    title: 'Scene lighting',
+    codereviewstatusname: 'Under review',
+    reviewers: '',
+    comments: 0,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:30',
+    date: daysAgo(5),
+    modifieddate: daysAgo(5),
+    ...mergeRequest('Draft', '/main'),
+    ...common,
+  },
+  {
+    id: 83,
+    title: 'First playable',
+    codereviewstatusname: 'Reviewed',
+    reviewers: 'ana.diaz@acme.com:Reviewed',
+    comments: 1,
+    unresolvedissues: 0,
+    targettype: 'branch',
+    target: 'id:30',
+    date: daysAgo(20),
+    modifieddate: daysAgo(15),
+    ...mergeRequest('Merged', '/main'),
     ...common,
   },
 ];
 
-/** Review 80's conversation, as `cm find changereviewcomment` prints it: its description, a change request on a line, its reply, a status. */
-const REVIEW_COMMENT_FIELDS = { owner: OWNER, parent: -1, revisionid: -1, itemid: '', path: '', line: '', changeset: -1, appliedinchangeset: -1, reviewid: 80 };
+/**
+ * Review 80's conversation, as `cm find changereviewcomment` prints it: its description, a change request on a line, its
+ * reply, a merge request's state move and destination change, a status.
+ */
+const REVIEW_COMMENT_FIELDS = { owner: OWNER, parent: -1, revisionid: -1, itemid: '', path: '', location: -1, changeset: -1, appliedinchangeset: -1, reviewid: 80 };
 const REVIEW_COMMENTS = [
   { ...REVIEW_COMMENT_FIELDS, id: 90, guid: 'ffffffff-0000-0000-0000-000000000090', date: daysAgo(8), modifieddate: daysAgo(8), type: 'timeline', comment: '[description]Makes the player **jump**.' },
-  { ...REVIEW_COMMENT_FIELDS, id: 91, guid: 'ffffffff-0000-0000-0000-000000000091', date: daysAgo(7), modifieddate: daysAgo(7), type: 'change', comment: 'Jump only when grounded.', revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
-  { ...REVIEW_COMMENT_FIELDS, id: 92, guid: 'ffffffff-0000-0000-0000-000000000092', date: daysAgo(6), modifieddate: daysAgo(6), type: 'comment', comment: 'On it.', parent: 91, revisionid: 12, itemid: 7, path: '/src/player.cs', line: 1 },
+  { ...REVIEW_COMMENT_FIELDS, id: 91, guid: 'ffffffff-0000-0000-0000-000000000091', date: daysAgo(7), modifieddate: daysAgo(7), type: 'change', comment: 'Jump only when grounded.', revisionid: 12, itemid: 7, path: '/src/player.cs', location: 0 },
+  { ...REVIEW_COMMENT_FIELDS, id: 92, guid: 'ffffffff-0000-0000-0000-000000000092', date: daysAgo(6), modifieddate: daysAgo(6), type: 'comment', comment: 'On it.', parent: 91, revisionid: 12, itemid: 7, path: '/src/player.cs', location: 0 },
+  // A merge request's notes: made ready for review, then pointed at /main (from /main/task-002, by branch ids).
+  { ...REVIEW_COMMENT_FIELDS, id: 94, guid: 'ffffffff-0000-0000-0000-000000000094', date: daysAgo(5), modifieddate: daysAgo(5), type: 'timeline', comment: '[mergerequest-status-draft-to-open]' },
+  { ...REVIEW_COMMENT_FIELDS, id: 95, guid: 'ffffffff-0000-0000-0000-000000000095', date: daysAgo(4), modifieddate: daysAgo(4), type: 'timeline', comment: '[changed-mergerequest-destination]30;3' },
   { ...REVIEW_COMMENT_FIELDS, id: 93, guid: 'ffffffff-0000-0000-0000-000000000093', date: daysAgo(2), modifieddate: daysAgo(2), type: 'timeline', comment: '[status-rework-required]One change first.' },
 ];
 
@@ -144,7 +188,7 @@ const FILES = {
 
 /**
  * Revisions by id, for `cm cat revid:N`: the two sides of the change every `cm diff` reports, the one revision of the
- * file whose permissions alone changed, and the revision before `src/camera.cs`'s (Files' last change of it).
+ * file whose permissions alone changed, and the revision before `src/camera.cs`'s (its `parentrevid` in `tree.cjs`).
  */
 const REVISIONS = {
   200: FILES['src/camera.cs'].parent,
@@ -158,8 +202,8 @@ const REVISIONS = {
  * its permissions, which `cm` prints with no base revision: it had none set before, as a file checked in from Windows.
  */
 const DIFFERENCES = [
-  { status: 'C', path: '"/README.md"', srccmpath: '""', baserevid: -1, revid: 203, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '""', fsprotection: '"-r--r--r--"' },
-  { status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-rw-r--r--"' },
+  { status: 'C', path: '"/README.md"', srccmpath: '""', baserevid: -1, revid: 203, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '""', fsprotection: '"-r--r--r--"', date: `"${daysAgo(3)}"` },
+  { status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-rw-r--r--"', date: `"${daysAgo(1)}"` },
 ];
 
 /** `cm lock list` records, their fields in the order `cm` prints them. */

@@ -53,6 +53,15 @@ describe('branchHeadMovedOnServer', () => {
     expect(branchHeadMovedOnServer(summary(3, 5), summary(5, 5))).toBe(false);
   });
 
+  it('spots checkins by others in a partial workspace, whose own checkins leave nothing to bring', () => {
+    const partial = (headChangeset: number, itemCount: number): IncomingSummary => ({ branch: '/main', partial: true, headChangeset, itemCount });
+    expect(branchHeadMovedOnServer(partial(3, 0), partial(5, 2))).toBe(true);
+    expect(branchHeadMovedOnServer(partial(5, 2), partial(5, 2))).toBe(false);
+    expect(branchHeadMovedOnServer(partial(3, 0), partial(4, 0))).toBe(false);
+    expect(branchHeadMovedOnServer(partial(3, 0), summary(3, 5))).toBe(false);
+    expect(branchHeadMovedOnServer(summary(3, 3), partial(5, 2))).toBe(false);
+  });
+
   it('sees nothing move off a branch', () => {
     const nothing = { branch: null, changesetCount: 0, countCapped: false, authors: [] } as const satisfies IncomingSummary;
     expect(branchHeadMovedOnServer(nothing, summary(3, 5))).toBe(false);

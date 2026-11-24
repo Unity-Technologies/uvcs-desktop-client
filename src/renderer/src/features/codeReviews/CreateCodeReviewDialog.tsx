@@ -14,8 +14,8 @@ import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
 import { branchSuggestions } from './branchSuggestions';
-import { typedReviewers } from './reviewerGroups';
-import { useReviewerGroups } from './useReviewerGroups';
+import { NO_REVIEWERS, reviewersToAsk } from './pickedReviewers';
+import { ReviewersField } from './ReviewersField';
 import { draftTargetSpec, type ReviewTargetDraft, type ReviewTargetKind } from './reviewDraft';
 
 /**
@@ -39,9 +39,8 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
   const [targetKind, setTargetKind] = useState<ReviewTargetKind>(initialTarget.kind);
   const [target, setTarget] = useState(initialTarget.value);
   const [title, setTitle] = useState(initialTarget.title ?? '');
-  const [reviewers, setReviewers] = useState('');
+  const [reviewers, setReviewers] = useState(NO_REVIEWERS);
   const [creating, setCreating] = useState(false);
-  const groups = useReviewerGroups();
 
   // Only the best few of the tens of thousands a repository may hold: suggesting every one made the field slow to
   // open and to type in.
@@ -55,7 +54,7 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
     const reviewId = await runAction(
       place,
       "Couldn't create the code review",
-      () => api.codeReviews.create(place, { targetSpec, title: title.trim(), reviewers: typedReviewers(reviewers, groups) }),
+      () => api.codeReviews.create(place, { targetSpec, title: title.trim(), reviewers: reviewersToAsk(reviewers) }),
       isAffectedByCodeReviews,
     );
     setCreating(false);
@@ -116,13 +115,7 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
       )}
       {/* A title is one line: Enter creates the review, as the field it replaced did. */}
       <CommentArea singleLine label="Title" placeholder="What should be reviewed?" value={title} onChange={(text) => setTitle(oneLineText(text))} autoFocus />
-      <TextField
-        label="Reviewers"
-        placeholder="jane.doe@example.com, john.doe@example.com"
-        hint="Optional. You can add them later."
-        value={reviewers}
-        onChange={(event) => setReviewers(event.target.value)}
-      />
+      <ReviewersField pick={reviewers} onPickChange={setReviewers} />
     </Dialog>
   );
 }

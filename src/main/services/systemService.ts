@@ -3,10 +3,10 @@ import { homedir } from 'node:os';
 import { normalize } from 'node:path';
 import { app, dialog, net, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
+import { installedAndNeededText } from '@shared/domain/cmVersionWords';
 import { showsGravatar } from '@shared/domain/gravatarChoice';
-import type { ConnectionProblem } from '@shared/domain/setup';
-import { checkConnection } from '../cm/connectionCheck';
 import { checkSetup } from '../cm/setupCheck';
+import { cmFoundText } from '../diagnostics/logRecords';
 import { outermostPaths } from '../files/pathContainment';
 import { callerId } from '../ipc/caller';
 import { readDraggedPath } from '../system/dragPasteboard';
@@ -17,35 +17,56 @@ import { isWebAddress } from '../system/webAddress';
 import { showIncomingNotification } from '../window/incomingNotification';
 import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
-export function createSystemService({ cm, operations, windows, settings }: ServiceContext, { profiles }: ProfilesContext): SystemApi {
+export function createSystemService({ cm, cmRuntime, operations, windows, settings, diagnosticLog }: ServiceContext, { profiles }: ProfilesContext): SystemApi {
   const gravatars = new GravatarCache(async (url) => {
     const response = await net.fetch(url);
     if (!response.ok) return null;
     return { type: response.headers.get('content-type') ?? 'image/png', bytes: new Uint8Array(await response.arrayBuffer()) };
   });
 
-  // Every window asks when it opens: once `cm` runs and reaches its server, later windows take that answer.
-  const cmVersion = untilSucceeded(async () => {
-    cm.relocate();
-    // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
-    return (await cm.execute(['version'])).trim();
-  });
-  const setupProblem = untilSucceeded(() => checkSetup(profiles), (problem) => problem === null);
-  // Per server: once it answers, later windows on its workspaces take that answer.
-  const connectionChecks = new Map<string, () => Promise<ConnectionProblem | null>>();
-  const connectionProblem = (server: string): Promise<ConnectionProblem | null> => {
-    let check = connectionChecks.get(server);
-    if (!check) {
-      check = untilSucceeded(() => checkConnection(cm, server), (problem) => problem === null);
-      connectionChecks.set(server, check);
+  // Every window asks when it opens: once a `cm` runs and reaches its server, later windows take that answer. Kept per
+  // executable: choosing another `cm` in Settings (`cmRuntime.use`) asks the new one, and logs where it is; and per
+  // revision of the installed one (`installedRevision`): once it was updated, a read the older one answered is dropped.
+  const versions = new Map<string, () => Promise<string>>();
+  const versionOf = (executable: string): Promise<string> => {
+    const key = `${executable}\n${cmRuntime.installedRevision()}`;
+    let version = versions.get(key);
+    if (!version) {
+      version = untilSucceeded(async () => {
+        // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
+        const answer = (await cm.execute(['version'])).trim();
+        // Once per `cm` a launch runs: the log's reader learns which one the app ran, with no command of its own.
+        diagnosticLog.write(cmFoundText(answer, executable));
+        return answer;
+      });
+      versions.set(key, version);
     }
-    return check();
+    return version();
   };
+  // The one read of every `cm` the app runs, so the version floor costs no command of its own (`CmRuntime.admits`):
+  // an installed `cm` older than the app's own brings up the update screen, or gives way to the app's own when the user
+  // chose it for now; where the app has none, it stops here.
+  const cmVersion = async (): Promise<string> => {
+    cm.relocate();
+    const executable = cm.executable;
+    const revision = cmRuntime.installedRevision();
+    const answer = await versionOf(executable);
+    // Another `cm` runs since it was asked (a window opened at the same time dropped an older one), or the installed one
+    // was updated while it answered: ask that one.
+    if (cm.executable !== executable || revision !== cmRuntime.installedRevision()) return cmVersion();
+    if (cmRuntime.admits(executable, answer)) return answer;
+    // Check Again asks it again: the user may have updated it meanwhile.
+    versions.delete(`${executable}\n${revision}`);
+    // The app's own runs instead (`CmRuntime.admits` relocated `cm` to it), when it's there; one still setting up shows
+    // the setup screen meanwhile, as the update screen shows while the installed one waits for its update.
+    if (cm.executable !== executable && cmRuntime.isReady()) return cmVersion();
+    throw new Error(`The installed Unity Version Control is older than this app needs. ${installedAndNeededText(answer, cmRuntime.pinnedVersion)}`);
+  };
+  const setupProblem = untilSucceeded(() => checkSetup(profiles, cm.executable), (problem) => problem === null);
 
   return {
     cmVersion,
     checkSetup: setupProblem,
-    checkConnection: connectionProblem,
     currentUser: async () => (await cm.query(['whoami'], { anyDirectory: true })).trim(),
     openPath: async (path) => {
       const error = await shell.openPath(normalize(path));
@@ -74,6 +95,7 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     takeRequestedPlace: async () => windows.takeRequested(callerId()),
     // The one gate on Gravatar: nothing goes there until the user turned pictures on themselves.
     gravatar: async (user, size) => (showsGravatar(settings.get()) ? gravatars.picture(user, size) : null),
+    logUnexpectedError: async (error) => diagnosticLog.write(`Unexpected error in a window: ${error.details}`),
     notifyIncoming: async (workspacePath, message) => showIncomingNotification(windows, workspacePath, message),
   };
 }

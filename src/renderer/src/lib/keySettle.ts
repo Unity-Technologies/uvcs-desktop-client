@@ -1,3 +1,5 @@
+import { settleTimeout } from './settleTimeout';
+
 /** Says when what shows (`show`, by its key) has stayed put for `delayMs`; `stop` drops a wait. */
 export interface KeySettle {
   show: (key: string) => void;
@@ -11,14 +13,14 @@ export interface KeySettle {
  */
 export function keySettle(settled: (key: string) => void, delayMs: number): KeySettle {
   let shown: string | undefined;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancel = (): void => {};
   return {
     show: (key) => {
       if (key === shown) return;
       shown = key;
-      clearTimeout(timer);
-      timer = setTimeout(() => settled(key), delayMs);
+      cancel();
+      cancel = settleTimeout(() => settled(key), delayMs);
     },
-    stop: () => clearTimeout(timer),
+    stop: () => cancel(),
   };
 }

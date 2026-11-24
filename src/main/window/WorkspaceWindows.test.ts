@@ -1,15 +1,16 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { SavedWindow } from '@shared/domain/settings';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
+import type { CmSetupStart } from '@shared/startingPlace';
 import { fakeElectron, type FakeWindow } from './testing/fakeElectron';
-import { WorkspaceWindows } from './WorkspaceWindows';
+import { focusWindow, WorkspaceWindows } from './WorkspaceWindows';
 
 vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeElectron.module);
 vi.mock('./createMainWindow', async () => {
@@ -45,8 +46,10 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const closeLeftBehind = vi.fn((windowId: number) => fakeElectron.windows().find((window) => window.id === windowId)?.close());
   const onCloseRequested = vi.fn((windowId: number, event: { preventDefault(): void }) => heldBack.has(windowId) && event.preventDefault());
   const settings = memorySettings({ recentWorkspacePaths, openWindows });
+  const cm = { setup: null as CmSetupStart | null };
   const windows = new WorkspaceWindows({
     settings,
+    cmSetup: () => cm.setup,
     onLastWindowClosing,
     workspaceOf: (viewer) => shown.get(viewer),
     onWindowsChanged,
@@ -58,7 +61,7 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath === undefined ? undefined : workspacePlace(workspacePath)) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
   const shows = (window: FakeWindow, workspacePath: string): void => void shown.set(window.webContents.id, workspacePath);
-  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft, heldBack, closeLeftBehind };
+  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft, heldBack, closeLeftBehind, cm };
 }
 
 const asBrowserWindow = (window: FakeWindow): BrowserWindow => window as unknown as BrowserWindow;
@@ -108,6 +111,17 @@ describe('one window per workspace', () => {
     expect(windows.windowShowing(workspacePlace(GAME))).toBe(asBrowserWindow(game));
     expect(windows.windowShowing(workspacePlace(GAME), game.webContents.id)).toBeUndefined();
     expect(windows.windowShowing(workspacePlace(TOOLS))).toBeUndefined();
+  });
+});
+
+describe('the app’s own cm being set up', () => {
+  it('opens a window on the setup while it runs, and the next ones as usual once it’s done', () => {
+    const { windows, cm } = setUp();
+    cm.setup = 'settingUp';
+    windows.open();
+    cm.setup = null;
+    windows.open();
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.cmSetup)).toEqual(['settingUp', null]);
   });
 });
 
@@ -834,5 +848,46 @@ describe('page windows', () => {
     windows.showWorkspaceWindow(page.webContents.id, 'goto.branches');
     expect(fakeElectron.focused()).toBe(game);
     expect(sentTo(game)).toEqual([['menuCommand', { commandId: 'goto.branches' }]]);
+  });
+});
+
+describe('focusWindow in an agent’s launch (`windowsStayInBackground`)', () => {
+  const minimizedWindow = (): FakeWindow => {
+    createMainWindow(memorySettings());
+    const window = fakeElectron.windows().at(-1)!;
+    window.minimize();
+    return window;
+  };
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('leaves the window where it is and the focus with the person, in a build run from the checkout', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+    const window = minimizedWindow();
+
+    focusWindow(asBrowserWindow(window));
+    expect(window.shown).toBe(false);
+    expect(fakeElectron.focused()).toBeNull();
+  });
+
+  it('leaves the person’s saved session alone, so their next launch opens as it would have', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+    const saved: SavedWindow = { workspacePath: '/game', bounds: { x: 0, y: 0, width: 1000, height: 700, maximized: true }, fullScreen: true };
+    const { windows, settings, open } = setUp([], [saved]);
+    open();
+
+    windows.saveSession({ withViews: false });
+    expect(settings.get().openWindows).toEqual([saved]);
+  });
+
+  it('brings an installed app’s window forward as always, whatever its environment holds', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    const window = minimizedWindow();
+
+    focusWindow(asBrowserWindow(window));
+    expect(window.shown).toBe(true);
+    expect(fakeElectron.focused()).toBe(window);
   });
 });

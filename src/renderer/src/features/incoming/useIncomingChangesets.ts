@@ -15,7 +15,7 @@ import { firstOlderPageParam, listedIncomingChangesets, nextOlderPageParam, show
  */
 export function useNewestIncomingChangesets(summary: IncomingSummary | undefined, enabled: boolean) {
   const workspacePath = useWorkspacePath();
-  const behind = summary?.branch && summary.changesetCount > 0 ? summary : null;
+  const behind = summary?.branch && !('partial' in summary) && summary.changesetCount > 0 ? summary : null;
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'incoming', 'newest', behind?.branch, behind?.loadedChangeset, behind?.headChangeset),
     enabled: enabled && behind !== null,

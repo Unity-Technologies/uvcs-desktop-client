@@ -1,30 +1,39 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import { SHORT_STATUS } from '../../codeReviews/reviewsByBranch';
+import { reviewChipOf } from '../../codeReviews/reviewChip';
 import type { DrawContext } from './drawContext';
 import { textWidth } from './fitText';
+import { STATE_GLYPHS, STATUS_GLYPHS, VERDICT_GLYPHS } from './lucideGlyphs';
+import { CHIP_HEIGHT, GLYPH, PILL_GLYPH_X, reviewChipLayout, STATUS_ICON, type ReviewChipLayout } from './reviewChipLayout';
 
-const CHIP_HEIGHT = 15;
-const PAD_X = 4;
-const GLYPH = 8;
-const GLYPH_GAP = 3;
+/** The pill's tint over the header, as the lists' badges tint theirs; stronger under the pointer, as it opens the review. */
+const TINT = 0.14;
+const HOVER_TINT = 0.28;
 
-export function reviewChipWidth({ ctx, scene }: DrawContext, review: CodeReviewSummary): number {
+function layoutOf({ ctx, scene }: DrawContext, review: CodeReviewSummary): ReviewChipLayout {
   ctx.save();
   ctx.font = scene.palette.fonts.badge;
-  const width = PAD_X * 2 + GLYPH + GLYPH_GAP + textWidth(ctx, SHORT_STATUS[review.status]);
+  const layout = reviewChipLayout(reviewChipOf(review, false), (text) => textWidth(ctx, text));
   ctx.restore();
-  return width;
+  return layout;
+}
+
+export function reviewChipWidth(draw: DrawContext, review: CodeReviewSummary): number {
+  return layoutOf(draw, review).width;
 }
 
 /**
- * The branch's code review, as the header's last word before the comment: a hairline divider, then the status glyph
- * and name in the status color (a check once reviewed, a dot otherwise). No patch of its own, so it reads as part of
- * the tinted pill at any zoom; hovering it lights a soft patch, as it opens the review. Recorded for the pointer.
+ * The branch's code review, as the header's last word before the comment, drawn as the lists draw it
+ * (`CodeReviewChip`, `reviewChipLayout`): a hairline divider, then a tinted pill with the app's own glyph and name in
+ * its color (a merge request's state, else a code review's status: `lucideGlyphs`), then a merge request's verdict
+ * icon (`listedVerdictOf`). Hovering it tints the pill more, as it opens the review (a merge request's summary shows then).
+ * Recorded for the pointer.
  */
 export function drawReviewChip(draw: DrawContext, review: CodeReviewSummary, left: number, middle: number, width: number, hovered: boolean): void {
   const { ctx, pen, scene } = draw;
-  const color = scene.palette.reviewStatus[review.status];
+  const chip = reviewChipOf(review, false);
+  const layout = layoutOf(draw, review);
   const top = middle - CHIP_HEIGHT / 2;
+  const color = chip.state ? scene.palette.mergeRequestState[chip.state] : scene.palette.reviewStatus[review.status];
 
   ctx.save();
   ctx.strokeStyle = scene.palette.border;
@@ -34,37 +43,27 @@ export function drawReviewChip(draw: DrawContext, review: CodeReviewSummary, lef
   pen.lineTo(left - 3, top + CHIP_HEIGHT - 2.5);
   ctx.stroke();
 
+  const alpha = ctx.globalAlpha;
   ctx.fillStyle = color;
+  ctx.globalAlpha = alpha * (hovered ? HOVER_TINT : TINT);
+  ctx.beginPath();
+  pen.roundRect(left, top, layout.pill.width, CHIP_HEIGHT, CHIP_HEIGHT / 2);
+  ctx.fill();
+  ctx.globalAlpha = alpha;
+
   ctx.strokeStyle = color;
-  if (hovered) {
-    const alpha = ctx.globalAlpha;
-    ctx.globalAlpha = alpha * 0.16;
-    ctx.beginPath();
-    pen.roundRect(left, top, width, CHIP_HEIGHT, 4);
-    ctx.fill();
-    ctx.globalAlpha = alpha;
+  const glyph = chip.state ? STATE_GLYPHS[chip.state] : STATUS_GLYPHS[review.status];
+  pen.strokeGlyph(glyph, left + PILL_GLYPH_X, middle - GLYPH / 2, GLYPH);
+  if (layout.pill.text) {
+    ctx.font = scene.palette.fonts.badge;
+    ctx.textBaseline = 'middle';
+    pen.fillText(layout.pill.text.value, left + layout.pill.text.x, middle + 0.5);
   }
-
-  const glyphX = left + PAD_X;
-  if (review.status === 'Reviewed') {
-    const glyphTop = middle - GLYPH / 2;
-    ctx.lineWidth = 1.7;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    pen.moveTo(glyphX + 0.5, glyphTop + 4.3);
-    pen.lineTo(glyphX + 3, glyphTop + 6.8);
-    pen.lineTo(glyphX + 7.5, glyphTop + 1.6);
-    ctx.stroke();
-  } else {
-    ctx.beginPath();
-    pen.arc(glyphX + GLYPH / 2, middle, 2.75, 0, Math.PI * 2);
-    ctx.fill();
+  if (layout.icon && chip.verdict) {
+    // The verdict's colors are the merge card's discs': the Reviewed status's green, the Rework status's amber, a quiet ink while it waits.
+    ctx.strokeStyle = { ready: scene.palette.reviewStatus.Reviewed, blocked: scene.palette.reviewStatus['Rework required'], waiting: scene.palette.textTertiary }[chip.verdict];
+    pen.strokeGlyph(VERDICT_GLYPHS[chip.verdict], left + layout.icon.x, middle - STATUS_ICON / 2, STATUS_ICON);
   }
-
-  ctx.font = scene.palette.fonts.badge;
-  ctx.textBaseline = 'middle';
-  pen.fillText(SHORT_STATUS[review.status], glyphX + GLYPH + GLYPH_GAP, middle + 0.5);
   ctx.restore();
   draw.drawn.reviewChips.add(review, left, top, width, CHIP_HEIGHT);
 }

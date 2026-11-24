@@ -1,0 +1,68 @@
+/* A merge request at a glance (`MergeRequestSummaryCard`): its title, who wants it merged where, its state, its review. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+/*
+ * The card's frame where it stands alone (a hover card, the Branch Explorer's tooltip), as the top bar's segment
+ * cards: one width for every hover of a branch's merge request.
+ */
+.framed {
+  composes: card from '../../ui/ToolbarSegment.module.css';
+
+  width: 320px;
+  padding: var(--space-3);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-bottom: var(--space-2);
+}
+
+.title,
+.titleLink {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.titleLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.titleLink:hover {
+  text-decoration: underline;
+}
+
+.who {
+  margin: 0;
+  color: var(--text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.owner {
+  color: var(--text-secondary);
+}
+
+.badge {
+  display: flex;
+  margin-top: var(--space-1);
+}
+
+.review {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}

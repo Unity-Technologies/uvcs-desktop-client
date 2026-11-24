@@ -7,7 +7,7 @@ import { CornerCard, CornerCardText } from '../../ui/toast/CornerCard';
 import { SWEEP, type ProgressBarState } from '../operations/progressBar';
 import { ProgressTrack } from '../operations/ProgressTrack';
 import { openReleaseNotesDialog } from './ReleaseNotesDialog';
-import { installLabel, updateCardOf } from './updateCardStatus';
+import { installedCmNoteOf, installLabel, updateCardOf, waitingCardOf } from './updateCardStatus';
 import { useHasWhatsNew } from './updateReleaseNotes';
 import { installUpdate, putOffUpdate, useUpdateStore } from './updateStore';
 import styles from './UpdateCard.module.css';
@@ -20,19 +20,27 @@ export function UpdateCard() {
   const card = useUpdateStore((state) => updateCardOf(state.status, state.dismissedVersion, state.aboutOpen || state.releaseNotesOpen));
   const hasNotes = useHasWhatsNew();
   if (!card) return null;
+  const installedCm = installedCmNoteOf(card.installedCm);
 
   if (card.state === 'downloading') {
     const bar: ProgressBarState = card.percent > 0 ? { mode: 'fill', value: card.percent / 100, durationMs: GLIDE_MS, remaining: null, motion: null } : SWEEP;
     return (
       <CornerCard role="status" icon={<Download size={15} />} title={`Downloading version ${card.version}…`} trailing={<span className={styles.percent}>{card.percent}%</span>}>
         <ProgressTrack bar={bar} />
+        {installedCm && <InstalledCmNote {...installedCm} />}
       </CornerCard>
     );
   }
 
-  // Asked to install while an operation changes a workspace: nothing to choose until it finishes and the app restarts.
+  // Asked to install while an operation changes a workspace, or the installed one's installer runs first: nothing to
+  // choose until it ends and the app restarts.
   if (card.state === 'waitingToInstall') {
-    return <CornerCard role="status" icon={<Spinner size={13} />} title={`${APP_NAME} ${card.version} installs once the operation finishes.`} />;
+    const waiting = waitingCardOf(card);
+    return (
+      <CornerCard role="status" icon={<Spinner size={13} />} title={waiting.title}>
+        {waiting.text && <CornerCardText>{waiting.text}</CornerCardText>}
+      </CornerCard>
+    );
   }
 
   const byInstaller = card.install === 'installer';
@@ -60,6 +68,17 @@ export function UpdateCard() {
     >
       {/* A Mac build without a Developer ID signature can't replace itself: the user drags the new one in. */}
       {byInstaller && <CornerCardText>Open the installer and drag {APP_NAME} to your Applications folder to finish.</CornerCardText>}
+      {installedCm && <InstalledCmNote {...installedCm} />}
     </CornerCard>
+  );
+}
+
+/** What the update does to the installed Unity Version Control, and its versions on a line of their own. */
+function InstalledCmNote({ text, versions }: { text: string; versions: string }) {
+  return (
+    <>
+      <CornerCardText>{text}</CornerCardText>
+      <p className={styles.versions}>{versions}</p>
+    </>
   );
 }

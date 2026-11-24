@@ -3,14 +3,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { APP_ICON_COLORS } from '@shared/appMark';
-import { WINDOW_BACKGROUND } from '@shared/windowChrome';
+import { TITLE_BAR_HEIGHT, WINDOW_BACKGROUND } from '@shared/windowChrome';
 import { AVATAR_COLORS } from '../lib/avatarColors';
 import { HEADER_HOVER_TINT, HEADER_TINT, headerTextOn } from '../features/branchExplorer/canvas/graphPalette';
 import { BRANCH_HUES, LINE_TONE } from '../features/branchExplorer/model/branchHue';
 import { STABLE_HUES } from '../lib/stableHue';
 import { composite, contrastRatio, hslColor, parseColor, themeTokens } from './contrast';
 
-const themes = themeTokens(readFileSync(join(__dirname, 'tokens.css'), 'utf8'));
+const css = readFileSync(join(__dirname, 'tokens.css'), 'utf8');
+const themes = themeTokens(css);
 
 /** The opaque backgrounds text sits on. */
 const SURFACES = ['--bg-app', '--bg-sidebar', '--bg-surface', '--bg-surface-raised', '--bg-subtle', '--bg-input', '--bg-code'];
@@ -25,6 +26,11 @@ const TEXT = [
   '--positive-text',
   '--caution-text',
   '--danger-text',
+  '--comment-kind-text',
+  '--merge-request-draft',
+  '--merge-request-open',
+  '--merge-request-merged',
+  '--merge-request-closed',
   '--syntax-command',
   '--syntax-option',
   '--syntax-variable',
@@ -56,6 +62,10 @@ function ratio(tokens: Record<string, string>, foreground: string, background: s
   return contrastRatio(composite(parseColor(tokens[foreground]!), behind), behind);
 }
 
+it('draws the top bar as tall as the window centers its traffic lights and caption buttons in (`TITLE_BAR_HEIGHT`)', () => {
+  expect(css).toMatch(new RegExp(`--topbar-height: ${TITLE_BAR_HEIGHT}px;`));
+});
+
 describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
   it("is the window's own background (`WINDOW_BACKGROUND`), so no frame shows another color", () => {
     expect(tokens['--bg-app']).toBe(WINDOW_BACKGROUND[theme as keyof typeof WINDOW_BACKGROUND]);
@@ -77,6 +87,15 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     expect(ratio(tokens, '--text-inverse', fill)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each([
+    ['--positive-text', '--positive-soft'],
+    ['--danger-text', '--danger-soft'],
+  ])('writes what Choose what to download changes in %s on its %s pill at 4.5:1', (text, tint) => {
+    // `ChooseDownloadsDialog`'s `.marker` pills lay their tint on the dialog's `--bg-surface-raised`, whatever the row's.
+    const pill = composite(parseColor(tokens[tint]!), parseColor(tokens['--bg-surface-raised']!).rgb);
+    expect(contrastRatio(composite(parseColor(tokens[text]!), pill), pill)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(['--icon-folder', '--icon-file'])('draws item icons in %s at 3:1 on every surface', (icon) => {
     for (const surface of SURFACES) expect(ratio(tokens, icon, surface), surface).toBeGreaterThanOrEqual(3);
   });
@@ -85,6 +104,13 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     'draws file glyphs in %s at 3:1 on the page they sit on',
     (glyph) => {
       expect(ratio(tokens, glyph, '--icon-file-fill')).toBeGreaterThanOrEqual(3);
+    },
+  );
+
+  it.each(['--graph-merge-link', '--graph-cherry-pick-link', '--status-deleted'])(
+    'draws Branch Explorer merge links in %s at 3:1 on the graph (--bg-surface)',
+    (line) => {
+      expect(ratio(tokens, line, '--bg-surface')).toBeGreaterThanOrEqual(3);
     },
   );
 

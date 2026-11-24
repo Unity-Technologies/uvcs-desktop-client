@@ -1,4 +1,5 @@
-import { FilePlus, FolderDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
+import { FolderDown, RefreshCw, Search } from 'lucide-react';
+import { NO_ROW_REVEAL, revealAsked, type RowReveal } from '../../ui/table/rowReveal';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
@@ -21,12 +22,12 @@ import { LineLinksContext } from '../diff/viewer/lineLinks';
 import { usePendingLocks } from '../pendingChanges/locks/usePendingLocks';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
-import { fileMenu, FILE_SHORTCUTS } from './fileMenu';
+import { fileMenu } from './fileMenu';
 import { useCutItems } from './cutItemsStore';
 import { directoryListingQuery } from './directoryListing';
 import { CutHint } from './CutHint';
-import { createItem, openItem, targetDirectoryFor } from './fileOperations';
-import { useFilesViewStore, useRevealRequest } from './filesViewStore';
+import { openItem } from './fileOperations';
+import { FILES_DETAILS_KEY, useFilesViewStore, useRevealRequest } from './filesViewStore';
 import { FileTreeSkeleton, FileTreeTable } from './FileTreeTable';
 import { FILE_TREE_WIDTH } from './fileTreeWidth';
 import { ancestorsOf, buildFileTreeRows } from './fileTreeRows';
@@ -41,6 +42,7 @@ import { singleSelection } from '../../lib/selection';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
+import { showsChooseDownloadsButton } from '../partialWorkspace/workspaceDownloads';
 import { showsNothingDownloaded } from './nothingDownloaded';
 import { WorkspaceRootDetails } from './WorkspaceRootDetails';
 import { isWorkspaceRoot, workspaceRootItem } from './workspaceRoot';
@@ -56,7 +58,7 @@ export function FilesView() {
   const { toggle, expand } = useExpandedDirectoriesStore();
   const { data: pendingChanges, dataUpdatedAt: pendingChangesUpdatedAt } = usePendingChanges();
   const [selection, setSelection] = useViewSelection('files');
-  const [revealPath, setRevealPath] = useState<string | null>(null);
+  const [reveal, setReveal] = useState<RowReveal>(NO_ROW_REVEAL);
   const diffExpanded = useDiffExpanded();
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => directoryListingQuery(workspacePath, directory), expanded);
@@ -77,7 +79,7 @@ export function FilesView() {
     const { path, selected = [path] } = revealRequest;
     expand(workspacePath, ancestorsOf(path));
     setSelection({ selected: new Set(selected), anchor: path });
-    setRevealPath(path);
+    setReveal((previous) => revealAsked(previous, path));
     useFilesViewStore.getState().revealed(revealRequest);
   }, [revealRequest, expand, workspacePath]);
 
@@ -94,21 +96,23 @@ export function FilesView() {
 
   const selectFolder = (path: string): void => {
     selectAfterLeaving(selection, singleSelection(path), setSelection);
-    setRevealPath(path);
+    setReveal((previous) => revealAsked(previous, path));
   };
-
-  const createInSelection = (kind: 'file' | 'directory'): void => void createItem(workspacePath, targetDirectoryFor(focused), kind);
 
   const header = (
     <ViewHeader
       title="Files"
-      detailsToggle={<DetailsToggleButton detailsKey="filesTree" />}
+      detailsToggle={<DetailsToggleButton detailsKey={FILES_DETAILS_KEY} />}
       subtitle={workspacePath}
       actions={
         <>
           <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={() => openGoToFile()} />
-          <IconButton icon={<FilePlus size={14} />} label="New file" shortcut={FILE_SHORTCUTS.newFile} onClick={() => createInSelection('file')} />
-          <IconButton icon={<FolderPlus size={14} />} label="New folder" shortcut={FILE_SHORTCUTS.newFolder} onClick={() => createInSelection('directory')} />
+          {showsChooseDownloadsButton(workspace?.kind) && (
+            // Labeled, not an icon: in a partial workspace choosing what to download is how its files get there.
+            <Button icon={<FolderDown size={14} />} onClick={() => openChooseDownloads(workspacePath)}>
+              Choose what to download…
+            </Button>
+          )}
           <IconButton icon={<RefreshCw size={14} />} label="Refresh" shortcut={hotkey('refresh')} onClick={() => void invalidateWorkspace(workspacePath)} />
         </>
       }
@@ -124,7 +128,7 @@ export function FilesView() {
     <>
       <Stowable stowed={diffExpanded}>{header}</Stowable>
       <ListWithDetails
-        detailsKey="filesTree"
+        detailsKey={FILES_DETAILS_KEY}
         widthLimits={FILE_TREE_WIDTH}
         sized="list"
         diffInDetails
@@ -150,7 +154,7 @@ export function FilesView() {
               statusOf={(item) => itemStatus(item, pendingIndex)}
               lockOf={(item) => locks.get(item.path)}
               hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
-              revealPath={revealPath}
+              reveal={reveal}
               isCut={(item) => cutPaths.has(item.path)}
               onGoToFile={() => openGoToFile()}
             />

@@ -1,0 +1,7 @@
+/* A merge request's verdict beside its state, in a branch's chip, centered on the badge. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  margin-left: 3px;
+}

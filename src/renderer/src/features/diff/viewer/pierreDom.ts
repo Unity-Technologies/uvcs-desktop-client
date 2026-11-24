@@ -32,12 +32,19 @@ export function isTypingIn(container: Element | null | undefined): boolean {
 }
 
 /**
- * Whether the editor in `container` has focus: its text, or its search panel (`data-search-panel`, which Pierre's
- * editor draws in the same shadow root), whose keys are the editor's too.
+ * Whether a key was pressed in a field of the app's own over the code (a review comment written by a line, which Pierre
+ * shows among its rows): its keys are its own, never the code's. Pierre's own content is in its shadow root, so its
+ * keys come from its host (`diffs-container`).
  */
+export function typedOutsideCode(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement) || target.tagName === 'DIFFS-CONTAINER') return false;
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
+/** Whether the editor in `container` has focus: its text is being typed into. */
 export function editorHasFocusIn(container: Element | null | undefined): boolean {
   const focused = pierreShadowRoot(container)?.activeElement;
-  return focused instanceof HTMLElement && (focused.isContentEditable || focused.closest('[data-search-panel]') !== null);
+  return focused instanceof HTMLElement && focused.isContentEditable;
 }
 
 /** The `data-line-type` of a changed line's rows. */
@@ -48,6 +55,19 @@ export function changedLineType({ side }: Pick<ChangedLine, 'side'>): 'change-ad
 /** Selects a changed line's content row. */
 export function lineRowSelector(line: ChangedLine): string {
   return `[data-line-type="${changedLineType(line)}"][data-line="${line.lineNumber}"]`;
+}
+
+/**
+ * Selects the content row of any line of a side, unchanged lines too (`lineRowSelector` selects changed lines only).
+ * Side by side, a side's rows are in its pane (`data-deletions`, `data-additions`), numbered as that side numbers them.
+ * Unified (`data-unified`), an unchanged line shows once, numbered as the newer side numbers it (`data-line`), the older
+ * side's number beside it (`data-alt-line`); its type is `context`, or `context-expanded` once unfolded. A whole file
+ * Pierre shows alone (its `File`: a merge's hand-editing, a diff's whole-file editor) is `data-file`, the newer side.
+ */
+export function sideLineRowSelector({ side, lineNumber }: ChangedLine): string {
+  const line = `[data-line="${lineNumber}"][data-line-type]`;
+  if (side === 'additions') return `[data-additions] ${line}, [data-unified] ${line}:not([data-line-type="change-deletion"]), [data-file] ${line}`;
+  return `[data-deletions] ${line}, [data-unified] ${line}[data-line-type="change-deletion"], [data-unified] [data-line-type^="context"][data-alt-line="${lineNumber}"]`;
 }
 
 /** Selects a changed line's number cell. */
@@ -75,6 +95,24 @@ export function keepPointerDownToItself(button: HTMLButtonElement | null): (() =
   const stop = (event: PointerEvent): void => event.stopPropagation();
   button.addEventListener('pointerdown', stop);
   return () => button.removeEventListener('pointerdown', stop);
+}
+
+/** The pointer events Pierre's diff listens to on its code (`pre`): hovering a row, picking lines, clicking one. */
+const CODE_POINTER_EVENTS = ['pointerdown', 'pointermove', 'click'] as const;
+
+/**
+ * For a diff shown inside a comment on another diff's code (a suggested change in a thread in the code): the events on
+ * its rows would reach the code around it, whose Pierre reads the first row in their path as the line under the
+ * pointer (to hover it, put its gutter button there, pick it), and that row is the comment's diff's own. They stay in
+ * the comment's diff, which handles them first, in its shadow root. Native, as Pierre listens before React sees them.
+ */
+export function keepCodePointerToItself(element: HTMLElement | null): (() => void) | undefined {
+  if (!element) return undefined;
+  const stop = (event: Event): void => event.stopPropagation();
+  for (const type of CODE_POINTER_EVENTS) element.addEventListener(type, stop);
+  return () => {
+    for (const type of CODE_POINTER_EVENTS) element.removeEventListener(type, stop);
+  };
 }
 
 /**
@@ -142,11 +180,15 @@ export function rowTextRange(row: Element, start: number, end: number): Range | 
 
 /**
  * The row a pointer event is on, as Pierre marks it (`lineUnderPointer` reads it): the line number of its number cell
- * (`data-column-number`) or code (`data-line`), its type, and side by side the pane it's in. Null off a row.
+ * (`data-column-number`) or code (`data-line`), its type, and side by side the pane it's in. Null off a row, and over
+ * a row of a diff shown in a comment on the code (a suggested change in a thread): its rows come first in the event's
+ * path, inside a `diffs-container` of its own, but they're its lines, not the code's.
  */
 export function rowUnderPointer(path: readonly EventTarget[]): RowUnderPointer | null {
-  const row = path.find((target): target is HTMLElement => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
-  return row ? rowOf(row) : null;
+  const index = path.findIndex((target) => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
+  if (index === -1) return null;
+  const diffsAround = path.slice(index).filter((target) => target instanceof HTMLElement && target.tagName.toLowerCase() === 'diffs-container').length;
+  return diffsAround > 1 ? null : rowOf(path[index] as HTMLElement);
 }
 
 /** Text selected in the page, in a diff or a file Pierre renders (not typed into: the editor has its own selections). */
