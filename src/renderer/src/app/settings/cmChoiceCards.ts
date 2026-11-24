@@ -49,7 +49,7 @@ function tooOldCard(base: Pick<CmChoiceCard, 'choice' | 'label' | 'selected'>, i
     return { ...card, description, tip: installed.path, warning: false };
   }
   if (update?.kind === 'failed') {
-    return { ...card, description: 'Couldn’t update it.', tip: `${UPDATE_FAILURE_REASONS[update.failure]} ${update.detail}`, warning: true, updateLabel: TRY_AGAIN_LABEL };
+    return { ...card, description: 'Couldn’t update it.', tip: UPDATE_FAILURE_REASONS[update.failure], warning: true, updateLabel: TRY_AGAIN_LABEL };
   }
   return {
     ...card,
