@@ -1,4 +1,4 @@
-import { meetsCmVersion, retriesByItself, type CmChoice, type CmRuntimeStatus, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
+import { meetsCmVersion, retriesByItself, type CmChoice, type CmRuntimeStatus, type CmUserChoice, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
 import { existsSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import type { CmSetupStart } from '@shared/startingPlace';
@@ -172,15 +172,15 @@ export class CmRuntime {
   }
 
   /**
-   * Runs the installed `cm` when there is one, or always the app's own (Settings, or the setup's failure screen). An
-   * installed one older than the pinned version is read first (`installedCm`) and never run: the update screen asks to
-   * update it, unless the user ran the app's own for this pinned version already. Going back to the app's own before
-   * it's there keeps the installed one running while it downloads (`useOwnWhenDownloaded`): the windows never lose what
-   * they show for a setup screen.
+   * Runs the installed `cm` from now on, or the app's own again (Settings, or the setup's failure screen). An installed
+   * one older than the pinned version is never taken (`usableInstalledCm`): Settings never offers it. Going back to the
+   * app's own before it's there keeps the installed one running while it downloads (`useOwnWhenDownloaded`): the windows
+   * never lose what they show for a setup screen.
    */
-  async use(choice: CmChoice): Promise<void> {
+  async use(choice: CmUserChoice): Promise<void> {
     const turn = ++this.choiceTurn;
-    const installed = choice === 'automatic' ? await this.installedCm() : null;
+    // Refused without a word: Settings never offers an older one, nor does the setup's failure screen.
+    if (choice === 'installed' && !(await this.usableInstalledCm())) return;
     if (turn !== this.choiceTurn) return;
     if (choice === 'managed' && this.chosen.source === 'installed' && this.hasOwnCm() && !this.options.installer.isInstalled(this.pinnedVersion)) {
       void this.useOwnWhenDownloaded();
@@ -189,10 +189,6 @@ export class CmRuntime {
     // Any other choice drops a switch to its own still downloading (`useOwnWhenDownloaded` checks it's still wanted).
     this.switchingToOwn = null;
     this.options.saveChoice(choice);
-    if (installed && !meetsCmVersion(installed.version, this.pinnedVersion) && this.hasOwnCm()) {
-      this.refuse(installed);
-      return;
-    }
     this.refusedInstalledPath = null;
     this.switchTo(this.choose());
   }
@@ -200,7 +196,7 @@ export class CmRuntime {
   /**
    * "Use the included version for now", on the update screen: runs the app's own, set up first when it isn't there,
    * and remembers it for this pinned version, so the update screen doesn't ask again until the pin moves. The choice
-   * stays automatic: once the installed one is new enough, it runs again without asking.
+   * stays as it was: once the installed one is new enough, it runs again without asking.
    */
   useIncludedForNow(): void {
     if (!this.updateNeeded) return;

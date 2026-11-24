@@ -21,14 +21,14 @@ export interface ChosenCm {
 }
 
 /**
- * Which `cm` runs (docs/features/cm-runtime.md "Which cm runs"): `UVCS_CM_PATH`; then, by default, the installed one
- * when there is one; then the app's own; where the app has none, the installed one, found or not. Whether the installed
+ * Which `cm` runs (docs/features/cm-runtime.md "Which cm runs"): `UVCS_CM_PATH`; then, by default or when chosen, the
+ * installed one when there is one; then the app's own; where the app has none, the installed one, found or not. Whether the installed
  * one is new enough is known only once its `cm version` answers (`CmRuntime.admits`).
  */
 export function chooseCm(candidates: CmCandidates, bareName: string): ChosenCm {
   const { environmentPath, choice, installedPath, managedPath } = candidates;
   if (environmentPath) return { source: 'environment', path: environmentPath };
-  if (choice === 'automatic' && installedPath) return { source: 'installed', path: installedPath };
+  if (choice !== 'managed' && installedPath) return { source: 'installed', path: installedPath };
   if (managedPath) return { source: 'managed', path: managedPath };
   return { source: 'installed', path: installedPath ?? bareName };
 }

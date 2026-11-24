@@ -172,8 +172,8 @@ describe('CmRuntime', () => {
     const { runtime, installer, statuses, relocations, choice } = runtimeWith();
     runtime.start();
     await installer.fail(new CmInstallError('unavailable', 'HTTP 403'));
-    await runtime.use('automatic');
-    expect(choice()).toBe('automatic');
+    await runtime.use('installed');
+    expect(choice()).toBe('installed');
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
     expect(relocations()).toBe(1);
@@ -273,11 +273,11 @@ describe('CmRuntime going back to its own cm from the installed one', () => {
   it('stays on the installed one when it’s chosen again while its own downloads', async () => {
     const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'automatic' });
     await runtime.use('managed');
-    await runtime.use('automatic');
+    await runtime.use('installed');
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
     await installer.succeed();
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
-    expect(choice()).toBe('automatic');
+    expect(choice()).toBe('installed');
     expect(relocations()).toBe(0);
   });
 
@@ -295,7 +295,7 @@ describe('CmRuntime with choices made during its setup', () => {
   it('keeps the installed one chosen while its own was downloading, once that finishes', async () => {
     const { runtime, installer, statuses, relocations } = runtimeWith();
     runtime.start();
-    await runtime.use('automatic');
+    await runtime.use('installed');
     await installer.succeed();
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
@@ -305,7 +305,7 @@ describe('CmRuntime with choices made during its setup', () => {
   it('says nothing of a failure of its own once the installed one runs', async () => {
     const { runtime, installer, statuses, timers } = runtimeWith();
     runtime.start();
-    await runtime.use('automatic');
+    await runtime.use('installed');
     await installer.fail(new Error('net::ERR_INTERNET_DISCONNECTED'));
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
     expect(timers).toEqual([]);
@@ -439,22 +439,21 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(runtime.status()).toEqual({ kind: 'ready', source: 'installed' });
   });
 
-  it('asks to update it when the user chooses Automatic in Settings, before running it', async () => {
+  it('never runs an older installed one when the user chooses it', async () => {
     const { runtime, statuses, choice, relocations } = runtimeWith({ installed: [VERSION], versionOf: async () => OLDER });
     runtime.start();
-    await runtime.use('automatic');
-    expect(choice()).toBe('automatic');
-    expect(statuses.at(-1)).toEqual(TOO_OLD);
+    await runtime.use('installed');
+    expect(runtime.cmPath()).toBe(MANAGED);
+    expect(choice()).toBe('managed');
+    expect(statuses).toEqual([]);
     expect(relocations()).toBe(0);
   });
 
-  it('keeps its own running when the user chooses Automatic after choosing it for this pinned version', async () => {
-    const { runtime, statuses, relocations } = runtimeWith({ installed: [VERSION], versionOf: async () => OLDER, declinedFor: VERSION });
+  it('asks to update it when the user chose it before and it’s older now', () => {
+    const { runtime, statuses } = runtimeWith({ chosen: 'installed', installed: [VERSION] });
     runtime.start();
-    await runtime.use('automatic');
-    expect(runtime.cmPath()).toBe(MANAGED);
-    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
-    expect(relocations()).toBe(0);
+    expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
+    expect(statuses.at(-1)).toEqual(TOO_OLD);
   });
 
   it('offers no older installed one when its own fails to set up', async () => {
@@ -484,14 +483,14 @@ describe('CmRuntime with an installed cm older than its own', () => {
     }
   });
 
-  it('keeps the user’s last choice when Automatic was clicked first and the installed one’s version answers after', async () => {
+  it('keeps the user’s last choice when Installed was clicked first and its version answers after', async () => {
     let answer: (version: string) => void = () => undefined;
     const { runtime, choice } = runtimeWith({ installed: [VERSION], versionOf: () => new Promise((resolve) => (answer = resolve)) });
     runtime.start();
-    const automatic = runtime.use('automatic');
+    const installed = runtime.use('installed');
     await runtime.use('managed');
     answer(INSTALLED_VERSION);
-    await automatic;
+    await installed;
     expect(runtime.cmPath()).toBe(MANAGED);
     expect(choice()).toBe('managed');
   });

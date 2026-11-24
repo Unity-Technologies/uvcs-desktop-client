@@ -15,6 +15,11 @@ describe('chooseCm', () => {
     expect(chooseCm(CANDIDATES, 'cm')).toEqual({ source: 'installed', path: INSTALLED });
   });
 
+  it('runs the installed cm when the user chose it, and the app’s own when it’s gone', () => {
+    expect(chooseCm({ ...CANDIDATES, choice: 'installed' }, 'cm')).toEqual({ source: 'installed', path: INSTALLED });
+    expect(chooseCm({ ...CANDIDATES, choice: 'installed', installedPath: null }, 'cm')).toEqual({ source: 'managed', path: MANAGED });
+  });
+
   it('runs the app’s own by default when none is found', () => {
     expect(chooseCm({ ...CANDIDATES, installedPath: null }, 'cm')).toEqual({ source: 'managed', path: MANAGED });
   });
@@ -24,7 +29,7 @@ describe('chooseCm', () => {
     expect(chooseCm({ ...CANDIDATES, choice: 'managed', installedPath: null }, 'cm')).toEqual({ source: 'managed', path: MANAGED });
   });
 
-  it('runs the installed cm where the app has none of its own, under either choice', () => {
+  it('runs the installed cm where the app has none of its own, under any choice', () => {
     expect(chooseCm({ ...CANDIDATES, managedPath: null }, 'cm')).toEqual({ source: 'installed', path: INSTALLED });
     expect(chooseCm({ ...CANDIDATES, choice: 'managed', managedPath: null }, 'cm')).toEqual({ source: 'installed', path: INSTALLED });
   });
