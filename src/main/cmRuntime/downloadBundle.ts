@@ -7,7 +7,7 @@ import { CmInstallError, httpFailure } from './cmInstallFailure';
  * Fetches a URL: Electron's `net.fetch` in the app, which goes through the system's proxy, PAC script and certificates
  * as Chromium does (Node's own `fetch` knows none of them); the global `fetch` in tests.
  */
-export type Fetch = (url: string, init: { headers: Record<string, string>; signal?: AbortSignal }) => Promise<Response>;
+export type Fetch = (url: string, init: { method?: 'GET' | 'HEAD'; headers: Record<string, string>; signal?: AbortSignal }) => Promise<Response>;
 
 export interface BundleDownload {
   fetch: Fetch;
