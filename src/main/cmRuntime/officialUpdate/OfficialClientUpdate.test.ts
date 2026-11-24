@@ -194,6 +194,14 @@ describe('OfficialClientUpdate', () => {
       expect(calls.filter((call) => call.endsWith(' cm'))).toEqual(['hold cm', 'resume cm']);
     });
 
+    it('on macOS, when Installer.app closed and the installed one is still too old: its steps weren’t finished', async () => {
+      const site = fakeSite();
+      const fetch: Fetch = (url, init) => site.fetch(url.includes('/for/cloud/macos-arm64') ? LOOKUP : url, init);
+      const { update } = await setup({ site: { fetch, requests: [] }, platform: 'macos-arm64', versionAfter: '11.0.16.9000' });
+      expect(await update.install({ path: '/Applications/PlasticSCM.app/Contents/MacOS/cm', version: '11.0.16.9000' }, FLOOR)).toBe(false);
+      expect(update.state()).toMatchObject({ kind: 'failed', failure: 'notFinished' });
+    });
+
     it('when the installer ended and the installed one is still too old, keeping the download to try again', async () => {
       const { update, folder } = await setup({ outcome: { kind: 'ended', exitCode: 3 }, versionAfter: '11.0.16.9000' });
       expect(await update.install(INSTALLED, FLOOR)).toBe(false);
