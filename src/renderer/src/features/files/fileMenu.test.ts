@@ -9,7 +9,9 @@ import type { WorkspaceInfo } from '@shared/domain/workspace';
 import type { Action, MenuEntry } from '../../lib/actions';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
+import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { fileMenu } from './fileMenu';
+import { FILES_DETAILS_KEY, useFilesViewStore } from './filesViewStore';
 import { PendingChangesIndex } from './itemStatus';
 
 const ws = '/ws';
@@ -96,5 +98,34 @@ describe('fileMenu: xlinks in a partial workspace', () => {
   it('keeps Edit xlink… on an xlink', () => {
     seed({ kind: 'partial' });
     expect(entryIn(menuOf([{ ...item('lib', 'directory'), xlink }]), 'editXlink')).toBeDefined();
+  });
+});
+
+// With the details panel hidden, Annotate and Show changes used to change a panel no one saw, and seemed to do nothing.
+describe('fileMenu: showing the file beside the tree', () => {
+  const filesDetailsHidden = () => detailsHidden(useDetailsPaneStore.getState(), FILES_DETAILS_KEY);
+
+  beforeEach(() => {
+    seed({});
+    useFilesViewStore.setState({ fileView: 'diff', revealRequest: null });
+    useDetailsPaneStore.setState({ hidden: { [FILES_DETAILS_KEY]: true }, startedHidden: {} });
+  });
+
+  it('opens the hidden details panel on the file annotated, and selects the file', () => {
+    entryIn(menuOf([item('src/main.c')]), 'annotate')!.run();
+
+    expect(useFilesViewStore.getState().fileView).toBe('annotate');
+    expect(useFilesViewStore.getState().revealRequest?.path).toBe('src/main.c');
+    expect(filesDetailsHidden()).toBe(false);
+  });
+
+  it("opens the hidden details panel on the file's changes, and selects the file", () => {
+    useFilesViewStore.setState({ fileView: 'annotate' });
+
+    entryIn(menuOf([item('src/main.c')]), 'changes')!.run();
+
+    expect(useFilesViewStore.getState().fileView).toBe('diff');
+    expect(useFilesViewStore.getState().revealRequest?.path).toBe('src/main.c');
+    expect(filesDetailsHidden()).toBe(false);
   });
 });
