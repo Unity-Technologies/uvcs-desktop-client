@@ -276,6 +276,8 @@ export class WorkspaceWindows {
    * puts them back where they were, while a launch of their own starts on Changes.
    */
   saveSession({ withViews }: { withViews: boolean }): void {
+    // Never maximized or full screen, its windows would reopen so at the person's next launch (`windowsStayInBackground`).
+    if (windowsStayInBackground(process.env, app.isPackaged)) return;
     const openWindows = inSessionOrder(this.all(), this.lastFocused).map((window): SavedWindow => {
       const place = this.placeIn(window);
       const saved = { ...savedPlaceFields(place), bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() };

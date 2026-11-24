@@ -19,7 +19,7 @@ const TEXT_FILE = /\.(?:[cm]?[jt]sx?|json|ya?ml|sh|ps1|cmd|bat|nsh|md)$/;
 const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
 
 describe('windowsStayInBackground', () => {
-  it('keeps the windows of a build run from the checkout from taking the focus when the smoke test asks', () => {
+  it('keeps the windows of a build run from the checkout from taking the focus when an agent’s launch asks', () => {
     expect(windowsStayInBackground({ UVCS_BACKGROUND_WINDOWS: '1' }, false)).toBe(true);
   });
 

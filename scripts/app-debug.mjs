@@ -6,7 +6,9 @@ import { spawn } from 'node:child_process';
 import electron from 'electron';
 
 const port = process.env.UVCS_CDP_PORT || '9333';
-const inBackground = process.argv.includes('--background');
+// npm takes `--background` as its own option when no `--` comes before it (PowerShell's npm may drop the `--`), and
+// then says so in `npm_config_background`.
+const inBackground = process.argv.includes('--background') || process.env.npm_config_background === 'true';
 const args = process.argv.slice(2).filter((argument) => argument !== '--background');
 const env = inBackground ? { ...process.env, UVCS_BACKGROUND_WINDOWS: '1' } : process.env;
 spawn(electron, ['.', `--remote-debugging-port=${port}`, ...args], { stdio: 'inherit', env }).on('exit', (code) => process.exit(code ?? 1));

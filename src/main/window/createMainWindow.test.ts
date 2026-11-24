@@ -143,7 +143,7 @@ describe('createMainWindow', () => {
   });
 });
 
-describe('createMainWindow under the smoke test (`windowsStayInBackground`)', () => {
+describe('createMainWindow in an agent’s launch (`windowsStayInBackground`)', () => {
   const reopenedMaximizedFullScreen = (): FakeWindow => {
     vi.mocked(loadWindowBounds).mockReturnValueOnce({ bounds: null, maximized: true });
     createMainWindow(memorySettings(), { reopen: { bounds: { x: 0, y: 0, width: 1000, height: 700, maximized: true }, fullScreen: true } });
@@ -161,6 +161,14 @@ describe('createMainWindow under the smoke test (`windowsStayInBackground`)', ()
     const window = reopenedMaximizedFullScreen();
     expect(window).toMatchObject({ shown: false, shownInactive: true, maximized: false, fullScreen: false });
     expect(window.options.webPreferences?.backgroundThrottling).toBe(false);
+  });
+
+  it('saves none of its bounds, so the person’s next launch opens where they left their windows', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+
+    reopenedMaximizedFullScreen().emit('close', closeEvent());
+    expect(boundsSavedOnClose).toEqual([]);
   });
 
   it('shows an installed app’s window as always, whatever its environment holds', () => {

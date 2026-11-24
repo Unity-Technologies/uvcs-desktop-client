@@ -851,7 +851,7 @@ describe('page windows', () => {
   });
 });
 
-describe('focusWindow under the smoke test (`windowsStayInBackground`)', () => {
+describe('focusWindow in an agent’s launch (`windowsStayInBackground`)', () => {
   const minimizedWindow = (): FakeWindow => {
     createMainWindow(memorySettings());
     const window = fakeElectron.windows().at(-1)!;
@@ -869,6 +869,17 @@ describe('focusWindow under the smoke test (`windowsStayInBackground`)', () => {
     focusWindow(asBrowserWindow(window));
     expect(window.shown).toBe(false);
     expect(fakeElectron.focused()).toBeNull();
+  });
+
+  it('leaves the person’s saved session alone, so their next launch opens as it would have', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+    const saved: SavedWindow = { workspacePath: '/game', bounds: { x: 0, y: 0, width: 1000, height: 700, maximized: true }, fullScreen: true };
+    const { windows, settings, open } = setUp([], [saved]);
+    open();
+
+    windows.saveSession({ withViews: false });
+    expect(settings.get().openWindows).toEqual([saved]);
   });
 
   it('brings an installed app’s window forward as always, whatever its environment holds', () => {

@@ -58,7 +58,8 @@ export function createMainWindow(
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
   const chrome = windowChrome(process.platform);
-  const underTest = windowsStayInBackground(process.env, app.isPackaged);
+  // Overrides `inBackground`: every window shows without the focus, and leaves the person's saved bounds alone.
+  const keptInBackground = windowsStayInBackground(process.env, app.isPackaged);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
     ...bounds,
@@ -74,19 +75,22 @@ export function createMainWindow(
       contextIsolation: true,
       sandbox: true,
       // A window left behind others still runs its timers and animation frames, and its page reads as visible.
-      ...(underTest ? { backgroundThrottling: false } : {}),
+      ...(keptInBackground ? { backgroundThrottling: false } : {}),
     },
   });
 
   // First: every other `close` listener (the bounds saved, `askBeforeUnloading`, the last window's) sees whether it was held back.
   if (onCloseRequested) window.on('close', (event) => onCloseRequested(window.id, event));
-  keepWindowBoundsSaved(window, settings, boundsKey);
+  if (!keptInBackground) keepWindowBoundsSaved(window, settings, boundsKey);
   followPageZoom(window, chrome);
   window.once('ready-to-show', () => {
     // The page has its zoom by now: the window shows with its controls where the zoomed top bar puts them.
     fitWindowControls(window, chrome);
     // Never maximized or full screen, which would show it and take the focus.
-    if (underTest) return window.showInactive();
+    if (keptInBackground) {
+      window.showInactive();
+      return;
+    }
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
     if (inBackground) window.showInactive();
