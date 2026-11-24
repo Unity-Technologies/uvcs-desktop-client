@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { changedLineType, editorHasFocusIn, lineRowSelector, numberCellSelector, pageTextSelection, rowUnderPointer } from './pierreDom';
+import { changedLineType, editorHasFocusIn, lineRowSelector, numberCellSelector, pageTextSelection, rowUnderPointer, sideLineRowSelector } from './pierreDom';
 
 describe('pierreDom', () => {
   it('names a changed line by its type in Pierre’s rows', () => {
@@ -10,6 +10,16 @@ describe('pierreDom', () => {
   it('selects a changed line’s content row and its number cell', () => {
     expect(lineRowSelector({ side: 'deletions', lineNumber: 3 })).toBe('[data-line-type="change-deletion"][data-line="3"]');
     expect(numberCellSelector({ side: 'additions', lineNumber: 12 })).toBe('[data-line-type="change-addition"][data-column-number="12"]');
+  });
+
+  it('selects any line of a side, unchanged too: in its pane side by side, by the number it has there unified', () => {
+    expect(sideLineRowSelector({ side: 'additions', lineNumber: 7 })).toBe(
+      '[data-additions] [data-line="7"][data-line-type], [data-unified] [data-line="7"][data-line-type]:not([data-line-type="change-deletion"])',
+    );
+    // Unified, an unchanged line's row is numbered by the newer side, the older side's number beside it.
+    expect(sideLineRowSelector({ side: 'deletions', lineNumber: 7 })).toBe(
+      '[data-deletions] [data-line="7"][data-line-type], [data-unified] [data-line="7"][data-line-type][data-line-type="change-deletion"], [data-unified] [data-line-type^="context"][data-alt-line="7"]',
+    );
   });
 });
 

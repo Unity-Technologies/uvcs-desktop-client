@@ -50,6 +50,18 @@ export function lineRowSelector(line: ChangedLine): string {
   return `[data-line-type="${changedLineType(line)}"][data-line="${line.lineNumber}"]`;
 }
 
+/**
+ * Selects the content row of any line of a side, unchanged lines too (`lineRowSelector` selects changed lines only).
+ * Side by side, a side's rows are in its pane (`data-deletions`, `data-additions`), numbered as that side numbers them.
+ * Unified (`data-unified`), an unchanged line shows once, numbered as the newer side numbers it (`data-line`), the older
+ * side's number beside it (`data-alt-line`); its type is `context`, or `context-expanded` once unfolded.
+ */
+export function sideLineRowSelector({ side, lineNumber }: ChangedLine): string {
+  const line = `[data-line="${lineNumber}"][data-line-type]`;
+  if (side === 'additions') return `[data-additions] ${line}, [data-unified] ${line}:not([data-line-type="change-deletion"])`;
+  return `[data-deletions] ${line}, [data-unified] ${line}[data-line-type="change-deletion"], [data-unified] [data-line-type^="context"][data-alt-line="${lineNumber}"]`;
+}
+
 /** Selects a changed line's number cell. */
 export function numberCellSelector(line: ChangedLine): string {
   return `[data-line-type="${changedLineType(line)}"][data-column-number="${line.lineNumber}"]`;
