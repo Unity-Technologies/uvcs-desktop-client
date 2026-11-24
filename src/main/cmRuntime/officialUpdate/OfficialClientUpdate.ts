@@ -102,8 +102,36 @@ export class OfficialClientUpdate {
   /** The user asked to install it: a failure from here on is shown, and the download says it's for that. */
   private installRequested = false;
   private lastProgressAt = Number.NEGATIVE_INFINITY;
+  /** Told how far the download is, 0 to 1, while an app update waits for it (`downloadAhead`). */
+  private progressListener: ((fraction: number) => void) | null = null;
 
   constructor(private readonly options: OfficialClientUpdateOptions) {}
+
+  /** How the installed one is updated here: its installer, a command the user runs (Linux), or neither (no installer for this computer). */
+  updatesBy(): 'installer' | 'command' | null {
+    const { platform } = this.options;
+    if (platform === null) return null;
+    return platform === 'linux' ? 'command' : 'installer';
+  }
+
+  /**
+   * Downloads the installer of `floor` or newer along with an app update that needs it (docs/features/cm-runtime.md
+   * "Updates bring their cm"), telling how far it is, 0 to 1; `install` with the same floor runs it. A failure is
+   * thrown, and shows nothing: nobody asked for it yet.
+   */
+  async downloadAhead(installed: InstalledCm, floor: string, onProgress: (fraction: number) => void): Promise<void> {
+    if (this.updatesBy() !== 'installer') throw new OfficialUpdateError('noUpdate', 'This computer has no installer to download.');
+    this.progressListener = onProgress;
+    try {
+      await this.downloaded(installed, floor);
+      onProgress(1);
+    } catch (error) {
+      if (!this.installRequested) this.set(null);
+      throw error;
+    } finally {
+      this.progressListener = null;
+    }
+  }
 
   /** Where it stands; null when nothing is under way. */
   state(): OfficialUpdate | null {
@@ -189,9 +217,12 @@ export class OfficialClientUpdate {
     throw new OfficialUpdateError('notSigned', `${verdict.why}: ${installer.path}`);
   }
 
-  /** The installer, downloaded once: asks while it downloads join that download. */
+  /**
+   * The installer, downloaded once: asks while it downloads join that download. One downloaded for an older floor (the
+   * update screen's, before an app update raised it) is passed over.
+   */
   private downloaded(installed: InstalledCm, floor: string): Promise<DownloadedInstaller> {
-    if (this.ready) return Promise.resolve(this.ready);
+    if (this.ready && meetsCmVersion(this.ready.version, floor)) return Promise.resolve(this.ready);
     this.preparing ??= this.download(installed, floor).finally(() => (this.preparing = null));
     return this.preparing;
   }
@@ -256,6 +287,7 @@ export class OfficialClientUpdate {
     if (this.current?.kind === 'downloading' && now - this.lastProgressAt < PROGRESS_INTERVAL_MS) return;
     this.lastProgressAt = now;
     this.set({ kind: 'downloading', version, receivedBytes, totalBytes, installRequested: this.installRequested });
+    this.progressListener?.(totalBytes ? Math.min(1, receivedBytes / totalBytes) : 0);
   }
 
   private set(state: OfficialUpdate | null): void {

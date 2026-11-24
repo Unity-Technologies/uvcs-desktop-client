@@ -221,4 +221,37 @@ describe('OfficialClientUpdate', () => {
     expect(await update.install(INSTALLED, FLOOR)).toBe(false);
     expect(site.requests).toEqual([]);
   });
+
+  describe('along with an app update that needs a newer one', () => {
+    const NEXT_FLOOR = '11.0.16.10690';
+
+    it('downloads the installer, telling how far, and installs it at the update’s floor', async () => {
+      const { update, folder, calls } = await setup();
+      const fractions: number[] = [];
+      await update.downloadAhead(INSTALLED, NEXT_FLOOR, (fraction) => fractions.push(fraction));
+      expect(fractions.at(0)).toBe(0);
+      expect(fractions.at(-1)).toBe(1);
+      expect(await update.install(INSTALLED, NEXT_FLOOR)).toBe(true);
+      expect(calls).toContain(`run ${join(folder, FILE)} 11.0.16.10694`);
+    });
+
+    it('fails, showing nothing, when no version as new as the update needs is published', async () => {
+      const { update } = await setup();
+      await expect(update.downloadAhead(INSTALLED, '11.0.16.10800', () => undefined)).rejects.toMatchObject({ failure: 'noUpdate' });
+      expect(update.state()).toBeNull();
+    });
+
+    it('passes over an installer downloaded for an older floor', async () => {
+      const { update, site } = await setup({ site: fakeSite({ lookup: { status: 200, body: answer('11.0.16.10694') } }) });
+      await update.prepare(INSTALLED, FLOOR);
+      await expect(update.downloadAhead(INSTALLED, '11.0.16.10700', () => undefined)).rejects.toMatchObject({ failure: 'noUpdate' });
+      expect(site.requests.filter((request) => request === `GET ${LOOKUP}`)).toHaveLength(2);
+    });
+
+    it('says how the installed one updates: its installer, a command on Linux, or not at all', async () => {
+      expect((await setup()).update.updatesBy()).toBe('installer');
+      expect((await setup({ platform: 'linux' })).update.updatesBy()).toBe('command');
+      expect((await setup({ platform: null })).update.updatesBy()).toBeNull();
+    });
+  });
 });
