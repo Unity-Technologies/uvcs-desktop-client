@@ -55,8 +55,9 @@ const REASONS: Readonly<Record<CmInstallFailure, string>> = {
   blocked: 'It downloaded, but didn’t start on this computer, which may block apps in your user folder or lack something they need: Details say what.',
 };
 
+/** What the setup shows; null once `cm` runs, or while the update screen asks to update the installed one (`cmUpdateViewOf`). */
 export function cmSetupViewOf(status: CmRuntimeStatus, secondsLeft: number | null): CmSetupView | null {
-  if (status.kind === 'ready') return null;
+  if (status.kind === 'ready' || status.kind === 'installedTooOld') return null;
   if (status.kind === 'failed') {
     return {
       kind: 'failed',
