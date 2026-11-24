@@ -76,6 +76,8 @@ import {
   Scissors,
   Search,
   ServerCog,
+  Star,
+  StarOff,
   ShieldCheck,
   Signpost,
   Square,
@@ -300,6 +302,9 @@ export const MENU_WORDS = {
   hide: word('edit', EyeOff),
   unhide: word('edit', Eye),
   forget: word('edit', X, 'Remove from list'),
+  // An organization listed first in the home sidebar (`AppSettings.favoriteOrganizations`).
+  favorite: word('edit', Star, 'Add to favorites'),
+  unfavorite: word('edit', StarOff, 'Remove from favorites'),
   // Who may do what with it (docs/features/permissions.md).
   permissions: word('edit', ShieldCheck, 'Permissions…'),
   pathPermissions: word('edit', FolderLock, 'Path permissions…'),

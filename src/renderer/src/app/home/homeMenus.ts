@@ -8,7 +8,7 @@ import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { openRepositoryPathPermissions, openRepositoryPermissions, openServerPermissions } from '../../features/permissions/openPermissions';
 import { repositoryLinkTo } from '../links/linkTo';
-import { forgetRecentWorkspace } from '../settings/useSettings';
+import { forgetRecentWorkspace, setFavoriteOrganization } from '../settings/useSettings';
 import { exploreRepository } from '../workspace/exploreRepository';
 import type { OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace, restoreRepository } from './homeOperations';
@@ -50,4 +50,13 @@ export function repositoryMenu(repository: RepositorySummary, createWorkspace: (
 /** A deleted repository's menu: restoring it is all it offers until then, besides copying the name it had. */
 export function deletedRepositoryMenu(repository: RepositorySummary): MenuEntry[] {
   return groupedMenu([menuAction('restore', () => void restoreRepository(repository), { label: 'Restore' }), copySubmenu('Repository', { name: repository.name })]);
+}
+
+/** An organization's menu in the home sidebar: adding it to the favorites listed first, or taking it out. */
+export function organizationMenu(server: string, favorite: boolean): MenuEntry[] {
+  return groupedMenu([
+    favorite
+      ? menuAction('unfavorite', () => void setFavoriteOrganization(server, false))
+      : menuAction('favorite', () => void setFavoriteOrganization(server, true)),
+  ]);
 }

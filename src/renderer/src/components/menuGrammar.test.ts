@@ -20,7 +20,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { branchResult, changesetResult, codeReviewResult, labelResult, shelveResult, type ResultContext } from '../app/commands/objectResults';
-import { deletedRepositoryMenu, missingWorkspaceMenu, repositoryMenu, workspaceMenu } from '../app/home/homeMenus';
+import { deletedRepositoryMenu, missingWorkspaceMenu, organizationMenu, repositoryMenu, workspaceMenu } from '../app/home/homeMenus';
 import { currentWorkspaceMenu } from '../app/shell/currentWorkspaceMenu';
 import { attributeTypeMenu } from '../features/attributes/attributeTypeMenu';
 import { graphMenu } from '../features/branchExplorer/graphMenu';
@@ -245,6 +245,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   repository: () => repositoryMenu({ id: '1', name: 'game', server: 'local', owner: '', spec: repository }, () => {}),
   deletedRepository: () => deletedRepositoryMenu({ id: '8', name: 'game', server: 'local', owner: '', spec: 'd1e2f3a4@local', deleted: true }),
+  organization: () => organizationMenu('acme@unity', false),
+  favoriteOrganization: () => organizationMenu('acme@unity', true),
   currentWorkspace: () => currentWorkspaceMenu(ws, { name: 'game', kind: 'partial' }),
   graphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, graphContext),
   graphBranch: () => graphMenu({ kind: 'branch', lane }, graphContext),
