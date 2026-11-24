@@ -1,16 +1,15 @@
 import { placeId, type Place } from '@shared/domain/place';
-import type { BranchName } from './branchNames';
+import type { BranchName, BranchNameReads } from './branchNames';
 import { ownCopy } from './ownCopy';
-
-type ReadAll = (place: Place) => Promise<BranchName[]>;
 
 /** A branch rename shows in the code review lists after this long at most. */
 const MAX_AGE_MS = 10 * 60_000;
 
 /**
  * Branch names by object id, as code reviews name their branches. Branch lists already read answer them
- * (`remember`); only when some id is unknown and no complete list is recent is every branch's name read, once, in two
- * light queries. An id missing from a complete list is a deleted branch.
+ * (`remember`); only when some id is unknown and no complete list is recent does it ask the server: for one id alone (a
+ * review's page), that branch's name; for more (a list of reviews), every branch's name, once, in two light queries. An
+ * id missing from a complete list is a deleted branch.
  */
 export class BranchNamesCache {
   /** By place (`placeId`), then branch id. */
@@ -23,7 +22,7 @@ export class BranchNamesCache {
    * read that ends after the last window let the place go (`forget`) would keep them for the session.
    */
   constructor(
-    private readonly readAll: ReadAll,
+    private readonly reads: BranchNameReads,
     private readonly now: () => number = Date.now,
     private readonly isShown: (place: Place) => boolean = () => true,
   ) {}
@@ -40,9 +39,9 @@ export class BranchNamesCache {
   }
 
   async resolve(place: Place, ids: number[]): Promise<Map<number, string>> {
-    const unknown = ids.some((id) => this.nameOf(place, id) === undefined) && !this.isComplete(place);
+    const unknown = this.isComplete(place) ? [] : ids.filter((id) => this.nameOf(place, id) === undefined);
     // What the read found answers this lookup even where it isn't kept.
-    const read = unknown ? await this.readEvery(place) : undefined;
+    const read = unknown.length > 0 ? await this.readUnknown(place, unknown) : undefined;
     const names = new Map<number, string>();
     for (const id of ids) {
       const name = this.nameOf(place, id) ?? read?.get(id);
@@ -72,6 +71,19 @@ export class BranchNamesCache {
     return completeAt !== undefined && this.now() - completeAt < MAX_AGE_MS;
   }
 
+  /**
+   * The names of `unknown`: one id alone is read by itself, unless every branch's name is being read already, which it
+   * waits for; more ids read every branch's name.
+   */
+  private async readUnknown(place: Place, unknown: number[]): Promise<ReadonlyMap<number, string>> {
+    const [id] = unknown;
+    if (unknown.length > 1 || id === undefined || this.reading.has(placeId(place))) return this.readEvery(place);
+    const branch = await this.reads.one(place, id);
+    if (!branch) return new Map();
+    this.remember(place, [branch]);
+    return new Map([[branch.id, branch.name]]);
+  }
+
   /** Reads every branch name, by id; lookups meanwhile wait for the same read. */
   private readEvery(place: Place): Promise<ReadonlyMap<number, string>> {
     const key = placeId(place);
@@ -79,7 +91,7 @@ export class BranchNamesCache {
     if (running) return running;
     // A read the place was forgotten during (`forget`) keeps nothing.
     const isCurrent = (): boolean => this.reading.get(key) === read;
-    const read: Promise<ReadonlyMap<number, string>> = this.readAll(place)
+    const read: Promise<ReadonlyMap<number, string>> = this.reads.every(place)
       .then((branches) => {
         if (isCurrent()) this.remember(place, branches, { complete: true });
         return new Map(branches.map(({ id, name }) => [id, name]));

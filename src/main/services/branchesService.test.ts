@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
+import { NO_BRANCH_NAME_READS } from '../cm/testing/branchNameReads';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_BRANCHES } from '../cm/foundObjects';
 import { branchesFound, formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
@@ -40,9 +41,7 @@ const OTHER_TASK1 = { ...branchRecord(40, '/main/fix/task1', '2026-09-28T10:00:0
 
 function branches(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  const branchNames = new BranchNamesCache(async () => {
-    throw new Error('The list read answers every name.');
-  });
+  const branchNames = new BranchNamesCache(NO_BRANCH_NAME_READS);
   return { ...fake, branchNames, service: createBranchesService(serviceContext(fake.cm), { branchNames }) };
 }
 
@@ -283,7 +282,7 @@ describe('recent branches', () => {
     const fake = fakeCmClient({ getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID]) });
     const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-settings-')), 'settings.json'));
     const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
-    const service = createBranchesService(serviceContext(fake.cm, { settings, headers }), { branchNames: new BranchNamesCache(async () => []) });
+    const service = createBranchesService(serviceContext(fake.cm, { settings, headers }), { branchNames: new BranchNamesCache(NO_BRANCH_NAME_READS) });
     return { ...fake, settings, headers, service };
   }
 
