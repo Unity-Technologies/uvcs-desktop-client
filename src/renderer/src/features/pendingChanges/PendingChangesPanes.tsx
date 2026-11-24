@@ -7,6 +7,7 @@ import { recentCommentsFor } from '@shared/domain/recentComments';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
+import { viewOfferFor } from '../../components/fileListViewMenuModel';
 import { useFileListViewStore } from '../../components/fileListViewStore';
 import { ListToolbar } from '../../components/ListToolbar';
 import { useRankedOrder } from '../../components/useRankedOrder';
@@ -118,7 +119,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     isViewFilter: true,
     reading: !snapshot,
     actions: <ReviewModeButton place={workspacePlace(workspacePath)} />,
-    viewOffer: { statusGroups: true, changelists: grouping === 'changelist' },
+    viewOffer: viewOfferFor(PENDING_CHANGE_FACTS, { statusGroups: true, changelists: grouping === 'changelist' }),
     onChangelistsChange: (on) => setGrouping(on ? 'changelist' : 'none'),
   });
   const order = useRankedOrder(sorted, PENDING_CHANGE_FACTS);

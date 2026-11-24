@@ -202,8 +202,8 @@ const REVISIONS = {
  * its permissions, which `cm` prints with no base revision: it had none set before, as a file checked in from Windows.
  */
 const DIFFERENCES = [
-  { status: 'C', path: '"/README.md"', srccmpath: '""', baserevid: -1, revid: 203, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '""', fsprotection: '"-r--r--r--"' },
-  { status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-rw-r--r--"' },
+  { status: 'C', path: '"/README.md"', srccmpath: '""', baserevid: -1, revid: 203, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '""', fsprotection: '"-r--r--r--"', date: `"${daysAgo(3)}"` },
+  { status: 'C', path: '"/src/player.cs"', srccmpath: '""', baserevid: 201, revid: 202, type: 'F', repository: `"${REPOSITORY_SPEC}"`, srcfsprotection: '"-rw-r--r--"', fsprotection: '"-rw-r--r--"', date: `"${daysAgo(1)}"` },
 ];
 
 /** `cm lock list` records, their fields in the order `cm` prints them. */

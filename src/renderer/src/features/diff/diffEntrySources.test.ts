@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { DIFF_ENTRY_FACTS, describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones, permissionsNote } from './diffEntrySources';
+import { DIFF_ENTRY_FACTS, DIFF_VIEW_OFFER, describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones, permissionsNote } from './diffEntrySources';
 
 describe('diffEntrySources', () => {
   it('reads both sides of a file under an xlink in the xlinked repository, where its ids are', () => {
@@ -110,5 +110,26 @@ describe('an item whose file permissions alone changed', () => {
   it('is none for an item whose content changed, or that was only moved', () => {
     expect(permissionsNote({ ...onlyPermissions, permissionsChange: undefined, baseRevisionId: 40 })).toBeNull();
     expect(permissionsNote({ ...onlyPermissions, permissionsChange: undefined, status: 'moved', oldPath: 'build.sh' })).toBeNull();
+  });
+});
+
+describe("a diff entry's date", () => {
+  const entry: DiffEntry = { status: 'changed', path: 'src/a.ts', itemType: 'file', baseRevisionId: 1, revisionId: 2, repository: 'game@local' };
+
+  it('is the moment its revision was made, whatever the offset cm printed it with', () => {
+    const date = DIFF_ENTRY_FACTS.dateOf!;
+    expect(date({ ...entry, date: '2026-11-20T09:15:02.1234567+01:00' })).toBe(Date.UTC(2026, 10, 20, 8, 15, 2, 123));
+    expect(date({ ...entry, date: '2026-11-20T08:15:03.0000000+00:00' })! > date({ ...entry, date: '2026-11-20T09:15:02.0000000+01:00' })!).toBe(true);
+  });
+
+  it('is none where cm printed none, or a date it cannot read', () => {
+    expect(DIFF_ENTRY_FACTS.dateOf!(entry)).toBeUndefined();
+    expect(DIFF_ENTRY_FACTS.dateOf!({ ...entry, date: '20/11/2026 9:15' })).toBeUndefined();
+  });
+});
+
+describe('DIFF_VIEW_OFFER', () => {
+  it("offers a diff's list the sort by date", () => {
+    expect(DIFF_VIEW_OFFER).toEqual({ statusGroups: true, dates: true });
   });
 });

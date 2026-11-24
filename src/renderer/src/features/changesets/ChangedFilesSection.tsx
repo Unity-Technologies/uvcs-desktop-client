@@ -4,7 +4,7 @@ import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { FileListViewMenu } from '../../components/FileListViewMenu';
-import type { FileListViewOffer } from '../../components/fileListViewMenuModel';
+import { viewOfferFor } from '../../components/fileListViewMenuModel';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
@@ -40,7 +40,7 @@ interface ChangedFilesSectionProps {
 }
 
 /** A details panel's short list is never grouped: its view menu offers the layout and the order. */
-const NO_GROUPINGS: FileListViewOffer = { statusGroups: false };
+const NO_GROUPINGS = viewOfferFor(DIFF_ENTRY_FACTS, { statusGroups: false });
 
 /**
  * The changes pane of a details panel: what a changeset, branch, label, shelve or code review changed.

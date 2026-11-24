@@ -62,6 +62,36 @@ describe('fileListOrder', () => {
   });
 });
 
+describe('fileListOrder by date', () => {
+  interface DatedFile extends File {
+    date?: number;
+  }
+  const dated: DatedFile[] = [
+    { path: 'a/old.ts', tone: 'changed', date: 100 },
+    { path: 'a/undated.ts', tone: 'deleted' },
+    { path: 'b/new.ts', tone: 'added', date: 300 },
+    { path: 'b/same.ts', tone: 'changed', date: 200 },
+    { path: 'c/gone.ts', tone: 'deleted' },
+    { path: 'c/same.ts', tone: 'changed', date: 200 },
+  ];
+  const datedFacts = { toneOf: (file: DatedFile) => file.tone, dateOf: (file: DatedFile) => file.date };
+  const byDate = (items: DatedFile[]) =>
+    layoutPathItems(items, (file) => file.path, { tree: false, folderScope: 'all', order: fileListOrder('date', datedFacts) }).map((row) => row.key);
+
+  it('sorts the newest first, files without a date last, ties in path order', () => {
+    expect(byDate(dated)).toEqual(['b/new.ts', 'b/same.ts', 'c/same.ts', 'a/old.ts', 'a/undated.ts', 'c/gone.ts']);
+  });
+
+  it('arranges a list by date as sorting it would', () => {
+    const order = fileListOrder('date', datedFacts)!;
+    expect(order.arrange!(dated)).toEqual([...dated].sort(order.compare));
+  });
+
+  it('keeps the path order in a list that has no dates (the merge page)', () => {
+    expect(fileListOrder('date', facts)).toBeUndefined();
+  });
+});
+
 describe('extensionOf', () => {
   it('reads the last extension of the name, in lower case', () => {
     expect(extensionOf('a/b.PNG')).toBe('png');

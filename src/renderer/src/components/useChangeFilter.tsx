@@ -17,7 +17,7 @@ export interface ChangeFilterOptions<T> {
   toneLabels?: Partial<Record<StatusTone, string>>;
   /** At the row's end, after the view menu: the list's own modes (the review mode toggle). */
   actions?: ReactNode;
-  /** The groupings the list's view menu offers (`FileListViewMenu`): by status unless said otherwise. */
+  /** What the list's view menu offers (`FileListViewMenu`, `viewOfferFor`): grouping by status and no dates unless said otherwise. */
   viewOffer?: FileListViewOffer;
   /** Changes' grouping by changelist turned on or off, from its view menu. */
   onChangelistsChange?: (on: boolean) => void;
@@ -35,7 +35,7 @@ export interface ListFlag<T> {
 }
 
 const NO_TONE_LABELS: Partial<Record<StatusTone, string>> = {};
-const BY_STATUS: FileListViewOffer = { statusGroups: true };
+const BY_STATUS: FileListViewOffer = { statusGroups: true, dates: false };
 
 export interface ChangeFilterResult<T> {
   visible: T[];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFileContent, incomingFileTones, incomingScopeOf, scopeDiffToRead, scopeKey } from './incomingScope';
+import { collidesWithLocal, INCOMING_FILE_FACTS, firstIncomingFile, incomingDiffTarget, incomingFileContent, incomingFileTones, incomingScopeOf, scopeDiffToRead, scopeKey } from './incomingScope';
 
 const file = (path: string, extra: Partial<DiffEntry> = {}): DiffEntry => ({ path, status: 'changed', itemType: 'file', ...extra }) as DiffEntry;
 
@@ -92,5 +92,11 @@ describe('scopeDiffToRead', () => {
     expect(scopeDiffToRead({ kind: 'all' })).toBeNull();
     expect(scopeDiffToRead({ kind: 'changeset', id: 7 })).toEqual({ kind: 'changeset', changesetId: 7 });
     expect(scopeDiffToRead({ kind: 'span', target: span })).toEqual(span);
+  });
+});
+
+describe('INCOMING_FILE_FACTS', () => {
+  it("dates an incoming file by its revision, as a diff's files", () => {
+    expect(INCOMING_FILE_FACTS.dateOf!(file('src/a.ts', { date: '2026-11-20T08:00:00.0000000+00:00' }))).toBe(Date.UTC(2026, 10, 20, 8));
   });
 });
