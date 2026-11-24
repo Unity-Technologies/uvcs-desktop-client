@@ -96,11 +96,12 @@ describe('cm commands never open an external tool', () => {
 });
 
 describe('merge tools open only on the user’s request', () => {
-  it('starts processes only to run cm, open an app the user picked (an editor, a terminal, a merge tool), ask the OS which apps are installed, ask codesign how the app is signed, read the folder dragged over a window (osascript), find the UVCS tray that serves dynamic workspaces (tasklist), or make an AppImage the handler of uvcs:// links (xdg-mime, which opens nothing), or unpack the app’s own cm (tar)', () => {
+  it('starts processes only to run cm, open an app the user picked (an editor, a terminal, a merge tool), ask the OS which apps are installed, ask codesign how the app is signed, read the folder dragged over a window (osascript), find the UVCS tray that serves dynamic workspaces (tasklist), or make an AppImage the handler of uvcs:// links (xdg-mime, which opens nothing), unpack the app’s own cm (tar), or update the installed one (its installer, on the user’s click, after checking its signature; dpkg and rpm, which open nothing)', () => {
     const spawning = allSources.filter(({ source }) => source.includes("'node:child_process'")).map(({ file }) => relative(file));
     expect(spawning.sort()).toEqual([
       'cm/CmShellSession.ts',
       'cm/runCmProcess.ts',
+      'cmRuntime/officialUpdate/officialUpdateTools.ts',
       'cmRuntime/unpackBundle.ts',
       'links/xdgMime.ts',
       'merge/mergeTools/launch.ts',
@@ -122,5 +123,13 @@ describe('merge tools open only on the user’s request', () => {
     const importsLaunch = /^import (?!type )[^;]*from '(\.\/|[./]*(merge\/)?mergeTools\/)launch';/m;
     const launching = allSources.filter(({ source }) => importsLaunch.test(source)).map(({ file }) => relative(file));
     expect(launching).toEqual(['services/mergeToolsService.ts']);
+  });
+
+  it('runs the installed one’s installer only when the user clicks Update, never as background work', () => {
+    // `CmRuntime.updateInstalled` is the one caller of `install`, and only the service behind the Update buttons calls it.
+    const installs = allSources.filter(({ source }) => /officialUpdate\.install\(/.test(source)).map(({ file }) => relative(file));
+    expect(installs).toEqual(['cmRuntime/CmRuntime.ts']);
+    const updates = allSources.filter(({ source }) => /\.updateInstalled\(/.test(source)).map(({ file }) => relative(file));
+    expect(updates).toEqual(['services/cmRuntimeService.ts']);
   });
 });

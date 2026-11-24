@@ -8,6 +8,7 @@ import { cmBundleFor, type CmVersionPin } from './cmBundles';
 import { cmInstallFailureOf } from './cmInstallFailure';
 import type { CmInstaller, CmInstallProgress } from './CmInstaller';
 import { retryDelayAfter } from './installRetries';
+import type { OfficialClientUpdate } from './officialUpdate/OfficialClientUpdate';
 
 /** A download of another version's `cm`, ahead of the update that runs it. */
 export interface CmPrefetch {
@@ -57,6 +58,11 @@ export interface CmRuntimeOptions {
   /** Shows a file in the OS's file manager (`shell.showItemInFolder`). */
   reveal: (path: string) => void;
   timers: CmRuntimeTimers;
+  /**
+   * Updates the installed one when it's too old, with its own installer (docs/features/cm-runtime.md "Updating the
+   * installed one"); it tells where it stands through `officialUpdateChanged`.
+   */
+  officialUpdate: Pick<OfficialClientUpdate, 'state' | 'prepare' | 'install'>;
 }
 
 /** How often, at most, a download's progress reaches the windows. */
@@ -91,6 +97,8 @@ export class CmRuntime {
   private refusedInstalledPath: string | null = null;
   /** Where the app has no `cm` of its own, the installed one, too old to run: nothing runs (`admits`). */
   private unrunnable: InstalledCm | null = null;
+  /** How many times this launch found the installed `cm` replaced by a newer one (`installedRevision`). */
+  private installedReplaced = 0;
   /** Check Again reading the installed `cm`'s version (`checkInstalledAgain`): asks while it does join it. */
   private checkingInstalled: Promise<void> | null = null;
 
@@ -136,7 +144,8 @@ export class CmRuntime {
   }
 
   status(): CmRuntimeStatus {
-    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion };
+    const officialUpdate = this.options.officialUpdate.state();
+    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion, ...(officialUpdate && { officialUpdate }) };
     if (this.isReady()) {
       const { switchingToOwn, unrunnable } = this;
       return {
@@ -144,6 +153,7 @@ export class CmRuntime {
         source: this.chosen.source,
         ...(switchingToOwn && { switchingToOwn }),
         ...(unrunnable && { installedTooOld: { installed: unrunnable, requiredVersion: this.pinnedVersion } }),
+        ...(officialUpdate && { officialUpdate }),
       };
     }
     return this.progress ?? this.installingStatus({ phase: 'downloading', receivedBytes: 0, totalBytes: null });
@@ -217,6 +227,43 @@ export class CmRuntime {
     return this.checkingInstalled;
   }
 
+  /**
+   * The update screen shows: the installed one's installer downloads in the background, ready for Update (on Linux, the
+   * command that updates it is found). Asked by the screen, never on a timer.
+   */
+  prepareUpdate(): void {
+    if (this.updateNeeded) void this.options.officialUpdate.prepare(this.updateNeeded, this.pinnedVersion);
+  }
+
+  /**
+   * Update, on the update screen or Settings' too old installed card: updates the installed one with its installer.
+   * Once it's new enough it runs, its shells started again, with no restart: unless the user chose the app's own in
+   * Settings, which keeps running. A failure stays where it was asked, saying why (`officialUpdate`'s state).
+   */
+  async updateInstalled(): Promise<void> {
+    const installed = this.updateNeeded ?? (await this.installedCm());
+    if (!installed || meetsCmVersion(installed.version, this.pinnedVersion)) return;
+    if (!(await this.options.officialUpdate.install(installed, this.pinnedVersion))) return;
+    this.installedReplaced++;
+    this.updateNeeded = null;
+    this.refusedInstalledPath = null;
+    this.switchTo(this.choose(), { relocate: true });
+  }
+
+  /**
+   * Changes each time the installed `cm` was found replaced by a newer one, at the same path (an update, or Check
+   * Again): what remembers a version per executable (`system.cmVersion`) reads it again then, rather than take an
+   * answer the older one gave, or was still giving.
+   */
+  installedRevision(): number {
+    return this.installedReplaced;
+  }
+
+  /** The installed one's update moved on: the windows hear it. */
+  officialUpdateChanged(): void {
+    this.announce();
+  }
+
   private async readInstalledAgain(): Promise<void> {
     const installed = await this.installedCm();
     const before = this.updateNeeded;
@@ -229,6 +276,7 @@ export class CmRuntime {
       return;
     }
     this.updateNeeded = null;
+    this.installedReplaced++;
     // Its shells, started before its version answered, run the executable the update replaced: started again.
     this.switchTo(this.choose(), { relocate: true });
   }

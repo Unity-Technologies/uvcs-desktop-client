@@ -118,6 +118,22 @@
   color: var(--accent-text);
 }
 
+/* A card with a button of its own at its end (`SettingsChoice`'s action), laid over the card's right edge. */
+.choiceWithAction {
+  position: relative;
+}
+
+.choiceWithAction > .choice {
+  padding-right: 96px;
+}
+
+.choiceAction {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+}
+
 /* An app setting's drop-down button (`AppPicker`), drawn as one choice card. */
 .picker {
   composes: choice;

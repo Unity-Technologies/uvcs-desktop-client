@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { HardDrive, Package } from 'lucide-react';
+import { Download, HardDrive, Package } from 'lucide-react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useCmRuntimeStore } from '../cmSetup/cmRuntimeStore';
+import { PLATFORM } from '../../lib/platform';
+import { Button } from '../../ui/Button';
 import { IMMUTABLE_QUERY } from '../queryMeta';
 import { cmChoiceCards, cmChoiceNote } from './cmChoiceCards';
 import { SettingsChoice } from './SettingsChoice';
@@ -18,7 +20,19 @@ export function CmChoiceGroup() {
   // One `cm version` of the installed one, each time Settings opens: it may have been installed or updated meanwhile.
   const installed = useQuery({ queryKey: queryKeys.installedCm, queryFn: () => api.cmRuntime.installedCm(), staleTime: 0, gcTime: 0 });
   if (status.kind !== 'ready' || pinned.data === undefined) return null;
-  const cards = cmChoiceCards({ pinnedVersion: pinned.data, installed: installed.data, source: status.source, switchingToOwn: status.switchingToOwn });
+  const cards = cmChoiceCards({
+    pinnedVersion: pinned.data,
+    installed: installed.data,
+    source: status.source,
+    switchingToOwn: status.switchingToOwn,
+    officialUpdate: status.officialUpdate,
+    canInstall: PLATFORM !== 'linux',
+  });
+  const update = async (): Promise<void> => {
+    await api.cmRuntime.updateInstalled();
+    // Its version changed once it worked: read again.
+    void installed.refetch();
+  };
   const note = cmChoiceNote(status.source);
   return (
     <SettingsGroup title="Command line client">
@@ -34,6 +48,13 @@ export function CmChoiceGroup() {
             disabled={card.disabled}
             warning={card.warning}
             onSelect={() => void api.cmRuntime.use(card.choice)}
+            action={
+              card.updateLabel && (
+                <Button variant="ghost" size="small" icon={<Download size={13} />} onClick={() => void update()}>
+                  {card.updateLabel}
+                </Button>
+              )
+            }
           />
         ))}
       </div>

@@ -14,8 +14,11 @@ export interface BundleDownload {
   url: string;
   /** Where the bundle downloads: a download cut short resumes from what it holds. */
   partialPath: string;
-  /** The SHA-256 the pin holds: anything else is deleted and fails as `damaged`. */
-  sha256: string;
+  /**
+   * The SHA-256 the pin holds: anything else is deleted and fails as `damaged`. Null for a file with none published
+   * (the official installer, whose signature is checked instead): then only its length is, against what the site said.
+   */
+  sha256: string | null;
   onProgress: (receivedBytes: number, totalBytes: number | null) => void;
   /** Timers for the stall watch (`STALL_TIMEOUT_MS`); the tests' own. */
   timers?: StallTimers;
@@ -72,15 +75,17 @@ function totalOf(response: Response, resumedFrom: number): number | null {
 
 /**
  * Downloads a bundle into `partialPath`, resuming what an earlier attempt left there (a `Range` request: the download
- * site answers 206), and checks its SHA-256. A site that answers the whole file again (200) starts it over.
+ * site answers 206), and checks its SHA-256, when one is published. A site that answers the whole file again (200)
+ * starts it over. A body that ends short of the length the site said fails as `unreachable`, keeping what arrived.
  */
 export async function downloadBundle(download: BundleDownload): Promise<void> {
   const { url, partialPath, sha256, onProgress } = download;
   let resumedFrom = await sizeOf(partialPath);
   const kept = createHash('sha256');
-  if (resumedFrom > 0) await hashFile(partialPath, kept);
+  // With no SHA-256 to check, what was kept isn't read again.
+  if (resumedFrom > 0 && sha256 !== null) await hashFile(partialPath, kept);
   // What an earlier attempt kept is the whole bundle already (it failed after downloading): nothing to ask.
-  if (resumedFrom > 0 && kept.copy().digest('hex') === sha256) {
+  if (sha256 !== null && resumedFrom > 0 && kept.copy().digest('hex') === sha256) {
     onProgress(resumedFrom, resumedFrom);
     return;
   }
@@ -93,6 +98,7 @@ export async function downloadBundle(download: BundleDownload): Promise<void> {
   } finally {
     watch.stop();
   }
+  if (sha256 === null) return;
   const received = (resumedFrom > 0 ? kept : hash).digest('hex');
   if (received !== sha256) {
     await rm(partialPath, { force: true });
@@ -133,6 +139,9 @@ async function receive(download: BundleDownload, from: number, kept: Hash, fresh
     }
   } finally {
     await file.close();
+  }
+  if (totalBytes !== null && receivedBytes < totalBytes) {
+    throw new CmInstallError('unreachable', `${url} ended after ${receivedBytes} of ${totalBytes} bytes`);
   }
   return resumedFrom;
 }

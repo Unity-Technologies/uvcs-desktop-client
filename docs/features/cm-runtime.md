@@ -163,18 +163,101 @@ the update screen instead (`CmUpdateNeeded`, its words from `cmUpdateViewOf`): n
 is false), and the windows wait as they do for a setup.
 
 - **Words**: "Update Unity Version Control", "This app needs a newer version of Unity Version Control on this
-  computer.", both versions on a line of their own (`cmVersionWords`), then what to do next. Never `cm`, command
-  line, installer or bundle; the installed one's path only under Details.
+  computer.", both versions on a line of their own (`cmVersionWords`), then "It takes a minute, and your workspaces
+  aren't changed." Never `cm`, command line, installer, bundle or token; the installed one's path, and any error,
+  only under Details.
+- **Update** (primary) updates it with its own installer ("Updating the installed one"): the installer downloads in the
+  background as soon as the screen shows (`cmRuntime.prepareUpdate`, a line under the buttons says how far: "Downloading
+  the update… 42%", then "The update is ready to install."), and the click runs it (`cmRuntime.updateInstalled`). While
+  it runs: "Updating Unity Version Control…", the download's bar if it isn't done, then "Your computer may ask for
+  permission." with "Installed: 11.0.16.9000 · Installing: 11.0.16.10729"; the Dock or taskbar icon shows the same
+  (`cmSetupIconProgress`). Once the installed one is new enough the window goes on to its place: no restart.
+- **A failure** says "Couldn't update Unity Version Control", why in plain words (`UPDATE_FAILURE_REASONS`: no newer
+  version yet, the download failed, not signed by Unity, the permission declined, or the installer ended and the
+  version is the same: "Close the other Unity Version Control apps, then try again. This computer may also not allow
+  installing programs."), "You can keep working with the version included with the app.", and offers Try Again and
+  Use the Included Version, the error under Details. A failure of the download in the background shows nothing: the
+  click tries it all again, and says why then.
 - **"Use the included version for now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the
   setup screen when it isn't there, and saves the pinned version as `cmDeclinedUpdateFor`: the screen doesn't ask again
   until the pin moves. The choice stays as it was, so once the installed one is new enough, it runs again without
   asking.
-- **Check Again** (`cmRuntime.checkInstalledAgain`) reads the installed one's version again (one `cm version`, logged):
-  new enough, it runs, its shells started again; still too old, the screen says so; none found any more, the app's own
-  runs. It's also asked, quietly, as a window gains focus (the user may come back from updating it), never on a timer.
+- **Linux** has no installer: the screen shows the command that updates it, with Copy, Check Again
+  (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the included version for now".
+- **Checked again as a window gains focus** (the user may come back from updating it another way), quietly, never on a
+  timer: new enough, it runs, its shells started again; none found any more, the app's own runs.
 
 To see it in a development build: the smoke test's fake `cm` (`scripts/e2e/fakeCm`) on a temp PATH as `cm`, with
 `UVCS_FAKE_CM_VERSION_FILE` naming a file that holds an older version, and no `UVCS_CM_PATH` (scripts/e2e/README.md).
+"Updating the installed one" says how to reach each of its states.
+
+## Updating the installed one
+
+`OfficialClientUpdate` (`main/cmRuntime/officialUpdate/`) updates the official installation the way the official
+client updates itself, with its own edition's installer, and asks Unity's download site only from the update screen or
+Settings' Update link, never on a timer. It isn't `cm`, so the server budget doesn't apply.
+
+1. **Edition** (`officialEditionOf`): a marker file next to the installed client, checked for and never read:
+   `cloudedition.token` → `cloud`, `dvcs.token` → `dvcs`, none → `enterprise` (client only and full alike). On Windows
+   it's the folder of `cm.exe` (`<install>\client\`); on macOS, links resolved first (`/usr/local/bin/cm` leads into
+   PlasticSCM.app), it's inside the app bundle (`Contents/Applications/cm.app/Contents/MacOS/`, `Contents/MonoBundle/`,
+   `Contents/MacOS/`). `noCmInternalFiles.test.ts` names this one exception: `cm` prints no edition.
+2. **Platform** (`officialPlatformOf`): `windows`, `macos`, `macos-arm64` (the Mac's own architecture: Apple silicon
+   even when the app runs under Rosetta, `app.runningUnderARM64Translation`) or `linux`.
+3. **The latest version** (`lastVersionUrl`, `parseLastVersion`): `GET
+   https://www.plasticscm.com/api/lastversion/after/<installed>/for/<edition>/<platform>` answers JSON (`version`,
+   `installerUri`, `downloadLink`, …) or `null` when nothing is newer. The installer is `installerUri`, or
+   `downloadLink` with `/download/` → `/download/downloadinstaller/`; it redirects to the file on Unity's CDN. A version
+   still below the pin is a failure (`noUpdate`), never installed.
+4. **Download** (`downloadBundle` with no SHA-256: Electron's `net`, so the system's proxy; resumed, its length checked)
+   into the `update` folder beside the app's own `cm` store (`cmStoreFolder`'s parent), named `installerFileName`
+   (`unity-vcs-<version>-<edition>-<platform>.exe` or `.pkg.zip`) because Electron's `net.fetch` doesn't tell the
+   address a redirect ended at. Other files there (an older version's) are deleted; the folder is emptied once it
+   installed. macOS's zip is unpacked with the system's `tar` (`unpackBundle`) to its one `.pkg`.
+5. **Signature**, checked on the click, right before it runs (no checksum is published; `installerSignature.ts`):
+   Windows, `Get-AuthenticodeSignature` through System32's PowerShell (`authenticodeCheck`) must say `Valid` and name
+   `WINDOWS_INSTALLER_SIGNERS` (CN and O `Unity Technologies SF`); macOS, `pkgutil --check-signature`
+   (`pkgutilCheck`) must say it's signed for distribution by a certificate Apple issued, notarized, and by a Developer
+   ID Installer of `MAC_INSTALLER_TEAMS` (`Codice Software (BQ7R3Y4J72)`). Those are the signers of 11.0.16.10694's
+   installers. Any other answer deletes the download (`notSigned`).
+6. **Run** (`installerCommands.ts`), after `CmClient`'s shells are stopped (`CmClient.dispose`: they hold `cm`'s files,
+   and the Windows installer stops while `cm` runs): Windows starts the installer elevated, so Windows asks for
+   permission, unattended with its own small dialogs (`--mode unattended --unattendedmodeui minimalWithDialogs`),
+   without the official client's option that starts it once done, and waits for it (`windowsInstallerRun`: .NET's
+   `Process.Start` with the `runas` verb, so a declined prompt ends with Windows' `ERROR_CANCELLED`,
+   `DECLINED_EXIT_CODE`); the path goes in an environment variable (`INSTALLER_PATH_VARIABLE`), never on the command
+   line. macOS opens the package in Installer.app, as the official client does, and waits for it to close
+   (`open -W`, `macInstallerRun`). Only the click starts it (`noExternalUi.test.ts`).
+7. **Then** the installed one's version is read again (`CmRuntime.installedCm`). The pinned version or newer: it runs
+   (`CmRuntime.updateInstalled`, its shells started again, `installedRevision` moved so no window keeps an answer the
+   older one gave; the first window's answers read ahead are dropped, `EarlyCalls.dropAll`), unless the user chose the
+   app's own in Settings, which keeps running. Otherwise it failed (`notUpdated`): no exit code is trusted, only the
+   version.
+
+**Linux** (`linuxUpdateCommand.ts`): the package that owns the installed `cm`, links resolved (`dpkg -S`, else `rpm -qf
+--queryformat '%{NAME}\n'`; `plasticscm-cloud`, `plasticscm-complete` or `plasticscm-client-core`, the last when
+neither tool knows), and the distribution's package manager from /etc/os-release: `sudo apt-get update && sudo apt-get
+install --only-upgrade <package>`, `sudo dnf upgrade <package>` or `sudo zypper update <package>`.
+
+**Settings**: the installed card, when it's too old, has an Update link (none on Linux) that runs the same update, the
+card saying how far it is ("Downloading the update… 42%", "Updating… Your computer may ask for permission.") or
+"Couldn't update it." with the reason in its tip and Try Again.
+
+**Seeing every state without a real installer** (development builds only; a packaged app ignores
+`UVCS_FAKE_OFFICIAL_UPDATE`, so nothing there can skip the signature check):
+
+- `UVCS_OFFICIAL_UPDATES_URL` names another site laid out as Unity's. `node scripts/e2e/fakeOfficialSite.mjs
+  [--latest=<version>|--latest=none] [--missing-installer] [--slow]` serves one, with a small fake installer (macOS's
+  zipped around a `.pkg`), and prints the variable to set.
+- `UVCS_FAKE_OFFICIAL_UPDATE` fakes the OS's part (`developmentUpdateTools`): `installs` (the fake `cm` then prints the
+  new version, through `UVCS_FAKE_CM_VERSION_FILE`), `fails` (it ends with the same version), `declined`, `unsigned`,
+  or `linux` (with `UVCS_RENDERER_PLATFORM=linux`, the command). `UVCS_FAKE_OFFICIAL_UPDATE_MS` is how long the fake
+  installer takes (1.5 s by default).
+
+**Verified only with fakes**: the tests and the smoke test run no installer, and nothing here was run against a real
+installation. Running the real installers (Windows' UAC prompt and a declined one, a Cloud and an on-premises
+edition, macOS on Intel and Apple silicon, the other Unity Version Control apps open) is left to a person, on a virtual
+machine with an older official installation.
 
 ## Updates bring their cm
 
@@ -191,12 +274,13 @@ the one the app prefers. The check marks the one that runs, chosen or not: until
 installed one when it's new enough, and the included one otherwise. Clicking a card chooses it (`installed` or
 `managed`), and that sticks. "Installed on this computer" shows its version and path, from one `cm version` each time
 Settings opens; "Not found" and disabled when there is none; disabled, in the caution color, with the version it needs,
-when it's older than the app needs (`needsUpdate`). "Included with the app" shows its version, or its download's
+when it's older than the app needs (`needsUpdate`), with an Update link at its end (`updateLabel`; "Updating the
+installed one"). "Included with the app" shows its version, or its download's
 progress while it replaces the installed one. `UVCS_CM_PATH` overrides both: neither is checked, and a line says why.
 The words "automatic" and "Automatic" never show.
 
 Every place that shows a version names it with `cmVersionWords` ("Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or
-later"): the update screen, the cards, `CmUnavailableScreen`.
+later", and "Installing: 11.0.16.10729" while it's updated): the update screen, the cards, `CmUnavailableScreen`.
 
 Settings saved before the automatic choice existed (without `cmDeclinedUpdateFor`) move a `managed` to it once
 (`storedCmChoice`): `SettingsStore` writes every setting on each change, so a `managed` saved then can't be told apart
@@ -223,3 +307,11 @@ Client does from the menu bar: the app's own in its store, or the installed one.
   the gap someone noticed, and every other feature still misbehaves on an older `cm`. The app's own is always there
   to run instead, so refusing an older installed one stops no one.
 - **Checking sizes in the pin**: the download's `Content-Length` gives the progress, and the hash checks the rest.
+- **Naming the installer as the CDN does** (the address its redirect ends at): Electron's `net.fetch` gives no
+  `Response.url` after a redirect, so the app names the download itself (`installerFileName`).
+- **Downloading the installer into the OS's temporary folder**: Electron's on macOS ignores `TMPDIR`, so a test's
+  download would land in the user's own; it goes beside the app's `cm` store, whose environment the tests set.
+- **Checking only the installer's length**, as the official client does: no checksum is published, and the signature
+  shows it is Unity's, whichever version is latest.
+- **`Start-Process -Verb RunAs`** to run the Windows installer: its error on a declined prompt keeps only a translated
+  message, so the app couldn't tell a declined prompt from another failure; .NET's `Process.Start` keeps Windows' code.

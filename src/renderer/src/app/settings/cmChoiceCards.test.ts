@@ -3,7 +3,7 @@ import { cmChoiceCards, cmChoiceNote, type CmChoiceFacts } from './cmChoiceCards
 
 const PINNED = '11.0.16.10659';
 const INSTALLED = { path: '/usr/local/bin/cm', version: '11.0.16.10700' };
-const FACTS: CmChoiceFacts = { pinnedVersion: PINNED, installed: INSTALLED, source: 'installed' };
+const FACTS: CmChoiceFacts = { pinnedVersion: PINNED, installed: INSTALLED, source: 'installed', canInstall: true };
 
 describe('cmChoiceCards', () => {
   it('shows the installed one first, then the included one', () => {
@@ -54,8 +54,35 @@ describe('cmChoiceCards', () => {
       selected: false,
       warning: true,
       needsUpdate: true,
+      updateLabel: 'Update',
     });
     expect(managed).toMatchObject({ selected: true });
+  });
+
+  describe('updating an installed one older than the app needs', () => {
+    const tooOld = (officialUpdate?: CmChoiceFacts['officialUpdate'], canInstall = true) =>
+      cmChoiceCards({ ...FACTS, installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'managed', officialUpdate, canInstall })[0]!;
+
+    it('offers no Update link on Linux, which has no installer', () => {
+      expect(tooOld(undefined, false)).not.toHaveProperty('updateLabel');
+    });
+
+    it('says how far the update is while it runs, with no link', () => {
+      expect(tooOld({ kind: 'lookingUp', installRequested: true })).toMatchObject({ description: 'Downloading the update…', warning: false });
+      expect(tooOld({ kind: 'lookingUp', installRequested: true })).not.toHaveProperty('updateLabel');
+      expect(tooOld({ kind: 'downloading', version: '11.0.16.10694', receivedBytes: 42, totalBytes: 100, installRequested: true }).description).toBe('Downloading the update… 42%');
+      expect(tooOld({ kind: 'installing', version: '11.0.16.10694' })).toMatchObject({ description: 'Updating… Your computer may ask for permission.' });
+      expect(tooOld({ kind: 'installing', version: '11.0.16.10694' })).not.toHaveProperty('updateLabel');
+    });
+
+    it('says it couldn’t, why in its tip, and offers Try Again', () => {
+      expect(tooOld({ kind: 'failed', failure: 'declined', version: '11.0.16.10694', detail: 'The permission to install was not given.' })).toMatchObject({
+        description: 'Couldn’t update it.',
+        tip: 'Installing it needs your permission. Try again, and allow it when your computer asks. The permission to install was not given.',
+        warning: true,
+        updateLabel: 'Try Again',
+      });
+    });
   });
 
   it('can’t choose the installed one while it’s looked for', () => {

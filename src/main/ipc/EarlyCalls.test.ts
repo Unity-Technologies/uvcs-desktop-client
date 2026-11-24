@@ -66,6 +66,17 @@ describe('EarlyCalls', () => {
     expect(early.take('system.cmVersion', [])).toBeUndefined();
   });
 
+  it('drops every answer once another cm runs, as each was read from the one before (an update screen left within seconds)', () => {
+    const { early } = earlyCalls({ 'workspaces.list': async () => [], 'system.cmVersion': async () => '11.0' });
+    early.start('workspaces.list', []);
+    early.start('system.cmVersion', []);
+
+    early.dropAll();
+
+    expect(early.take('workspaces.list', [])).toBeUndefined();
+    expect(early.take('system.cmVersion', [])).toBeUndefined();
+  });
+
   it("refuses a method the API doesn't have", () => {
     const { early } = earlyCalls({});
 
