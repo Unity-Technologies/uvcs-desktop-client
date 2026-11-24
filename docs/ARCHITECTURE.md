@@ -1556,19 +1556,23 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and
     sorts only the others (`sortedFromPrevious`): 0.1 s for a million with one file edited. A list and a tree show the files in the same
     order. That path order is the default and the one every list's items come in; a sort is laid over it.
-  - **One sort, chosen**: by path (the default), name, status (in the chips' order, `toneRank`) or extension
+  - **One sort, chosen**: by path (the default), name, status (in the chips' order, `toneRank`), extension or date
     (`fileListOrder`: `FileListSort`). Ties keep the path order: sorting is stable and the items come by path. A list
     sorts all its files; a tree keeps its folders in path order, first, and sorts each folder's files after them
     (`layoutPathItems`, `orderTreeRows`): a sort is about files, and folders keep their place as in a file browser. Only
-    the path order costs nothing. The others put the files in a bucket per name, status or extension and compare only
+    the path order costs nothing. The others put the files in a bucket per name, status, extension or date and compare only
     those (`bucketOrder`): files share names, and a million changes compared one by one by name took 4.5 s (now 3 s
     when every name differs, 0.5 s when names repeat). Every list, filtered as the user types (Changes over up to a
     million changes), ranks all its files once a read (`useRankedOrder`, `rankedOrder`) and picks what the filter
     leaves out of those ranks, a look-up each, never comparing names again: 50,000 files of a diff by name took 85 ms
     a key, now 2 ms. A read after files changed keeps the ranking of the same sort for the files still there and finds
     the others their places by a binary search (`rankList`): a million changes with one edited, 0.3 s. No direction:
-    nobody reads a list of files backwards. A sort by date was left out: `cm status` prints no dates, and a diff's
-    entries have none, so it would mean reading the disk or the server for every file.
+    nobody reads a list of files backwards, except by date, newest first, the files without a date last
+    (`FileListFacts.dateOf`). The dates cost nothing more: a change's is its file's on disk (`PendingChange.lastModified`,
+    which `DiskDetails` already reads; a deleted file or a folder has none), and a diff's file's is its revision's,
+    which the same `cm diff` prints (`{date}` in `DIFF_FORMAT`, `DiffEntry.date`; a deleted file's last revision's).
+    The merge page and a partial workspace's Incoming have no dates: their menus offer no Date (`FileListViewOffer.dates`)
+    and show their files by path while it is the sort chosen.
   - **One view, chosen in a menu**: the layout, List or Tree, the sort, and grouping by status, for every list at once
     and across sessions (`useFileListViewStore`, kept under the key `file-list-layout` it had when it held the layout
     alone, which took the one Changes kept first). Its menu (`FileListViewMenu`, decided by `fileListViewMenu` in
