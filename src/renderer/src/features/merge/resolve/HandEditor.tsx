@@ -63,8 +63,8 @@ export function HandEditor({ path, text, onChange }: HandEditorProps) {
   });
 
   return (
-    <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
-      <div className={styles.frame}>
+    <div className={styles.frame}>
+      <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
         <div
           ref={setSurface}
           className={styles.surface}
@@ -79,8 +79,8 @@ export function HandEditor({ path, text, onChange }: HandEditorProps) {
           </VirtualizerContext.Provider>
           <PaneScrollbars containerRef={surfaceRef} />
         </div>
-        {codeFind.bar && <CodeFindBar bar={codeFind.bar} />}
-      </div>
-    </ActionContextMenu>
+      </ActionContextMenu>
+      {codeFind.bar && <CodeFindBar bar={codeFind.bar} />}
+    </div>
   );
 }
