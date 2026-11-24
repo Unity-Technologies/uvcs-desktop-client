@@ -54,6 +54,11 @@
   --area-color: var(--border-comment);
   opacity: 0;
   transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+/* One look for both, so the area doesn't change as the drag that drew it ends. */
+.area,
+.dragArea {
   border: 2px solid var(--area-color);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--area-color) 10%, transparent);
@@ -89,10 +94,8 @@
 }
 
 .dragArea {
+  --area-color: var(--accent);
   position: absolute;
-  border: 2px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--accent-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
