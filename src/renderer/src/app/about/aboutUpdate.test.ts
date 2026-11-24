@@ -40,6 +40,13 @@ describe('aboutUpdateAction', () => {
     expect(aboutUpdateAction(waiting)).toEqual({ kind: 'install', label: 'Restart & Install', enabled: false });
   });
 
+  it('waits, with a spinner and its button off, while the installed Unity Version Control’s installer runs first', () => {
+    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'installedCm' } as const;
+
+    expect(aboutUpdateLine(waiting)).toEqual({ text: 'Updating the Unity Version Control installed on this computer, then version 1.2.0 installs.', tone: 'accent', busy: true });
+    expect(aboutUpdateAction(waiting)).toMatchObject({ enabled: false });
+  });
+
   it('checks, except while a check or download is under way or in a development build', () => {
     expect(aboutUpdateAction({ state: 'idle' })).toEqual({ kind: 'check', enabled: true });
     expect(aboutUpdateAction({ state: 'failed', error: 'x' })).toEqual({ kind: 'check', enabled: true });
