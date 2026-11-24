@@ -3,7 +3,7 @@ import { isFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { describeServer } from '../../lib/servers';
 import { IconButton } from '../../ui/IconButton';
 import { setFavoriteOrganization, useSettings } from '../settings/useSettings';
-import { canBeFavorite } from './serverGroups';
+import { canBeFavorite, favoriteButtonLabel } from './serverGroups';
 
 interface FavoriteOrganizationButtonProps {
   server: string;
@@ -31,6 +31,3 @@ export function FavoriteOrganizationButton({ server, size, className }: Favorite
   );
 }
 
-function favoriteButtonLabel(name: string, favorite: boolean): string {
-  return favorite ? `Remove ${name} from favorites` : `Add ${name} to favorites`;
-}

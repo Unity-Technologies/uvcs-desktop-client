@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canBeFavorite, ORGANIZATION_FILTER_MIN, serverEntryDetail, serverGroups, showsOrganizationFilter } from './serverGroups';
+import { canBeFavorite, favoriteButtonLabel, ORGANIZATION_FILTER_MIN, serverEntryDetail, serverGroups, showsOrganizationFilter } from './serverGroups';
 
 const profile = (server: string) => ({ server, user: 'ana', workingMode: 'SSOWorkingMode' });
 
@@ -59,21 +59,30 @@ describe('serverGroups with favorites', () => {
 describe('serverGroups with a filter', () => {
   const servers = ['local', 'core_prod_az_eastus@cloud', 'core_int_gcp_westeu@cloud', 'codice@cloud', 'Core-Tools@unity'].map(profile);
 
-  it('lists the servers whose name holds the text, whatever its case', () => {
+  it('lists the organizations whose name holds the text, whatever its case', () => {
     expect(serverGroups(servers, { filter: 'CORE' }).map(({ label, servers: inGroup }) => [label, inGroup.map((entry) => entry.server)])).toEqual([
       ['Unity organizations', ['Core-Tools@unity']],
       ['Cloud organizations', ['core_int_gcp_westeu@cloud', 'core_prod_az_eastus@cloud']],
+      ['Servers', ['local']],
     ]);
   });
 
   it('matches the name shown, not the kind after it', () => {
-    expect(serverGroups(servers, { filter: 'cloud' })).toEqual([]);
-    expect(serverGroups(servers, { filter: 'computer' }).map((group) => group.label)).toEqual(['Servers']);
+    expect(serverGroups(servers, { filter: 'cloud' }).map((group) => group.label)).toEqual(['Servers']);
+  });
+
+  it('keeps this computer and the servers, which it never filters', () => {
+    expect(serverGroups([...servers, profile('build:8087')], { filter: 'zzz' }).map(({ servers: inGroup }) => inGroup.map((entry) => entry.server))).toEqual([
+      ['local', 'build:8087'],
+    ]);
   });
 
   it('filters the favorites too', () => {
     const groups = serverGroups(servers, { favorites: ['codice@cloud', 'core_prod_az_eastus@cloud'], filter: 'prod' });
-    expect(groups.map(({ label, servers: inGroup }) => [label, inGroup.map((entry) => entry.server)])).toEqual([['Favorites', ['core_prod_az_eastus@cloud']]]);
+    expect(groups.map(({ label, servers: inGroup }) => [label, inGroup.map((entry) => entry.server)])).toEqual([
+      ['Favorites', ['core_prod_az_eastus@cloud']],
+      ['Servers', ['local']],
+    ]);
   });
 
   it('lists everything with no text, or only spaces', () => {
@@ -98,6 +107,13 @@ describe('showsOrganizationFilter', () => {
 describe('canBeFavorite', () => {
   it('takes organizations, not this computer or a server', () => {
     expect(['acme@unity', 'acme@cloud', 'local', 'build:8087'].map(canBeFavorite)).toEqual([true, true, false, false]);
+  });
+});
+
+describe('favoriteButtonLabel', () => {
+  it('names the organization, as a sidebar holds one star per organization', () => {
+    expect(favoriteButtonLabel('acme', false)).toBe('Add acme to favorites');
+    expect(favoriteButtonLabel('acme', true)).toBe('Remove acme from favorites');
   });
 });
 

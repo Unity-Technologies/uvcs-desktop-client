@@ -35,8 +35,8 @@ interface ServerGroupOptions {
 /**
  * The servers the sidebar lists, grouped: the favorite organizations, then the other Unity organizations, the cloud
  * organizations from before them, then this computer and on-premises servers. Each by name, this computer first among
- * the servers; a group with none is left out. A favorite shows only under Favorites. With a filter, only the servers
- * whose name holds it.
+ * the servers; a group with none is left out. A favorite shows only under Favorites. With a filter, only the
+ * organizations whose name holds it; this computer and the servers, few, always show.
  */
 export function serverGroups(servers: readonly ServerProfile[], { favorites = [], filter = '' }: ServerGroupOptions = {}): ServerGroup[] {
   const shown = servers.filter((profile) => matchesFilter(profile.server, filter)).sort(byPlace);
@@ -58,7 +58,13 @@ export function showsOrganizationFilter(servers: readonly ServerProfile[]): bool
   return servers.filter((profile) => canBeFavorite(profile.server)).length >= ORGANIZATION_FILTER_MIN;
 }
 
+/** What the star and the menu entry that add an organization to the favorites, or take it out, are called. */
+export function favoriteButtonLabel(name: string, favorite: boolean): string {
+  return favorite ? `Remove ${name} from favorites` : `Add ${name} to favorites`;
+}
+
 function matchesFilter(server: string, filter: string): boolean {
+  if (!canBeFavorite(server)) return true;
   const text = filter.trim().toLocaleLowerCase();
   return describeServer(server).label.toLocaleLowerCase().includes(text);
 }

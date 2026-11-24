@@ -53,15 +53,16 @@ there are two or more (`accountSwitchCommands`), on the home screen only.
 - **What it lists** (`homeServersOf`): this computer, the shown account's organizations, and every server's account,
   a server's entry showing its user (`serverEntryDetail`), as a server is an account of its own.
 - **Favorites** (`AppSettings.favoriteOrganizations`, by server): someone in dozens of organizations keeps the ones
-  they use in sight. A star on an organization's row (on hover, as long as the sidebar isn't folded), its right-click
-  menu (`organizationMenu`) and the star in its page's header (`FavoriteOrganizationButton`) add it or take it out.
+  they use in sight. A star on an organization's row (on hover or keyboard focus, as long as the sidebar isn't folded),
+  its right-click menu (`organizationMenu`, which also copies its name and link) and the star in its page's header (`FavoriteOrganizationButton`) add it or take it out.
   The sidebar lists the favorites first, under Favorites, and only there (`serverGroups`); every group stays by name, as
   a list that orders itself by use moves under the user's hand. The main process changes the list
   (`withFavoriteOrganization`), so two windows don't overwrite each other's; it changes nothing in `cm`.
 - **The filter** (`OrganizationFilter`): from ten organizations, Unity and cloud ones together
   (`showsOrganizationFilter`, `ORGANIZATION_FILTER_MIN`), a quiet field above them, drawn as one more row, keeps the
-  entries whose name holds the text. Most people have one to three organizations and never see it. Picking another
-  account empties it; folded, the sidebar shows none and filters nothing. It shows by count, not when More appears,
+  organizations whose name holds the text; this computer and the servers, few, always show. Most people have one to
+  three organizations and never see it. Picking another account empties it, and going back finds it empty
+  (`typedFilterFor`); folded, the sidebar shows none and filters nothing (`sidebarFilter`). It shows by count, not when More appears,
   which depends on the window's height: a filter that came and went on a resize would look broken.
 - **Picking an account only shows it** (`showHomeAccount`): it changes nothing in `cm`, and is remembered in the app's
   own settings, never `cm`'s. Repositories of the account left give way to the welcome (`sectionAfterSwitch`, by the same `accountOfServer`:
