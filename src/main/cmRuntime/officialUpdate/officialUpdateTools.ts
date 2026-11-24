@@ -20,12 +20,14 @@ interface ToolResult {
 }
 
 /** Runs a tool to its end, whatever its exit code: what it printed says how it went. */
-function runTool({ command, args, env }: ToolCommand): Promise<ToolResult> {
+function runTool({ command, args, env, input }: ToolCommand): Promise<ToolResult> {
   return new Promise((resolve) => {
-    execFile(command, args, { env: { ...process.env, ...env }, windowsHide: true, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+    const child = execFile(command, args, { env: { ...process.env, ...env }, windowsHide: true, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
       const code = error && typeof error.code === 'number' ? error.code : error ? -1 : 0;
       resolve({ stdout, stderr: stderr || (error && code === -1 ? error.message : ''), exitCode: code });
     });
+    // A tool that exits without reading its input closes the pipe first: no error to throw.
+    child.stdin?.on('error', () => undefined).end(input);
   });
 }
 
