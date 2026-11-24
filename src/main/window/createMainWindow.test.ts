@@ -142,3 +142,41 @@ describe('createMainWindow', () => {
     expect(window.titleBarOverlay).toMatchObject({ height: 62 });
   });
 });
+
+describe('createMainWindow under the smoke test (`windowsStayHidden`)', () => {
+  const reopenedMaximizedFullScreen = (): FakeWindow => {
+    vi.mocked(loadWindowBounds).mockReturnValueOnce({ bounds: null, maximized: true });
+    createMainWindow(memorySettings(), { reopen: { bounds: { x: 0, y: 0, width: 1000, height: 700, maximized: true }, fullScreen: true } });
+    const window = fakeElectron.windows().at(-1)!;
+    window.emit('ready-to-show');
+    return window;
+  };
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('renders a window without ever showing it, its timers and animation frames running, in a build run from the checkout', () => {
+    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+
+    const window = reopenedMaximizedFullScreen();
+    expect(window).toMatchObject({ shown: false, shownInactive: false, maximized: false, fullScreen: false });
+    expect(window.options.webPreferences?.backgroundThrottling).toBe(false);
+  });
+
+  it('shows an installed app’s window as always, whatever its environment holds', () => {
+    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+
+    const window = reopenedMaximizedFullScreen();
+    expect(window).toMatchObject({ shown: true, fullScreen: true });
+    expect(window.options.webPreferences).not.toHaveProperty('backgroundThrottling');
+  });
+
+  it('shows a window as always when nothing asks to hide it', () => {
+    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '');
+    fakeElectron.app.isPackaged = false;
+
+    const window = reopenedMaximizedFullScreen();
+    expect(window).toMatchObject({ shown: true, fullScreen: true });
+    expect(window.options.webPreferences).not.toHaveProperty('backgroundThrottling');
+  });
+});
