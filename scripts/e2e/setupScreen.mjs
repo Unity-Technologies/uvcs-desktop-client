@@ -11,8 +11,8 @@
 //    the window gaining focus elsewhere), once the "installed" one is the pinned version, brings the app to Home on it.
 // 3. Updating the installed one: the update screen with a fake of the download site (`fakeOfficialSite.mjs`) and the
 //    development build's fake installer (`UVCS_FAKE_OFFICIAL_UPDATE`), which only writes the version the fake `cm`
-//    prints. Update brings the app to Home once it "installed"; a declined permission says it couldn't. On Linux, which
-//    has no installer, the screen shows the command instead.
+//    prints. Update brings the app to Home once it "installed". A declined permission is left to the unit tests
+//    (`OfficialClientUpdate`, `cmUpdateView`). On Linux, which has no installer, the screen shows the command instead.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -109,12 +109,6 @@ async function officialUpdate() {
     await window.getByRole('button', { name: 'Update', exact: true }).click();
     await window.getByRole('region', { name: 'All workspaces' }).waitFor();
     console.log('ok    Home, on the installed cm once Update installed it');
-  });
-  const declined = await launch('official-update-declined', {}, { UVCS_FAKE_OFFICIAL_UPDATE: 'declined' }, '11.0.16.1');
-  await declined.steps(async (window) => {
-    await window.getByRole('button', { name: 'Update', exact: true }).click();
-    await window.getByRole('heading', { name: 'Couldn’t update Unity Version Control' }).waitFor();
-    console.log('ok    The update screen says it couldn’t update when the permission was declined');
   });
 }
 

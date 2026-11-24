@@ -242,7 +242,8 @@ The suite runs after every change, so it must take seconds, not minutes. A test 
 - **The smoke test** (`npm run e2e`, `scripts/e2e/README.md`) drives the built app over a fake `cm` and a temp
   workspace: startup, every sidebar view, a diff, the palette, Settings, a theme switch; it fails on renderer errors
   and on any `cm` command the fake doesn't know. A view that starts running a new command teaches it to the fake
-  (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`.
+  (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`. It stays a pass through the
+  views plus what only the real app shows; what a module decides is a unit test (its README, "What belongs here").
 - **The renderer's fakes** are in `renderer/src/testing/`: `fakeWindow` (`window.uvcs`; `fakeApi` answers the calls a
   test declares and fails it on any other), `fakeDialogs` (confirm and prompt), `operationOutcome` (the toasts, where
   the window went, the views refreshed), `queryProbes`.
