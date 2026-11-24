@@ -103,7 +103,7 @@ export function useFileCommands(
         icon: ScanText,
         shortcut: FILE_SHORTCUTS.annotate,
         disabled: !views.annotate,
-        // The pane's "Diff | Annotate": the file annotated, or back to its diff.
+        // The pane's "Diff | Annotate" (`fileViewForAnnotateCommand`): with the panel hidden, it opens the panel annotated.
         run: () => views.annotate && toggleAnnotated(),
       },
       {
