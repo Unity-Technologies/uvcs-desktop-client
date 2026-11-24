@@ -1,20 +1,25 @@
 import { House, Layers, Settings } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { isFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import type { ServerProfile } from '@shared/domain/repository';
 import { ServerIcon } from '../../components/ServerIcon';
 import { describeServer } from '../../lib/servers';
-import { NavFooter, NavGroups, NavItem, Sidebar, type NavSectionItem } from '../../ui/nav/SidebarNav';
+import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { NavFooter, NavGroups, NavItem, Sidebar, type NavSection, type NavSectionItem } from '../../ui/nav/SidebarNav';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { useCommands } from '../commands/commandStore';
 import { openSettingsDialog } from '../settings/SettingsDialog';
+import { useSettings } from '../settings/useSettings';
 import { useSidebarCollapsed } from '../shell/sidebarStore';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
 import { AccountSwitcher } from './AccountSwitcher';
 import { accountSwitchCommands } from './accountSwitcherMenu';
 import { homeServersOf } from './homeAccount';
 import { showHomeAccount } from './homeAccountStore';
+import { organizationMenu } from './homeMenus';
 import { isSameSection, WELCOME, type HomeSection } from './homeSection';
-import { serverEntryDetail, serverGroups } from './serverGroups';
+import { OrganizationFilter } from './OrganizationFilter';
+import { canBeFavorite, serverEntryDetail, serverGroups, showsOrganizationFilter } from './serverGroups';
 import { useHomeAccount } from './useHomeAccount';
 import { ServerMonogram } from './ServerMonogram';
 
@@ -26,6 +31,9 @@ interface HomeSidebarProps {
 export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
   const { accounts, shown, reading } = useHomeAccount();
   const rail = useSidebarCollapsed();
+  const { favoriteOrganizations } = useSettings();
+  // The filter's text, for the account it was typed for: another account's organizations start unfiltered.
+  const [typed, setTyped] = useState({ account: '', text: '' });
   useCommands(useMemo(() => accountSwitchCommands(accounts, shown, (account) => showHomeAccount(account, accounts)), [accounts, shown]));
 
   // `railLabel`: the short name the folded sidebar's tile shows, where "All workspaces" and "This computer" would wrap.
@@ -45,11 +53,29 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
     // Folded, every organization would be the same icon: their initials tell them apart.
     const icon = rail && server !== 'local' ? <ServerMonogram label={label} /> : <ServerIcon server={server} />;
     const railLabel = server === 'local' ? 'Local' : undefined;
-    return item({ kind: 'server', server }, icon, label, { railLabel, detail: serverEntryDetail(profile, rail) });
+    const entry = item({ kind: 'server', server }, icon, label, { railLabel, detail: serverEntryDetail(profile, rail) });
+    if (!canBeFavorite(server)) return entry;
+    const favorite = isFavoriteOrganization(favoriteOrganizations, server);
+    return { ...entry, element: <ActionContextMenu entries={() => organizationMenu(server, favorite)}>{entry.element}</ActionContextMenu> };
   };
-  const serverSections = reading
+  const servers = homeServersOf(accounts, shown);
+  // Folded, the rail shows no filter, so none applies.
+  const filtering = !reading && !rail && showsOrganizationFilter(servers);
+  const filter = filtering && typed.account === (shown?.id ?? '') ? typed.text : '';
+  const groups = serverGroups(servers, { favorites: favoriteOrganizations, filter });
+  const serverSections: NavSection[] = reading
     ? [{ label: 'Servers', items: [{ key: 'loading', element: <CenteredSpinner /> }] }]
-    : serverGroups(homeServersOf(accounts, shown)).map((group) => ({ label: group.label, items: group.servers.map(serverItem) }));
+    : groups.map((group) => ({ label: group.label, items: group.servers.map(serverItem) }));
+  const filterSection: NavSection = {
+    items: [
+      {
+        key: 'filter',
+        element: (
+          <OrganizationFilter value={filter} onChange={(text) => setTyped({ account: shown?.id ?? '', text })} noMatches={groups.length === 0} />
+        ),
+      },
+    ],
+  };
 
   return (
     <Sidebar width={232} rail={rail}>
@@ -60,6 +86,7 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
             label: 'Workspaces',
             items: [item(WELCOME, <House size={15} />, 'Home'), item({ kind: 'all' }, <Layers size={15} />, 'All workspaces', { railLabel: 'All' })],
           },
+          ...(filtering ? [filterSection] : []),
           ...serverSections,
         ]}
       />

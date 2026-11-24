@@ -1,0 +1,32 @@
+/*
+ * The sidebar's organization filter, for someone with many (`showsOrganizationFilter`): drawn as one more of the
+ * sidebar's rows, a magnifier and quiet words, until the pointer or the caret comes to it.
+ */
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.filter input {
+  height: 28px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: inherit;
+}
+
+.filter input:hover {
+  background: var(--bg-hover);
+}
+
+.filter input:focus {
+  border-color: var(--border-default);
+  background: var(--bg-input);
+}
+
+.noMatches {
+  padding: 0 var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
