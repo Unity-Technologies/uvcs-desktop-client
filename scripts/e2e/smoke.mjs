@@ -19,11 +19,13 @@ const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 
 /** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /**
- * Server commands still sent twice within a step on main (`duplicateReport`), each until the change named removes it.
+ * Server commands still sent twice within a step on main (`duplicateReport`), each allowed in its step only, until the
+ * change named removes it.
  * One that no longer happens only warns, so those changes can merge in any order; then its line goes.
  */
 const KNOWN_DUPLICATES = [
   {
+    step: 'Open workspace',
     command: 'status --header --xml',
     why: '#349: as a workspace opens, its info and the Incoming read (`readWorkspaceLoad`) each ask for the header; goes once Incoming takes the one the info read',
   },
@@ -152,11 +154,12 @@ function stillLoading(loading) {
 }
 
 /**
- * Waits until the window reads and changes nothing (`markReadsInFlight`), and still doesn't two frames later, once what
- * the last answer showed has asked for what it needs: each command logged then belongs to the step that sent it.
+ * Waits until `page` reads, changes and waits to read nothing (`markReadsInFlight`), and still doesn't two frames
+ * later, once what the last answer showed has asked for what it needs: each command logged then belongs to the step
+ * that sent it. A step waits on every window it opened before closing it.
  */
-async function readsSettled() {
-  await window.waitForFunction(
+async function readsSettled(page = window) {
+  const idle = page.waitForFunction(
     () =>
       new Promise((answer) => {
         const idle = () => document.documentElement.dataset.reading === 'false';
@@ -164,6 +167,7 @@ async function readsSettled() {
         requestAnimationFrame(() => requestAnimationFrame(() => answer(idleBefore && idle())));
       }),
   );
+  await withTimeout(idle, TIMEOUT_MS, 'reads still in flight');
 }
 
 /**
@@ -322,6 +326,7 @@ try {
     await main.getByRole('button', { name: 'More merge request actions' }).click();
     await window.getByRole('menuitem', { name: 'Close merge request' }).click();
     await settled();
+    // The operation reads the request again once it changed it: a read of it before, in the same step, is meant.
   }, { rereads: 'Close merge request' });
   await step('Branch Explorer timeline', async () => {
     // From another view its shortcut opens the Branch Explorer with the timeline shown.
@@ -399,6 +404,7 @@ try {
     await pageWindow.getByRole('button', { name: 'Follow selection' }).waitFor({ timeout: TIMEOUT_MS });
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).waitFor();
+    await readsSettled(pageWindow);
     await pageWindow.close();
   });
   await step('Permissions', async () => {
@@ -475,13 +481,14 @@ try {
     if (await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).isVisible()) throw new Error('a view shortcut ran while covered');
     const serverCommands = commandLog().slice(before).filter((line) => line.args && needsServer(line.args));
     if (serverCommands.length > 0) throw new Error(`server commands ran while signed out: ${serverCommands.map(({ args }) => args.join(' ')).join('; ')}`);
-  }, { rereads: 'Refresh' });
+  });
   await step('Signed in again', async () => {
     writeFileSync(signInFile, '');
     await window.getByRole('button', { name: 'Check again' }).click();
     await window.getByRole('heading', { name: 'Your session for the server on this computer ended' }).waitFor({ state: 'detached' });
     await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
     await settled();
+    // Signing in again runs the reads the ended session refused and refreshes the window: some may meet.
   }, { rereads: 'Check again' });
   await step('Explore a repository', async () => {
     await window.getByRole('button', { name: 'Home' }).first().click();
@@ -516,6 +523,7 @@ try {
     pageWindow.on('pageerror', (error) => errors.push(`repository page window pageerror: ${error.message}`));
     pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`repository page window console.error: ${message.text()}`));
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
+    await readsSettled(pageWindow);
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
@@ -556,7 +564,7 @@ errors.push(...unknownCommands.map(({ args }) => `the fake cm failed: ${readable
 // step that failed may have left its reads half done.
 if (errors.length === 0) {
   const { failures, unused } = duplicateReport(commandsByStep(log), KNOWN_DUPLICATES);
-  errors.push(...failures.map(({ step, commandLine, cwd, times }) => `"${step}" sent a server command ${times} times: ${readableCommandLine(commandLine)} (in ${cwd}; ARCHITECTURE.md "Server budget")`));
+  errors.push(...failures.map(({ step, commandLine, cwd, times }) => `"${step}" sent the same server command ${times} times: ${readableCommandLine(commandLine)} (in ${cwd}; scripts/e2e/README.md "Duplicate server commands")`));
   for (const { command, why } of unused) console.warn(`warning: the known duplicate ${readableCommandLine(command)} didn't happen; remove it from KNOWN_DUPLICATES (${why})`);
 }
 console.log(`\n${VIEWS.length} views in ${((Date.now() - started) / 1000).toFixed(1)} s; screenshots in ${shots}`);
