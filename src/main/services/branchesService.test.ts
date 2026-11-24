@@ -133,13 +133,15 @@ describe('branch list', () => {
 
 describe('one branch by name', () => {
   it('finds a visible branch by its last name part with one quick query, and picks the one with the full name', async () => {
-    const { service, lines } = branches({
+    const { service, commands } = branches({
       'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1, OTHER_TASK1), ''),
     });
 
     const branch = await service.get(IN_WORKSPACE, '/main/fix/task1');
 
-    expect(lines()).toEqual([foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc")]);
+    expect(commands).toMatchObject([
+      { via: 'query', args: findQueryArgs(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc"), readsRecords: true },
+    ]);
     expect(branch).toMatchObject({ id: 40, name: '/main/fix/task1' });
   });
 
@@ -155,10 +157,14 @@ describe('one branch by name', () => {
     ]);
   });
 
-  it("answers null for a branch that doesn't exist", async () => {
-    const { service } = branches({ 'find branch': '' });
+  it("answers null for a branch that doesn't exist, once both the visible and the hidden ones were looked at", async () => {
+    const { service, lines } = branches({ 'find branch': '' });
 
     expect(await service.get(IN_WORKSPACE, '/main/gone')).toBeNull();
+    expect(lines()).toEqual([
+      foundLine(FOUND_BRANCHES, "where name = 'gone' and hidden = 'false' order by date desc"),
+      foundLine(FOUND_BRANCHES, "where name = 'gone' and hidden = 'true' order by date desc"),
+    ]);
   });
 
   it('looks a name holding a quote up with a wildcard in its place, and returns only the branch of that very name', async () => {
