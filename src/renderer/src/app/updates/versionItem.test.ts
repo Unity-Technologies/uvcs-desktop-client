@@ -16,6 +16,6 @@ describe('versionItem', () => {
   it('says an update is ready until it installs, even once its card was put off', () => {
     const expected = { label: 'Update ready', tip: 'Version 1.5.0 is ready to install', detail: 'Running 1.4.2', updateReady: true };
     expect(versionItem('1.4.2', { state: 'ready', version: '1.5.0', install: 'restart' })).toEqual(expected);
-    expect(versionItem('1.4.2', { state: 'waitingToInstall', version: '1.5.0', install: 'installer' })).toEqual(expected);
+    expect(versionItem('1.4.2', { state: 'waitingToInstall', version: '1.5.0', install: 'installer', waitingFor: 'operation' })).toEqual(expected);
   });
 });

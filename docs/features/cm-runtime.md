@@ -107,8 +107,8 @@ the next launch on without asking.
 **Never an installed `cm` older than the pinned version** (`meetsCmVersion`): it's caught by the `cm version` the
 first window reads as it opens (`system.cmVersion`), so it costs no command of its own; what started before that
 answers (the window's first reads, `readFirstScreenAhead`) still runs on it once. `CmRuntime.admits` then shows the
-update screen (status `installedTooOld`, "The update screen"), unless the user chose "Use the included version for
-now" for this pinned version (`cmDeclinedUpdateFor`): then the app's own runs at once, set up first when it isn't
+update screen (status `installedTooOld`, "The update screen"), unless the user chose "Use the Included Version for
+Now" for this pinned version (`cmDeclinedUpdateFor`): then the app's own runs at once, set up first when it isn't
 there. Where the app has none of its own, `CmUnavailableScreen` names both versions (the ready status's `installedTooOld`),
 and Check Again reads the version again. `UVCS_CM_PATH` is never checked.
 
@@ -143,7 +143,7 @@ ready, and then the window's place or Home, with no click. What it shows is `cmS
   button and no Cancel: there is nothing else to do. The Dock or taskbar icon shows the same progress
   (`cmSetupIconProgress`).
 - **A failure** says why in plain words, whether it retries by itself, offers Try Again and, when one at the pinned
-  version or newer is installed (only when the user chose the app's own), "Use the installed one (version)", which
+  version or newer is installed (only when the user chose the app's own), "Use the Installed Version (version)", which
   switches to it (`cmRuntime.use('installed')`), with the address and error folded under Details.
 
 Where no `cm` is installed, users of a version before the app had its own `cm` see the screen once too, as on a first
@@ -176,14 +176,14 @@ is false), and the windows wait as they do for a setup.
   version yet, the download failed, not signed by Unity, the permission declined, or the installer ended and the
   version is the same: "Close the other Unity Version Control apps, then try again. This computer may also not allow
   installing programs."), "You can keep working with the version included with the app.", and offers Try Again and
-  Use the Included Version, the error under Details. A failure of the download in the background shows nothing: the
+  Use the Included Version for Now, the error under Details. A failure of the download in the background shows nothing: the
   click tries it all again, and says why then.
-- **"Use the included version for now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the
+- **"Use the Included Version for Now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the
   setup screen when it isn't there, and saves the pinned version as `cmDeclinedUpdateFor`: the screen doesn't ask again
   until the pin moves. The choice stays as it was, so once the installed one is new enough, it runs again without
   asking.
 - **Linux** has no installer: the screen shows the command that updates it, with Copy, Check Again
-  (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the included version for now".
+  (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the Included Version for Now".
 - **Checked again as a window gains focus** (the user may come back from updating it another way), quietly, never on a
   timer: new enough, it runs, its shells started again; none found any more, the app's own runs.
 
@@ -194,8 +194,8 @@ To see it in a development build: the smoke test's fake `cm` (`scripts/e2e/fakeC
 ## Updating the installed one
 
 `OfficialClientUpdate` (`main/cmRuntime/officialUpdate/`) updates the official installation the way the official
-client updates itself, with its own edition's installer, and asks Unity's download site only from the update screen or
-Settings' Update link, never on a timer. It isn't `cm`, so the server budget doesn't apply.
+client updates itself, with its own edition's installer, and asks Unity's download site only from the update screen,
+Settings' Update link or an app update that needs a newer one ("Updates bring their cm"), never on a timer of its own. It isn't `cm`, so the server budget doesn't apply.
 
 1. **Edition** (`officialEditionOf`): a marker file next to the installed client, checked for and never read:
    `cloudedition.token` → `cloud`, `dvcs.token` → `dvcs`, none → `enterprise` (client only and full alike). On Windows
@@ -220,18 +220,25 @@ Settings' Update link, never on a timer. It isn't `cm`, so the server budget doe
    (`pkgutilCheck`) must say it's signed for distribution by a certificate Apple issued, notarized, and by a Developer
    ID Installer of `MAC_INSTALLER_TEAMS` (`Codice Software (BQ7R3Y4J72)`). Those are the signers of 11.0.16.10694's
    installers. Any other answer deletes the download (`notSigned`).
-6. **Run** (`installerCommands.ts`), after `CmClient`'s shells are stopped (`CmClient.dispose`: they hold `cm`'s files,
-   and the Windows installer stops while `cm` runs): Windows starts the installer elevated, so Windows asks for
+6. **Run** (`installerCommands.ts`) with `CmClient` held (`CmClient.hold`): its shells end, as they hold `cm`'s files
+   and the Windows installer stops while `cm` runs, and no command starts a process or a shell until the installer
+   ended and the version was read again. A command asked meanwhile (from Settings, a view refreshing) waits, then runs
+   on the `cm` the installer left; one its caller cancels while it waits never runs. A command already running in a
+   process of its own goes on: an app update waits for the operations changing a workspace first ("Updates bring their
+   cm"). Then: Windows starts the installer elevated, so Windows asks for
    permission, unattended with its own small dialogs (`--mode unattended --unattendedmodeui minimalWithDialogs`),
    without the official client's option that starts it once done, and waits for it (`windowsInstallerRun`: .NET's
    `Process.Start` with the `runas` verb, so a declined prompt ends with Windows' `ERROR_CANCELLED`,
    `DECLINED_EXIT_CODE`); the path goes in an environment variable (`INSTALLER_PATH_VARIABLE`), never on the command
    line. macOS opens the package in Installer.app, as the official client does, and waits for it to close
-   (`open -W`, `macInstallerRun`). Only the click starts it (`noExternalUi.test.ts`).
+   (`open -W`, `macInstallerRun`). Only the user's click starts it: Update, or "Restart & Install" of an app update
+   that needs it ("Updates bring their cm"; `noExternalUi.test.ts`).
 7. **Then** the installed one's version is read again (`CmRuntime.installedCm`). The pinned version or newer: it runs
    (`CmRuntime.updateInstalled`, its shells started again, `installedRevision` moved so no window keeps an answer the
-   older one gave; the first window's answers read ahead are dropped, `EarlyCalls.dropAll`), unless the user chose the
-   app's own in Settings, which keeps running. Otherwise it failed (`notUpdated`): no exit code is trusted, only the
+   older one gave; the first window's answers read ahead are dropped, `EarlyCalls.dropAll`). Asking to update it is
+   choosing it, so it runs even when the user had chosen the app's own: that choice goes back to the default
+   (`automatic`), and "Use the Included Version for Now" is forgotten (`cmDeclinedUpdateFor` cleared); Settings' check
+   mark moves to it. Otherwise it failed (`notUpdated`), and no choice changes: no exit code is trusted, only the
    version.
 
 **Linux** (`linuxUpdateCommand.ts`): the package that owns the installed `cm`, links resolved (`dpkg -S`, else `rpm -qf
@@ -262,10 +269,33 @@ machine with an older official installation.
 ## Updates bring their cm
 
 When an update is found, `AppUpdates` reads the `cm` it pins (`readReleaseCmPin`, its release's `cm-version.json`; a
-release without one has none to download). If the app's own `cm` runs and that version isn't there
-(`CmRuntime.prefetchFor`), it downloads it after the app's own download, each taking half of the update's progress
-(`APP_SHARE_WITH_CM`); "Restart & Install" is offered once both are there, so the new version starts at once. A
-failure there never stops the update: the new version sets its `cm` up as it starts, with the "Updating" screen.
+release without one has none to download) and asks `CmRuntime.prefetchFor` what the update needs of `cm` beyond the one
+running (`CmPrefetch`):
+
+- **The app's own runs** (`own`) and that version isn't there: it downloads it after the app's own download, each taking
+  half of the update's progress (`APP_SHARE_WITH_CM`); "Restart & Install" is offered once both are there, so the new
+  version starts at once. A failure there never stops the update: the new version sets its `cm` up as it starts, with
+  the "Updating" screen.
+- **The installed one runs and is older than the update's pin** (`installed`; its version as `admits` read it, or one
+  `cm version`): its installer downloads after the app's own download, the same way and with the same half of the
+  progress (`OfficialClientUpdate.downloadAhead`, the latest version of its edition, at the update's pin or newer). The
+  update card says so ("This update also updates the Unity Version Control installed on this computer.", with
+  `cmVersionWords`' "Installed: … · Needed: … or later" under it: `installedCmNoteOf`, the status's `installedCm`).
+  "Restart & Install" waits for the operations changing a workspace, then runs that installer as Update does
+  ("Updating the installed one", steps 5 to 7: the signature, `CmClient` held, the permission asked, the version read
+  again), the card saying "Updating the Unity Version Control installed on this computer…" (`waitingToInstall` with
+  `waitingFor: 'installedCm'`, `waitingCardOf`), and then restarts into the new version. Declined, failed or not
+  downloaded, the update still installs: its first start shows the update screen, which offers Update again. Quitting
+  the app installs the update without the installer (`autoInstallOnAppQuit`), with the same result.
+- **Linux** (`installedByCommand`): no installer; nothing more downloads, and the card says "After the restart, the app
+  shows the command that updates the Unity Version Control installed on this computer.", which the update screen does.
+- Anything else (`UVCS_CM_PATH`, an installed one new enough, a computer with no installer to download) needs
+  nothing.
+
+To see the card in a development build, `UVCS_PREVIEW_UPDATE`'s file names the `cm` it pins as `"cmVersion"`
+(`previewCmPinOf`; docs/features/updates.md "Seeing it while developing"), above the fake `cm`'s version, with the fakes
+of "Updating the installed one" (`UVCS_OFFICIAL_UPDATES_URL` serving `--latest=` that version, `--slow` to watch it
+download, and `UVCS_FAKE_OFFICIAL_UPDATE`).
 
 ## Settings
 
@@ -281,6 +311,9 @@ The words "automatic" and "Automatic" never show.
 
 Every place that shows a version names it with `cmVersionWords` ("Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or
 later", and "Installing: 11.0.16.10729" while it's updated): the update screen, the cards, `CmUnavailableScreen`.
+Their buttons come from `cmScreenLabels` (the setup and update screens, `CmUnavailableScreen`, the cards' links), in
+title case as every button of the app ("Check Again", "Use the Included Version for Now"), so one action reads the
+same on every screen.
 
 Settings saved before the automatic choice existed (without `cmDeclinedUpdateFor`) move a `managed` to it once
 (`storedCmChoice`): `SettingsStore` writes every setting on each change, so a `managed` saved then can't be told apart

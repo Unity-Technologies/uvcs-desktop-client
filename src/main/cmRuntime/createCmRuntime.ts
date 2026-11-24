@@ -28,8 +28,8 @@ interface CmRuntimeWiring {
   /** `CmClient.logEntry`: the command log shows the `cm version` checks run apart from it. */
   logCommand: (entry: Omit<CommandLogEntry, 'id'>) => void;
   statusChanged: (status: CmRuntimeStatus) => void;
-  /** `CmClient.dispose`: ends its shells before the installed one is updated, as they hold its files open. */
-  stopShells: () => void;
+  /** `CmClient.hold`: ends its shells and starts no command while the installed one is updated, as they hold its files open. */
+  holdCm: () => () => void;
 }
 
 /** A path with its links resolved (macOS's /usr/local/bin/cm leads into PlasticSCM.app); as it is when it can't be. */
@@ -70,7 +70,7 @@ function versionReader(log: (entry: Omit<CommandLogEntry, 'id'>) => void): (cmPa
 }
 
 /** The app's `cm`, wired to Electron and the settings. Its setup starts with `start()`, once Electron is ready (`net`). */
-export function createCmRuntime({ settings, prunes, relocated, logCommand, statusChanged, stopShells }: CmRuntimeWiring): CmRuntime {
+export function createCmRuntime({ settings, prunes, relocated, logCommand, statusChanged, holdCm }: CmRuntimeWiring): CmRuntime {
   const versionOf = versionReader(logCommand);
   const store = cmStoreFolder(process.platform, process.env, homedir());
   const installer = new CmInstaller({
@@ -91,7 +91,7 @@ export function createCmRuntime({ settings, prunes, relocated, logCommand, statu
     folder: join(dirname(store), 'update'),
     editionOf: (cmPath) => officialEditionOf(resolvedPath(cmPath), process.platform, existsSync),
     tools: updateToolsFor(development),
-    stopCm: stopShells,
+    holdCm,
     installedAgain: () => runtime.installedCm(),
     changed: () => runtime.officialUpdateChanged(),
     now: Date.now,

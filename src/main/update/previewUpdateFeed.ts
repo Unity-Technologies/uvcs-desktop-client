@@ -1,3 +1,4 @@
+import type { CmVersionPin } from '../cmRuntime/cmBundles';
 import type { FoundUpdate, UpdateFeed } from './AppUpdates';
 
 /**
@@ -5,7 +6,9 @@ import type { FoundUpdate, UpdateFeed } from './AppUpdates';
  * while developing: an unpackaged app (`npm run app:debug`, `npm run dev`) finds that update instead of having no
  * feed. A packaged app ignores it. The file holds `{ "version": "0.2.5", "releaseDate": "…", "releaseNotes":
  * [{ "version": "0.2.5", "note": "<h2>New</h2>…" }] }`, each note as GitHub renders it (the HTML of `gh api
- * repos/<owner>/<repo>/releases/latest -H "Accept: application/vnd.github.html+json" --jq .body_html`).
+ * repos/<owner>/<repo>/releases/latest -H "Accept: application/vnd.github.html+json" --jq .body_html`). An optional
+ * `"cmVersion"` is the `cm` version the update pins (`previewCmPinOf`), to see the card of an update that needs a newer
+ * installed Unity Version Control (docs/features/cm-runtime.md "Updates bring their cm").
  */
 export const PREVIEW_UPDATE_VARIABLE = 'UVCS_PREVIEW_UPDATE';
 
@@ -25,6 +28,15 @@ export function previewUpdateOf(json: unknown): FoundUpdate {
     releaseDate: typeof json.releaseDate === 'string' ? json.releaseDate : undefined,
     releaseNotes: notes.filter(isRecord).map((release) => ({ version: String(release.version), note: typeof release.note === 'string' ? release.note : null })),
   };
+}
+
+/**
+ * The `cm` a preview update pins (`"cmVersion"`), with no bundles: only an installed `cm` older than it has anything to
+ * download, its installer; null when the file names none.
+ */
+export function previewCmPinOf(json: unknown): CmVersionPin | null {
+  if (!isRecord(json) || typeof json.cmVersion !== 'string') return null;
+  return { version: json.cmVersion, bundles: {} as CmVersionPin['bundles'] };
 }
 
 /**

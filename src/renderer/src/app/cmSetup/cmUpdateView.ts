@@ -1,5 +1,6 @@
 import type { CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import { installedAndInstallingText, installedAndNeededText } from '@shared/domain/cmVersionWords';
+import { checkAgainLabel, TRY_AGAIN_LABEL, UPDATE_LABEL, USE_INCLUDED_FOR_NOW_LABEL } from './cmScreenLabels';
 import { downloadFraction, downloadPercent, downloadSizes, isUpdating, UPDATE_FAILURE_REASONS } from './officialUpdateWords';
 
 export type CmTooOld = Extract<CmRuntimeStatus, { kind: 'installedTooOld' }>;
@@ -42,7 +43,6 @@ export type CmUpdateView =
 
 const TITLE = 'Update Unity Version Control';
 const BODY = 'This app needs a newer version of Unity Version Control on this computer.';
-const INCLUDED_FOR_NOW = 'Use the included version for now';
 
 /** The line under the buttons while the update downloads in the background, or once it's ready. */
 function backgroundLine(update: CmTooOld['officialUpdate']): string | null {
@@ -74,8 +74,8 @@ function failedView(status: CmTooOld, update: Extract<NonNullable<CmTooOld['offi
     body: UPDATE_FAILURE_REASONS[update.failure],
     versions: installedAndNeededText(installed.version, requiredVersion),
     hint: 'You can keep working with the version included with the app.',
-    tryAgainLabel: 'Try Again',
-    includedLabel: 'Use the Included Version',
+    tryAgainLabel: TRY_AGAIN_LABEL,
+    includedLabel: USE_INCLUDED_FOR_NOW_LABEL,
     detail: `${update.detail}\n${installed.path}`,
   };
 }
@@ -90,9 +90,9 @@ function byCommandView(status: CmTooOld, check: CmUpdateCheck): CmUpdateView {
     hint: check === 'stillTooOld' ? 'It still needs an update. Update it, then check again.' : 'Update it in a terminal, then come back to this window. You can also keep working with the version included with the app.',
     commandNote: 'Run this in a terminal:',
     command: officialUpdate?.kind === 'byCommand' ? officialUpdate.command : null,
-    checkAgainLabel: check === 'checking' ? 'Checking…' : 'Check Again',
+    checkAgainLabel: checkAgainLabel(check === 'checking'),
     checking: check === 'checking',
-    includedLabel: INCLUDED_FOR_NOW,
+    includedLabel: USE_INCLUDED_FOR_NOW_LABEL,
     detail: installed.path,
   };
 }
@@ -113,8 +113,8 @@ export function cmUpdateViewOf(status: CmTooOld, check: CmUpdateCheck, canInstal
     body: BODY,
     versions: installedAndNeededText(installed.version, requiredVersion),
     hint: 'It takes a minute, and your workspaces aren’t changed.',
-    updateLabel: 'Update',
-    includedLabel: INCLUDED_FOR_NOW,
+    updateLabel: UPDATE_LABEL,
+    includedLabel: USE_INCLUDED_FOR_NOW_LABEL,
     background: backgroundLine(update),
     detail: installed.path,
   };

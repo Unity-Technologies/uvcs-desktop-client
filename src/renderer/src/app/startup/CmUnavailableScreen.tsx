@@ -22,7 +22,7 @@ interface CmUnavailableScreenProps {
 /** Shown when the `cm` command line client can't be run; re-checks without restarting the app. */
 export function CmUnavailableScreen({ reason, cm, checking, onRecheck }: CmUnavailableScreenProps) {
   const guidance = installGuidance(window.uvcs.platform);
-  const view = cmUnavailableView(cm);
+  const view = cmUnavailableView(cm, checking);
 
   return (
     <ScreenMessage
@@ -37,7 +37,7 @@ export function CmUnavailableScreen({ reason, cm, checking, onRecheck }: CmUnava
             </Button>
           )}
           <Button icon={<RefreshCw size={14} className={checking ? 'spinning' : undefined} />} onClick={onRecheck} disabled={checking}>
-            {checking ? 'Checking…' : 'Check Again'}
+            {view.checkAgainLabel}
           </Button>
         </>
       }

@@ -8,7 +8,7 @@ import { AppUpdates, type AppUpdatesDependencies, type UpdateFeed } from './AppU
 import { downloadInstaller } from './downloadInstaller';
 import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
-import { previewUpdateFeed, previewUpdateFile, previewUpdateOf } from './previewUpdateFeed';
+import { previewCmPinOf, previewUpdateFeed, previewUpdateFile, previewUpdateOf } from './previewUpdateFeed';
 import { readReleaseCmPin } from './releaseCmPin';
 import { releaseFileUrl } from './releaseFeed';
 import { removeLeftoverStagingUserId, withoutStagingUserId } from './withoutStagingUserId';
@@ -25,9 +25,11 @@ export function createAppUpdates(aroundInstalling: AroundInstalling, cmRuntime: 
 
   // Development only: an unpackaged app has no feed, unless a file describes an update to preview (`PREVIEW_UPDATE_VARIABLE`).
   const previewFile = previewUpdateFile(app.isPackaged, process.env);
+  let preview: Promise<unknown> | null = null;
+  const readPreview = (file: string): Promise<unknown> => (preview ??= readFile(file, 'utf8').then((text) => JSON.parse(text) as unknown));
 
   return new AppUpdates({
-    loadFeed: previewFile ? async () => previewUpdateFeed(previewUpdateOf(JSON.parse(await readFile(previewFile, 'utf8')))) : loadAutoUpdater,
+    loadFeed: previewFile ? async () => previewUpdateFeed(previewUpdateOf(await readPreview(previewFile))) : loadAutoUpdater,
     packaged: app.isPackaged || previewFile !== undefined,
     needsManualInstall: async () => !previewFile && process.platform === 'darwin' && needsManualInstall(process.execPath),
     installerOf: (files) => installerAsset(files, process.arch, app.runningUnderARM64Translation),
@@ -43,9 +45,9 @@ export function createAppUpdates(aroundInstalling: AroundInstalling, cmRuntime: 
       if (error) throw new Error(error);
       app.quit();
     },
-    // A preview's release isn't published: it has no pin to read.
+    // A preview's release isn't published: its file may name the cm it pins instead.
     cmPrefetchFor: async (version) => {
-      const pin = previewFile ? null : await readReleaseCmPin(version, (url) => net.fetch(url));
+      const pin = previewFile ? previewCmPinOf(await readPreview(previewFile)) : await readReleaseCmPin(version, (url) => net.fetch(url));
       return pin && cmRuntime.prefetchFor(pin);
     },
     ...aroundInstalling,

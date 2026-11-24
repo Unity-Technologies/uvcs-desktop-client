@@ -1,6 +1,7 @@
 import { meetsCmVersion, type CmSource, type CmUserChoice, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
 import { versionAndNeededText, versionText } from '@shared/domain/cmVersionWords';
 import type { OfficialUpdate } from '@shared/domain/officialUpdate';
+import { TRY_AGAIN_LABEL, UPDATE_LABEL } from '../cmSetup/cmScreenLabels';
 import { downloadPercent, isUpdating, UPDATE_FAILURE_REASONS } from '../cmSetup/officialUpdateWords';
 
 /** One card of Settings' choice of which Unity Version Control the app runs (`cmChoice`). */
@@ -48,14 +49,14 @@ function tooOldCard(base: Pick<CmChoiceCard, 'choice' | 'label' | 'selected'>, i
     return { ...card, description, tip: installed.path, warning: false };
   }
   if (update?.kind === 'failed') {
-    return { ...card, description: 'Couldn’t update it.', tip: `${UPDATE_FAILURE_REASONS[update.failure]} ${update.detail}`, warning: true, updateLabel: 'Try Again' };
+    return { ...card, description: 'Couldn’t update it.', tip: `${UPDATE_FAILURE_REASONS[update.failure]} ${update.detail}`, warning: true, updateLabel: TRY_AGAIN_LABEL };
   }
   return {
     ...card,
     description: versionAndNeededText(installed.version, pinnedVersion),
     tip: `Older than this app needs. Update it to use it. ${installed.path}`,
     warning: true,
-    ...(facts.canInstall && { updateLabel: 'Update' }),
+    ...(facts.canInstall && { updateLabel: UPDATE_LABEL }),
   };
 }
 

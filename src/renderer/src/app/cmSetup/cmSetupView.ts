@@ -1,5 +1,6 @@
-import { CM_SETUP_DOWNLOAD_SHARE, retriesByItself, type CmInstallFailure, type CmRuntimeStatus, type InstalledCm } from '@shared/domain/cmRuntime';
+import { CM_SETUP_DOWNLOAD_SHARE, retriesByItself, type CmInstallFailure, type CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import { formatSize } from '../../lib/formatDate';
+import { TRY_AGAIN_LABEL, useInstalledLabel } from './cmScreenLabels';
 
 /**
  * What the setup screen shows while the app sets up its own Unity Version Control (docs/features/cm-runtime.md "The
@@ -24,8 +25,9 @@ export type CmSetupView =
       reason: string;
       /** It tries again by itself (the network's failures): the screen says so, and Try Again stays. */
       retriesByItself: boolean;
-      /** The installed one, offered instead; null when none is found. */
-      installedCm: InstalledCm | null;
+      tryAgainLabel: string;
+      /** The button that runs the installed one instead, naming its version; null when none is found. */
+      useInstalledLabel: string | null;
       /** What failed, folded under Details. */
       detail: string;
     };
@@ -64,7 +66,8 @@ export function cmSetupViewOf(status: CmRuntimeStatus, secondsLeft: number | nul
       title: status.firstRun ? 'Unity Version Control couldn’t be set up' : 'Unity Version Control couldn’t be updated',
       reason: REASONS[status.failure],
       retriesByItself: retriesByItself(status.failure),
-      installedCm: status.installedCm,
+      tryAgainLabel: TRY_AGAIN_LABEL,
+      useInstalledLabel: status.installedCm && useInstalledLabel(status.installedCm.version),
       detail: status.detail,
     };
   }
@@ -79,9 +82,4 @@ export function cmSetupViewOf(status: CmRuntimeStatus, secondsLeft: number | nul
     finishing: false,
     detail: secondsLeft === null ? sizes : `${sizes} · ${timeLeftText(secondsLeft)}`,
   };
-}
-
-/** The label of the button that runs the installed one instead. */
-export function installedCmLabel(installed: InstalledCm): string {
-  return `Use the installed one (${installed.version})`;
 }

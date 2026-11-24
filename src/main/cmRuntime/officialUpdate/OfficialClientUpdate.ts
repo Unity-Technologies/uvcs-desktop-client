@@ -40,8 +40,11 @@ export interface OfficialClientUpdateOptions {
   /** The edition of the installation a `cm` belongs to (`officialEditionOf`, its links resolved). */
   editionOf: (cmPath: string) => OfficialEdition;
   tools: OfficialUpdateTools;
-  /** Stops `CmClient`'s shells: the installer replaces the files they hold open, and on Windows stops while one runs. */
-  stopCm: () => void;
+  /**
+   * Holds `CmClient` while the installer runs (`CmClient.hold`): its shells end, as the installer replaces the files
+   * they hold open and on Windows stops while one runs, and no command starts until the returned function resumes it.
+   */
+  holdCm: () => () => void;
   /** The installed `cm` and its version, read again once the installer ended (`CmRuntime.installedCm`). */
   installedAgain: () => Promise<InstalledCm | null>;
   /** Where it stands changed (`state`). */
@@ -88,7 +91,7 @@ function failureOf(error: unknown): OfficialUpdateError {
  * Updates the official installation of Unity Version Control, as the official client updates itself
  * (docs/features/cm-runtime.md "Updating the installed one"): asks the download site for the latest version of the
  * installed edition, downloads its installer (in the background as soon as the update screen shows: `prepare`), and on
- * the user's click checks it's signed by Unity, stops the app's `cm`, runs it and waits for it, then reads the installed
+ * the user's click checks it's signed by Unity, holds the app's `cm`, runs it and waits for it, then reads the installed
  * version again (`install`). On Linux it only names the command that updates it.
  */
 export class OfficialClientUpdate {
@@ -99,8 +102,36 @@ export class OfficialClientUpdate {
   /** The user asked to install it: a failure from here on is shown, and the download says it's for that. */
   private installRequested = false;
   private lastProgressAt = Number.NEGATIVE_INFINITY;
+  /** Told how far the download is, 0 to 1, while an app update waits for it (`downloadAhead`). */
+  private progressListener: ((fraction: number) => void) | null = null;
 
   constructor(private readonly options: OfficialClientUpdateOptions) {}
+
+  /** How the installed one is updated here: its installer, a command the user runs (Linux), or neither (no installer for this computer). */
+  updatesBy(): 'installer' | 'command' | null {
+    const { platform } = this.options;
+    if (platform === null) return null;
+    return platform === 'linux' ? 'command' : 'installer';
+  }
+
+  /**
+   * Downloads the installer of `floor` or newer along with an app update that needs it (docs/features/cm-runtime.md
+   * "Updates bring their cm"), telling how far it is, 0 to 1; `install` with the same floor runs it. A failure is
+   * thrown, and shows nothing: nobody asked for it yet.
+   */
+  async downloadAhead(installed: InstalledCm, floor: string, onProgress: (fraction: number) => void): Promise<void> {
+    if (this.updatesBy() !== 'installer') throw new OfficialUpdateError('noUpdate', 'This computer has no installer to download.');
+    this.progressListener = onProgress;
+    try {
+      await this.downloaded(installed, floor);
+      onProgress(1);
+    } catch (error) {
+      if (!this.installRequested) this.set(null);
+      throw error;
+    } finally {
+      this.progressListener = null;
+    }
+  }
 
   /** Where it stands; null when nothing is under way. */
   state(): OfficialUpdate | null {
@@ -145,13 +176,7 @@ export class OfficialClientUpdate {
       version = installer.version;
       this.set({ kind: 'installing', version });
       await this.checkSignature(installer);
-      this.options.stopCm();
-      const outcome = await this.options.tools.run(installer);
-      if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');
-      const after = await this.options.installedAgain();
-      if (!after || !meetsCmVersion(after.version, floor)) {
-        throw new OfficialUpdateError('notUpdated', `The installer of ${version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
-      }
+      await this.runHoldingCm(installer, floor);
       this.ready = null;
       await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
       this.set(null);
@@ -165,6 +190,24 @@ export class OfficialClientUpdate {
     }
   }
 
+  /**
+   * Runs the installer with `CmClient` held, and reads the installed version again before commands start again: they
+   * run on the `cm` it left. Fails unless that version meets the floor.
+   */
+  private async runHoldingCm(installer: DownloadedInstaller, floor: string): Promise<void> {
+    const resumeCm = this.options.holdCm();
+    try {
+      const outcome = await this.options.tools.run(installer);
+      if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');
+      const after = await this.options.installedAgain();
+      if (!after || !meetsCmVersion(after.version, floor)) {
+        throw new OfficialUpdateError('notUpdated', `The installer of ${installer.version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
+      }
+    } finally {
+      resumeCm();
+    }
+  }
+
   /** A signature that isn't Unity's: the installer is deleted, so the next try downloads it again. */
   private async checkSignature(installer: DownloadedInstaller): Promise<void> {
     const verdict = await this.options.tools.checkSignature(installer.path);
@@ -174,9 +217,12 @@ export class OfficialClientUpdate {
     throw new OfficialUpdateError('notSigned', `${verdict.why}: ${installer.path}`);
   }
 
-  /** The installer, downloaded once: asks while it downloads join that download. */
+  /**
+   * The installer, downloaded once: asks while it downloads join that download. One downloaded for an older floor (the
+   * update screen's, before an app update raised it) is passed over.
+   */
   private downloaded(installed: InstalledCm, floor: string): Promise<DownloadedInstaller> {
-    if (this.ready) return Promise.resolve(this.ready);
+    if (this.ready && meetsCmVersion(this.ready.version, floor)) return Promise.resolve(this.ready);
     this.preparing ??= this.download(installed, floor).finally(() => (this.preparing = null));
     return this.preparing;
   }
@@ -241,6 +287,7 @@ export class OfficialClientUpdate {
     if (this.current?.kind === 'downloading' && now - this.lastProgressAt < PROGRESS_INTERVAL_MS) return;
     this.lastProgressAt = now;
     this.set({ kind: 'downloading', version, receivedBytes, totalBytes, installRequested: this.installRequested });
+    this.progressListener?.(totalBytes ? Math.min(1, receivedBytes / totalBytes) : 0);
   }
 
   private set(state: OfficialUpdate | null): void {

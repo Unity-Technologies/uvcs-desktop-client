@@ -52,13 +52,15 @@ bundle, and the main module evaluates it in about 7 ms that the first window wou
   version left. The releases never stage, so nothing is lost; a staged rollout would need
   another way to pick its users. Downloads send no id either, the unsigned-macOS installer's included
   (`downloadInstaller` fetches the bare URL).
-- **Download**: an update found downloads by itself, with the `cm` it runs when that's another one
-  (docs/features/cm-runtime.md "Updates bring their cm"), then waits (`ready`). A check while one is under way or
+- **Download**: an update found downloads by itself, with the `cm` it runs when that's another one, or the installer of
+  the installed Unity Version Control when the update needs a newer one (docs/features/cm-runtime.md "Updates bring
+  their cm"), then waits (`ready`). A check while one is under way or
   ready checks nothing and tells where it stands.
 - **Install**: "Restart & Install" quits into it (Windows runs the installer silently, per user, and starts the app
   again); quitting the app installs it too (`autoInstallOnAppQuit`). Asked while an operation changes a workspace
-  (`writesRunning`: an update, a checkin…), it waits for it to finish (`waitingToInstall`: the card and About say so,
-  with nothing to press) rather than kill its `cm` partway; quitting asks the same. The app comes back with every
+  (`writesRunning`: an update, a checkin…), it waits for it to finish (`waitingToInstall`, `waitingFor: 'operation'`:
+  the card and About say so, with nothing to press) rather than kill its `cm` partway; quitting asks the same. Then the
+  installed Unity Version Control's installer runs first when the update brought one (`waitingFor: 'installedCm'`). The app comes back with every
   window where it was, each on the view it showed (`beforeRestart`; ARCHITECTURE.md "Windows").
 - **Unsigned macOS builds**: Squirrel.Mac, which electron-updater installs through on macOS, rejects any build without a
   Developer ID signature ("code failed to satisfy specified code requirement(s)"). Once an update is found,
@@ -165,7 +167,7 @@ renderer is untrusted and must never run markup from the network.
 
 **Seeing it while developing**: an unpackaged app has no feed, so What's New never opens. `UVCS_PREVIEW_UPDATE=<file>`
 (`previewUpdateFile`, `previewUpdateFeed`; ignored by a packaged app, and when blank) makes it find the update a JSON
-file describes, ready at once and never installed (installing it only logs a warning, and quitting stays a plain quit): `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }] }`, each note the HTML GitHub
+file describes, ready at once and never installed (installing it only logs a warning, and quitting stays a plain quit): `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }], "cmVersion" }`, the last optional, the `cm` version it pins (docs/features/cm-runtime.md "Updates bring their cm"), each note the HTML GitHub
 renders (`gh api repos/<owner>/<repo>/releases/latest -H "Accept: application/vnd.github.html+json" --jq .body_html`,
 or `gh api markdown -f mode=gfm -F text=@notes.md` for notes not published yet). Start it with `npm run app:debug`; the
 update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.

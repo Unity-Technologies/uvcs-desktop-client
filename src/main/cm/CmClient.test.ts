@@ -778,6 +778,65 @@ const STICKY = [
   '--server',
 ];
 
+describe('CmClient held while Unity Version Control updates', () => {
+  /** Lets every promise already settled run its callbacks: a held command must still not have started after them. */
+  async function settle(): Promise<void> {
+    for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+  }
+
+  it('ends its shells, starts nothing while held, and runs what waited once resumed', async () => {
+    const { cm, pools, processes, shellCommands } = fakeClient();
+    const resume = cm.hold();
+    expect(pools[0]!.disposed).toBe(true);
+
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
+    const operation = cm.execute(['update'], { cwd: WORKSPACE });
+    const records = cm.queryRecords(['find', 'branch', '--format={name}#'], (fields) => fields, { cwd: WORKSPACE });
+    cm.warmUp(WORKSPACE);
+    cm.show(WORKSPACE);
+    await settle();
+    expect({ processes, shellCommands, warmed: pools[0]!.warmed, shown: pools[0]!.shown }).toEqual({ processes: [], shellCommands: [], warmed: [], shown: [] });
+
+    resume();
+    await expect(query).resolves.toBe('done\n');
+    await operation;
+    await records;
+    expect(shellCommands.map((command) => command.args[0])).toEqual(['status', 'find']);
+    // The update, a `cm shell` of its own.
+    expect(processes).toHaveLength(1);
+    expect(pools[0]!.shown).toEqual([WORKSPACE]);
+  });
+
+  it('stays held until every hold is resumed, each resume counting once', async () => {
+    const { cm, shellCommands } = fakeClient();
+    const first = cm.hold();
+    const second = cm.hold();
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
+
+    first();
+    first();
+    await settle();
+    expect(shellCommands).toEqual([]);
+
+    second();
+    await query;
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('gives up a held command its caller cancels, which never runs', async () => {
+    const { cm, processes } = fakeClient();
+    const resume = cm.hold();
+    const cancel = new AbortController();
+    const operation = cm.execute(['update'], { cwd: WORKSPACE, signal: cancel.signal });
+
+    cancel.abort();
+    await expect(operation).rejects.toMatchObject({ name: 'AbortError' });
+    resume();
+    await settle();
+    expect(processes).toEqual([]);
+  });
+});
+
 describe('CmClient options that stick to a cm shell', () => {
   it.each(STICKY)('refuses a quick command carrying %s before any shell runs it', async (option) => {
     const { cm, shellCommands, processes } = fakeClient();
