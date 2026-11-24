@@ -1,6 +1,10 @@
 import { samePlace, type Place } from '@shared/domain/place';
 import { create } from 'zustand';
-import type { FileView } from '../annotate/fileView';
+import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
+import { otherFileView, type FileView } from '../annotate/fileView';
+
+/** The Files view's details panel (`ListWithDetails`, `DetailsToggleButton`), where the selected file shows. */
+export const FILES_DETAILS_KEY = 'filesTree';
 
 /** A path to select and scroll to in one place's Files (a workspace's tree, or a repository's), with the others to select (moved items). */
 export interface RevealRequest {
@@ -27,6 +31,29 @@ export const useFilesViewStore = create<FilesViewStore>((set) => ({
   requestReveal: (place, path, selected) => set({ revealRequest: { place, path, selected } }),
   revealed: (request) => set((state) => (state.revealRequest === request ? { revealRequest: null } : state)),
 }));
+
+/**
+ * Shows the selected file as `view`, and the details it shows in if they were hidden: Annotate or Show changes, asked
+ * from a menu, the palette or a key, would otherwise change a panel no one sees, and seem to do nothing.
+ */
+export function showFileView(view: FileView): void {
+  useFilesViewStore.getState().setFileView(view);
+  useDetailsPaneStore.getState().showDetails(FILES_DETAILS_KEY);
+}
+
+/**
+ * What the Annotate command shows: the other of "Diff | Annotate" while the details show the file; the file annotated
+ * while they're hidden, where the diff switched to would be as unseen as the annotations were.
+ */
+export function fileViewForAnnotateCommand(current: FileView, detailsAreHidden: boolean): FileView {
+  return detailsAreHidden ? 'annotate' : otherFileView(current);
+}
+
+/** Annotates the selected file, or goes back to its diff (`fileViewForAnnotateCommand`), in details that show. */
+export function toggleAnnotated(): void {
+  const hidden = detailsHidden(useDetailsPaneStore.getState(), FILES_DETAILS_KEY);
+  showFileView(fileViewForAnnotateCommand(useFilesViewStore.getState().fileView, hidden));
+}
 
 /**
  * The reveal for this place's tree: none while it was asked in another, whose folders this tree would list
