@@ -109,7 +109,7 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
 
 ## Commands
 
-npm (Node ≥ 22.12; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). The app downloads its own `cm` on the first run (docs/features/cm-runtime.md); sign in once with it or an installed
+npm (Node ≥ 22.18; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). The app downloads its own `cm` on the first run (docs/features/cm-runtime.md); sign in once with it or an installed
 one. `UVCS_CM_PATH` runs another `cm`, and `UVCS_CM_BUNDLES_URL` downloads the app's own from another site.
 
 ```bash

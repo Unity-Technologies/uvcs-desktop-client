@@ -73,8 +73,8 @@ No telemetry, analytics or crash reports. See [PRIVACY.md](PRIVACY.md).
 
 You need:
 
-- **Node.js 22.12 or newer**. CI builds with the version in [`.nvmrc`](.nvmrc) (26), so that one is safest. Check with
-  `node -v`. An older Node stops `npm install` with `EBADENGINE … Required: {"node":">=22.12"}`: install a newer one
+- **Node.js 22.18 or newer**. CI builds with the version in [`.nvmrc`](.nvmrc) (26), so that one is safest. Check with
+  `node -v`. An older Node stops `npm install` with `EBADENGINE … Required: {"node":">=22.18"}`: install a newer one
   and run `npm install` again.
   - With a version manager (recommended), run `nvm install` ([nvm](https://github.com/nvm-sh/nvm), macOS and Linux)
     or `fnm use --install-if-missing` ([fnm](https://github.com/Schniz/fnm), any OS) in the clone: both read `.nvmrc`.
