@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { settleTimeout } from '../lib/settleTimeout';
 import { markReadsInFlight } from './markReadsInFlight';
 
 /** A promise and the function that settles it, to hold a read in flight as long as a test needs. */
@@ -9,11 +10,26 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   return { promise, resolve };
 }
 
+const stops: (() => void)[] = [];
+afterEach(() => {
+  stops.splice(0).forEach((stop) => stop());
+  vi.useRealTimers();
+});
+
+/** A client followed by the mark, on a root that counts how often the mark is written. */
 function setup() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const root = { dataset: {} as DOMStringMap };
-  markReadsInFlight(client, root);
-  return { client, root };
+  const values: DOMStringMap = {};
+  let writes = 0;
+  const dataset = new Proxy(values, {
+    set: (target, name, value) => {
+      writes += 1;
+      return Reflect.set(target, name, value);
+    },
+  });
+  const root = { dataset };
+  stops.push(markReadsInFlight(client, root));
+  return { client, root, writes: () => writes };
 }
 
 describe('markReadsInFlight', () => {
@@ -58,5 +74,23 @@ describe('markReadsInFlight', () => {
     done.resolve();
     await change;
     expect(root.dataset.reading).toBe('false');
+  });
+
+  it('marks the page while a selection waits to settle before it reads, and clears it once it settled', () => {
+    vi.useFakeTimers();
+    const { root } = setup();
+    settleTimeout(() => {}, 300);
+    expect(root.dataset.reading).toBe('true');
+    vi.advanceTimersByTime(300);
+    expect(root.dataset.reading).toBe('false');
+  });
+
+  it('writes the mark only when it changes', async () => {
+    const { client, writes } = setup();
+    const answer = deferred<number>();
+    const reads = [client.fetchQuery({ queryKey: ['a'], queryFn: () => answer.promise }), client.fetchQuery({ queryKey: ['b'], queryFn: () => answer.promise })];
+    answer.resolve(1);
+    await Promise.all(reads);
+    expect(writes()).toBe(3);
   });
 });
