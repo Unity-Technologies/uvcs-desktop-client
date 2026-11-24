@@ -1,9 +1,9 @@
 # Partial workspaces
 
 A partial workspace downloads only the folders and files the user chooses; everything else stays on the server. How
-the app tells a workspace's kind (`WorkspaceKind`, `workspaceKindsReader`) and shows it (`WorkspaceKindChip`) is in
-ARCHITECTURE.md. This doc holds how a partial workspace is created, how a standard one becomes partial and a partial
-one standard again, how the user chooses what it downloads, and how it stays partial.
+the app tells a workspace's kind (`WorkspaceKind`, `workspaceKindsReader`) and shows it (`WorkspaceKindChip`,
+`WorkspaceKindBadge`) is in ARCHITECTURE.md. This doc holds how a partial workspace is created, how a standard one
+becomes partial and a partial one standard again, how the user chooses what it downloads, and how it stays partial.
 
 ## Creating one
 

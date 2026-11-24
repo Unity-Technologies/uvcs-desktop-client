@@ -17,12 +17,29 @@ export function workspaceKindWords(kind: WorkspaceKind): WorkspaceKindWords {
   return WORKSPACE_KIND_WORDS[kind];
 }
 
+/** A kind a workspace's row or card marks, with a chip and its avatar's badge: every kind but standard. */
+export type MarkedWorkspaceKind = Exclude<WorkspaceKind, 'standard'>;
+
 /**
- * The chip a workspace's row or card shows for its kind: none for a standard workspace, the way most are, nor while
- * its kind is still unread, so only the workspaces that hold their files another way stand out.
+ * The kind a workspace's row or card marks: none for a standard workspace, the way most are, nor while its kind is
+ * still unread, so only the workspaces that hold their files another way stand out.
  */
+export function markedWorkspaceKind(kind: WorkspaceKind | undefined): MarkedWorkspaceKind | null {
+  return kind === undefined || kind === 'standard' ? null : kind;
+}
+
+/**
+ * The kind a workspace's row tells, on its avatar and its chip: none for a missing workspace, whose folder is gone and
+ * whose row shows that instead, so its kind as last read isn't claimed for a folder that no longer holds it.
+ */
+export function shownWorkspaceKind(kind: WorkspaceKind | undefined, missing: boolean): WorkspaceKind | undefined {
+  return missing ? undefined : kind;
+}
+
+/** The chip a workspace's row or card shows for its kind, when it marks it (`markedWorkspaceKind`). */
 export function workspaceKindChip(kind: WorkspaceKind | undefined): WorkspaceKindWords | null {
-  return kind === undefined || kind === 'standard' ? null : WORKSPACE_KIND_WORDS[kind];
+  const marked = markedWorkspaceKind(kind);
+  return marked && WORKSPACE_KIND_WORDS[marked];
 }
 
 /**
