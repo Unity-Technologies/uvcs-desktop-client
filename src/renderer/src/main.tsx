@@ -1,4 +1,3 @@
-import { focusManager } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -33,16 +32,6 @@ setTimeout(preloadCommentEditor, 2500);
 document.documentElement.dataset.chrome = WINDOW_CHROME;
 exposePageZoom();
 markReadsInFlight(queryClient);
-// TEMPORARY diagnostics for PR #359's Windows duplicate: who fetches a listing, and the watcher's and focus' events.
-queryClient.getQueryCache().subscribe((event) => {
-  if (event.type !== 'updated' || event.action.type !== 'fetch') return;
-  const key = JSON.stringify(event.query.queryKey);
-  if (!key.includes('"explorer"') && !key.includes('"pendingChanges"')) return;
-  Error.stackTraceLimit = 40;
-  console.info(`[diag] fetch ${key}\n${(new Error().stack ?? '').split('\n').slice(10, 30).map((frame) => frame.replace(/\(?file:.*\//, '(')).join('\n')}`);
-});
-focusManager.subscribe((focused) => console.info(`[diag] focus ${focused}`));
-window.uvcs.on('workspaceChanged', (change) => console.info(`[diag] workspaceChanged ${JSON.stringify(change)}`));
 guardUnloading();
 trackPointerReturnFocus();
 // A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.
