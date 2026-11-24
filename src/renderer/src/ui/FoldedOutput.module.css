@@ -1,0 +1,13 @@
+.folded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+/* The output, in full: read and copied as it is. */
+.folded pre {
+  width: 100%;
+  text-align: left;
+}

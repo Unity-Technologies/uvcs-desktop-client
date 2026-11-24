@@ -2,8 +2,7 @@ import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
-import { DetailsDisclosure } from '../../ui/DetailsDisclosure';
-import { OutputBlock } from '../../ui/OutputBlock';
+import { FoldedOutput } from '../../ui/FoldedOutput';
 import { useCmRuntimeStore } from './cmRuntimeStore';
 import { cmUpdateViewOf, type CmTooOld, type CmUpdateCheck } from './cmUpdateView';
 import styles from './CmSetupScreen.module.css';
@@ -15,7 +14,6 @@ import styles from './CmSetupScreen.module.css';
  */
 export function CmUpdateNeeded({ status }: { status: CmTooOld }) {
   const [check, setCheck] = useState<CmUpdateCheck>('none');
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const view = cmUpdateViewOf(status, check);
   useEffect(() => {
     // Quietly: the screen moves on by itself once it's new enough.
@@ -47,10 +45,7 @@ export function CmUpdateNeeded({ status }: { status: CmTooOld }) {
         </Button>
       </div>
       <div className={styles.details}>
-        <DetailsDisclosure open={detailsOpen} onToggle={() => setDetailsOpen(!detailsOpen)}>
-          Details
-        </DetailsDisclosure>
-        {detailsOpen && <OutputBlock output={view.detail} />}
+        <FoldedOutput output={view.detail} />
       </div>
     </div>
   );

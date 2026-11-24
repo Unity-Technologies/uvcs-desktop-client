@@ -2,7 +2,7 @@ import { Download, RefreshCw, TerminalSquare } from 'lucide-react';
 import type { CmSource } from '@shared/domain/cmRuntime';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
-import { OutputBlock } from '../../ui/OutputBlock';
+import { FoldedOutput } from '../../ui/FoldedOutput';
 import { ScreenMessage } from '../../ui/ScreenMessage';
 import { CopyableCommand } from './CopyableCommand';
 import { cmUnavailableView } from './cmUnavailableView';
@@ -42,7 +42,7 @@ export function CmUnavailableScreen({ reason, source, checking, onRecheck }: CmU
       footer={
         <>
           {view.offersInstall && <CopyableCommand note={guidance.commandNote} command={guidance.command} />}
-          <OutputBlock output={reason} />
+          <FoldedOutput output={reason} />
         </>
       }
     >

@@ -4,8 +4,7 @@ import { api } from '../../api/client';
 import { AppMark } from '../../components/AppMark';
 import { Button } from '../../ui/Button';
 import { useTheme } from '../settings/useTheme';
-import { DetailsDisclosure } from '../../ui/DetailsDisclosure';
-import { OutputBlock } from '../../ui/OutputBlock';
+import { FoldedOutput } from '../../ui/FoldedOutput';
 import { cmSetupViewOf, installedCmLabel, type CmSetupView as View } from './cmSetupView';
 import { useCmRuntimeStore, useSecondsLeft } from './cmRuntimeStore';
 import { CmUpdateNeeded } from './CmUpdateNeeded';
@@ -64,7 +63,6 @@ function Progress({ view }: { view: Extract<View, { kind: 'progress' }> }) {
 
 function Failure({ view }: { view: Extract<View, { kind: 'failed' }> }) {
   const [retrying, setRetrying] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const retry = async (): Promise<void> => {
     setRetrying(true);
     try {
@@ -84,10 +82,7 @@ function Failure({ view }: { view: Extract<View, { kind: 'failed' }> }) {
         {view.installedCm && <Button onClick={() => void api.cmRuntime.use('automatic')}>{installedCmLabel(view.installedCm)}</Button>}
       </div>
       <div className={styles.details}>
-        <DetailsDisclosure open={detailsOpen} onToggle={() => setDetailsOpen(!detailsOpen)}>
-          Details
-        </DetailsDisclosure>
-        {detailsOpen && <OutputBlock output={view.detail} />}
+        <FoldedOutput output={view.detail} />
       </div>
     </div>
   );
