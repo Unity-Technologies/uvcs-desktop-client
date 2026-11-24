@@ -4,6 +4,7 @@ import type { FileListFacts } from '../../components/fileListOrder';
 import type { ItemPresence } from '../../components/ItemRow';
 import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
+import { parsedDate } from '../../lib/parsedDate';
 import { categoryOf, describeKindList, describeKinds, isContentKind, isMovedAndChanged, type ChangeCategory } from './changeCategories';
 
 const TONES: Record<ChangeCategory, StatusTone> = {
@@ -26,7 +27,7 @@ export const PENDING_CHANGE_FACTS: FileListFacts<PendingChange> = { toneOf: chan
 
 /** When the change's file was last modified on disk; none for what has no file there (a deleted file, a folder). */
 function changeDate(change: PendingChange): number | undefined {
-  return change.lastModified ? Date.parse(change.lastModified) : undefined;
+  return parsedDate(change.lastModified);
 }
 
 /** The statuses the filter chips find a pending change by: a moved file that changed by C and M. */

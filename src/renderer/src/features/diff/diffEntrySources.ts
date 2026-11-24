@@ -6,6 +6,7 @@ import { statusGroup, type StatusGroup } from '../../components/statusGroups';
 import type { GroupedFileListFacts } from '../../components/useGroupedFileTree';
 import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
+import { parsedDate } from '../../lib/parsedDate';
 
 const EMPTY: ContentSource = { kind: 'empty' };
 
@@ -60,7 +61,7 @@ export const DIFF_ENTRY_FACTS: GroupedFileListFacts<DiffEntry, StatusGroup> = { 
 
 /** When the entry's revision was made (`DiffEntry.date`), parsed whatever UTC offset `cm` printed it with. */
 function diffEntryDate(entry: DiffEntry): number | undefined {
-  return entry.date ? Date.parse(entry.date) : undefined;
+  return parsedDate(entry.date);
 }
 
 /** The statuses the filter chips find an entry by: a moved file that changed by C and M. */
