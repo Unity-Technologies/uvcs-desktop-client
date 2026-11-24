@@ -12,7 +12,8 @@ there, while the production build, which ships, runs each effect once. Each run 
 (from the home screen: its views, a file found by name and a changeset's diff) and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
 `Loading` (what shows only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton
-until it shows again), any `cm` command the fake couldn't answer, and an answer to the profile pictures question that wasn't
+until it shows again), any `cm` command the fake couldn't answer, a step that sent the same server command twice
+("Duplicate server commands" below), and an answer to the profile pictures question that wasn't
 saved. Beyond that answer and the larger editor being on top, it asserts only that things appear, never pixels or copy.
 About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
 runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
@@ -57,10 +58,26 @@ Settings › Issue tracker shows its empty state: no tracker is connected, and n
 fake Jira Cloud and GitHub for looking at the trackers' flows in a development build (`UVCS_FAKE_TRACKERS`,
 docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn't load it.
 
+## Duplicate server commands
+
+A step ends once its reads did (`readsSettled`): the page marks itself while its query client reads or changes
+anything (`<html data-reading>`, `markReadsInFlight`), and the step waits for the mark to clear and stay clear two
+frames later, when what the last answer showed has asked for what it needs. Each step writes its start to the fake's
+log, so every command logged belongs to the step that sent it. After a clean run, the same server command (same
+arguments, same folder; local commands per `needsServer` left out) sent twice within one step fails the run, naming
+the step and the command (`duplicateReport`, `scripts/build/duplicateServerCommands.mts`, with its tests). A step that
+reads again on purpose names what does (`step(name, run, { rereads: 'Refresh' })`), and its commands aren't checked.
+
+`KNOWN_DUPLICATES` lists the duplicates still on `main`, each matched by how its command line starts, with the issue
+and the change that removes it. One that no longer happens prints a warning without failing, so that change can merge
+before or after the line goes; remove the line then. Never add a line to get a new duplicate through: fix it, or name
+the issue that will.
+
 ## The fake `cm` (`fakeCm/`)
 
 - `cm.cjs` runs a command as a process (`cm find …`) or as `cm shell` (commands on stdin, each answer ending with
-  `CommandResult <code>`, as `CmShellSession` reads it). Every command is logged to `UVCS_FAKE_CM_LOG`, `ok` or `ERR`.
+  `CommandResult <code>`, as `CmShellSession` reads it). Every command is logged to `UVCS_FAKE_CM_LOG`,
+  one JSON line each: its arguments, the folder it ran in, and whether the fake knew it (`readCommandLog`).
 - `answers.cjs` maps commands (`COMMANDS`, one or two words: `find`, `lock list`) to their output. `--format` output
   is the command's own template filled from the objects' fields (`format.cjs`), so a new field is one more property
   on the objects. `find` keeps only the objects its query's comparisons match

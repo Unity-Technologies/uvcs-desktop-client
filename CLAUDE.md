@@ -92,7 +92,8 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
    output": "No list is one string").
 6. **What does it refresh?** An operation declares what it `affects` (`refreshScopes.ts`); reads refresh nothing.
 7. **Check it.** Watch the command log (⌘⇧L) while exercising the change and count the commands. Development builds
-   warn `[server budget]` in the console when a server command repeats more than twice in ten seconds.
+   warn `[server budget]` in the console when a server command repeats more than twice in ten seconds, and the smoke
+   test fails when one step sends the same server command twice.
 
 ## Safety
 
@@ -270,6 +271,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
+| `scripts/e2e/smoke.mjs` (`duplicateReport`)               | no step of the smoke test sends the same server command twice, unless it says what reads again (`rereads`) or `KNOWN_DUPLICATES` names the change that removes it |
 | `main/cm/noStickyShellOptions.test.ts`                    | no option a `cm shell` keeps for its session (`--username`, `--server`…: `STICKY_SHELL_OPTIONS`) reaches a pooled shell |
 | `main/cm/commandOutputs.test.ts`, `testing/fakeCmClient.test.ts` | no list is read as one string; every command says how it's read (`COMMAND_OUTPUTS`) |
 | `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
