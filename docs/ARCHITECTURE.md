@@ -268,8 +268,10 @@ and many people use the same server. Every `cm` command other than local reads (
   from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
   (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
   `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
-  renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
-  changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
+  renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes share the Locks view's read of every lock (`locksQuery`), and ask which locks
+  are mine only when some lock holds one of them; left changes look the selector's object id up only when an automatic
+  shelve by another client could match it, and on a branch take its id from the top bar's branch query instead
+  (`leftChangesQuery`, `KnownBranch`; used only while the workspace is still on that branch, `selectorObjectRef`), and arriving
   from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
   a changeset's, branch's or shelve's diff, Incoming, update conflicts, a merge's destination version of each
