@@ -502,8 +502,10 @@ describe('CmRuntime with an installed cm older than its own', () => {
     officialUpdate.set({ kind: 'downloading', version: '11.0.16.10694', receivedBytes: 1, totalBytes: 2, installRequested: true });
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed', officialUpdate: { kind: 'downloading', version: '11.0.16.10694', receivedBytes: 1, totalBytes: 2, installRequested: true } });
     officialUpdate.set(null);
-    officialUpdate.outcome.updatesTo = version = '11.0.16.10694';
-    await runtime.updateInstalled();
+    officialUpdate.outcome.updatesTo = '11.0.16.10694';
+    const update = runtime.updateInstalled();
+    version = '11.0.16.10694';
+    await update;
     expect(officialUpdate.installs).toEqual([{ path: '/usr/bin/cm', version: OLDER }]);
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
   });

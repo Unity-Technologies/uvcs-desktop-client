@@ -64,6 +64,7 @@ const cmRuntime = createCmRuntime({
   settings,
   prunes: app.isPackaged,
   relocated: () => cm.relocate(),
+  stopShells: () => cm.dispose(),
   logCommand: (entry) => cm.logEntry(entry),
   statusChanged: (status) => {
     sendEvent('cmRuntimeChanged', status);

@@ -13,6 +13,13 @@ export interface CmRuntimeApi {
   use(choice: CmUserChoice): Promise<void>;
   /** The update screen's "Use the included version for now": runs the app's own until the pinned version moves. */
   useIncludedForNow(): Promise<void>;
+  /** The update screen shows: the installed one's update gets ready in the background (its installer downloads). */
+  prepareUpdate(): Promise<void>;
+  /**
+   * Update, on the update screen or Settings: updates the installed one with its own installer, then runs it once it's
+   * new enough. Where it stands arrives in the status's `officialUpdate`.
+   */
+  updateInstalled(): Promise<void>;
   /** The update screen's Check Again: reads the installed `cm`'s version again, and runs it once it's new enough. */
   checkInstalledAgain(): Promise<void>;
   /** The `cm` installed on the computer and its version (one `cm version` of it); null when there is none. */
