@@ -27,3 +27,13 @@ export function installedAndNeededText(installedVersion: string, pinnedVersion: 
 export function versionAndNeededText(version: string, pinnedVersion: string): string {
   return `${versionText(version)} · ${neededVersionText(pinnedVersion)}`;
 }
+
+/** The version an update installs: "Installing: 11.0.16.10694". */
+export function installingVersionText(version: string): string {
+  return `Installing: ${version}`;
+}
+
+/** The version installed and the one its update installs: "Installed: 11.0.16.9000 · Installing: 11.0.16.10694". */
+export function installedAndInstallingText(installedVersion: string, installingVersion: string): string {
+  return `${installedVersionText(installedVersion)} · ${installingVersionText(installingVersion)}`;
+}
