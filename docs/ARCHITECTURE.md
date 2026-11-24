@@ -233,7 +233,10 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch
-  Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
+  Explorer is kept five minutes and focus never re-reads all history. Local views (pending changes, the Files view,
+  review marks, the workspace info) keep the client's 30 s too, so showing one again or in a second view reads nothing;
+  focus never re-reads them while the watcher sees the whole workspace with auto refresh on, and always re-reads those
+  on screen otherwise, however fresh (`localQueryDefaults`).
 - **Home**: the repository and branch of every listed workspace come from a `cm wi <path> --machinereadable` of each
   (`workspaces.heads`, `workspaceHeadsReader`), a local read with no form for N ("One command for N things"): `cm` has
   no form that tells several workspaces at once (`cm workspace list --format` prints no selector), and `wi` only reads
@@ -1152,7 +1155,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     skips `ignore.conf` folders (on Linux the folders watched follow its edits, `followSkipRule`) and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
     `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).
-    A watch that sees only part of the workspace refreshes local views on focus instead (`localQueryDefaults`), from the
+    A watch that sees only part of the workspace re-reads the local views on screen on every focus instead, however fresh (`localQueryDefaults`), from the
     start ("Some folders here aren't watched") or once a watch breaks later (`workspaceWatchBroken`: one error toast per
     workspace and session, `noteBrokenWatch`; no polling).
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
@@ -1161,8 +1164,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     A hidden window (minimized, covered, on another desktop) keeps the changes and refreshes once, when it shows again.
     File edits name the folders they touched (up to `MAX_CHANGED_FOLDERS`, else anywhere): the files view re-reads only
     those listings and the ones above them (`isAffectedByFileChangesIn`), not every open folder.
-  - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
-  - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
+  - Locks live on the server, where nothing reports changes: the lock marks of pending changes read them as they show and
+    on focus, at most every 30 s (`LOCKS_STALE_MS`); the watcher's refresh of the changes doesn't read them again.
+  - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views. Local views skip it while
+    the watcher sees everything with auto refresh on, and otherwise are re-read on every focus (`localQueryDefaults`).
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
     older than 20 s. A branch head moved by someone else refreshes the repository views (`isAffectedByNewChangesets`).
   - Refresh, asked for (⌘R, the menu's, a view's `ViewRefreshButton`), reads again what the window shows, or only what
