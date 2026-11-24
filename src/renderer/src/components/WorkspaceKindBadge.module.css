@@ -1,38 +1,37 @@
-/* Overlaps the avatar's bottom-right corner, ringed by its own border so it reads on any row or card behind it. */
+/*
+ * Overlaps the avatar's bottom-right corner: the accent's glyph on a disc of the raised surface (white in the light
+ * theme), ringed and lifted so it reads on any row or card behind it.
+ */
 .badge {
   position: absolute;
-  right: -4px;
-  bottom: -4px;
+  right: -5px;
+  bottom: -5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
   background: var(--bg-surface-raised);
-  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  color: var(--accent-text);
 }
 
 .icon {
-  width: 9px;
-  height: 9px;
-}
-
-/* The lightning reads at this size only filled, as the official clients draw it. */
-.badge[data-kind='dynamic'] .icon {
-  fill: currentColor;
+  width: 11px;
+  height: 11px;
 }
 
 /* Smaller on the switcher's and the sidebar's avatars, so it never hides the initial. */
 .badge[data-compact='true'] {
-  right: -3px;
-  bottom: -3px;
-  width: 12px;
-  height: 12px;
+  right: -4px;
+  bottom: -4px;
+  width: 13px;
+  height: 13px;
 }
 
 .badge[data-compact='true'] .icon {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }

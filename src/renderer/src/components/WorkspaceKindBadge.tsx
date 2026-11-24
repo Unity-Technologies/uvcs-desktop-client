@@ -1,12 +1,14 @@
-import { Contrast, Zap, type LucideIcon } from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
 import type { WorkspaceKind } from '@shared/domain/workspace';
+import { DynamicWorkspaceIcon } from './DynamicWorkspaceIcon';
+import { PartialWorkspaceIcon } from './PartialWorkspaceIcon';
 import { markedWorkspaceKind, type MarkedWorkspaceKind } from './workspaceKindWords';
 import styles from './WorkspaceKindBadge.module.css';
 
-/** A lightning for a workspace that downloads each file when first opened; half a circle for one holding only some. */
-const BADGE_ICONS: Record<MarkedWorkspaceKind, LucideIcon> = {
-  dynamic: Zap,
-  partial: Contrast,
+/** A bolt for a workspace that downloads each file when first opened; a half-filled circle for one holding only some. */
+const BADGE_ICONS: Record<MarkedWorkspaceKind, ComponentType<SVGProps<SVGSVGElement>>> = {
+  dynamic: DynamicWorkspaceIcon,
+  partial: PartialWorkspaceIcon,
 };
 
 /**
@@ -20,7 +22,7 @@ export function WorkspaceKindBadge({ kind, compact }: { kind: WorkspaceKind | un
   const Icon = BADGE_ICONS[marked];
   return (
     <span className={styles.badge} data-kind={marked} data-compact={compact}>
-      <Icon className={styles.icon} strokeWidth={2.5} />
+      <Icon className={styles.icon} />
     </span>
   );
 }
