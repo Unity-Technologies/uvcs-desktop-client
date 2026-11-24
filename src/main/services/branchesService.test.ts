@@ -132,24 +132,27 @@ describe('branch list', () => {
 });
 
 describe('one branch by name', () => {
-  it('finds a branch by its last name part among visible and hidden ones, and picks the one with the full name', async () => {
+  it('finds a visible branch by its last name part with one quick query, and picks the one with the full name', async () => {
     const { service, lines } = branches({
       'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1, OTHER_TASK1), ''),
     });
 
     const branch = await service.get(IN_WORKSPACE, '/main/fix/task1');
 
+    expect(lines()).toEqual([foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc")]);
+    expect(branch).toMatchObject({ id: 40, name: '/main/fix/task1' });
+  });
+
+  it('looks among hidden branches only once no visible one has the full name, and flags the one found', async () => {
+    const { service, lines } = branches({
+      'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1), recordsOutput(FOUND_BRANCHES, { ...OLD_HIDDEN, name: '/main/fix/task1' })),
+    });
+
+    expect(await service.get(IN_WORKSPACE, '/main/fix/task1')).toMatchObject({ id: 21, isHidden: true });
     expect(lines()).toEqual([
       foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc"),
       foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'true' order by date desc"),
     ]);
-    expect(branch).toMatchObject({ id: 40, name: '/main/fix/task1' });
-  });
-
-  it('finds a hidden branch, flagged as such', async () => {
-    const { service } = branches({ 'find branch': visibleOrHidden('', recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
-
-    expect(await service.get(IN_WORKSPACE, '/main/old')).toMatchObject({ id: 21, isHidden: true });
   });
 
   it("answers null for a branch that doesn't exist", async () => {
