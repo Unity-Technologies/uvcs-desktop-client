@@ -9,9 +9,9 @@ import { SettingsChoice } from './SettingsChoice';
 import { SettingsGroup } from './SettingsGroup';
 import styles from './SettingsDialog.module.css';
 
-const ICONS = { managed: <Package size={18} />, installed: <HardDrive size={18} /> };
+const ICONS = { installed: <HardDrive size={18} />, managed: <Package size={18} /> };
 
-/** Which Unity Version Control the app runs: its own (docs/features/cm-runtime.md), or the one installed. */
+/** Which Unity Version Control the app runs: the installed one, or its own (docs/features/cm-runtime.md). */
 export function CmChoiceGroup() {
   const status = useCmRuntimeStore((state) => state.status);
   const pinned = useQuery({ queryKey: queryKeys.pinnedCmVersion, queryFn: () => api.cmRuntime.pinnedVersion(), staleTime: Infinity, meta: IMMUTABLE_QUERY });

@@ -147,3 +147,16 @@ describe('SettingsStore reading its file', () => {
     expect(new SettingsStore(filePath).get()).toMatchObject({ showGravatar: true, gravatarChoiceAsked: true });
   });
 });
+
+describe('SettingsStore and the choice of cm', () => {
+  it('moves a file’s choice from before the automatic one to it once, and keeps the user’s choice after that', () => {
+    const { settings, filePath } = store();
+    writeFileSync(filePath, JSON.stringify({ ...DEFAULT_SETTINGS, cmChoice: 'managed', cmDeclinedUpdateFor: undefined }));
+    const migrated = new SettingsStore(filePath);
+    expect(migrated.get().cmChoice).toBe('automatic');
+
+    migrated.update({ cmChoice: 'managed' });
+    expect(new SettingsStore(filePath).get().cmChoice).toBe('managed');
+    expect(settings.get().cmChoice).toBe('automatic');
+  });
+});

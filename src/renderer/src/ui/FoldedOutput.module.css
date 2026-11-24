@@ -1,0 +1,19 @@
+.folded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+/* The output, in full: read and copied as it is. */
+.folded pre {
+  width: 100%;
+  text-align: left;
+}
+
+/* Centered under the centered words and buttons of the screens that show it. */
+.folded > button {
+  align-self: center;
+  margin-left: 0;
+}

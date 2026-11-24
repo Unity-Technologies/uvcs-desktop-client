@@ -58,13 +58,15 @@ export function createCmRuntime({ settings, prunes, relocated, logCommand, statu
     installer,
     choice: () => settings.get().cmChoice,
     saveChoice: (cmChoice) => settings.update({ cmChoice }),
+    declinedUpdateFor: () => settings.get().cmDeclinedUpdateFor,
+    saveDeclinedUpdate: (cmDeclinedUpdateFor) => settings.update({ cmDeclinedUpdateFor }),
     findInstalled: () => findInstalledCm(),
     versionOf,
     relocated,
     statusChanged,
     reveal: (path) => shell.showItemInFolder(path),
-    prune: (pinned) => {
-      if (prunes) void installer.prune(pinned);
+    prune: (keep) => {
+      if (prunes) void installer.prune(keep);
     },
     timers: { now: Date.now, setTimeout: (run, ms) => setTimeout(run, ms), clearTimeout: (timer) => clearTimeout(timer as NodeJS.Timeout) },
   });

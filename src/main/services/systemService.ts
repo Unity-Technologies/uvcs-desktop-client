@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { normalize } from 'node:path';
 import { app, dialog, net, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
+import { installedAndNeededText } from '@shared/domain/cmVersionWords';
 import { showsGravatar } from '@shared/domain/gravatarChoice';
 import { checkSetup } from '../cm/setupCheck';
 import { cmFoundText } from '../diagnostics/logRecords';
@@ -41,7 +42,8 @@ export function createSystemService({ cm, cmRuntime, operations, windows, settin
     return version();
   };
   // The one read of every `cm` the app runs, so the version floor costs no command of its own (`CmRuntime.admits`):
-  // an installed `cm` older than the app's own gives way to it, or, where the app has none, stops here.
+  // an installed `cm` older than the app's own brings up the update screen, or gives way to the app's own when the user
+  // chose it for now; where the app has none, it stops here.
   const cmVersion = async (): Promise<string> => {
     cm.relocate();
     const executable = cm.executable;
@@ -52,9 +54,9 @@ export function createSystemService({ cm, cmRuntime, operations, windows, settin
     // Check Again asks it again: the user may have updated it meanwhile.
     versions.delete(executable);
     // The app's own runs instead (`CmRuntime.admits` relocated `cm` to it), when it's there; one still setting up shows
-    // the setup screen meanwhile.
+    // the setup screen meanwhile, as the update screen shows while the installed one waits for its update.
     if (cm.executable !== executable && cmRuntime.isReady()) return cmVersion();
-    throw new Error(`The installed Unity Version Control is version ${answer}. This app needs version ${cmRuntime.pinnedVersion} or later.`);
+    throw new Error(`The installed Unity Version Control is older than this app needs. ${installedAndNeededText(answer, cmRuntime.pinnedVersion)}`);
   };
   const setupProblem = untilSucceeded(() => checkSetup(profiles, cm.executable), (problem) => problem === null);
 

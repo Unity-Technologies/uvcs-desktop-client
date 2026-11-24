@@ -1,6 +1,6 @@
 // What the fake `cm` answers to each command, from the synthetic repository. A command, subcommand or `--format`
 // field it doesn't know fails, naming it: the smoke test then fails and says what to teach it.
-const { writeFileSync } = require('node:fs');
+const { existsSync, readFileSync, writeFileSync } = require('node:fs');
 const { formatRecords } = require('./format.cjs');
 const repository = require('./repository.cjs');
 const { statusOutput } = require('./status.cjs');
@@ -53,9 +53,18 @@ const ORGANIZATION_REPOSITORIES = [
 /** The workspace as `cm workspace list` and `cm getworkspacefrompath` print it: a standard one (`type`, `dynamic`). */
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid, type: 'regular', dynamic: 'static' }];
 
+/**
+ * The version it prints: the one the app pins, or what `UVCS_FAKE_CM_VERSION_FILE` names (read on every command), to be
+ * an installed `cm` older than the app needs: the update screen (docs/features/cm-runtime.md "The update screen").
+ */
+function version() {
+  const file = process.env.UVCS_FAKE_CM_VERSION_FILE;
+  const named = file && existsSync(file) ? readFileSync(file, 'utf8').trim() : '';
+  return `${named || PINNED_CM_VERSION}\n`;
+}
+
 const COMMANDS = {
-  // The version the app pins: as an installed `cm`, an older one wouldn't be run (docs/features/cm-runtime.md).
-  version: () => `${PINNED_CM_VERSION}\n`,
+  version,
   checkconnection: () => 'Test connection executed successfully\n',
   whoami: () => `${OWNER}\n`,
   // Without --format: the local setup check (`checkSetup`), which reads only whether it succeeds.

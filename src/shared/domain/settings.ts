@@ -49,10 +49,16 @@ export interface AppSettings {
   /** Automatically refresh pending changes when files change on disk. */
   autoRefresh: boolean;
   /**
-   * Which `cm` the app runs: its own, pinned to this version of the app (the default), or the one installed on the
-   * computer (Settings › Workspaces, docs/features/cm-runtime.md "Which cm runs").
+   * Which `cm` the app runs: the one installed on the computer when there is one, or its own (`automatic`, the
+   * default until the user chooses), the installed one (`installed`), or always its own (`managed`) (Settings ›
+   * Workspaces, docs/features/cm-runtime.md "Which cm runs").
    */
   cmChoice: CmChoice;
+  /**
+   * The pinned version (the oldest `cm` the app runs) for which the user chose the app's own over updating an older
+   * installed one ("Use the included version for now"): not asked again until the pin moves. Null when never chosen.
+   */
+  cmDeclinedUpdateFor: string | null;
   /** Folder new workspaces are created in; empty means the home folder. */
   defaultWorkspaceRoot: string;
   /** What to do with pending changes when switching the workspace. */
@@ -136,7 +142,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   recentComments: [],
   recentCommentsByRepository: {},
   autoRefresh: true,
-  cmChoice: 'managed',
+  cmChoice: 'automatic',
+  cmDeclinedUpdateFor: null,
   defaultWorkspaceRoot: '',
   pendingChangesOnSwitch: 'ask',
   restoreLeftChangesAutomatically: true,

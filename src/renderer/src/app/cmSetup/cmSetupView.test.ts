@@ -18,6 +18,10 @@ describe('cmSetupViewOf', () => {
     expect(cmSetupViewOf({ kind: 'ready', source: 'managed' }, null)).toBeNull();
   });
 
+  it('leaves the window to the update screen while the installed one is too old', () => {
+    expect(cmSetupViewOf({ kind: 'installedTooOld', installed: { path: '/usr/bin/cm', version: '11.0.16.9000' }, requiredVersion: '11.0.16.10659' }, null)).toBeNull();
+  });
+
   it('sets up on the first run, and updates after one', () => {
     expect(cmSetupViewOf(downloading(0, null), null)).toMatchObject({ title: 'Setting up Unity Version Control', subtitle: 'This happens once and takes a moment.' });
     expect(cmSetupViewOf(downloading(0, null, false), null)).toMatchObject({ title: 'Updating Unity Version Control', subtitle: 'A newer version came with this update.' });

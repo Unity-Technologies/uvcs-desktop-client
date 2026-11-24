@@ -57,15 +57,16 @@ async function flush(): Promise<void> {
   for (let turn = 0; turn < 5; turn++) await Promise.resolve();
 }
 
-function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; chosen?: CmChoice } = {}) {
-  const { installed, chosen, ...overrides } = setup;
+function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; chosen?: CmChoice; declinedFor?: string } = {}) {
+  const { installed, chosen, declinedFor, ...overrides } = setup;
   const installer = fakeInstaller(installed);
   const statuses: CmRuntimeStatus[] = [];
   const timers: { ms: number; run: () => void }[] = [];
   let now = 0;
   let choice: CmChoice = chosen ?? 'managed';
   let relocations = 0;
-  const pruned: string[] = [];
+  let declined: string | null = declinedFor ?? null;
+  const pruned: (string | null)[] = [];
   const revealed: string[] = [];
   const runtime = new CmRuntime({
     pin: PIN,
@@ -75,6 +76,8 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
     installer,
     choice: () => choice,
     saveChoice: (saved) => (choice = saved),
+    declinedUpdateFor: () => declined,
+    saveDeclinedUpdate: (pinned) => (declined = pinned),
     findInstalled: () => '/usr/bin/cm',
     versionOf: async () => `${INSTALLED_VERSION}\n`,
     relocated: () => relocations++,
@@ -84,7 +87,7 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
     timers: { now: () => now, setTimeout: (run, ms) => timers.push({ ms, run }), clearTimeout: () => timers.splice(0) },
     ...overrides,
   });
-  return { runtime, installer, statuses, timers, pruned, revealed, advance: (ms: number) => (now += ms), relocations: () => relocations, choice: () => choice };
+  return { runtime, installer, statuses, timers, pruned, revealed, advance: (ms: number) => (now += ms), relocations: () => relocations, choice: () => choice, declined: () => declined };
 }
 
 describe('CmRuntime', () => {
@@ -209,7 +212,7 @@ describe('CmRuntime with an update waiting', () => {
 
   it('downloads nothing for the same version, nor when the installed one runs', () => {
     expect(runtimeWith({ installed: [VERSION] }).runtime.prefetchFor(PIN)).toBeNull();
-    expect(runtimeWith({ chosen: 'installed' }).runtime.prefetchFor(NEXT)).toBeNull();
+    expect(runtimeWith({ chosen: 'automatic' }).runtime.prefetchFor(NEXT)).toBeNull();
   });
 
   it('downloads nothing where the platform has no bundle', () => {
@@ -251,14 +254,14 @@ describe('CmRuntime and what waits for cm', () => {
 
 describe('CmRuntime going back to its own cm from the installed one', () => {
   it('keeps the installed one running while its own downloads, then switches to it', async () => {
-    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'installed' });
+    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'automatic' });
     runtime.start();
     await runtime.use('managed');
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed', switchingToOwn: { kind: 'downloading', fraction: null } });
     installer.progress({ phase: 'downloading', receivedBytes: 40, totalBytes: 100 });
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed', switchingToOwn: { kind: 'downloading', fraction: 0.4 } });
-    expect(choice()).toBe('installed');
+    expect(choice()).toBe('automatic');
 
     await installer.succeed();
     expect(runtime.cmPath()).toBe(MANAGED);
@@ -268,7 +271,7 @@ describe('CmRuntime going back to its own cm from the installed one', () => {
   });
 
   it('stays on the installed one when it’s chosen again while its own downloads', async () => {
-    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'installed' });
+    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'automatic' });
     await runtime.use('managed');
     await runtime.use('installed');
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
@@ -279,11 +282,11 @@ describe('CmRuntime going back to its own cm from the installed one', () => {
   });
 
   it('stays on the installed one, saying why, when its own fails to download', async () => {
-    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'installed' });
+    const { runtime, installer, statuses, relocations, choice } = runtimeWith({ chosen: 'automatic' });
     await runtime.use('managed');
     await installer.fail(new CmInstallError('unavailable', 'HTTP 403'));
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed', switchingToOwn: { kind: 'failed', failure: 'unavailable', detail: 'HTTP 403' } });
-    expect(choice()).toBe('installed');
+    expect(choice()).toBe('automatic');
     expect(relocations()).toBe(0);
   });
 });
@@ -317,17 +320,140 @@ describe('CmRuntime with choices made during its setup', () => {
   });
 });
 
-describe('CmRuntime refusing an installed cm older than its own', () => {
-  const OLDER = '11.0.16.9000';
+describe('CmRuntime by default', () => {
+  it('runs the installed cm when one is found, with nothing to set up', () => {
+    const { runtime, installer } = runtimeWith({ chosen: 'automatic' });
+    runtime.start();
+    expect(runtime.status()).toEqual({ kind: 'ready', source: 'installed' });
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(installer.installs).toBe(0);
+  });
 
-  it('never runs an older installed one when it’s chosen', async () => {
-    const { runtime, statuses, choice, relocations } = runtimeWith({ installed: [VERSION], versionOf: async () => `${OLDER}\n` });
+  it('sets its own up when none is found', () => {
+    const { runtime, installer } = runtimeWith({ chosen: 'automatic', findInstalled: () => null });
+    runtime.start();
+    expect(runtime.status()).toMatchObject({ kind: 'installing', firstRun: true });
+    expect(installer.installs).toBe(1);
+  });
+
+  it('prunes all of its own once the installed one’s version is known to be new enough, and only then', () => {
+    const { runtime, pruned } = runtimeWith({ chosen: 'automatic', installed: [VERSION] });
+    runtime.start();
+    expect(pruned).toEqual([]);
+    expect(runtime.admits('/usr/bin/cm', INSTALLED_VERSION)).toBe(true);
+    expect(pruned).toEqual([null]);
+  });
+});
+
+describe('CmRuntime with an installed cm older than its own', () => {
+  const OLDER = '11.0.16.9000';
+  const TOO_OLD: CmRuntimeStatus = { kind: 'installedTooOld', installed: { path: '/usr/bin/cm', version: OLDER }, requiredVersion: VERSION };
+
+  it('asks to update it, running nothing meanwhile, when its version answers', () => {
+    const { runtime, statuses, choice, pruned } = runtimeWith({ chosen: 'automatic', installed: [VERSION] });
+    runtime.start();
+    expect(runtime.admits('/usr/bin/cm', `${OLDER}\n`)).toBe(false);
+    expect(statuses.at(-1)).toEqual(TOO_OLD);
+    expect(runtime.isReady()).toBe(false);
+    expect(choice()).toBe('automatic');
+    expect(pruned).toEqual([]);
+  });
+
+  it('runs its own for now, set up first when it isn’t there, and remembers that for this pinned version', async () => {
+    const { runtime, installer, statuses, choice, declined, relocations } = runtimeWith({ chosen: 'automatic' });
+    runtime.start();
+    runtime.admits('/usr/bin/cm', OLDER);
+    runtime.useIncludedForNow();
+    expect(statuses.at(-1)).toMatchObject({ kind: 'installing', firstRun: true });
+    await installer.succeed();
+    expect(runtime.cmPath()).toBe(MANAGED);
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
+    expect(choice()).toBe('automatic');
+    expect(declined()).toBe(VERSION);
+    expect(relocations()).toBeGreaterThan(0);
+  });
+
+  it('runs its own without asking when the user chose it for this pinned version before', () => {
+    const { runtime, statuses, pruned } = runtimeWith({ chosen: 'automatic', installed: [VERSION], declinedFor: VERSION });
+    runtime.start();
+    expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
+    expect(runtime.cmPath()).toBe(MANAGED);
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
+    expect(pruned).toEqual([VERSION]);
+  });
+
+  it('asks again once the pinned version moved past the one the user chose its own for', () => {
+    const { runtime, statuses } = runtimeWith({ chosen: 'automatic', installed: [VERSION], declinedFor: '11.0.16.10000' });
+    runtime.start();
+    runtime.admits('/usr/bin/cm', OLDER);
+    expect(statuses.at(-1)).toEqual(TOO_OLD);
+  });
+
+  it('runs the installed one once Check Again finds it new enough, starting its shells again', async () => {
+    let version = OLDER;
+    const { runtime, statuses, relocations } = runtimeWith({ chosen: 'automatic', installed: [VERSION], versionOf: async () => version });
+    runtime.start();
+    runtime.admits('/usr/bin/cm', OLDER);
+    await runtime.checkInstalledAgain();
+    expect(statuses.at(-1)).toEqual(TOO_OLD);
+    expect(relocations()).toBe(0);
+
+    version = INSTALLED_VERSION;
+    await runtime.checkInstalledAgain();
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(relocations()).toBe(1);
+  });
+
+  it('says which version Check Again found when it’s still too old', async () => {
+    const { runtime, statuses } = runtimeWith({ chosen: 'automatic', installed: [VERSION], versionOf: async () => '11.0.16.9500' });
+    runtime.start();
+    runtime.admits('/usr/bin/cm', OLDER);
+    await runtime.checkInstalledAgain();
+    expect(statuses.at(-1)).toEqual({ ...TOO_OLD, installed: { path: '/usr/bin/cm', version: '11.0.16.9500' } });
+  });
+
+  it('reads the version once for Check Again asked again while it reads', async () => {
+    let reads = 0;
+    const { runtime } = runtimeWith({ chosen: 'automatic', installed: [VERSION], versionOf: async () => (reads++, OLDER) });
+    runtime.admits('/usr/bin/cm', OLDER);
+    await Promise.all([runtime.checkInstalledAgain(), runtime.checkInstalledAgain()]);
+    expect(reads).toBe(1);
+  });
+
+  it('runs its own when Check Again finds none installed any more', async () => {
+    let found: string | null = '/usr/bin/cm';
+    const { runtime, statuses } = runtimeWith({ chosen: 'automatic', installed: [VERSION], findInstalled: () => found });
+    runtime.start();
+    runtime.admits('/usr/bin/cm', OLDER);
+    found = null;
+    await runtime.checkInstalledAgain();
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
+  });
+
+  it('runs the installed one again at the next launch once it’s new enough, without asking', () => {
+    const { runtime } = runtimeWith({ chosen: 'automatic', installed: [VERSION], declinedFor: VERSION });
+    runtime.start();
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(runtime.admits('/usr/bin/cm', INSTALLED_VERSION)).toBe(true);
+    expect(runtime.status()).toEqual({ kind: 'ready', source: 'installed' });
+  });
+
+  it('never runs an older installed one when the user chooses it', async () => {
+    const { runtime, statuses, choice, relocations } = runtimeWith({ installed: [VERSION], versionOf: async () => OLDER });
     runtime.start();
     await runtime.use('installed');
     expect(runtime.cmPath()).toBe(MANAGED);
     expect(choice()).toBe('managed');
     expect(statuses).toEqual([]);
     expect(relocations()).toBe(0);
+  });
+
+  it('asks to update it when the user chose it before and it’s older now', () => {
+    const { runtime, statuses } = runtimeWith({ chosen: 'installed', installed: [VERSION] });
+    runtime.start();
+    expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
+    expect(statuses.at(-1)).toEqual(TOO_OLD);
   });
 
   it('offers no older installed one when its own fails to set up', async () => {
@@ -337,39 +463,24 @@ describe('CmRuntime refusing an installed cm older than its own', () => {
     expect(runtime.status()).toMatchObject({ kind: 'failed', installedCm: null });
   });
 
-  it('admits its own, the environment’s and an installed one as new as its own or newer', () => {
+  it('admits its own, the environment’s and an installed one as new as its own or newer, under either choice', () => {
     expect(runtimeWith({ installed: [VERSION] }).runtime.admits(MANAGED, '11.0.16.1')).toBe(true);
+    expect(runtimeWith({ chosen: 'automatic', findInstalled: () => null, installed: [VERSION] }).runtime.admits(MANAGED, '11.0.16.1')).toBe(true);
     expect(runtimeWith({ environmentPath: '/fake/cm' }).runtime.admits('/fake/cm', '1.0.0.0')).toBe(true);
-    expect(runtimeWith({ chosen: 'installed' }).runtime.admits('/usr/bin/cm', VERSION)).toBe(true);
-    expect(runtimeWith({ chosen: 'installed' }).runtime.admits('/usr/bin/cm', INSTALLED_VERSION)).toBe(true);
+    expect(runtimeWith({ chosen: 'automatic' }).runtime.admits('/usr/bin/cm', VERSION)).toBe(true);
+    expect(runtimeWith({ chosen: 'automatic' }).runtime.admits('/usr/bin/cm', INSTALLED_VERSION)).toBe(true);
   });
 
-  it('runs its own instead of an older installed one chosen before, and saves that', () => {
-    const { runtime, statuses, choice, relocations } = runtimeWith({ chosen: 'installed', installed: [VERSION] });
-    runtime.start();
-    expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
-    expect(runtime.cmPath()).toBe(MANAGED);
-    expect(choice()).toBe('managed');
-    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
-    expect(relocations()).toBe(1);
-  });
-
-  it('sets its own up first when it isn’t there yet', async () => {
-    const { runtime, installer, statuses } = runtimeWith({ chosen: 'installed' });
-    runtime.start();
-    expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
-    expect(runtime.isReady()).toBe(false);
-    expect(statuses.at(-1)).toMatchObject({ kind: 'installing', firstRun: true });
-    await installer.succeed();
-    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'managed' });
-  });
-
-  it('runs nothing where it has no cm of its own (Linux on Arm)', () => {
-    const { runtime, choice } = runtimeWith({ arch: 'arm64' });
-    runtime.start();
-    expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
-    expect(runtime.cmPath()).toBe('/usr/bin/cm');
-    expect(choice()).toBe('managed');
+  it('runs nothing where it has no cm of its own (Linux on Arm), under either choice, naming both versions', () => {
+    for (const chosen of ['automatic', 'managed'] as const) {
+      const { runtime, statuses } = runtimeWith({ arch: 'arm64', chosen });
+      runtime.start();
+      expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
+      expect(runtime.cmPath()).toBe('/usr/bin/cm');
+      expect(statuses).toEqual([{ kind: 'ready', source: 'installed', installedTooOld: { installed: { path: '/usr/bin/cm', version: OLDER }, requiredVersion: VERSION } }]);
+      expect(runtime.admits('/usr/bin/cm', INSTALLED_VERSION)).toBe(true);
+      expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
+    }
   });
 
   it('keeps the user’s last choice when Installed was clicked first and its version answers after', async () => {
@@ -385,7 +496,7 @@ describe('CmRuntime refusing an installed cm older than its own', () => {
   });
 
   it('answers only for the cm running: another one asked before a switch is none of its business', () => {
-    const { runtime } = runtimeWith({ chosen: 'installed' });
+    const { runtime } = runtimeWith({ chosen: 'automatic' });
     expect(runtime.admits('/somewhere/else/cm', OLDER)).toBe(true);
   });
 });

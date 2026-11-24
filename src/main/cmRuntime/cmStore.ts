@@ -49,9 +49,11 @@ function versionOfEntry(name: string): string {
 /**
  * The entries of the store to delete: every version but the pinned one and the newest above it (one an update
  * downloaded to run, kept across restarts until it starts: docs/features/cm-runtime.md "Updates bring their cm"),
- * finished or not. Anything else in the folder is left alone.
+ * finished or not; every version when `pinned` is null, as the installed `cm` runs. Anything else in the folder is left
+ * alone.
  */
-export function storeEntriesToPrune(names: readonly string[], pinned: string): string[] {
+export function storeEntriesToPrune(names: readonly string[], pinned: string | null): string[] {
+  if (pinned === null) return names.filter((name) => VERSION_ENTRY.test(name)).sort();
   const versions = names.filter((name) => VERSION_ENTRY.test(name)).map(versionOfEntry);
   const newer = versions.filter((version) => compareCmVersions(version, pinned) > 0).sort(compareCmVersions);
   const keep = [pinned, ...newer.slice(-1)];
