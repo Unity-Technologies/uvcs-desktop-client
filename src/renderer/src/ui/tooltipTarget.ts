@@ -6,7 +6,7 @@ import type { TooltipSide } from './tooltipPlacement';
 export interface FoundTip extends TipText {
   /** The element the tip is read from: followed while it shows. */
   host: Element;
-  /** `data-tip-side="above"`: an element whose tip mustn't cover what lies under the cursor (a comment's pin). */
+  /** `data-tip-side="above"`: the tip sits on top of its element, off what lies under it (a comment's pin). */
   side?: TooltipSide;
 }
 

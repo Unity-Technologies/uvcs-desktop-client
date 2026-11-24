@@ -10,6 +10,8 @@ interface Tip extends FoundTip {
   /** Pointer position at show time: the tip is anchored to the cursor. */
   pointerX: number;
   pointerY: number;
+  /** The element's box at show time, for a tip that sits on it (`side`). */
+  element?: DOMRectReadOnly;
 }
 
 /** How long the pointer rests on something before its tooltip shows; canvas tooltips wait the same. */
@@ -41,7 +43,7 @@ export function TooltipLayer() {
     };
     const show = (found: FoundTip): void => {
       shownHost.current = found.host;
-      setTip({ ...found, pointerX: pointer.current.x, pointerY: pointer.current.y });
+      setTip({ ...found, pointerX: pointer.current.x, pointerY: pointer.current.y, element: found.side ? found.host.getBoundingClientRect() : undefined });
     };
     const onMove = (event: MouseEvent): void => {
       pointer.current = { x: event.clientX, y: event.clientY };
@@ -99,6 +101,7 @@ export function TooltipLayer() {
         move={tip.move}
         pointerX={tip.pointerX}
         pointerY={tip.pointerY}
+        element={tip.element}
         side={tip.side}
       />
     )

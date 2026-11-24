@@ -946,7 +946,7 @@ knows nothing of reviews, docs/features/diff.md "Comments on images").
   reads over any image; where the thread stands is a mark on it, never a color the image could swallow: an
   Open-colored dot while open, faded once settled, an accent ring around the avatar when selected (a state border,
   then a bubble filled with the state's color, each vanished over an image of that color). Its tooltip opens above
-  it (`data-tip-side`, `placeTooltip`): under the bubble is what the comment is about, which the reader looks at while
+  it, its caret on the bubble wherever the cursor is on it (`data-tip-side`, `placeTooltip`): under the bubble is what the comment is about, which the reader looks at while
   reading it. An area is drawn as the one dragged to write it: a 2 px line in its state's color over a faint wash of
   that color, so the image reads as it is (a 1.5 px line with a light halo was tried and read as a washed-out double
   border over images), and it shows only while its

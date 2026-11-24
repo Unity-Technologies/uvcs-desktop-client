@@ -19,29 +19,32 @@ interface TooltipBubbleProps {
   pointerY: number;
   /** Room for a paragraph (a whole comment) rather than a label. */
   wide?: boolean;
-  /** The side of the cursor it opens on when it fits (`placeTooltip`). */
+  /** The element it's about, to sit on (`side`) instead of by the cursor: a comment's pin. */
+  element?: DOMRectReadOnly;
+  /** The side of its anchor it opens on when it fits (`placeTooltip`). */
   side?: TooltipSide;
 }
 
-/** The look of the app's tooltips: a small plain bubble by the cursor, its caret pointing at it. It never takes the pointer. */
-export function TooltipBubble({ text, sub, shortcut, move, pointerX, pointerY, wide = false, side }: TooltipBubbleProps) {
+/** The look of the app's tooltips: a small plain bubble by the cursor (or on the element it's about), its caret pointing at it. It never takes the pointer. */
+export function TooltipBubble({ text, sub, shortcut, move, pointerX, pointerY, wide = false, element, side }: TooltipBubbleProps) {
   const [placement, setPlacement] = useState<TooltipPlacement | null>(null);
   const tipRef = useRef<HTMLDivElement>(null);
 
   // Placed again whenever its size changes after it showed (a move's lines fitted to it, `PathMoveLines`).
   useLayoutEffect(() => {
-    const element = tipRef.current;
-    if (!element) return;
+    const tooltip = tipRef.current;
+    if (!tooltip) return;
     const place = (): void => {
       // Its laid-out size, not its box on screen, which the pop-in animation scales down while it runs.
-      const bubble = { width: element.offsetWidth, height: element.offsetHeight };
-      setPlacement(placeTooltip({ x: pointerX, y: pointerY }, bubble, { width: window.innerWidth, height: window.innerHeight }, side));
+      const bubble = { width: tooltip.offsetWidth, height: tooltip.offsetHeight };
+      const anchor = element ? { element } : { pointer: { x: pointerX, y: pointerY } };
+      setPlacement(placeTooltip(anchor, bubble, { width: window.innerWidth, height: window.innerHeight }, side));
     };
     place();
     const resizes = new ResizeObserver(place);
-    resizes.observe(element);
+    resizes.observe(tooltip);
     return () => resizes.disconnect();
-  }, [text, sub, shortcut, move, pointerX, pointerY, side]);
+  }, [text, sub, shortcut, move, pointerX, pointerY, element, side]);
 
   return createPortal(
     <div
