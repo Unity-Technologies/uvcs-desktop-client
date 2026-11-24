@@ -12,6 +12,8 @@ import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openPageWindowFromAddress } from './app/pageWindow/openPageWindowFromAddress';
 import { openPlaceFromAddress } from './app/workspace/openPlaceFromAddress';
 import { exposePageZoom } from './app/shell/exposePageZoom';
+import { markReadsInFlight } from './app/markReadsInFlight';
+import { queryClient } from './app/queryClient';
 import { trackPointerReturnFocus } from './lib/inputModality';
 import { WINDOW_CHROME } from './lib/platform';
 import './styles/global.css';
@@ -29,6 +31,7 @@ setTimeout(preloadCommentEditor, 2500);
 
 document.documentElement.dataset.chrome = WINDOW_CHROME;
 exposePageZoom();
+markReadsInFlight(queryClient);
 guardUnloading();
 trackPointerReturnFocus();
 // A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.
