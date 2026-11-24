@@ -1,12 +1,13 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 
 import { queryKeys } from '../../api/queryKeys';
 import { branchReviewsQuery } from '../../features/codeReviews/changeRequests/useChangeRequests';
 import { showQuery, type QueryProbe } from '../../testing/queryProbes';
-import { IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
+import { createQueryClient, IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
 import { affectedByChange, HeldChanges, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
 
 const ws = '/ws';
@@ -183,14 +184,40 @@ describe('affectedByChange', () => {
 describe('localQueryDefaults', () => {
   it('skips the focus refetch of local views only while the watcher sees everything and auto refresh is on', () => {
     expect(localQueryDefaults('pendingChanges', true, 'full').refetchOnWindowFocus).toBe(false);
-    expect(localQueryDefaults('pendingChanges', true, 'partial').refetchOnWindowFocus).toBe(true);
-    expect(localQueryDefaults('pendingChanges', false, 'full').refetchOnWindowFocus).toBe(true);
+    expect(localQueryDefaults('pendingChanges', true, 'partial').refetchOnWindowFocus).toBe('always');
+    expect(localQueryDefaults('pendingChanges', false, 'full').refetchOnWindowFocus).toBe('always');
+  });
+
+  it("re-reads a local view on screen as the window gains focus, however fresh, unless the watcher sees everything: an edit it didn't see shows on return", async () => {
+    const readsOnFocus = async (coverage: WatchCoverage) => {
+      const client = createQueryClient();
+      const key = queryKeys.inWorkspace(ws, 'explorer', 'directory', '');
+      client.setQueryDefaults(queryKeys.inWorkspace(ws, 'explorer'), localQueryDefaults('explorer', true, coverage));
+      const view = await showQuery(client, key);
+      unsubscribers.push(view.hide);
+      const before = view.reads();
+      // What the client does as the window gains focus (`QueryClient.mount`'s focus listener).
+      client.getQueryCache().onFocus();
+      const query = client.getQueryCache().find({ queryKey: key })!;
+      // A read the focus started, awaited: `fetch` joins it rather than starting another.
+      if (query.state.fetchStatus !== 'idle') await query.fetch();
+      return view.reads() - before;
+    };
+    expect(await readsOnFocus('partial')).toBe(1);
+    expect(await readsOnFocus('full')).toBe(0);
   });
 
   it('keeps the workspace info fresh for good while the watcher sees every .plastic rewrite', () => {
     expect(localQueryDefaults('info', false, 'full').staleTime).toBe(Infinity);
-    expect(localQueryDefaults('info', true, 'partial').staleTime).toBeUndefined();
-    expect(localQueryDefaults('pendingChanges', true, 'full').staleTime).toBeUndefined();
+  });
+
+  it("leaves every other local view the app's staleness: a Files listing shown again, or by a second view, isn't read again at once", () => {
+    const client = createQueryClient();
+    const appStaleTime = client.getDefaultOptions().queries?.staleTime;
+    for (const [area, coverage] of [['explorer', 'full'], ['pendingChanges', 'full'], ['info', 'partial']] as const) {
+      client.setQueryDefaults(queryKeys.inWorkspace(ws, area), localQueryDefaults(area, true, coverage));
+      expect([area, client.defaultQueryOptions({ queryKey: queryKeys.inWorkspace(ws, area, 'directory', '') }).staleTime]).toEqual([area, appStaleTime]);
+    }
   });
 });
 
