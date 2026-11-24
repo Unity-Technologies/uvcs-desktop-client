@@ -167,8 +167,7 @@ the update screen instead (`CmUpdateNeeded`, its words from `cmUpdateViewOf`): n
 is false), and the windows wait as they do for a setup.
 
 - **Words**: "Update Unity Version Control", "This app needs a newer version of Unity Version Control on this
-  computer.", both versions on a line of their own (`cmVersionWords`), then "It takes a minute, and your workspaces
-  aren't changed." Never `cm`, command line, installer, bundle or token; the installed one's path, and any error,
+  computer.", both versions on a line of their own (`cmVersionWords`), then "Your workspaces stay as they are." Never `cm`, command line, installer, bundle or token; the installed one's path, and any error,
   only under Details.
 - **Update** (primary) updates it with its own installer ("Updating the installed one"): the installer downloads in the
   background as soon as the screen shows (`cmRuntime.prepareUpdate`, a line under the buttons says how far: "Downloading
@@ -217,7 +216,8 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
 3. **The latest version** (`lastVersionUrl`, `parseLastVersion`): `GET
    https://www.plasticscm.com/api/lastversion/after/<installed>/for/<edition>/<platform>` answers JSON (`version`,
    `installerUri`, `downloadLink`, …) or `null` when nothing is newer. The installer is `installerUri`, or
-   `downloadLink` with `/download/` → `/download/downloadinstaller/`; it redirects to the file on Unity's CDN. A version
+   `downloadLink` with `/download/` → `/download/downloadinstaller/`; it redirects to the file on Unity's CDN. Only an
+   https address is taken, or one on the site asked (a local fake while developing). A version
    still below the pin is a failure (`noUpdate`), never installed.
 4. **Download** (`downloadBundle` with no SHA-256: Electron's `net`, so the system's proxy; resumed, its length checked)
    into the `update` folder beside the app's own `cm` store (`officialUpdateFolder`), named `installerFileName`
@@ -264,7 +264,8 @@ install --only-upgrade <package>`, `sudo dnf upgrade <package>` or `sudo zypper 
 **Settings**: the installed card, when it's too old, has an Update link (only where `updatesBy` is `installer`: none
 on Linux) that runs the same update, the
 card saying how far it is ("Downloading the update… 42%", "Updating… Your computer may ask for permission.") or
-"Couldn't update it." with the reason in its tip and Try Again.
+"Couldn't update it." with the reason in plain words in its tip (the error only on the update screen's Details) and
+Try Again.
 
 **Seeing every state without a real installer** (development builds only; a packaged app ignores
 `UVCS_FAKE_OFFICIAL_UPDATE`, so nothing there can skip the signature check):

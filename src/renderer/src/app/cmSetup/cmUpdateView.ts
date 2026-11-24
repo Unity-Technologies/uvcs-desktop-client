@@ -120,7 +120,7 @@ export function cmUpdateViewOf(status: CmTooOld, check: CmUpdateCheck): CmUpdate
     title: TITLE,
     body: BODY,
     versions: installedAndNeededText(installed.version, requiredVersion),
-    hint: 'It takes a minute, and your workspaces aren’t changed.',
+    hint: 'Your workspaces stay as they are.',
     updateLabel: UPDATE_LABEL,
     includedLabel: USE_INCLUDED_FOR_NOW_LABEL,
     background: backgroundLine(update),
