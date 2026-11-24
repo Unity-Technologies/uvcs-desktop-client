@@ -283,7 +283,7 @@ export class CmClient {
    * Holds every command while the installed `cm` is updated (docs/features/cm-runtime.md "Updating the installed
    * one"). From now on no command starts a process or a shell; the commands already running end first, in a shell or a
    * process of their own, along with those queued for a shell, and then the shells end, as they hold `cm`'s files open
-   * and the Windows installer stops while `cm` runs. Settles then, with the function that resumes commands: what was
+   * and the Windows installer stops while `cm` runs. Settles once their processes exited, with the function that resumes commands: what was
    * asked meanwhile runs on the `cm` the update left, and the shells of the directories windows show start again. A
    * command its caller cancels while it waits never runs. Holds add up: commands run once every one is resumed.
    */
@@ -306,7 +306,7 @@ export class CmClient {
       held.resume();
     };
     await this.commandsEnded();
-    this.shellPool.endSessions();
+    await this.shellPool.endSessions();
     return resume;
   }
 

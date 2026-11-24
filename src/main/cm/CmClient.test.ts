@@ -156,7 +156,7 @@ describe('CmClient routing', () => {
       isReady: true,
       start: async () => undefined,
       run: async () => (ranIn.push(cwd), { output: '', exitCode: 0 }),
-      dispose: () => undefined,
+      dispose: async () => undefined,
     });
     const runProcess = async () => ({ output: '', exitCode: 0 });
     const cm = new CmClient(() => CM_PATH, OUTSIDE_WORKSPACES, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
