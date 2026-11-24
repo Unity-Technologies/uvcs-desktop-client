@@ -74,7 +74,7 @@ export const readDiffEntry: ReadRecord<DiffEntry> = ([
     itemType,
     ...sidesOf(status, baseRevisionId, revisionId),
     repository,
-    date: revisionDate(unquoted(quotedDate)),
+    date: madeARevision(status, baseRevisionId) ? revisionDate(unquoted(quotedDate)) : undefined,
   };
   if (!onlyPermissionsChanged(status, itemType, baseRevisionId, revisionId)) return entry;
   return { ...entry, permissionsChange: permissionsChange(unquoted(quotedPermissionsBefore), unquoted(quotedPermissionsAfter)) };
@@ -96,6 +96,16 @@ function sidesOf(status: DiffStatus, baseRevisionId: number, revisionId: number)
  */
 function onlyPermissionsChanged(status: DiffStatus, itemType: DiffEntry['itemType'], baseRevisionId: number, revisionId: number): boolean {
   return status === 'changed' && itemType !== 'xlink' && baseRevisionId === -1 && revisionId !== -1;
+}
+
+/**
+ * Whether the change made the revision `cm` dates: an added item, or one whose content changed (it has a base). A
+ * deleted item's date is its last revision's, and a pure move's or a change of permissions alone's is the one revision
+ * it already had: all from before the change, so a list sorted by date would put a file deleted in the newest
+ * changeset among the oldest. They get no date, and go last, as a deleted file does in Changes.
+ */
+function madeARevision(status: DiffStatus, baseRevisionId: number): boolean {
+  return status === 'added' || (status !== 'deleted' && baseRevisionId !== -1);
 }
 
 /**
