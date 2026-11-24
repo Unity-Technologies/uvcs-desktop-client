@@ -412,8 +412,18 @@ export class CmRuntime {
       installed,
       neededVersion,
       download: (onProgress) => officialUpdate.downloadAhead(installed, neededVersion, onProgress),
-      install: () => officialUpdate.install(installed, neededVersion),
+      install: () => this.installAhead(installed, neededVersion),
     };
+  }
+
+  /**
+   * Restart & Install of an app update that needs a newer installed `cm`: runs the installer downloaded ahead, unless the
+   * installed one, read again now, already meets `neededVersion` (updated meanwhile, from Settings or another way).
+   */
+  private async installAhead(downloadedFor: InstalledCm, neededVersion: string): Promise<boolean> {
+    const installed = await this.installedCm();
+    if (installed && meetsCmVersion(installed.version, neededVersion)) return true;
+    return this.options.officialUpdate.install(installed ?? downloadedFor, neededVersion);
   }
 
   /** The `cm` installed on the computer, with its version; null when none is found or it doesn't run. */

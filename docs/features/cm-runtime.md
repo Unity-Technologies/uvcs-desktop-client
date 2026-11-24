@@ -283,7 +283,8 @@ running (`CmPrefetch`):
   progress (`OfficialClientUpdate.downloadAhead`, the latest version of its edition, at the update's pin or newer). The
   update card says so ("This update also updates the Unity Version Control installed on this computer.", with
   `cmVersionWords`' "Installed: … · Needed: … or later" under it: `installedCmNoteOf`, the status's `installedCm`).
-  "Restart & Install" waits for the operations changing a workspace, then runs that installer as Update does
+  "Restart & Install" waits for the operations changing a workspace, reads the installed version again (one updated
+  meanwhile needs no installer: `CmRuntime.installAhead`), then runs that installer as Update does
   ("Updating the installed one", steps 5 to 7: the signature, `CmClient` held, the permission asked, the version read
   again), the card saying "Updating the Unity Version Control installed on this computer…" (`waitingToInstall` with
   `waitingFor: 'installedCm'`, `waitingCardOf`), and then restarts into the new version. Declined, failed or not
