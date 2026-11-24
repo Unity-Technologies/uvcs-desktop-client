@@ -83,9 +83,10 @@ function Root() {
   useForgetLeftPlace(place);
   const cm = useCmAvailability();
   const cmSource = useCmRuntimeStore((state) => (state.status.kind === 'ready' ? state.status.source : 'managed'));
+  const installedTooOld = useCmRuntimeStore((state) => (state.status.kind === 'ready' ? state.status.installedTooOld : undefined));
   const setup = useSetupCheck(cm.isSuccess);
 
-  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} source={cmSource} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
+  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} cm={{ source: cmSource, installedTooOld }} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
   // The app shows meanwhile: the check is local and takes a moment. A server out of reach never stops the app: the
   // open workspace's server is checked apart (`ConnectionProblemCard`, and `SignInCover` for a sign-in it needs), and
   // the home screen asks no server at all.

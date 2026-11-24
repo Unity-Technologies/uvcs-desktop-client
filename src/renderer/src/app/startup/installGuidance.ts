@@ -8,10 +8,15 @@ export interface InstallGuidance {
   command: string;
 }
 
-/** Unity's documented setup (install-uvcs-on-linux): the key in its own keyring, named by `signed-by` (`apt-key` is gone). */
+/**
+ * Unity's documented setup for Debian and Ubuntu (install-uvcs-on-linux): its repository at uvcs.unity3d.com, whose key
+ * goes in its own keyring, named by `signed-by` (`apt-key` is gone). The older plasticscm.com repository is one the
+ * docs now say to remove.
+ */
 const LINUX_COMMAND = [
-  'wget -qO - https://www.plasticscm.com/plasticrepo/stable/ubuntu/Release.key | gpg --dearmor | sudo tee /usr/share/keyrings/plasticscm-stable.gpg > /dev/null',
-  'echo "deb [signed-by=/usr/share/keyrings/plasticscm-stable.gpg] https://www.plasticscm.com/plasticrepo/stable/ubuntu ./" | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list',
+  'sudo install -d /etc/apt/keyrings',
+  'wget -O - https://uvcs.unity3d.com/linux/keys/public | sudo gpg --dearmor -o /etc/apt/keyrings/uvcs.gpg',
+  'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/uvcs.gpg] https://uvcs.unity3d.com/linux/repos/deb stable main" | sudo tee /etc/apt/sources.list.d/uvcs.list',
   'sudo apt-get update && sudo apt-get install plasticscm-client-core',
 ].join('\n');
 
@@ -22,7 +27,8 @@ export function installGuidance(platform: string): InstallGuidance {
       return {
         downloadLabel: 'Download for macOS',
         commandNote: 'Prefer the terminal? With Homebrew:',
-        command: 'brew install --cask plasticscm-cloud-edition',
+        // Homebrew renamed the cask from plasticscm-cloud-edition.
+        command: 'brew install --cask unity-version-control',
       };
     case 'win32':
       return {

@@ -26,7 +26,9 @@ export function aboutUpdateLine(status: UpdateStatus): AboutUpdateLine {
         ? { text: `Version ${status.version} is ready to install.`, tone: 'accent', busy: false }
         : { text: `Version ${status.version} is downloaded. Open its installer to finish.`, tone: 'accent', busy: false };
     case 'waitingToInstall':
-      return { text: `Version ${status.version} installs once the operation finishes.`, tone: 'accent', busy: true };
+      return status.waitingFor === 'operation'
+        ? { text: `Version ${status.version} installs once the operation finishes.`, tone: 'accent', busy: true }
+        : { text: `Updating the Unity Version Control installed on this computer, then version ${status.version} installs.`, tone: 'accent', busy: true };
     case 'failed':
       return { text: `Couldn't check for updates: ${status.error}`, tone: 'error', busy: false };
     case 'unavailable':

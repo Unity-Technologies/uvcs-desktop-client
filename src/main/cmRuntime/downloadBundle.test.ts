@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmInstallFailureOf } from './cmInstallFailure';
-import { downloadBundle, STALL_TIMEOUT_MS } from './downloadBundle';
+import { downloadBundle, type Fetch, STALL_TIMEOUT_MS } from './downloadBundle';
 import { fakeBundleSite, sha256Of } from './testing/fakeBundleSite';
 
 const URL = 'https://downloads.example/11.0.16.10659/client-linux.tar.gz';
@@ -102,5 +102,37 @@ describe('downloadBundle', () => {
     const site = fakeBundleSite({ [URL]: BUNDLE }, { status: 407 });
     const download = downloadBundle({ fetch: site.fetch, url: URL, partialPath: await partialPath(), sha256: sha256Of(BUNDLE), onProgress: () => undefined });
     await expect(download.catch(cmInstallFailureOf)).resolves.toBe('proxyAuthentication');
+  });
+
+  it('stops when its caller cancels it, failing as cancelled rather than as the network', async () => {
+    const cancel = new AbortController();
+    // Never answers; rejects once aborted, or at once when asked aborted, as Electron's `net.fetch` does.
+    const hanging: Fetch = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        if (init.signal?.aborted) reject(init.signal.reason);
+        init.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+      });
+    const download = downloadBundle({ fetch: hanging, url: URL, partialPath: await partialPath(), sha256: null, onProgress: () => undefined, signal: cancel.signal });
+    cancel.abort();
+    await expect(download).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  describe('without a SHA-256 (the official installer, whose signature is checked instead)', () => {
+    it('downloads the file and resumes what an earlier attempt left', async () => {
+      const site = fakeBundleSite({ [URL]: BUNDLE });
+      const path = await partialPath();
+      await writeFile(path, BUNDLE.subarray(0, 9));
+      await downloadBundle({ fetch: site.fetch, url: URL, partialPath: path, sha256: null, onProgress: () => undefined });
+      expect(await readFile(path)).toEqual(Buffer.from(BUNDLE));
+      expect(site.requests).toEqual([`GET ${URL} bytes=9-`]);
+    });
+
+    it('fails as unreachable, keeping what arrived to resume, when the body ends short of its length', async () => {
+      const site = fakeBundleSite({ [URL]: BUNDLE }, { endsAfter: 8 });
+      const path = await partialPath();
+      const download = downloadBundle({ fetch: site.fetch, url: URL, partialPath: path, sha256: null, onProgress: () => undefined });
+      await expect(download.catch(cmInstallFailureOf)).resolves.toBe('unreachable');
+      expect((await readFile(path)).length).toBe(8);
+    });
   });
 });

@@ -6,6 +6,9 @@
  *   npm run cm:check            downloads the pinned bundles again and fails when one changed or is gone: the Release
  *                               workflow runs it before building, and the cm bundles workflow every day
  *
+ * Both also fail unless the official installers of every edition, on Windows and both Macs, are published at that
+ * version or newer (`unpublishedInstallers`): the update screen's Update installs one of them.
+ *
  * The bundles are 45-130 MB each: both take a minute or two.
  */
 import { spawnSync } from 'node:child_process';
@@ -26,6 +29,8 @@ import {
   type CmVersionPin,
 } from '../../src/main/cmRuntime/cmBundles.ts';
 import { tarPath } from '../../src/main/cmRuntime/tarPath.ts';
+import { OFFICIAL_SITE } from '../../src/main/cmRuntime/officialUpdate/officialRelease.ts';
+import { installerQuestions, unpublishedInstallers } from './cmInstallersPublished.ts';
 
 const PIN_FILE = resolve(import.meta.dirname, '../../cm-version.json');
 
@@ -92,8 +97,23 @@ function checkRunsHere(pin: CmVersionPin, folder: string): void {
   console.log(`cm version: ${printed}`);
 }
 
+/** Asks the download site for every edition's latest installer; fails unless each is `version` or newer. */
+async function checkInstallersPublished(version: string): Promise<void> {
+  const answers = await Promise.all(
+    installerQuestions(OFFICIAL_SITE, version).map(async (question) => {
+      const response = await fetch(question.url, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`${question.url}: HTTP ${response.status}`);
+      return { ...question, body: await response.text() };
+    }),
+  );
+  const unpublished = unpublishedInstallers(version, answers);
+  if (unpublished.length > 0) throw new Error(`The official installers don't have ${version} yet:\n${unpublished.join('\n')}`);
+  console.log(`The official installers have ${version} or newer.`);
+}
+
 async function bump(version: string | undefined): Promise<void> {
   if (!version || !CM_VERSION_FORMAT.test(version)) throw new Error('Usage: npm run cm:bump <version>, like 11.0.16.10659');
+  await checkInstallersPublished(version);
   const folder = mkdtempSync(join(tmpdir(), 'cm-bump-'));
   try {
     const pin = pinOf(version, await downloadBundles(version, folder));
@@ -109,6 +129,7 @@ async function check(): Promise<void> {
   const pin = JSON.parse(readFileSync(PIN_FILE, 'utf8')) as CmVersionPin;
   const problems = pinProblems(pin);
   if (problems.length > 0) throw new Error(`cm-version.json: ${problems.join('; ')}`);
+  await checkInstallersPublished(pin.version);
   const folder = mkdtempSync(join(tmpdir(), 'cm-check-'));
   try {
     const changed = changedBundles(pin, await downloadBundles(pin.version, folder));

@@ -34,10 +34,17 @@ describe('aboutUpdateAction', () => {
   });
 
   it('waits, with a spinner and its button off, while an operation finishes before installing', () => {
-    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart' } as const;
+    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'operation' } as const;
 
     expect(aboutUpdateLine(waiting)).toEqual({ text: 'Version 1.2.0 installs once the operation finishes.', tone: 'accent', busy: true });
     expect(aboutUpdateAction(waiting)).toEqual({ kind: 'install', label: 'Restart & Install', enabled: false });
+  });
+
+  it('waits, with a spinner and its button off, while the installed Unity Version Control’s installer runs first', () => {
+    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'installedCm' } as const;
+
+    expect(aboutUpdateLine(waiting)).toEqual({ text: 'Updating the Unity Version Control installed on this computer, then version 1.2.0 installs.', tone: 'accent', busy: true });
+    expect(aboutUpdateAction(waiting)).toMatchObject({ enabled: false });
   });
 
   it('checks, except while a check or download is under way or in a development build', () => {

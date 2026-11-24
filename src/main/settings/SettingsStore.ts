@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { storedGravatarChoice } from '@shared/domain/gravatarChoice';
+import { storedCmChoice } from '@shared/domain/storedCmChoice';
 import { withRecentComment } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { replaceFileSync } from '../files/replaceFileSync';
@@ -80,6 +81,7 @@ export class SettingsStore {
         ...stored,
         pendingChanges: { ...DEFAULT_SETTINGS.pendingChanges, ...stored.pendingChanges },
         ...storedGravatarChoice(stored),
+        ...storedCmChoice(stored),
       };
     } catch {
       this.keepAside();

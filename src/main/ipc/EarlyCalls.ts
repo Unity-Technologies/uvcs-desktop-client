@@ -48,6 +48,14 @@ export class EarlyCalls {
     this.schedule(() => this.answers.get(key) === answer && this.answers.delete(key), EARLY_ANSWER_MS);
   }
 
+  /**
+   * Drops every answer not taken yet: another `cm` runs (`CmRuntime`'s `relocated`), so each was read from the one
+   * before. A window that left the update screen within seconds would otherwise take that `cm`'s version as its own.
+   */
+  dropAll(): void {
+    this.answers.clear();
+  }
+
   /** The answer of the early call with this method and arguments, once; undefined when there is none. */
   take(method: string, args: unknown[]): Promise<unknown> | undefined {
     const key = callKey(method, args);

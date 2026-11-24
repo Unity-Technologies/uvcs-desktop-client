@@ -8,13 +8,28 @@ export type UpdateStatus =
   | { state: 'idle' }
   | { state: 'checking' }
   | { state: 'upToDate' }
-  | { state: 'downloading'; version: string; percent: number }
-  | { state: 'ready'; version: string; install: 'restart' | 'installer' }
-  /** The user asked to install while an operation changes a workspace: it installs once that finishes. */
-  | { state: 'waitingToInstall'; version: string; install: 'restart' | 'installer' }
+  | { state: 'downloading'; version: string; percent: number; installedCm?: InstalledCmUpdate }
+  | { state: 'ready'; version: string; install: 'restart' | 'installer'; installedCm?: InstalledCmUpdate }
+  /**
+   * The user asked to install, and it waits: for an operation changing a workspace to finish (`operation`), or for the
+   * installed Unity Version Control's installer, run first (`installedCm`).
+   */
+  | { state: 'waitingToInstall'; version: string; install: 'restart' | 'installer'; waitingFor: 'operation' | 'installedCm'; installedCm?: InstalledCmUpdate }
   | { state: 'failed'; error: string }
   /** A development build, which has no update feed. */
   | { state: 'unavailable' };
+
+/**
+ * The installed Unity Version Control, which runs, is older than the update needs (docs/features/cm-runtime.md "Updates
+ * bring their cm"): its installer downloads with the update and runs before the restart (`installer`), or, on Linux,
+ * the user updates it with a command after the restart (`command`).
+ */
+export interface InstalledCmUpdate {
+  installedVersion: string;
+  /** The `cm` version the update pins: the oldest it runs. */
+  neededVersion: string;
+  by: 'installer' | 'command';
+}
 
 /**
  * What changed in one release: its notes on GitHub, as GitHub renders them (HTML, from the releases feed that

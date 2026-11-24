@@ -39,24 +39,28 @@ type Answer = (options?: CmProcessOptions) => CmResult;
 const doneAnswer: Answer = (options) => ({ output: options?.input ? 'done\nCommandResult 0\n' : 'done\n', exitCode: 0 });
 
 /** A `CmClient` over fake runners: every process and shell command is recorded and answered with `answer`. */
-function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = doneAnswer, outsideWorkspaces = OUTSIDE_WORKSPACES } = {}) {
+function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = doneAnswer, outsideWorkspaces = OUTSIDE_WORKSPACES, answerLater = false } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
   const shellReadings: (OutputReading | undefined)[] = [];
-  const pools: { cmPath: string; disposed: boolean; restarted: boolean; shown: string[]; warmed: string[]; released: string[] }[] = [];
+  const pools: { cmPath: string; disposed: boolean; restarted: boolean; ended: number; ending: Promise<void>; shownWarmedAgain: number; shown: string[]; warmed: string[]; released: string[] }[] = [];
+  /** With `answerLater`, the commands running, each answered when the test calls `answerRunning`. */
+  const running: (() => void)[] = [];
+  // An answer that throws (a stopped session) rejects, as the real runners do.
+  const answered = <T>(result: () => T): Promise<T> => new Promise((resolve) => (answerLater ? running.push(() => resolve(result())) : resolve(result())));
   const runners: CmRunners = {
-    runProcess: async (cmPath, args, options) => {
+    runProcess: (cmPath, args, options) => {
       processes.push({ cmPath, args, options });
-      return printed(answer(options), options.reading);
+      return answered(() => printed(answer(options), options.reading));
     },
     createShellPool: (cmPath) => {
-      const pool = { cmPath, disposed: false, restarted: false, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
+      const pool = { cmPath, disposed: false, restarted: false, ended: 0, ending: Promise.resolve(), shownWarmedAgain: 0, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
       pools.push(pool);
       return {
-        run: async (cwd, args, reading) => {
+        run: (cwd, args, reading) => {
           shellCommands.push({ cwd, args });
           shellReadings.push(reading);
-          return printed(answer(), reading);
+          return answered(() => printed(answer(), reading));
         },
         isReady: () => warm,
         shownDirectory: () => pool.shown.find((cwd) => !pool.released.includes(cwd)),
@@ -65,13 +69,19 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
         release: (cwd) => void pool.released.push(cwd),
         disposeAll: () => void (pool.disposed = true),
         restartSessions: () => void (pool.restarted = true),
+        endSessions: () => {
+          pool.ended++;
+          return pool.ending;
+        },
+        warmUpShown: () => void pool.shownWarmedAgain++,
       };
     },
   };
   const cm = new CmClient(() => CM_PATH, outsideWorkspaces, platform, runners);
   const logged: CommandLogEntry[] = [];
   cm.onCommandLogged((entry) => logged.push(entry));
-  return { cm, processes, shellCommands, shellReadings, pools, logged };
+  const answerRunning = (): void => running.splice(0).forEach((answerOne) => answerOne());
+  return { cm, processes, shellCommands, shellReadings, pools, logged, answerRunning };
 }
 
 /** What a runner gives for a command that printed `result.output`: streamed, its reader reads it, and the rest is its output. */
@@ -146,7 +156,7 @@ describe('CmClient routing', () => {
       isReady: true,
       start: async () => undefined,
       run: async () => (ranIn.push(cwd), { output: '', exitCode: 0 }),
-      dispose: () => undefined,
+      dispose: async () => undefined,
     });
     const runProcess = async () => ({ output: '', exitCode: 0 });
     const cm = new CmClient(() => CM_PATH, OUTSIDE_WORKSPACES, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
@@ -688,7 +698,7 @@ describe('CmClient sessions', () => {
       createShellPool: (cmPath) => {
         const pool = { cmPath, disposed: false };
         pools.push(pool);
-        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true), restartSessions: vi.fn() };
+        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true), restartSessions: vi.fn(), endSessions: async () => undefined, warmUpShown: vi.fn() };
       },
     });
 
@@ -705,6 +715,16 @@ describe('CmClient sessions', () => {
     ]);
     expect(cm.executable).toBe(locations[0]);
     expect(processes).toEqual([locations[0]]);
+  });
+
+  it('starts its sessions again once the cm at the same path was replaced by an update, and only then', () => {
+    const { cm, pools } = fakeClient();
+
+    cm.relocate();
+    expect(pools).toMatchObject([{ restarted: false, disposed: false }]);
+
+    cm.relocate({ replaced: true });
+    expect(pools).toMatchObject([{ cmPath: CM_PATH, restarted: true, disposed: false }]);
   });
 
   it('ends every session on dispose', () => {
@@ -777,6 +797,125 @@ const STICKY = [
   '--UserName=ana',
   '--server',
 ];
+
+describe('CmClient held while Unity Version Control updates', () => {
+  /** Runs every callback already due, promises and their follow-ups: a held command must still not have started after them. */
+  function settle(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+  }
+
+  it('ends its shells, starts nothing while held, and runs what waited once resumed, starting the shown shells again', async () => {
+    const { cm, pools, processes, shellCommands } = fakeClient();
+    const resume = (await cm.hold())!;
+    expect(pools[0]).toMatchObject({ ended: 1, disposed: false });
+
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
+    const operation = cm.execute(['update'], { cwd: WORKSPACE });
+    const records = cm.queryRecords(['find', 'branch', '--format={name}#'], (fields) => fields, { cwd: WORKSPACE });
+    cm.warmUp(WORKSPACE);
+    cm.show(WORKSPACE);
+    await settle();
+    expect({ processes, shellCommands, warmed: pools[0]!.warmed, shown: pools[0]!.shown }).toEqual({ processes: [], shellCommands: [], warmed: [], shown: [] });
+
+    resume();
+    await expect(query).resolves.toBe('done\n');
+    await operation;
+    await records;
+    expect(shellCommands.map((command) => command.args[0])).toEqual(['status', 'find']);
+    // The update, a `cm shell` of its own.
+    expect(processes).toHaveLength(1);
+    expect(pools[0]).toMatchObject({ shown: [WORKSPACE], shownWarmedAgain: 1 });
+  });
+
+  it('lets the commands already running end first, queued shell commands too, and only then ends the shells', async () => {
+    const { cm, pools, answerRunning } = fakeClient({ answerLater: true });
+    const inFlight = cm.query(['status', '--header'], { cwd: WORKSPACE });
+    const queued = cm.query(['whoami'], { cwd: WORKSPACE });
+    await settle();
+
+    let holding = false;
+    const held = cm.hold().then((resume) => ((holding = true), resume));
+    await settle();
+    expect({ holding, ended: pools[0]!.ended }).toEqual({ holding: false, ended: 0 });
+
+    answerRunning();
+    await expect(inFlight).resolves.toBe('done\n');
+    await expect(queued).resolves.toBe('done\n');
+    const resume = await held;
+    expect(pools[0]!.ended).toBe(1);
+    resume!();
+  });
+
+  it('holds nothing while an operation runs in a process of its own, which may never end: it says so at once', async () => {
+    const { cm, pools, shellCommands } = fakeClient({ answerLater: true });
+    // Never answered: an operation stuck on the server.
+    void cm.execute(['update'], { cwd: WORKSPACE });
+    await settle();
+
+    await expect(cm.hold()).resolves.toBeNull();
+    expect(pools[0]!.ended).toBe(0);
+    void cm.query(['status', '--header'], { cwd: WORKSPACE });
+    await settle();
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('settles only once its shells’ processes ended, as they hold the files the installer replaces', async () => {
+    const { cm, pools } = fakeClient();
+    let closed = (): void => undefined;
+    pools[0]!.ending = new Promise((resolve) => (closed = resolve));
+    let holding = false;
+    const held = cm.hold().then((resume) => ((holding = true), resume));
+    await settle();
+    expect({ holding, ended: pools[0]!.ended }).toEqual({ holding: false, ended: 1 });
+
+    closed();
+    (await held)!();
+  });
+
+  it('fails a held command whose time ran out as a running one does: an error of its own, logged', async () => {
+    const { cm, logged } = fakeClient();
+    const resume = (await cm.hold())!;
+    const timer = new AbortController();
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE, signal: timer.signal });
+
+    timer.abort(new DOMException('No answer in time', 'TimeoutError'));
+    const error = await query.then(() => undefined, (caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(DOMException);
+    expect((error as Error).message).toBe('The cm command took too long and was stopped.');
+    expect(logged).toMatchObject([{ commandLine: 'cm status --header', exitCode: -1 }]);
+    resume();
+  });
+
+  it('stays held until every hold is resumed, each resume counting once', async () => {
+    const { cm, shellCommands } = fakeClient();
+    const first = (await cm.hold())!;
+    const second = (await cm.hold())!;
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
+
+    first();
+    first();
+    await settle();
+    expect(shellCommands).toEqual([]);
+
+    second();
+    await query;
+    expect(shellCommands).toHaveLength(1);
+  });
+
+  it('gives up a held command its caller cancels, which never runs', async () => {
+    const { cm, processes } = fakeClient();
+    const resume = (await cm.hold())!;
+    const cancel = new AbortController();
+    const operation = cm.execute(['update'], { cwd: WORKSPACE, signal: cancel.signal });
+
+    cancel.abort();
+    await expect(operation).rejects.toMatchObject({ name: 'AbortError' });
+    resume();
+    await settle();
+    expect(processes).toEqual([]);
+  });
+});
 
 describe('CmClient options that stick to a cm shell', () => {
   it.each(STICKY)('refuses a quick command carrying %s before any shell runs it', async (option) => {

@@ -2,7 +2,7 @@ import { Download, RefreshCw, Settings2 } from 'lucide-react';
 import type { SetupProblem } from '@shared/domain/setup';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
-import { OutputBlock } from '../../ui/OutputBlock';
+import { FoldedOutput } from '../../ui/FoldedOutput';
 import { ScreenMessage } from '../../ui/ScreenMessage';
 import { cmCommandLine } from './cmCommandLine';
 import { CopyableCommand } from './CopyableCommand';
@@ -42,7 +42,7 @@ export function SetupProblemScreen({ problem, checking, onRetry }: SetupProblemS
       footer={
         <>
           <CopyableCommand note={window.uvcs.platform === 'win32' ? 'Or set it up in PowerShell:' : 'Or set it up in a terminal:'} command={cmCommandLine(problem.cmPath, 'configure', window.uvcs.platform)} />
-          <OutputBlock output={`$ ${problem.commandLine}\n${problem.output}`} />
+          <FoldedOutput output={`$ ${problem.commandLine}\n${problem.output}`} />
         </>
       }
     >

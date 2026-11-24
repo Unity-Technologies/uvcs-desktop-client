@@ -40,6 +40,13 @@ const TAIL_LENGTH = MAX_PROMPT_LENGTH + 1;
  * next queued commands as answers, so a stalled prompt or a timeout kills the process: the
  * running command fails and the queued ones continue on a fresh process.
  */
+/**
+ * How long a session asked to exit may take before it's killed (`dispose`): `exit` ends a `cm shell` at once, but one
+ * stuck on a command or a prompt never reads it, and the installed `cm`'s update waits for every session to end
+ * (`CmClient.hold`).
+ */
+export const SHELL_EXIT_TIMEOUT_MS = 3_000;
+
 export class CmShellSession {
   private process: ChildProcessWithoutNullStreams | null = null;
   private readonly queue: PendingCommand[] = [];
@@ -93,13 +100,33 @@ export class CmShellSession {
     });
   }
 
-  dispose(): void {
-    this.process?.stdin.end('exit\n');
+  /**
+   * Ends the session: its commands fail, and its process is asked to exit, then killed if it hasn't within
+   * `SHELL_EXIT_TIMEOUT_MS`. Settles once the process closed (at once when none runs).
+   */
+  dispose(): Promise<void> {
+    const child = this.process;
+    const closed = child ? this.exited(child) : Promise.resolve();
+    child?.stdin.end('exit\n');
     this.process = null;
     this.clearTimers();
     const pending = [...(this.running ? [this.running] : []), ...this.queue.splice(0)];
     this.running = null;
     pending.forEach((command) => command.reject(new Error('cm shell session was closed')));
+    return closed;
+  }
+
+  /** Settles once `child` closed, killing it if it hasn't within `SHELL_EXIT_TIMEOUT_MS` of being asked to exit. */
+  private exited(child: ChildProcessWithoutNullStreams): Promise<void> {
+    return new Promise((resolve) => {
+      const kill = setTimeout(() => this.guarded(() => child.kill('SIGKILL')), SHELL_EXIT_TIMEOUT_MS);
+      // Waiting for a session to exit is no reason to keep the app running.
+      kill.unref?.();
+      child.once('close', () => {
+        clearTimeout(kill);
+        resolve();
+      });
+    });
   }
 
   private runNext(): void {
