@@ -780,12 +780,14 @@ reads the platform (`pierreReadsMac`), so Replace opens from the menu on a Mac p
 **Find in the code.** ⌘F (Ctrl+F) in a text diff finds text in one of its sides. The side typed into has Pierre's search
 panel, which takes the key first; every other side (both sides of a committed diff) has the app's own bar over the
 diff's top right corner (`useCodeFind`, `CodeFindBar`, every decision in `codeFind`). A click in the code and
-⌘F search the side clicked, from the line clicked (`sideToFind`, `firstMatchFrom`): the older version or the newer one,
+⌘F search the side clicked, from the line clicked (`findOpening`, `firstMatchFrom`): the older version or the newer one,
 which the field's placeholder names ("Find in the older version"); a diff of one side searches it. ⌘F there never
 reaches the view's filter of files. Find in the code's menu opens it on the side right-clicked. It takes the text
 literally, ignoring case unless "Match case" is on, whole words only with "Match whole words" (`findInText`), and keeps at
-most `MAX_MATCHES` matches ("1 of 10,000+"). Enter and Shift+Enter step through them, going round at either end, and
-Esc closes the bar, the diff taking the keys again. Every match on screen is marked in `--bg-match`, the one shown in
+most `MAX_MATCHES` matches ("1 of 10,000+"), those from the line clicked on, going round from the top. ⌘F with the
+focus on the diff rather than in its editor (after Esc, a click on a line number) still opens the editor's panel on the
+side typed into, so one side never has two searches. Enter and Shift+Enter step through them, going round at either end, and
+Esc closes the bar, the diff taking the keys again (`findBarKeyAction`). Every match on screen is marked in `--bg-match`, the one shown in
 `--bg-match-current`, with the browser's highlights over Pierre's rows (`useWordMarks`, finding unchanged lines' rows
 too: `sideLineRowSelector`, which reads a unified diff's unchanged line by its older number, `data-alt-line`). The match
 shown is scrolled to only when it isn't in view (`rowNeedsScroll`), unfolding the collapsed lines that hold it, and a
