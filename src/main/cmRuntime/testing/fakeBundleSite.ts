@@ -16,6 +16,8 @@ export interface FakeBundleSiteOptions {
   error?: Error;
   /** Sends this many bytes, then nothing more, the connection left open until the request is aborted. */
   stallsAfter?: number;
+  /** Sends this many bytes, then ends the body as if whole, though its length said more: a connection cut cleanly. */
+  endsAfter?: number;
 }
 
 /** The SHA-256 of some bytes, as the pin holds it. */
@@ -39,7 +41,7 @@ export function fakeBundleSite(files: Record<string, Uint8Array>, options: FakeB
     const start = range && options.honorsRanges !== false ? Number(/bytes=(\d+)-/.exec(range)?.[1] ?? 0) : 0;
     if (start >= file.length && start > 0) return new Response(null, { status: 416 });
     const body = file.subarray(start);
-    const sent = options.stallsAfter === undefined ? body : body.subarray(0, options.stallsAfter);
+    const sent = body.subarray(0, options.stallsAfter ?? options.endsAfter ?? body.length);
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         for (let offset = 0; offset < sent.length; offset += chunkSize) controller.enqueue(sent.subarray(offset, offset + chunkSize));

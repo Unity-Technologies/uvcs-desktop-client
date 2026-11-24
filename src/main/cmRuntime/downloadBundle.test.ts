@@ -103,4 +103,23 @@ describe('downloadBundle', () => {
     const download = downloadBundle({ fetch: site.fetch, url: URL, partialPath: await partialPath(), sha256: sha256Of(BUNDLE), onProgress: () => undefined });
     await expect(download.catch(cmInstallFailureOf)).resolves.toBe('proxyAuthentication');
   });
+
+  describe('without a SHA-256 (the official installer, whose signature is checked instead)', () => {
+    it('downloads the file and resumes what an earlier attempt left', async () => {
+      const site = fakeBundleSite({ [URL]: BUNDLE });
+      const path = await partialPath();
+      await writeFile(path, BUNDLE.subarray(0, 9));
+      await downloadBundle({ fetch: site.fetch, url: URL, partialPath: path, sha256: null, onProgress: () => undefined });
+      expect(await readFile(path)).toEqual(Buffer.from(BUNDLE));
+      expect(site.requests).toEqual([`GET ${URL} bytes=9-`]);
+    });
+
+    it('fails as unreachable, keeping what arrived to resume, when the body ends short of its length', async () => {
+      const site = fakeBundleSite({ [URL]: BUNDLE }, { endsAfter: 8 });
+      const path = await partialPath();
+      const download = downloadBundle({ fetch: site.fetch, url: URL, partialPath: path, sha256: null, onProgress: () => undefined });
+      await expect(download.catch(cmInstallFailureOf)).resolves.toBe('unreachable');
+      expect((await readFile(path)).length).toBe(8);
+    });
+  });
 });
