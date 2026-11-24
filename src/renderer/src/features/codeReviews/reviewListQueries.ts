@@ -26,9 +26,11 @@ export function namedReviewListQuery(client: QueryClient, place: Place, filter: 
   return {
     queryKey: queryKeys.inPlace(place, 'codeReviews', filter),
     queryFn: async (): Promise<CodeReview[]> => {
-      // A refresh starts every shown query's read in one pass (`refetchQueries`), which cancels and starts again a read
-      // under way: waiting for the pass to end lets this list join the count's read of the summaries, where starting
-      // one first would have the count's pass cancel it and send a second `cm find review`.
+      // A refresh starts every shown query's read in one synchronous pass (`refetchQueries`, `cancelRefetch: true`),
+      // and TanStack Query calls a query function synchronously inside `query.fetch`. Started at once, this list's read
+      // of the summaries would come first whenever its query sits ahead of the count's in the cache, and the count's
+      // refetch would then cancel and restart it: a second `cm find review`. Waiting for the pass to end lets it join
+      // the count's read instead. The two "reads the reviews once on a refresh" tests guard it, in both orders.
       await endOfRefetchPass();
       const summaries = await client.fetchQuery(reviewListSummariesQuery(place, filter));
       const branchIds = branchTargetIdsOf(summaries);
