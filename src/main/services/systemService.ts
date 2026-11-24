@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { normalize } from 'node:path';
 import { app, dialog, net, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
+import { installedAndNeededText } from '@shared/domain/cmVersionWords';
 import { showsGravatar } from '@shared/domain/gravatarChoice';
 import { checkSetup } from '../cm/setupCheck';
 import { cmFoundText } from '../diagnostics/logRecords';
@@ -55,7 +56,7 @@ export function createSystemService({ cm, cmRuntime, operations, windows, settin
     // The app's own runs instead (`CmRuntime.admits` relocated `cm` to it), when it's there; one still setting up shows
     // the setup screen meanwhile, as the update screen shows while the installed one waits for its update.
     if (cm.executable !== executable && cmRuntime.isReady()) return cmVersion();
-    throw new Error(`The installed Unity Version Control is version ${answer}. This app needs version ${cmRuntime.pinnedVersion} or later.`);
+    throw new Error(`The installed Unity Version Control is older than this app needs. ${installedAndNeededText(answer, cmRuntime.pinnedVersion)}`);
   };
   const setupProblem = untilSucceeded(() => checkSetup(profiles, cm.executable), (problem) => problem === null);
 

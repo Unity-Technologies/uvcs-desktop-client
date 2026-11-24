@@ -472,13 +472,15 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(runtimeWith({ chosen: 'automatic' }).runtime.admits('/usr/bin/cm', INSTALLED_VERSION)).toBe(true);
   });
 
-  it('runs nothing where it has no cm of its own (Linux on Arm), under either choice', () => {
+  it('runs nothing where it has no cm of its own (Linux on Arm), under either choice, naming both versions', () => {
     for (const chosen of ['automatic', 'managed'] as const) {
       const { runtime, statuses } = runtimeWith({ arch: 'arm64', chosen });
       runtime.start();
       expect(runtime.admits('/usr/bin/cm', OLDER)).toBe(false);
       expect(runtime.cmPath()).toBe('/usr/bin/cm');
-      expect(statuses).toEqual([]);
+      expect(statuses).toEqual([{ kind: 'ready', source: 'installed', installedTooOld: { installed: { path: '/usr/bin/cm', version: OLDER }, requiredVersion: VERSION } }]);
+      expect(runtime.admits('/usr/bin/cm', INSTALLED_VERSION)).toBe(true);
+      expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
     }
   });
 

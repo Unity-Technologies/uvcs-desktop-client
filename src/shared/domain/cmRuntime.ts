@@ -56,7 +56,16 @@ export type CmRuntimeStatus =
    * `cm` can run; its version is what `system.cmVersion` answers. While the installed one runs, the app's own may be
    * downloading to replace it (Settings' choice): the installed one keeps running until that's done.
    */
-  | { kind: 'ready'; source: CmSource; switchingToOwn?: OwnCmSwitch }
+  | {
+      kind: 'ready';
+      source: CmSource;
+      switchingToOwn?: OwnCmSwitch;
+      /**
+       * Where the app has no `cm` of its own (Linux on Arm), the installed one, older than the pinned version, which
+       * nothing then runs: `CmUnavailableScreen` names both versions.
+       */
+      installedTooOld?: { installed: InstalledCm; requiredVersion: string };
+    }
   | {
       kind: 'installing';
       version: string;

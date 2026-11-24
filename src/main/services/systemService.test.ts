@@ -115,14 +115,14 @@ describe('the cm version of an installed cm older than the app’s own', () => {
   it('fails, naming both versions, while the app’s own sets up or where it has none', async () => {
     const { service } = system({ version: '11.0.16.9000\n' }, {}, fakeCmRuntime({ admits: () => false, isReady: () => false }));
 
-    await expect(service.cmVersion()).rejects.toThrow('The installed Unity Version Control is version 11.0.16.9000. This app needs version 11.0.16.10659 or later.');
+    await expect(service.cmVersion()).rejects.toThrow('The installed Unity Version Control is older than this app needs. Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later');
   });
 
   it('asks again on Check Again, as the user may have updated it', async () => {
     let answer = '11.0.16.9000\n';
     const { service, lines } = system({ version: () => answer }, {}, fakeCmRuntime({ admits: (_executable, version) => version !== '11.0.16.9000', isReady: () => false }));
 
-    await expect(service.cmVersion()).rejects.toThrow('version 11.0.16.9000');
+    await expect(service.cmVersion()).rejects.toThrow('Installed: 11.0.16.9000');
     answer = '11.0.16.10700\n';
 
     expect(await service.cmVersion()).toBe('11.0.16.10700');

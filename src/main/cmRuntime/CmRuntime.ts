@@ -89,6 +89,8 @@ export class CmRuntime {
   private updateNeeded: InstalledCm | null = null;
   /** The installed `cm` this launch found older than the pinned version, passed over for the app's own. */
   private refusedInstalledPath: string | null = null;
+  /** Where the app has no `cm` of its own, the installed one, too old to run: nothing runs (`admits`). */
+  private unrunnable: InstalledCm | null = null;
   /** Check Again reading the installed `cm`'s version (`checkInstalledAgain`): asks while it does join it. */
   private checkingInstalled: Promise<void> | null = null;
 
@@ -135,7 +137,15 @@ export class CmRuntime {
 
   status(): CmRuntimeStatus {
     if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion };
-    if (this.isReady()) return this.switchingToOwn ? { kind: 'ready', source: this.chosen.source, switchingToOwn: this.switchingToOwn } : { kind: 'ready', source: this.chosen.source };
+    if (this.isReady()) {
+      const { switchingToOwn, unrunnable } = this;
+      return {
+        kind: 'ready',
+        source: this.chosen.source,
+        ...(switchingToOwn && { switchingToOwn }),
+        ...(unrunnable && { installedTooOld: { installed: unrunnable, requiredVersion: this.pinnedVersion } }),
+      };
+    }
     return this.progress ?? this.installingStatus({ phase: 'downloading', receivedBytes: 0, totalBytes: null });
   }
 
@@ -236,11 +246,20 @@ export class CmRuntime {
   admits(executable: string, version: string): boolean {
     if (this.chosen.source !== 'installed' || executable !== this.chosen.path) return true;
     if (meetsCmVersion(version, this.pinnedVersion)) {
+      this.setUnrunnable(null);
       this.pruneOnce();
       return true;
     }
-    if (this.hasOwnCm()) this.refuse({ path: executable, version: version.trim() });
+    const installed = { path: executable, version: version.trim() };
+    if (this.hasOwnCm()) this.refuse(installed);
+    else this.setUnrunnable(installed);
     return false;
+  }
+
+  private setUnrunnable(installed: InstalledCm | null): void {
+    if (installed?.version === this.unrunnable?.version && installed?.path === this.unrunnable?.path) return;
+    this.unrunnable = installed;
+    this.announce();
   }
 
   /**
