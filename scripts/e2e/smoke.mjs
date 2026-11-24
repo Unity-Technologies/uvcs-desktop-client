@@ -20,6 +20,11 @@ const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync']
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 const VIEWPORT = { width: 1400, height: 880 };
+/**
+ * A screenshot of every step locally, for a person or an agent to look at; on CI only the failed step's, the only one
+ * the job keeps (its artifact is uploaded when it fails): taking each costs about a tenth of the run.
+ */
+const SHOTS_OF_EVERY_STEP = process.env.CI !== 'true';
 
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
@@ -149,7 +154,7 @@ function stillLoading(loading) {
 async function step(name, run) {
   try {
     await run();
-    await screenshot(name.toLowerCase().replaceAll(' ', '-'));
+    if (SHOTS_OF_EVERY_STEP) await screenshot(name.toLowerCase().replaceAll(' ', '-'));
     console.log(`ok    ${name}`);
   } catch (error) {
     // Playwright's call log, under the message's first line, says what the step was doing when it gave up: a run that

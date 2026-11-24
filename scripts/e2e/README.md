@@ -21,7 +21,7 @@ to the profile pictures question that wasn't saved. Beyond those and the larger 
 that things appear, never pixels or copy.
 About 15 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
 runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
-in `UVCS_E2E_SHOTS` when set. A run empties its own folder as it starts, never the one around it. A failed step also
+in `UVCS_E2E_SHOTS` when set; on CI (`CI=true`) only a failed step's, the one the job keeps. A run empties its own folder as it starts, never the one around it. A failed step also
 prints Playwright's call log, what it was waiting for when it gave up, and a view that never settles names each
 element still loading (`stillLoading`): a run that fails now and then can be read only from its output.
 
