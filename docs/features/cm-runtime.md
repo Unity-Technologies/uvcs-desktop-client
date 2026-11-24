@@ -225,7 +225,8 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
    address a redirect ended at. Other files there (an older version's) are deleted. The folder is deleted once it
    installed, and once nothing needs it (`OfficialClientUpdate.discard`): "Use the Included Version for Now" stops the
    download in the background, and a launch where a `cm` runs deletes what an earlier one left (`CmRuntime.pruneOnce`);
-   one an app update downloaded for Restart & Install stays. The Windows uninstaller removes it with the store, but not
+   one an app update downloaded for Restart & Install stays for this launch. Development builds share the folder with
+   the packaged app, as they share the store, so they only stop their own download (`discardDeletes`). The Windows uninstaller removes it with the store, but not
    on an update (`installer.nsh`). macOS's zip is unpacked with the system's `tar` (`unpackBundle`) to its one `.pkg`.
 5. **Signature**, checked on the click, right before it runs (no checksum is published; `installerSignature.ts`):
    Windows, `Get-AuthenticodeSignature` through System32's PowerShell (`authenticodeCheck`; its scripts go with

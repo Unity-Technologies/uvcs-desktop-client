@@ -37,6 +37,11 @@ export interface OfficialClientUpdateOptions {
   fetch: Fetch;
   /** Where the installer downloads: a folder of the app's own, emptied once it's installed. */
   folder: string;
+  /**
+   * Whether dropping the update deletes the folder (`discard`): packaged builds. Development builds share it with the
+   * packaged app, as they share the `cm` store, and only stop their own download.
+   */
+  discardDeletes: boolean;
   /** The edition of the installation a `cm` belongs to (`officialEditionOf`, its links resolved). */
   editionOf: (cmPath: string) => OfficialEdition;
   tools: OfficialUpdateTools;
@@ -166,7 +171,7 @@ export class OfficialClientUpdate {
   /**
    * Nothing needs the update any more: the user runs the included version for now, or a launch found none needed. A
    * download in the background stops, and the folder it downloads into is deleted, along with what an earlier launch
-   * left there. An update the user asked to install, or one an app update downloaded for Restart & Install, stays.
+   * left there (packaged builds only: `discardDeletes`). An update the user asked to install, or one an app update downloaded for Restart & Install, stays.
    */
   async discard(): Promise<void> {
     if (this.isWanted()) return;
@@ -189,7 +194,7 @@ export class OfficialClientUpdate {
     // Asked for again while it stopped: a download started since (`preparing`) waits for this drop, then keeps its file.
     if (this.isWanted() || this.preparing !== null) return;
     this.ready = null;
-    await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
+    if (this.options.discardDeletes) await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
     if (this.current && this.current.kind !== 'byCommand') this.set(null);
   }
 
