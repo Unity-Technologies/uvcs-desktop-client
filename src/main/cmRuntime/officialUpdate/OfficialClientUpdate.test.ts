@@ -54,9 +54,11 @@ interface Setup {
   versionAfter?: string;
   /** An operation runs in Unity Version Control: `CmClient` holds nothing (`holdCm` settles with null). */
   operationRuns?: boolean;
+  /** False in a development build, sharing the folder with the packaged app: a drop deletes nothing. */
+  discardDeletes?: boolean;
 }
 
-async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694', operationRuns = false }: Setup = {}) {
+async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694', operationRuns = false, discardDeletes = true }: Setup = {}) {
   const folder = join(await mkdtemp(join(tmpdir(), 'official-update-')), 'update');
   const calls: string[] = [];
   const states: (OfficialUpdate | null)[] = [];
@@ -74,6 +76,7 @@ async function setup({ site = fakeSite(), platform = 'windows', verdict = { trus
     site: SITE,
     fetch: site.fetch,
     folder,
+    discardDeletes,
     editionOf: () => 'cloud',
     tools,
     holdCm: async () => {
@@ -290,6 +293,14 @@ describe('OfficialClientUpdate', () => {
       await writeFile(join(folder, FILE), 'old');
       await update.discard();
       expect(existsSync(folder)).toBe(false);
+    });
+
+    it('in a development build, which shares the folder with the packaged app, stops only its own download and deletes nothing', async () => {
+      const { update, folder } = await setup({ discardDeletes: false });
+      await mkdir(folder, { recursive: true });
+      await writeFile(join(folder, FILE), 'the packaged app’s');
+      await update.discard();
+      expect(await readdir(folder)).toEqual([FILE]);
     });
 
     it('keeps an installer an app update downloaded for Restart & Install', async () => {
