@@ -5,7 +5,7 @@ import styles from './SettingsDialog.module.css';
 interface SettingsChoiceProps {
   icon: ReactNode;
   label: string;
-  /** One line under the label; cut to fit. */
+  /** One line under the label, cut to fit; a warning wraps instead. */
   description: string;
   /** The description's tooltip, e.g. a path cut off, or the rule a choice follows. */
   tip?: string;
@@ -26,7 +26,8 @@ export function SettingsChoice({ icon, label, description, tip, selected, onSele
       {icon}
       <span className={styles.choiceText}>
         <span className={styles.choiceLabel}>{label}</span>
-        <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={tip} data-warning={warning || undefined}>
+        {/* A warning wraps: cut, it would hide the version it asks for. */}
+        <span className={warning ? styles.choiceDescription : `${styles.choiceDescription} ${styles.oneLine}`} data-tip={tip} data-warning={warning || undefined}>
           {description}
         </span>
       </span>
