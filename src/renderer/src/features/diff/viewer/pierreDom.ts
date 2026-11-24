@@ -32,12 +32,19 @@ export function isTypingIn(container: Element | null | undefined): boolean {
 }
 
 /**
- * Whether the editor in `container` has focus: its text, or its search panel (`data-search-panel`, which Pierre's
- * editor draws in the same shadow root), whose keys are the editor's too.
+ * Whether a key was pressed in a field of the app's own over the code (a review comment written by a line, which Pierre
+ * shows among its rows): its keys are its own, never the code's. Pierre's own content is in its shadow root, so its
+ * keys come from its host (`diffs-container`).
  */
+export function typedOutsideCode(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement) || target.tagName === 'DIFFS-CONTAINER') return false;
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
+/** Whether the editor in `container` has focus: its text is being typed into. */
 export function editorHasFocusIn(container: Element | null | undefined): boolean {
   const focused = pierreShadowRoot(container)?.activeElement;
-  return focused instanceof HTMLElement && (focused.isContentEditable || focused.closest('[data-search-panel]') !== null);
+  return focused instanceof HTMLElement && focused.isContentEditable;
 }
 
 /** The `data-line-type` of a changed line's rows. */
@@ -54,11 +61,12 @@ export function lineRowSelector(line: ChangedLine): string {
  * Selects the content row of any line of a side, unchanged lines too (`lineRowSelector` selects changed lines only).
  * Side by side, a side's rows are in its pane (`data-deletions`, `data-additions`), numbered as that side numbers them.
  * Unified (`data-unified`), an unchanged line shows once, numbered as the newer side numbers it (`data-line`), the older
- * side's number beside it (`data-alt-line`); its type is `context`, or `context-expanded` once unfolded.
+ * side's number beside it (`data-alt-line`); its type is `context`, or `context-expanded` once unfolded. A whole file
+ * Pierre shows alone (its `File`: a merge's hand-editing, a diff's whole-file editor) is `data-file`, the newer side.
  */
 export function sideLineRowSelector({ side, lineNumber }: ChangedLine): string {
   const line = `[data-line="${lineNumber}"][data-line-type]`;
-  if (side === 'additions') return `[data-additions] ${line}, [data-unified] ${line}:not([data-line-type="change-deletion"])`;
+  if (side === 'additions') return `[data-additions] ${line}, [data-unified] ${line}:not([data-line-type="change-deletion"]), [data-file] ${line}`;
   return `[data-deletions] ${line}, [data-unified] ${line}[data-line-type="change-deletion"], [data-unified] [data-line-type^="context"][data-alt-line="${lineNumber}"]`;
 }
 
