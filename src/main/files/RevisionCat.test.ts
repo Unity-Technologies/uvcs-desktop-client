@@ -48,13 +48,17 @@ function heldCat(answer: typeof SERVER = SERVER) {
   };
 }
 
-/** `folder`: a long one makes command lines fill with fewer revisions. */
 /**
  * The quick backlog the tests that pass it run with (`maxQuickBacklog`): each read writes a file, and dozens of them
- * take seconds on a slow Windows runner, where a test fails at five.
+ * take seconds on a slow Windows runner, where a test fails at five. Past `MAX_QUICK_CAT`, so a backlog past it still
+ * takes more than one quick `cm cat`.
  */
-const SMALL_BACKLOG = 6;
+const SMALL_BACKLOG = MAX_QUICK_CAT + 2;
 
+/**
+ * `longFolder`: a long one makes command lines fill with fewer revisions. `maxQuickBacklog`: `SMALL_BACKLOG` keeps a
+ * test past it quick.
+ */
 async function setUp(answer: CmAnswer = SERVER, { longFolder = false, maxQuickBacklog = MAX_QUICK_BACKLOG } = {}) {
   const base = await mkdtemp(join(tmpdir(), 'revision-cat-'));
   const folder = longFolder ? join(base, 'f'.repeat(200)) : base;
@@ -221,8 +225,8 @@ describe('RevisionCat', () => {
     flush();
     const results = await Promise.allSettled(reads);
     expect(results.filter((result) => result.status === 'rejected')).toEqual([{ status: 'rejected', reason: expect.objectContaining({ message: 'Incorrect object specification' }) }]);
-    // The batch, then two halves at each halving: never a command each.
-    expect(fake.commands.length).toBeLessThanOrEqual(1 + 2 * Math.ceil(Math.log2(SMALL_BACKLOG + 1)));
+    // The batch, then the half holding the failure halved again until it stands alone: never a command each.
+    expect(readsPerCommand(fake).map(([, reads]) => reads)).toEqual([SMALL_BACKLOG + 1, 4, 3, 2, 1, 1, 1]);
   });
 
   it('fails the reads of a cm cat that failed for them all (a dropped connection) after trying its halves once, never one by one', async () => {
