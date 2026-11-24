@@ -12,7 +12,7 @@ there, while the production build, which ships, runs each effect once. Each run 
 (from the home screen: its views, a file found by name and a changeset's diff) and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
 `Loading` (what shows only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton
-until it shows again), any `cm` command the fake couldn't answer, a step that sent the same server command twice
+until it shows again), any `cm` command the fake couldn't answer, a step that sent the same command line twice from the same folder
 ("Duplicate server commands" below), and an answer to the profile pictures question that wasn't
 saved. Beyond that answer and the larger editor being on top, it asserts only that things appear, never pixels or copy.
 About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
@@ -60,18 +60,26 @@ docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn
 
 ## Duplicate server commands
 
-A step ends once its reads did (`readsSettled`): the page marks itself while its query client reads or changes
-anything (`<html data-reading>`, `markReadsInFlight`), and the step waits for the mark to clear and stay clear two
-frames later, when what the last answer showed has asked for what it needs. Each step writes its start to the fake's
-log, so every command logged belongs to the step that sent it. After a clean run, the same server command (same
-arguments, same folder; local commands per `needsServer` left out) sent twice within one step fails the run, naming
-the step and the command (`duplicateReport`, `scripts/build/duplicateServerCommands.mts`, with its tests). A step that
-reads again on purpose names what does (`step(name, run, { rereads: 'Refresh' })`), and its commands aren't checked.
+The rule: the same command line, sent twice from the same folder, within one step, fails the run. Local commands are
+left out (`needsServer`, held to the app's `needsSignIn` by its tests), and so is the incoming check (`isIncomingCheck`),
+the one read on a timer: its poll and its check as the window gains focus may run in any step, twice in one. The
+logic is a module with its own tests (`duplicateReport`, `scripts/build/duplicateServerCommands.mts`); the smoke test
+only writes each step's start into the fake's log, collects it, and reports, naming the step and the command.
 
-`KNOWN_DUPLICATES` lists the duplicates still on `main`, each matched by how its command line starts, with the issue
-and the change that removes it. One that no longer happens prints a warning without failing, so that change can merge
-before or after the line goes; remove the line then. Never add a line to get a new duplicate through: fix it, or name
-the issue that will.
+A step ends once its reads did (`readsSettled`): the page marks itself while its query client reads or changes
+anything, or a selection waits to settle before it reads (`<html data-reading>`, `markReadsInFlight`, `settleTimeout`),
+and the step waits for the mark to clear and stay clear two frames later, when what the last answer showed has asked
+for what it needs. A step waits so on every window it opened, before closing it, and the commands of all its windows
+count together. A step that reads again on purpose names what does (`step(name, run, { rereads: 'Check again' })`),
+and its commands aren't checked.
+
+What it can't see: two reads of the same data written as different command lines (another `--format`, another
+condition), and reads that start outside the query client and its settle waits, which may land in the next step.
+
+`KNOWN_DUPLICATES` lists the duplicates still on `main`, each by its step and how its command line starts, with the
+issue and the change that removes it; it allows that duplicate in that step only. One that no longer happens prints a
+warning without failing, so that change can merge before or after the line goes; remove the line then. Never add a
+line to get a new duplicate through: fix it, or name the issue that will.
 
 ## The fake `cm` (`fakeCm/`)
 
