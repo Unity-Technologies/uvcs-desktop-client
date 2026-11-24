@@ -105,8 +105,8 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
   const shownSide = onlySide ?? side;
   const replaceable = canReplace(shownSide, typedInto);
   const text = textOf(shownSide);
-  // Searched again as the text typed into changes, when typing pauses: a big file's search and marks cost more than a
-  // keystroke should.
+  // Searched in a render after each keystroke shows, which further typing can skip: a big file's search and marks
+  // never hold up the text typed.
   const searched = useDeferredValue(text);
   const found = useMemo(
     () => (open ? findInText(searched, query, options, MAX_MATCHES, startLine) : { matches: NO_MATCHES, capped: false }),
@@ -138,19 +138,23 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
     };
   }, [open, root, shownSide]);
 
-  // The match shown comes into view when the search moves to another: a step, a query, an option, a replacement. Not
-  // when typing moves it (a line typed above it): the view stays with the caret.
+  // The match shown comes into view when an action of the search asks (opening it, a step, the text searched for, an
+  // option, a replacement), never because typing moved it (a line typed above it): the view stays with the caret. A
+  // replacement asks for the match after it, which shows once the text typed into has changed (`afterMatch`).
   const matchKey = shownMatch && `${shownSide}:${shownMatch.line}:${shownMatch.start}:${shownMatch.end}`;
-  const revealAfterEdit = useRef(false);
-  const lastSearched = useRef(searched);
+  const revealAsked = useRef<{ afterMatch: string | null } | null>(null);
+  const [revealCount, setRevealCount] = useState(0);
+  const askReveal = (afterMatch: string | null = null): void => {
+    revealAsked.current = { afterMatch };
+    setRevealCount((count) => count + 1);
+  };
   useEffect(() => {
-    const typed = lastSearched.current !== searched;
-    lastSearched.current = searched;
+    const asked = revealAsked.current;
+    if (!asked || (asked.afterMatch !== null && shownMatch && asked.afterMatch === matchKey)) return;
+    revealAsked.current = null;
     const container = containerRef.current;
-    if (!container || !shownMatch || (typed && !revealAfterEdit.current)) return;
-    revealAfterEdit.current = false;
-    bringIntoView(container, shownSide, shownMatch, latest.current.scrollTo);
-  }, [matchKey]);
+    if (container && shownMatch) bringIntoView(container, shownSide, shownMatch, latest.current.scrollTo);
+  }, [matchKey, revealCount]);
 
   /**
    * Opens the search on `on` (a side right-clicked), else the side last pressed (`findOpening`), replacing too where
@@ -163,6 +167,7 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
     setStartLine(opening.from?.line ?? 1);
     setMode(wanted === 'replace' && canReplace(onlySide ?? opening.side, typedInto) ? 'replace' : 'find');
     setOpen(true);
+    askReveal();
     // The field is there once React shows the bar.
     requestAnimationFrame(() => {
       inputRef.current?.focus();
@@ -194,7 +199,7 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
     if (index === null) return;
     const [edit] = replaceEdits(text, [now.matches[index]!], query, options, replacement);
     if (!applyEdits([edit!])) return;
-    revealAfterEdit.current = true;
+    askReveal(matchKey);
     setFrom(placeAfterReplace(edit!));
   };
 
@@ -205,6 +210,7 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
     if (next === null) return;
     const match = found.matches[next]!;
     setFrom({ line: match.line, character: match.start });
+    askReveal();
   };
 
   /** Remembers the row pressed: its side is the one ⌘F searches, from its line. */
@@ -237,7 +243,10 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
         inputRef,
         right,
         query,
-        setQuery,
+        setQuery: (typed: string) => {
+          setQuery(typed);
+          askReveal();
+        },
         replacing: mode === 'replace' && replaceable,
         toggleReplace: replaceable ? () => setMode(mode === 'replace' ? 'find' : 'replace') : null,
         showReplace: () => replaceable && setMode('replace'),
@@ -246,7 +255,10 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor,
         replace,
         replaceAll,
         options,
-        setOptions,
+        setOptions: (picked: FindOptions) => {
+          setOptions(picked);
+          askReveal();
+        },
         countWords: matchCountWords(current, found),
         hasMatches: found.matches.length > 0,
         step,

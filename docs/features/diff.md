@@ -806,7 +806,8 @@ Find and Replace in the code's menu open it on the side right-clicked.
   match shown is scrolled to when the search moves to another (a step, the text searched for, an option, a
   replacement), never because typing moved it, and only when it isn't in view (`rowNeedsScroll`), unfolding the
   collapsed lines that hold it; a long line scrolls sideways to it (`sidewaysScrollBy`). The text typed into is searched
-  again once typing pauses (`useDeferredValue`), so a big file's search doesn't slow each keystroke.
+  again in a render after each keystroke shows, which further typing can skip (`useDeferredValue`), so a big file's
+  search never holds up the text typed.
 
 Pierre's search panel (`SearchPanelWidget`) wasn't reused: it isn't exported, runs on its editor's text document, which
 a read-only side doesn't have, and its look is its own. Copying its styles and icons was tried and dropped: they'd have

@@ -128,8 +128,8 @@ export const SHORTCUTS = {
   // Shift+Enter in its field, and ⌘G and ⇧⌘G from anywhere in the code on macOS, F3 and Shift+F3 elsewhere, where
   // Ctrl+G is Go to line.
   textFind: { area: 'Text', label: 'Find in the code', keys: ['mod+f'] },
-  textFindNext: { area: 'Text', label: 'Next match', keys: ['enter', 'mod+g'], keysOffMac: ['enter', 'f3'] },
-  textFindPrevious: { area: 'Text', label: 'Previous match', keys: ['shift+enter', 'mod+shift+g'], keysOffMac: ['shift+enter', 'shift+f3'] },
+  textFindNext: { area: 'Text', label: 'Next match (Enter in the search box)', keys: ['enter', 'mod+g'], keysOffMac: ['enter', 'f3'] },
+  textFindPrevious: { area: 'Text', label: 'Previous match (Shift+Enter in the search box)', keys: ['shift+enter', 'mod+shift+g'], keysOffMac: ['shift+enter', 'shift+f3'] },
   textCloseFind: { area: 'Text', label: 'Close the search box', keys: ['escape'] },
   textReplace: { area: 'Text', label: 'Find and replace in the text being typed', keys: ['mod+alt+f'], keysOffMac: ['mod+h'] },
   // ⌃G on macOS, as in other editors there: ⌘G is Find next.
@@ -151,8 +151,8 @@ export const SHORTCUTS = {
   commentFocusMode: { area: 'Comments', label: 'Write in a larger editor, and back', keys: ['mod+shift+f'], scope: 'commentField' },
 
   graphFind: { area: 'Branch Explorer', label: 'Find in graph', keys: ['mod+f', '/'] },
-  graphNextMatch: { area: 'Branch Explorer', label: 'Next match', keys: ['enter'] },
-  graphPreviousMatch: { area: 'Branch Explorer', label: 'Previous match', keys: ['shift+enter'] },
+  graphNextMatch: { area: 'Branch Explorer', label: 'Next match (Enter in the search box)', keys: ['enter'] },
+  graphPreviousMatch: { area: 'Branch Explorer', label: 'Previous match (Shift+Enter in the search box)', keys: ['shift+enter'] },
   graphClearFind: { area: 'Branch Explorer', label: 'Clear the search', keys: ['escape'] },
   graphLeaveFind: { area: 'Branch Explorer', label: 'Back to the graph from an empty search', keys: ['escape'] },
   graphWalk: { area: 'Branch Explorer', label: 'Walk the changesets', keys: ['left', 'right', 'up', 'down'] },
