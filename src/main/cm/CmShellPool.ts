@@ -133,6 +133,20 @@ export class CmShellPool {
     }
   }
 
+  /**
+   * Ends every session now, keeping which directories windows show, for `warmUpShown`: the installed `cm` is about to be
+   * replaced, and its sessions hold its files open (`CmClient.hold`, which first lets their commands end).
+   */
+  endSessions(): void {
+    for (const directory of this.directories.values()) this.disposeDirectory(directory);
+    this.directories.clear();
+  }
+
+  /** Starts the sessions of the directories windows show: after `endSessions`, on the `cm` that replaced the one before. */
+  warmUpShown(): void {
+    for (const cwd of this.shown.keys()) this.warmUp(cwd);
+  }
+
   disposeAll(): void {
     [...this.shown.keys()].forEach((cwd) => this.forgetShown(cwd));
     for (const directory of this.directories.values()) this.disposeDirectory(directory);

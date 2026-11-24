@@ -221,12 +221,13 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
    (`pkgutilCheck`) must say it's signed for distribution by a certificate Apple issued, notarized, and by a Developer
    ID Installer of `MAC_INSTALLER_TEAMS` (`Codice Software (BQ7R3Y4J72)`). Those are the signers of 11.0.16.10694's
    installers. Any other answer deletes the download (`notSigned`).
-6. **Run** (`installerCommands.ts`) with `CmClient` held (`CmClient.hold`): its shells end, as they hold `cm`'s files
-   and the Windows installer stops while `cm` runs, and no command starts a process or a shell until the installer
-   ended and the version was read again. A command asked meanwhile (from Settings, a view refreshing) waits, then runs
-   on the `cm` the installer left; one its caller cancels while it waits never runs. A command already running in a
-   process of its own goes on: an app update waits for the operations changing a workspace first ("Updates bring their
-   cm"). Then: Windows starts the installer elevated, so Windows asks for
+6. **Run** (`installerCommands.ts`) with `CmClient` held (`CmClient.hold`): from the click on, no command starts a
+   process or a shell until the installer ended and the version was read again. The commands already running end
+   first, in a shell or a process of their own (an operation too: the installer starts once it's done), along with
+   those queued for a shell; then the shells end, as they hold `cm`'s files and the Windows installer stops while
+   `cm` runs. A command asked meanwhile (from Settings, a view refreshing) waits, then runs on the `cm` the installer
+   left, and the shells of the workspaces the windows show start again (`CmShellPool.warmUpShown`); one its caller
+   cancels while it waits never runs. Then: Windows starts the installer elevated, so Windows asks for
    permission, unattended with its own small dialogs (`--mode unattended --unattendedmodeui minimalWithDialogs`),
    without the official client's option that starts it once done, and waits for it (`windowsInstallerRun`: .NET's
    `Process.Start` with the `runas` verb, so a declined prompt ends with Windows' `ERROR_CANCELLED`,

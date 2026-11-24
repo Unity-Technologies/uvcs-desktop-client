@@ -74,7 +74,7 @@ async function setup({ site = fakeSite(), platform = 'windows', verdict = { trus
     folder,
     editionOf: () => 'cloud',
     tools,
-    holdCm: () => {
+    holdCm: async () => {
       calls.push('hold cm');
       return () => calls.push('resume cm');
     },

@@ -64,7 +64,7 @@ interface Placed {
 export type CmRecordsOptions = Omit<CmRunOptions, 'onOutputLine'>;
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
-type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll' | 'restartSessions'>;
+type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll' | 'restartSessions' | 'endSessions' | 'warmUpShown'>;
 
 /** What `CmClient` runs commands with: a process of their own, and pooled `cm shell` sessions. Tests pass fakes. */
 export interface CmRunners {
@@ -121,6 +121,8 @@ export class CmClient {
   private signInGate: SignInGate | null = null;
   /** While the installed `cm` is updated (`hold`): what waits to start, and how many holds are still on. */
   private held: { holds: number; resumed: Promise<void>; resume: () => void; deferred: (() => void)[] } | null = null;
+  /** The commands running, in a shell or a process, until each ends: what a hold lets end first (`hold`). */
+  private readonly running = new Set<Promise<unknown>>();
 
   /**
    * `locate` finds the `cm` executable; it runs again on `relocate()`. `outsideWorkspaces` is an empty folder of the
@@ -279,12 +281,13 @@ export class CmClient {
 
   /**
    * Holds every command while the installed `cm` is updated (docs/features/cm-runtime.md "Updating the installed
-   * one"): the shells running end now, as they hold `cm`'s files open and the Windows installer stops while `cm` runs,
-   * and no command starts a process or a shell until the returned function resumes them. Commands asked meanwhile wait
-   * and then run, on the `cm` the update left; one its caller cancels while it waits never runs. Holds add up: commands
-   * run once every one is resumed.
+   * one"). From now on no command starts a process or a shell; the commands already running end first, in a shell or a
+   * process of their own, along with those queued for a shell, and then the shells end, as they hold `cm`'s files open
+   * and the Windows installer stops while `cm` runs. Settles then, with the function that resumes commands: what was
+   * asked meanwhile runs on the `cm` the update left, and the shells of the directories windows show start again. A
+   * command its caller cancels while it waits never runs. Holds add up: commands run once every one is resumed.
    */
-  hold(): () => void {
+  async hold(): Promise<() => void> {
     if (!this.held) {
       let resume = (): void => undefined;
       const resumed = new Promise<void>((resolve) => (resume = resolve));
@@ -292,16 +295,31 @@ export class CmClient {
     }
     const held = this.held;
     held.holds++;
-    this.shellPool.disposeAll();
     let resumedOnce = false;
-    return () => {
+    const resume = (): void => {
       if (resumedOnce) return;
       resumedOnce = true;
       if (--held.holds > 0) return;
       this.held = null;
+      this.shellPool.warmUpShown();
       held.deferred.forEach((start) => start());
       held.resume();
     };
+    await this.commandsEnded();
+    this.shellPool.endSessions();
+    return resume;
+  }
+
+  /** Settles once no command runs: those running when asked, and any that started while they did. */
+  private async commandsEnded(): Promise<void> {
+    while (this.running.size > 0) await Promise.allSettled([...this.running]);
+  }
+
+  /** Counts a command as running until it ends (`commandsEnded`). */
+  private track(finished: Promise<unknown>): void {
+    this.running.add(finished);
+    const ended = (): void => void this.running.delete(finished);
+    finished.then(ended, ended);
   }
 
   /** Starts sessions now, or once the hold ends (`hold`). */
@@ -389,7 +407,8 @@ export class CmClient {
    * waits while the installed `cm` is updated (`hold`); only then is `inShell` asked, as it may warm sessions up.
    */
   private async run(requested: string[], options: CmRunOptions & Placed, inShell: () => boolean, reading: OutputReading): Promise<string> {
-    await this.notHeld(options.signal);
+    // Checked again as it resumes: a hold may have started in the same turn (`hold`).
+    while (this.held) await this.notHeld(options.signal);
     const useShell = inShell();
     const { cwd } = options;
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
@@ -409,6 +428,7 @@ export class CmClient {
       return this.signInFailure(gate, server ?? learned, startedAt, useShell, entry);
     };
     const finished = useShell ? this.shellPool.run(cwd, args, reading) : this.runProcess(args, cwd, options, reading);
+    this.track(finished);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
     const result = await finished.catch(async (error: unknown) => {

@@ -28,8 +28,11 @@ interface CmRuntimeWiring {
   /** `CmClient.logEntry`: the command log shows the `cm version` checks run apart from it. */
   logCommand: (entry: Omit<CommandLogEntry, 'id'>) => void;
   statusChanged: (status: CmRuntimeStatus) => void;
-  /** `CmClient.hold`: ends its shells and starts no command while the installed one is updated, as they hold its files open. */
-  holdCm: () => () => void;
+  /**
+   * `CmClient.hold`: lets the commands running end, then ends its shells and starts no command while the installed one
+   * is updated, as they hold its files open.
+   */
+  holdCm: () => Promise<() => void>;
 }
 
 /** A path with its links resolved (macOS's /usr/local/bin/cm leads into PlasticSCM.app); as it is when it can't be. */

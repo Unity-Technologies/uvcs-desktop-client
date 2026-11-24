@@ -41,10 +41,11 @@ export interface OfficialClientUpdateOptions {
   editionOf: (cmPath: string) => OfficialEdition;
   tools: OfficialUpdateTools;
   /**
-   * Holds `CmClient` while the installer runs (`CmClient.hold`): its shells end, as the installer replaces the files
-   * they hold open and on Windows stops while one runs, and no command starts until the returned function resumes it.
+   * Holds `CmClient` while the installer runs (`CmClient.hold`): settles once the commands running ended and its shells
+   * with them, as the installer replaces the files they hold open and on Windows stops while one runs; no command starts
+   * until the function it settles with resumes it.
    */
-  holdCm: () => () => void;
+  holdCm: () => Promise<() => void>;
   /** The installed `cm` and its version, read again once the installer ended (`CmRuntime.installedCm`). */
   installedAgain: () => Promise<InstalledCm | null>;
   /** Where it stands changed (`state`). */
@@ -195,7 +196,7 @@ export class OfficialClientUpdate {
    * run on the `cm` it left. Fails unless that version meets the floor.
    */
   private async runHoldingCm(installer: DownloadedInstaller, floor: string): Promise<void> {
-    const resumeCm = this.options.holdCm();
+    const resumeCm = await this.options.holdCm();
     try {
       const outcome = await this.options.tools.run(installer);
       if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');

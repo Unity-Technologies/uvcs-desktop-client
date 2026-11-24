@@ -845,18 +845,6 @@ describe('CmClient held while Unity Version Control updates', () => {
     resume();
   });
 
-  it('holds a command asked in the same turn as the hold, which runs only once resumed', async () => {
-    const { cm, shellCommands } = fakeClient();
-    const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
-    const held = cm.hold();
-    await settle();
-    expect(shellCommands).toEqual([]);
-
-    (await held)();
-    await query;
-    expect(shellCommands).toHaveLength(1);
-  });
-
   it('stays held until every hold is resumed, each resume counting once', async () => {
     const { cm, shellCommands } = fakeClient();
     const first = await cm.hold();
