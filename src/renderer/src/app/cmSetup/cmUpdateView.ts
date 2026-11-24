@@ -53,7 +53,7 @@ function backgroundLine(update: CmTooOld['officialUpdate']): string | null {
 
 function updatingView(status: CmTooOld): CmUpdateView {
   const update = status.officialUpdate!;
-  const versions = 'version' in update ? installedAndInstallingText(status.installed.version, update.version) : installedAndNeededText(status.installed.version, status.requiredVersion);
+  const versions = update.kind === 'downloading' || update.kind === 'installing' ? installedAndInstallingText(status.installed.version, update.version) : installedAndNeededText(status.installed.version, status.requiredVersion);
   const heading = { title: 'Updating Unity Version Control…', versions };
   if (update.kind === 'installing') return { kind: 'updating', ...heading, body: 'Your computer may ask for permission.', fraction: null, progress: null };
   const downloading = update.kind === 'downloading';
