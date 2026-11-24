@@ -1,24 +1,125 @@
 import { describe, expect, it } from 'vitest';
-import { cmUpdateViewOf, type CmTooOld } from './cmUpdateView';
+import type { OfficialUpdate } from '@shared/domain/officialUpdate';
+import { cmUpdateViewOf, type CmTooOld, type CmUpdateView } from './cmUpdateView';
 
 const TOO_OLD: CmTooOld = { kind: 'installedTooOld', installed: { path: '/usr/local/bin/cm', version: '11.0.16.9000' }, requiredVersion: '11.0.16.10659' };
+const NEW = '11.0.16.10694';
+const MB = 1024 * 1024;
+
+const withUpdate = (officialUpdate: OfficialUpdate): CmTooOld => ({ ...TOO_OLD, officialUpdate });
+const downloading = (installRequested: boolean, totalBytes: number | null = 512 * MB): OfficialUpdate => ({ kind: 'downloading', version: NEW, receivedBytes: 215 * MB, totalBytes, installRequested });
+
+/** Every text a user reads in a view: none says cm, installer, bundle or token. */
+function wordsOf(view: CmUpdateView): string[] {
+  const texts: string[] = [view.title, view.body];
+  if ('hint' in view && view.hint) texts.push(view.hint);
+  if ('includedLabel' in view) texts.push(view.includedLabel);
+  if (view.kind === 'offer' && view.background) texts.push(view.background);
+  return texts;
+}
 
 describe('cmUpdateViewOf', () => {
-  it('asks to update it in plain words, with both versions on a line of their own and the path under Details', () => {
-    const view = cmUpdateViewOf(TOO_OLD, 'none');
-    expect(view).toMatchObject({ title: 'Update Unity Version Control', checkAgainLabel: 'Check Again', checking: false, includedLabel: 'Use the included version for now' });
-    expect(view.versions).toBe('Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later');
-    expect(view.detail).toBe('/usr/local/bin/cm');
-    for (const text of [view.title, view.body, view.hint, view.includedLabel]) {
-      expect(text).not.toMatch(/\bcm\b|command line|installer|bundle|\d+\.\d+/i);
-    }
+  it('offers Update first, and the included version for now, with both versions on a line of their own', () => {
+    const view = cmUpdateViewOf(TOO_OLD, 'none', true);
+    expect(view).toEqual({
+      kind: 'offer',
+      title: 'Update Unity Version Control',
+      body: 'This app needs a newer version of Unity Version Control on this computer.',
+      versions: 'Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later',
+      hint: 'It takes a minute, and your workspaces aren’t changed.',
+      updateLabel: 'Update',
+      includedLabel: 'Use the included version for now',
+      background: null,
+      detail: '/usr/local/bin/cm',
+    });
   });
 
-  it('says it’s checking while Check Again reads the version', () => {
-    expect(cmUpdateViewOf(TOO_OLD, 'checking')).toMatchObject({ checkAgainLabel: 'Checking…', checking: true });
+  it('says how far the download in the background is, then that it’s ready', () => {
+    expect(cmUpdateViewOf(withUpdate(downloading(false)), 'none', true)).toMatchObject({ kind: 'offer', background: 'Downloading the update… 41%' });
+    expect(cmUpdateViewOf(withUpdate(downloading(false, null)), 'none', true)).toMatchObject({ kind: 'offer', background: 'Downloading the update…' });
+    expect(cmUpdateViewOf(withUpdate({ kind: 'downloaded', version: NEW }), 'none', true)).toMatchObject({ kind: 'offer', background: 'The update is ready to install.' });
+    expect(cmUpdateViewOf(withUpdate({ kind: 'lookingUp', installRequested: false }), 'none', true)).toMatchObject({ kind: 'offer', background: null });
   });
 
-  it('says it still needs an update when Check Again found the same old version', () => {
-    expect(cmUpdateViewOf(TOO_OLD, 'stillTooOld').hint).toBe('It still needs an update. Update it, then check again.');
+  it('shows the download the user waits for once Update was pressed, with the version it installs', () => {
+    expect(cmUpdateViewOf(withUpdate(downloading(true)), 'none', true)).toEqual({
+      kind: 'updating',
+      title: 'Updating Unity Version Control…',
+      body: 'Downloading the update…',
+      versions: 'Installed: 11.0.16.9000 · Installing: 11.0.16.10694',
+      fraction: 215 / 512,
+      progress: '215 MB of 512 MB',
+    });
+    expect(cmUpdateViewOf(withUpdate({ kind: 'lookingUp', installRequested: true }), 'none', true)).toMatchObject({
+      kind: 'updating',
+      versions: 'Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later',
+      fraction: null,
+    });
+  });
+
+  it('says the computer may ask for permission while the installer runs', () => {
+    expect(cmUpdateViewOf(withUpdate({ kind: 'installing', version: NEW }), 'none', true)).toEqual({
+      kind: 'updating',
+      title: 'Updating Unity Version Control…',
+      body: 'Your computer may ask for permission.',
+      versions: 'Installed: 11.0.16.9000 · Installing: 11.0.16.10694',
+      fraction: null,
+      progress: null,
+    });
+  });
+
+  describe('a failure', () => {
+    const failed = (failure: Extract<OfficialUpdate, { kind: 'failed' }>['failure']) =>
+      cmUpdateViewOf(withUpdate({ kind: 'failed', failure, version: NEW, detail: 'The installer of 11.0.16.10694 ended with exit code 1.' }), 'none', true);
+
+    it('says it couldn’t, offers Try Again and the included version, the error and path under Details', () => {
+      expect(failed('notUpdated')).toEqual({
+        kind: 'failed',
+        title: 'Couldn’t update Unity Version Control',
+        body: 'Close the other Unity Version Control apps, then try again. This computer may also not allow installing programs.',
+        versions: 'Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later',
+        hint: 'You can keep working with the version included with the app.',
+        tryAgainLabel: 'Try Again',
+        includedLabel: 'Use the Included Version',
+        detail: 'The installer of 11.0.16.10694 ended with exit code 1.\n/usr/local/bin/cm',
+      });
+    });
+
+    it('says why in plain words for each kind', () => {
+      expect(failed('declined').body).toBe('Installing it needs your permission. Try again, and allow it when your computer asks.');
+      expect(failed('noUpdate').body).toBe('There’s no newer version to install yet.');
+      expect(failed('unreachable').body).toBe('The update couldn’t be downloaded. Check your connection, then try again.');
+      expect(failed('notSigned').body).toBe('The download isn’t signed by Unity, so it wasn’t installed. Try again to download a new copy.');
+    });
+  });
+
+  describe('on Linux', () => {
+    it('shows the command that updates it, with Check Again and the included version', () => {
+      const view = cmUpdateViewOf(withUpdate({ kind: 'byCommand', command: 'sudo dnf upgrade plasticscm-cloud' }), 'none', false);
+      expect(view).toMatchObject({ kind: 'byCommand', commandNote: 'Run this in a terminal:', command: 'sudo dnf upgrade plasticscm-cloud', checkAgainLabel: 'Check Again', checking: false });
+    });
+
+    it('waits for the command while it’s being found', () => {
+      expect(cmUpdateViewOf(TOO_OLD, 'none', false)).toMatchObject({ kind: 'byCommand', command: null });
+    });
+
+    it('says it’s checking, then that it still needs an update when Check Again found the same old version', () => {
+      expect(cmUpdateViewOf(TOO_OLD, 'checking', false)).toMatchObject({ checkAgainLabel: 'Checking…', checking: true });
+      expect(cmUpdateViewOf(TOO_OLD, 'stillTooOld', false)).toMatchObject({ hint: 'It still needs an update. Update it, then check again.' });
+    });
+  });
+
+  it('never says cm, installer, bundle or token, nor a version outside its own line', () => {
+    const views = [
+      cmUpdateViewOf(TOO_OLD, 'none', true),
+      cmUpdateViewOf(withUpdate(downloading(false)), 'none', true),
+      cmUpdateViewOf(withUpdate(downloading(true)), 'none', true),
+      cmUpdateViewOf(withUpdate({ kind: 'installing', version: NEW }), 'none', true),
+      ...(['noUpdate', 'unreachable', 'notSigned', 'declined', 'notUpdated'] as const).map((failure) =>
+        cmUpdateViewOf(withUpdate({ kind: 'failed', failure, version: NEW, detail: '' }), 'none', true),
+      ),
+      cmUpdateViewOf(TOO_OLD, 'stillTooOld', false),
+    ];
+    for (const text of views.flatMap(wordsOf)) expect(text).not.toMatch(/\bcm\b|command line|installer|bundle|token|\d+\.\d+/i);
   });
 });
