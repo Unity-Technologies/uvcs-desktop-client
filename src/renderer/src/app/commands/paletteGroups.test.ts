@@ -34,6 +34,7 @@ import { parseScope, type PaletteScope } from './paletteScope';
 import { palettePeople } from './personResults';
 import { indexPeople } from '../../lib/peopleIndex';
 import { rankGroups, type SearchGroup } from './searchResults';
+import { commandResult } from './commandResults';
 
 const branch = (id: number, name: string, guid = `guid-${id}`): Branch => ({
   id,
@@ -336,6 +337,14 @@ describe('paletteGroups finding branches and labels by their description', () =>
       const [result] = groupsFor({ term: 'fix crash', lists: { branches: branches(withComment(1, '/main/crash-fix', comment)) } })[0]!.results;
       expect(result).toMatchObject({ label: '/main/crash-fix', detail: expect.stringMatching(/^Ana · /), labelMatches: [6, 7, 8, 9, 10, 12, 13, 14] });
     }
+  });
+
+  it('ranks a command named as typed, in several words, before branches whose description holds them', () => {
+    const term = 'open link';
+    const openLink = { section: 'commands' as const, heading: 'Commands', results: [commandResult({ id: 'app.openLink', group: 'App', label: 'Open link…', run: () => {} }, term)] };
+    const branchGroups = groupsFor({ term, lists: { branches: branches(withComment(1, '/main/scm1005', 'Support open link for a missing workspace')) } });
+
+    expect(sections(rankGroups([...branchGroups, openLink])).slice(0, 2)).toEqual(['commands', 'branches']);
   });
 
   it('finds a label by its description too', () => {

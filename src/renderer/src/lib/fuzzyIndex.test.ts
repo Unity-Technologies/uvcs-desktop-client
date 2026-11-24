@@ -93,6 +93,16 @@ describe('fuzzyMatchQuality', () => {
     expect(fuzzyMatchQuality('lib/org.eclipse.core.commands_3.6.100.v20140', 'task1002144')).toBeLessThan(0.3);
   });
 
+  it('ranks a query of several words by where they appear together, as typed', () => {
+    expect(fuzzyMatchQuality('Open link', 'open link')).toBe(1);
+    expect(fuzzyMatchQuality('Open link…', 'open   link')).toBe(0.9);
+    expect(fuzzyMatchQuality('/main/fix open link', ' open link ')).toBe(0.8);
+  });
+
+  it('still ranks a query of several words typed for a name without spaces by the name', () => {
+    expect(fuzzyMatchQuality('src/OpenLink.ts', 'open link')).toBe(0.9);
+  });
+
   it('is zero when nothing matches', () => {
     expect(fuzzyMatchQuality('readme.md', 'xyz')).toBe(0);
   });
