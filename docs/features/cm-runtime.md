@@ -61,7 +61,8 @@ builds delete every version but the pinned one and the newest above it, which an
 until it starts, across restarts. When the installed one runs, once its version is known to be new enough
 (`CmRuntime.admits`), they delete every version: the app's own is downloaded again if it's ever needed. Development builds share the store and never prune. What can't be deleted (a `cm`
 still running from it) waits for the next start. The Windows
-uninstaller removes the store, but not on an update, which runs the old version's uninstaller too (`installer.nsh`).
+uninstaller removes the store, and the installed one's update beside it, but not on an update, which runs the old
+version's uninstaller too (`installer.nsh`).
 
 ## Setting it up
 
@@ -211,10 +212,13 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
    `downloadLink` with `/download/` → `/download/downloadinstaller/`; it redirects to the file on Unity's CDN. A version
    still below the pin is a failure (`noUpdate`), never installed.
 4. **Download** (`downloadBundle` with no SHA-256: Electron's `net`, so the system's proxy; resumed, its length checked)
-   into the `update` folder beside the app's own `cm` store (`cmStoreFolder`'s parent), named `installerFileName`
+   into the `update` folder beside the app's own `cm` store (`officialUpdateFolder`), named `installerFileName`
    (`unity-vcs-<version>-<edition>-<platform>.exe` or `.pkg.zip`) because Electron's `net.fetch` doesn't tell the
-   address a redirect ended at. Other files there (an older version's) are deleted; the folder is emptied once it
-   installed. macOS's zip is unpacked with the system's `tar` (`unpackBundle`) to its one `.pkg`.
+   address a redirect ended at. Other files there (an older version's) are deleted. The folder is deleted once it
+   installed, and once nothing needs it (`OfficialClientUpdate.discard`): "Use the Included Version for Now" stops the
+   download in the background, and a launch where a `cm` runs deletes what an earlier one left (`CmRuntime.pruneOnce`);
+   one an app update downloaded for Restart & Install stays. The Windows uninstaller removes it with the store, but not
+   on an update (`installer.nsh`). macOS's zip is unpacked with the system's `tar` (`unpackBundle`) to its one `.pkg`.
 5. **Signature**, checked on the click, right before it runs (no checksum is published; `installerSignature.ts`):
    Windows, `Get-AuthenticodeSignature` through System32's PowerShell (`authenticodeCheck`) must say `Valid` and name
    `WINDOWS_INSTALLER_SIGNERS` (CN and O `Unity Technologies SF`); macOS, `pkgutil --check-signature`

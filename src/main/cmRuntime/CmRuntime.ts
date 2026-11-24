@@ -78,7 +78,7 @@ export interface CmRuntimeOptions {
    * Updates the installed one when it's too old, with its own installer (docs/features/cm-runtime.md "Updating the
    * installed one"); it tells where it stands through `officialUpdateChanged`.
    */
-  officialUpdate: Pick<OfficialClientUpdate, 'state' | 'prepare' | 'install' | 'downloadAhead' | 'updatesBy'>;
+  officialUpdate: Pick<OfficialClientUpdate, 'state' | 'prepare' | 'install' | 'downloadAhead' | 'updatesBy' | 'discard'>;
 }
 
 /** How often, at most, a download's progress reaches the windows. */
@@ -229,6 +229,8 @@ export class CmRuntime {
   useIncludedForNow(): void {
     if (!this.updateNeeded) return;
     this.options.saveDeclinedUpdate(this.pinnedVersion);
+    // Its installer, downloading in the background since the screen showed, is needed no more.
+    void this.options.officialUpdate.discard();
     this.refusedInstalledPath = this.updateNeeded.path;
     this.updateNeeded = null;
     this.switchTo(this.choose());
@@ -497,12 +499,14 @@ export class CmRuntime {
 
   /**
    * Once a launch, as a `cm` first runs: what the store holds changes only by this app's own installs after that. While
-   * the installed one runs, the app's own isn't kept at all: it's downloaded again if ever needed.
+   * the installed one runs, the app's own isn't kept at all: it's downloaded again if ever needed. No update of the
+   * installed one is needed then either: an installer an earlier launch left goes (`OfficialClientUpdate.discard`).
    */
   private pruneOnce(): void {
     if (this.pruned) return;
     this.pruned = true;
     this.options.prune(this.chosen.source === 'installed' ? null : this.pinnedVersion);
+    void this.options.officialUpdate.discard();
   }
 
   private async install(): Promise<void> {

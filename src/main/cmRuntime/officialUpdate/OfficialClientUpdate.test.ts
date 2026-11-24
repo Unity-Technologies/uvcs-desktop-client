@@ -224,18 +224,18 @@ describe('OfficialClientUpdate', () => {
 
   describe('dropped once nothing needs it', () => {
     it('stops a background download and deletes what it downloaded', async () => {
-      const requests: string[] = [];
       const site = fakeSite();
-      // The installer never finishes arriving: only the drop ends it.
+      let installerAsked = (): void => undefined;
+      const asked = new Promise<void>((resolve) => (installerAsked = resolve));
+      // The installer never arrives: only the drop ends its download.
       const fetch: Fetch = (url, init) => {
-        requests.push(url);
         if (url !== INSTALLER_PAGE) return site.fetch(url, init);
+        installerAsked();
         return new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)));
       };
-      const { update, folder } = await setup({ site: { fetch, requests } });
+      const { update, folder } = await setup({ site: { fetch, requests: [] } });
       const background = update.prepare(INSTALLED, FLOOR);
-      await new Promise((resolve) => setImmediate(resolve));
-      expect(requests).toContain(INSTALLER_PAGE);
+      await asked;
 
       await update.discard();
       await background;

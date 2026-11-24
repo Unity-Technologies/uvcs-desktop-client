@@ -22,6 +22,8 @@ export interface BundleDownload {
   onProgress: (receivedBytes: number, totalBytes: number | null) => void;
   /** Timers for the stall watch (`STALL_TIMEOUT_MS`); the tests' own. */
   timers?: StallTimers;
+  /** Stops the download when its caller no longer needs it: it fails with the signal's reason, keeping what arrived. */
+  signal?: AbortSignal;
 }
 
 export interface StallTimers {
@@ -112,7 +114,7 @@ export async function downloadBundle(download: BundleDownload): Promise<void> {
  */
 async function receive(download: BundleDownload, from: number, kept: Hash, fresh: Hash, watch: ReturnType<typeof stallWatch>): Promise<number> {
   const { fetch, url, partialPath, onProgress } = download;
-  const signal = watch.signal;
+  const signal = download.signal ? AbortSignal.any([watch.signal, download.signal]) : watch.signal;
   let resumedFrom = from;
   let response = await fetch(url, { headers: resumedFrom > 0 ? { Range: `bytes=${resumedFrom}-` } : {}, signal });
   if (response.status === 416) {

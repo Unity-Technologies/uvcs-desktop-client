@@ -1,6 +1,5 @@
 import { existsSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
 import { app, net, shell } from 'electron';
 import type { CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import type { CommandLogEntry } from '@shared/events';
@@ -11,7 +10,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import { CM_BUNDLES_URL } from './cmBundles';
 import { CmInstaller } from './CmInstaller';
 import { CmRuntime } from './CmRuntime';
-import { cmStoreFolder } from './cmStore';
+import { cmStoreFolder, officialUpdateFolder } from './cmStore';
 import { developmentUpdateOf, developmentUpdateTools } from './officialUpdate/developmentUpdateTools';
 import { OfficialClientUpdate, type OfficialUpdateTools } from './officialUpdate/OfficialClientUpdate';
 import { officialEditionOf } from './officialUpdate/officialEdition';
@@ -89,9 +88,9 @@ export function createCmRuntime({ settings, prunes, relocated, logCommand, statu
     platform: development === 'linux' ? 'linux' : officialPlatformOf(process.platform, process.arch, app.runningUnderARM64Translation),
     site: process.env.UVCS_OFFICIAL_UPDATES_URL || OFFICIAL_SITE,
     fetch: (url, init) => net.fetch(url, init),
-    // Beside the app's own `cm` store, never roaming with the profile, and emptied once the installer ran. Not the OS's
-    // temporary folder: Electron's on macOS ignores TMPDIR, so no test could keep its downloads apart.
-    folder: join(dirname(store), 'update'),
+    // Beside the app's own `cm` store, and emptied once the installer ran or nothing needs it. Not the OS's temporary
+    // folder: Electron's on macOS ignores TMPDIR, so no test could keep its downloads apart.
+    folder: officialUpdateFolder(process.platform, process.env, homedir()),
     editionOf: (cmPath) => officialEditionOf(resolvedPath(cmPath), process.platform, existsSync),
     tools: updateToolsFor(development),
     holdCm,

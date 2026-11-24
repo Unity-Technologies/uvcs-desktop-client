@@ -486,7 +486,7 @@ describe('CmRuntime with an installed cm older than its own', () => {
     runtime.prepareUpdate();
     expect(officialUpdate.discards).toBe(0);
     runtime.useIncludedForNow();
-    expect(officialUpdate.discards).toBe(1);
+    expect(officialUpdate.discards).toBeGreaterThan(0);
   });
 
   it('runs its own without asking when the user chose it for this pinned version before', () => {

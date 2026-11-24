@@ -17,6 +17,15 @@ export function cmStoreFolder(platform: NodeJS.Platform, env: NodeJS.ProcessEnv,
   return posix.join(env.XDG_DATA_HOME || posix.join(home, '.local', 'share'), 'unity-version-control', 'cm');
 }
 
+/**
+ * Where the installed one's installer downloads (docs/features/cm-runtime.md "Updating the installed one"): `update`,
+ * beside the store, so the Windows uninstaller removes it with it (`installer.nsh`), never roaming with the profile.
+ */
+export function officialUpdateFolder(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, home: string): string {
+  const path = platform === 'win32' ? win32 : posix;
+  return path.join(path.dirname(cmStoreFolder(platform, env, home)), 'update');
+}
+
 /** What the store holds for one version, by name: the folder `cm` runs from, and the two that only exist on the way to it. */
 export interface CmStoreEntries {
   /** `<version>`: the unpacked bundle, checked; `cm` is in its `client` folder. */

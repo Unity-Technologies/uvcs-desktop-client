@@ -106,7 +106,12 @@ describe('downloadBundle', () => {
 
   it('stops when its caller cancels it, failing as cancelled rather than as the network', async () => {
     const cancel = new AbortController();
-    const hanging: Fetch = (_url, init) => new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)));
+    // Never answers; rejects once aborted, or at once when asked aborted, as Electron's `net.fetch` does.
+    const hanging: Fetch = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        if (init.signal?.aborted) reject(init.signal.reason);
+        init.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+      });
     const download = downloadBundle({ fetch: hanging, url: URL, partialPath: await partialPath(), sha256: null, onProgress: () => undefined, signal: cancel.signal });
     cancel.abort();
     await expect(download).rejects.toMatchObject({ name: 'AbortError' });
