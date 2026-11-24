@@ -68,6 +68,20 @@ rules) isn't in it: the header's checkbox includes or excludes them all, and the
 files selected or a folder right-clicked. Opening the files' menu on the default changelist's header was dropped: the
 same kind of row offered two different menus.
 
+## Ignore, cloak or hide
+
+"Ignore, cloak or hide ▸" (`filterRulesSubmenu`, in Changes and Files) adds rules to the workspace's `ignore.conf`,
+`cloaked.conf` or `hidden_changes.conf`. Each list offers the selected items by path ("This item (/a/b.txt)…", one
+rule each, leaving out the items a selected folder covers: `itemRulePatterns`), by the name they all share ("All items
+named b.txt…", a bare name, which matches it in every folder, never offered for a name starting with `#` or `!`,
+which the file reads as a comment or an exception: `sharedName`) and by the extension they all share ("All
+.txt files…": `sharedExtension`); an option the selection doesn't share isn't offered. Every entry opens the rules in
+a dialog (`askAndAddFilterRules`, `askFilterRules`), one per line, for the user to change before they're added (`rulesFromText` reads them),
+since the right rule is often a pattern none of the entries suggests. Rules already in the file aren't added twice
+(`withRules`). The check-in's notice of many private files ("Add Library/ to ignore.conf") adds its one rule
+without the dialog (`addFilterRules`): its button already says what it writes. The legacy client's "Apply rules to all my workspaces" isn't offered: it writes `cm`'s own config
+folder, which the app never touches (ARCHITECTURE.md "`cm` owns its files").
+
 ## Search matches: a move recorded by hand
 
 `cm status` pairs an item deleted from disk with a private one as a local move only when their contents are alike

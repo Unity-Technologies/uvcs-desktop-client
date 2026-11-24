@@ -12,6 +12,9 @@ export interface Branch {
   isHidden?: boolean;
 }
 
+/** A branch's object id by its full name, as a lookup already read it: passed on so it isn't looked up again. */
+export type KnownBranch = Pick<Branch, 'name' | 'id'>;
+
 /**
  * Where a branch starts: its first changeset, and that changeset's parent on the parent branch (`base`), the changeset
  * the branch was created from. Merging the parent into the branch (a "rebase") doesn't move it. `base` is -1 for the

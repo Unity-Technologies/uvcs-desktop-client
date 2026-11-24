@@ -1,4 +1,5 @@
 import { rm } from 'node:fs/promises';
+import type { KnownBranch } from '@shared/domain/branch';
 import type { Place } from '@shared/domain/place';
 import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
 import { selectorSpec } from '@shared/domain/specs';
@@ -35,12 +36,13 @@ export class LeftChangesFinder {
     private readonly tellKeptAside: (workspacePath: string, files: KeptAsideFile[]) => void = () => {},
   ) {}
 
-  async find(workspacePath: string): Promise<LeftChanges[]> {
+  /** `branch`: the workspace's branch as the window already read it (`LeftChangesApi.find`). */
+  async find(workspacePath: string, branch?: KnownBranch): Promise<LeftChanges[]> {
     const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
     const shelves = await readAutomaticShelves(this.cm, workspacePath);
     const own = this.liveRecords(workspace, shelves).flatMap((record) => waitingOn(record, selectorSpec(workspace.selector)) ?? []);
     const unrecorded = shelves.filter((shelve) => !this.records.find({ shelveId: shelve.id, repository: workspace.repository }));
-    const foreign = await shelvesLeftOn(this.cm, workspacePath, workspace.selector, unrecorded);
+    const foreign = await shelvesLeftOn(this.cm, workspacePath, workspace.selector, unrecorded, branch);
 
     return [
       ...own.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(toLeftChanges),

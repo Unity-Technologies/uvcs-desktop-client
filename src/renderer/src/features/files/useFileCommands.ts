@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { navigation } from '../../app/navigation/navigationStore';
-import { otherFileView } from '../annotate/fileView';
 import { browseRepositoryAtChangeset } from '../browseRepository/browseRepositoryAtChangeset';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
@@ -12,7 +11,7 @@ import { checkinItems } from './filesCheckinOperation';
 import { itemViews, type ItemViews } from './fileMenuTargets';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
-import { useFilesViewStore } from './filesViewStore';
+import { showFileView, toggleAnnotated } from './filesViewStore';
 import { showInLocks } from '../locks/showInLocks';
 import type { PendingLocks } from '../pendingChanges/locks/pendingLocks';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -104,12 +103,8 @@ export function useFileCommands(
         icon: ScanText,
         shortcut: FILE_SHORTCUTS.annotate,
         disabled: !views.annotate,
-        // The pane's "Diff | Annotate": the file annotated, or back to its diff.
-        run: () => {
-          if (!views.annotate) return;
-          const view = useFilesViewStore.getState();
-          view.setFileView(otherFileView(view.fileView));
-        },
+        // The pane's "Diff | Annotate" (`fileViewForAnnotateCommand`): with the panel hidden, it opens the panel annotated.
+        run: () => views.annotate && toggleAnnotated(),
       },
       {
         id: 'files.showChanges',
@@ -118,7 +113,7 @@ export function useFileCommands(
         icon: FileDiff,
         shortcut: FILE_SHORTCUTS.showChanges,
         disabled: !views.changes,
-        run: () => useFilesViewStore.getState().setFileView('diff'),
+        run: () => showFileView('diff'),
       },
       {
         id: 'files.showInLocks',

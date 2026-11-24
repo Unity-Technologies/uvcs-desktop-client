@@ -270,10 +270,12 @@ and many people use the same server. Every `cm` command other than local reads (
   alone, a review's page, is read by its id (`readBranchName`: `where id = N`, then among the hidden ones only when
   that finds none), and two or more read every branch's id and name once (`readBranchNames`, two light queries, kept
   ten minutes, and only while a window shows the workspace: `watchShownWorkspaces`). The top bar takes the branch
-  comment from the branch query. The recent branches and
-  renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
-  changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
-  from a switch looks for changes to restore only when this app left some there.
+  comment from the branch query. The recent branches and renaming a workspace take its GUID and name from the reads
+  the workspace info shares (`WorkspaceHeaders`). Pending changes share the Locks view's read of every lock
+  (`locksQuery`), and ask which locks are mine only when some lock holds one of them. Left changes look the selector's
+  object id up only when an automatic shelve by another client could match it. On a branch they take the id from the
+  top bar's branch query (`leftChangesQuery`, `KnownBranch`), used only while the workspace is still on that branch
+  (`selectorObjectRef`). Arriving from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
   a changeset's, branch's or shelve's diff, Incoming, update conflicts, a merge's destination version of each
   conflicting file, a model's `.mtl`, `.bin`, `.meta` and textures in any of them, both sides) follows one procedure
@@ -426,7 +428,9 @@ and many people use the same server. Every `cm` command other than local reads (
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
-  it, `changesetsService`); merges and labels come either way.
+  it, `changesetsService`); merges and labels come either way. No one `cm find branch` reads both: a `hidden`
+  condition keeps only the hidden ones or leaves them out. So a list wanting both runs two finds, and one branch
+  looked up by name (`branchesService.get`) asks for the hidden ones only when no visible branch has its name.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments (`canRunInShell`).
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
@@ -1538,7 +1542,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   a list of changes letters every row, as its filter chips do. In Changes every folder holds changes, so only its own
   change marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source
   did); `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read
-  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list
+  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. Every lock is the
+  Locks view's own query (`locksQuery`, scope `everyone`), one read for both; only the user's locks in this workspace
+  are a read of their own (`mineInThisWorkspace`), asked once a lock holds a change. The Changes list
   renders its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of
   them (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
   whether a shelve takes it, the folder a private file counts in), and how many of the changes each folder holds can go

@@ -1,3 +1,4 @@
+import type { KnownBranch } from '@shared/domain/branch';
 import type { Shelve } from '@shared/domain/shelve';
 import type { LeftChanges } from '@shared/domain/switchWithChanges';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
@@ -18,12 +19,13 @@ export function readAutomaticShelves(cm: CmClient, workspacePath: string): Promi
 
 /**
  * The shelves among `unrecorded` (automatic shelves this app has no record of) left on `selector`, newest first: their
- * comment names its object id as the official client writes it.
+ * comment names its object id as the official client writes it. `known`, the branch as the window already read it,
+ * spares looking the id up (`selectorObjectRef`).
  */
-export async function shelvesLeftOn(cm: CmClient, workspacePath: string, selector: WorkspaceSelector, unrecorded: Shelve[]): Promise<Shelve[]> {
+export async function shelvesLeftOn(cm: CmClient, workspacePath: string, selector: WorkspaceSelector, unrecorded: Shelve[], known?: KnownBranch): Promise<Shelve[]> {
   // Without such shelves there is nothing to match: the selector's object id would cost a server lookup for nothing.
   if (unrecorded.length === 0) return [];
-  const objectRef = await selectorObjectRef(cm, workspacePath, selector);
+  const objectRef = await selectorObjectRef(cm, workspacePath, selector, known);
   if (!objectRef) return [];
   const comment = automaticShelveComment(objectRef);
   return unrecorded.filter((shelve) => shelve.comment === comment).sort((a, b) => b.id - a.id);
