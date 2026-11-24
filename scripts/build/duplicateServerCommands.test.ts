@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { needsSignIn } from '../../src/main/cm/repeatedCommands';
@@ -19,6 +20,24 @@ const WORKSPACE = join('work', 'demo');
 const OTHER_WORKSPACE = join('work', 'other');
 const LOCKS = ['lock', 'list', '--anystatus', '--repository=demo@local'];
 const BRANCHES = ['find', 'branch', '--format={id}\u001f{name}\u001e'];
+
+/** The fake cm's copy of the list (`isLocal`), a CommonJS module the type checker can't follow. */
+const { isLocal: fakeCmIsLocal } = createRequire(import.meta.url)('../e2e/fakeCm/signIn.cjs') as { isLocal: (args: string[]) => boolean };
+
+/** Every local command `LOCAL_COMMANDS` lists, and the cases around it: a workspace's subcommands, `status`'s options. */
+const SIGN_IN_CASES: string[][] = [
+  ...['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist'].map((command) => [command]),
+  ['wk', 'list'],
+  ['workspace', 'list'],
+  ['workspace', 'create', 'demo'],
+  ['wk', 'delete', 'demo'],
+  ['status', '--header', '--xml'],
+  ['status', '--compact'],
+  ['status', '--cset'],
+  ['status', '--format={path}'],
+  ['find', 'branch'],
+  LOCKS,
+];
 
 function sent(args: string[], cwd = WORKSPACE) {
   return { args, cwd, known: true };
@@ -61,21 +80,13 @@ describe('needsServer', () => {
   });
 
   it("agrees with the app's own `needsSignIn`, whose list it copies", () => {
-    const local = ['getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist'];
-    const commands = [
-      ...local.map((command) => [command]),
-      ['wk', 'list'],
-      ['workspace', 'list'],
-      ['workspace', 'create', 'demo'],
-      ['wk', 'delete', 'demo'],
-      ['status', '--header', '--xml'],
-      ['status', '--compact'],
-      ['status', '--cset'],
-      ['status', '--format={path}'],
-      ['find', 'branch'],
-      LOCKS,
-    ];
-    for (const args of commands) expect([args, needsServer(args)]).toEqual([args, needsSignIn(args)]);
+    for (const args of SIGN_IN_CASES) expect([args, needsServer(args)]).toEqual([args, needsSignIn(args)]);
+  });
+});
+
+describe("the fake cm's `isLocal`", () => {
+  it("agrees with the app's own `needsSignIn`, whose list it copies: the fake refuses what the app gates", () => {
+    for (const args of SIGN_IN_CASES) expect([args, !fakeCmIsLocal(args)]).toEqual([args, needsSignIn(args)]);
   });
 });
 
@@ -90,9 +101,18 @@ describe('isIncomingCheck', () => {
     expect(isIncomingCheck(['find', 'changeset', "where date >= '2026-10-25' order by changesetid desc", '--format={changesetid}\u001f{owner}\u001e'])).toBe(false);
   });
 
-  it('never compares it: the poll and the focus check may run it twice in one step', () => {
-    const check = incomingChangesetsArgs('/main/task-001', 5);
+  const check = incomingChangesetsArgs('/main/task-001', 5);
+
+  it('allows it twice in one step: its timer (the poll, or the check as the window gains focus) sends it once more', () => {
     expect(duplicatesIn(stepOf(sent(check), sent(check)))).toEqual([]);
+  });
+
+  it('fails on it sent three times in one step', () => {
+    expect(duplicatesIn(stepOf(sent(check), sent(check), sent(check)))).toEqual([{ step: 'Locks', commandLine: check.join(' '), cwd: WORKSPACE, times: 3 }]);
+  });
+
+  it('counts each folder apart', () => {
+    expect(duplicatesIn(stepOf(sent(check), sent(check), sent(check, OTHER_WORKSPACE), sent(check, OTHER_WORKSPACE)))).toEqual([]);
   });
 });
 

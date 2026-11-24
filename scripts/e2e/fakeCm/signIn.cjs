@@ -6,7 +6,10 @@ const { existsSync, readFileSync } = require('node:fs');
 
 const SIGN_IN_FILE = process.env.UVCS_FAKE_CM_SIGN_IN;
 
-/** Commands that only read this machine (`LOCAL_COMMANDS` in main/cm/repeatedCommands.ts): they never sign in. */
+/**
+ * Commands that only read this machine (`LOCAL_COMMANDS` in main/cm/repeatedCommands.ts): they never sign in.
+ * scripts/build/duplicateServerCommands.test.ts holds `isLocal` to the app's `needsSignIn`.
+ */
 const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
 
 const PROMPT = 'Select your system [0-1]: ';
@@ -43,4 +46,4 @@ function signInFailure(args, { workspaceServer, otherServers }) {
   return { output: 'Error: The auth token expired. User: tester@example.com.\n', exitCode: 1 };
 }
 
-module.exports = { signInFailure };
+module.exports = { signInFailure, isLocal };
