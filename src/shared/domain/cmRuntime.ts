@@ -7,10 +7,14 @@
 export type CmSource = 'managed' | 'installed' | 'environment';
 
 /**
- * Which `cm` the user chose in Settings (docs/features/cm-runtime.md "Which cm runs"): `automatic`, the default, runs
- * the one installed on the computer when there is one and the app's own otherwise; `managed` always runs the app's own.
+ * Which `cm` runs (docs/features/cm-runtime.md "Which cm runs"): `automatic`, the default while the user hasn't chosen,
+ * runs the one installed on the computer when there is one and the app's own otherwise. In Settings the user chooses
+ * the installed one (`installed`, which runs as `automatic` does) or always the app's own (`managed`).
  */
-export type CmChoice = 'automatic' | 'managed';
+export type CmChoice = 'automatic' | 'installed' | 'managed';
+
+/** What the user chooses in Settings, or on the setup's failure screen: `automatic` is only ever the default. */
+export type CmUserChoice = Exclude<CmChoice, 'automatic'>;
 
 /** Why the app's `cm` couldn't be set up, each said to the user in its own plain words. */
 export type CmInstallFailure =

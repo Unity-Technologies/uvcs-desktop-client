@@ -50,7 +50,8 @@ export interface AppSettings {
   autoRefresh: boolean;
   /**
    * Which `cm` the app runs: the one installed on the computer when there is one, or its own (`automatic`, the
-   * default), or always its own (Settings › Workspaces, docs/features/cm-runtime.md "Which cm runs").
+   * default until the user chooses), the installed one (`installed`), or always its own (`managed`) (Settings ›
+   * Workspaces, docs/features/cm-runtime.md "Which cm runs").
    */
   cmChoice: CmChoice;
   /**
