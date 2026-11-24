@@ -23,7 +23,10 @@ SHA-256 of that file (`CmVersionPin`, `cmBundles.ts`):
   workspaces and configuration as it always did, so a newer installed one runs too (see "Which cm runs"). The app's
   own is that exact version: nothing reads `latest`, which lags behind what's published. A bump brings up the update
   screen for an installed one older than the new pin, so a pin is bumped only when a feature needs it, and never past
-  what the official installers have published.
+  what the official installers have published: `npm run cm:bump` and `npm run cm:check` ask the download site
+  (`installerQuestions`, the API of "Updating the installed one", step 3) for every edition (`cloud`, `enterprise`,
+  `dvcs`) on `windows`, `macos` and `macos-arm64`, and fail unless each has the pin or newer
+  (`unpublishedInstallers`).
 - **Bundles**: `win32-x64` (a zip), `darwin-x64`, `darwin-arm64` and `linux-x64` (gzipped tars), all unpacking into
   `client/` with `cm` or `cm.exe` inside (`CM_BUNDLE_FILES`). Windows on Arm runs the x64 one, emulated
   (`cmBundleFor`). Linux on Arm has none, and no installer either (releases build Linux on x64): a build from the
