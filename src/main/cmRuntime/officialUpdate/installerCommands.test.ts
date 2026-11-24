@@ -3,6 +3,11 @@ import { authenticodeCheck, DECLINED_EXIT_CODE, INSTALLER_PATH_VARIABLE, macInst
 
 const WINDOWS_ENV = { SystemRoot: 'C:\\Windows' };
 const WINDOWS_INSTALLER = 'C:\\Users\\José María\\AppData\\Local\\Temp\\unity-version-control-update\\unity-vcs-11.0.16.10694-win.exe';
+/** The script PowerShell runs: `-EncodedCommand` takes it as base64 of its UTF-16LE text. */
+function scriptOf(command: { args: string[] }): string {
+  return Buffer.from(command.args.at(-1)!, 'base64').toString('utf16le');
+}
+
 const MAC_PACKAGE = '/var/folders/x y/T/unity-version-control-update/unity-vcs-11.0.16.10694-mac-arm.pkg.zip.unpacked/unity-vcs-osx-arm64-11.0.16.10694.pkg';
 
 describe('windowsInstallerRun', () => {
@@ -18,7 +23,7 @@ describe('windowsInstallerRun', () => {
   });
 
   it("starts the installer elevated, so Windows asks for permission, unattended with its own dialogs, and waits for it", () => {
-    const script = windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV).args.at(-1)!;
+    const script = scriptOf(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV));
     expect(script).toContain(`$env:${INSTALLER_PATH_VARIABLE}`);
     expect(script).toContain("'runas'");
     expect(script).toContain('--mode unattended --unattendedmodeui minimalWithDialogs');
@@ -27,11 +32,20 @@ describe('windowsInstallerRun', () => {
   });
 
   it("never asks the installer to start the official client once it's done", () => {
-    expect(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV).args.join(' ')).not.toMatch(/launch|restart|relaunch|--gui/i);
+    expect(scriptOf(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV))).not.toMatch(/launch|restart|relaunch|--gui/i);
   });
 
   it('runs PowerShell without the user’s profile, nor a prompt', () => {
-    expect(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV).args.slice(0, 3)).toEqual(['-NoProfile', '-NonInteractive', '-Command']);
+    expect(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV).args.slice(0, 3)).toEqual(['-NoProfile', '-NonInteractive', '-EncodedCommand']);
+  });
+
+  it('passes the script encoded, so its quotes and lines reach PowerShell as written, whatever the command line does to them', () => {
+    const run = windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV);
+    expect(run.args.at(-1)).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    const script = scriptOf(run);
+    expect(script.split('\n').length).toBeGreaterThan(1);
+    expect(script).toContain("'--mode unattended --unattendedmodeui minimalWithDialogs'");
+    expect(scriptOf(authenticodeCheck(WINDOWS_INSTALLER, WINDOWS_ENV))).toContain('"Status=$($signature.Status)"');
   });
 });
 
@@ -39,9 +53,9 @@ describe('authenticodeCheck', () => {
   it('asks Windows for the signature of the file the environment names, and prints its status and signer', () => {
     const check = authenticodeCheck(WINDOWS_INSTALLER, WINDOWS_ENV);
     expect(check.env).toEqual({ [INSTALLER_PATH_VARIABLE]: WINDOWS_INSTALLER });
-    expect(check.args.at(-1)).toContain(`Get-AuthenticodeSignature -LiteralPath $env:${INSTALLER_PATH_VARIABLE}`);
-    expect(check.args.at(-1)).toContain('Status=');
-    expect(check.args.at(-1)).toContain('Subject=');
+    expect(scriptOf(check)).toContain(`Get-AuthenticodeSignature -LiteralPath $env:${INSTALLER_PATH_VARIABLE}`);
+    expect(scriptOf(check)).toContain('Status=');
+    expect(scriptOf(check)).toContain('Subject=');
   });
 });
 

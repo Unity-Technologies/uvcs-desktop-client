@@ -44,7 +44,7 @@ describe('lastVersionUrl', () => {
 
 describe('parseLastVersion', () => {
   it('reads the version and where its installer downloads from', () => {
-    expect(parseLastVersion(ANSWER)).toEqual({
+    expect(parseLastVersion(ANSWER, OFFICIAL_SITE)).toEqual({
       version: '11.0.16.10694',
       installerUrl: 'https://www.plasticscm.com/download/downloadinstaller/11.0.16.10694/plasticscm/windows/cloudedition',
     });
@@ -52,18 +52,26 @@ describe('parseLastVersion', () => {
 
   it('makes the installer address from the download page when the answer has none', () => {
     const { installerUri: _left, ...older } = JSON.parse(ANSWER) as Record<string, unknown>;
-    expect(parseLastVersion(JSON.stringify(older))?.installerUrl).toBe('https://www.plasticscm.com/download/downloadinstaller/11.0.16.10694/plasticscm/windows/cloudedition');
+    expect(parseLastVersion(JSON.stringify(older), OFFICIAL_SITE)?.installerUrl).toBe('https://www.plasticscm.com/download/downloadinstaller/11.0.16.10694/plasticscm/windows/cloudedition');
+  });
+
+  it('takes only an installer it downloads over https, or from the site it asked (a local fake while developing)', () => {
+    const answer = (installerUri: string) => JSON.stringify({ version: '11.0.16.10694', installerUri });
+    expect(parseLastVersion(answer('http://www.plasticscm.com/download/downloadinstaller/11.0.16.10694/x'), OFFICIAL_SITE)).toBeNull();
+    expect(parseLastVersion(answer('file:///C:/Windows/Temp/setup.exe'), OFFICIAL_SITE)).toBeNull();
+    expect(parseLastVersion(answer('https://cdn.example/setup.exe'), OFFICIAL_SITE)?.installerUrl).toBe('https://cdn.example/setup.exe');
+    expect(parseLastVersion(answer('http://127.0.0.1:8123/download/x'), 'http://127.0.0.1:8123')?.installerUrl).toBe('http://127.0.0.1:8123/download/x');
   });
 
   it('has nothing newer when the site answers null or an empty body', () => {
-    expect(parseLastVersion('null')).toBeNull();
-    expect(parseLastVersion('')).toBeNull();
+    expect(parseLastVersion('null', OFFICIAL_SITE)).toBeNull();
+    expect(parseLastVersion('', OFFICIAL_SITE)).toBeNull();
   });
 
   it('has nothing it can use from an answer without a readable version or an installer', () => {
-    expect(parseLastVersion(JSON.stringify({ version: 'latest', downloadLink: 'https://www.plasticscm.com/download/x' }))).toBeNull();
-    expect(parseLastVersion(JSON.stringify({ version: '11.0.16.10694' }))).toBeNull();
-    expect(parseLastVersion('"{\\"error\\":\\"Invalid version number\\"}"')).toBeNull();
+    expect(parseLastVersion(JSON.stringify({ version: 'latest', downloadLink: 'https://www.plasticscm.com/download/x' }), OFFICIAL_SITE)).toBeNull();
+    expect(parseLastVersion(JSON.stringify({ version: '11.0.16.10694' }), OFFICIAL_SITE)).toBeNull();
+    expect(parseLastVersion('"{\\"error\\":\\"Invalid version number\\"}"', OFFICIAL_SITE)).toBeNull();
   });
 });
 

@@ -1,16 +1,12 @@
 import { Download, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
-import { PLATFORM } from '../../lib/platform';
 import { Button } from '../../ui/Button';
 import { FoldedOutput } from '../../ui/FoldedOutput';
 import { CopyableCommand } from '../startup/CopyableCommand';
 import { useCmRuntimeStore } from './cmRuntimeStore';
-import { cmUpdateViewOf, type CmTooOld, type CmUpdateCheck, type CmUpdateView } from './cmUpdateView';
+import { checkAgainOutcome, cmUpdateViewOf, type CmTooOld, type CmUpdateCheck, type CmUpdateView } from './cmUpdateView';
 import styles from './CmSetupScreen.module.css';
-
-/** Linux has no installer to run: the screen shows the command that updates it. */
-const CAN_INSTALL = PLATFORM !== 'linux';
 
 /**
  * The setup screen's body when the installed Unity Version Control is older than the app needs
@@ -20,7 +16,7 @@ const CAN_INSTALL = PLATFORM !== 'linux';
  */
 export function CmUpdateNeeded({ status }: { status: CmTooOld }) {
   const [check, setCheck] = useState<CmUpdateCheck>('none');
-  const view = cmUpdateViewOf(status, check, CAN_INSTALL);
+  const view = cmUpdateViewOf(status, check);
   const waitsForUser = view.kind === 'offer' || view.kind === 'byCommand';
   useEffect(() => {
     // The installer downloads while the user reads; joined in main when several windows ask.
@@ -38,7 +34,7 @@ export function CmUpdateNeeded({ status }: { status: CmTooOld }) {
     try {
       await api.cmRuntime.checkInstalledAgain();
     } finally {
-      setCheck(useCmRuntimeStore.getState().status.kind === 'installedTooOld' ? 'stillTooOld' : 'none');
+      setCheck(checkAgainOutcome(useCmRuntimeStore.getState().status.kind));
     }
   };
   return (

@@ -23,7 +23,10 @@ SHA-256 of that file (`CmVersionPin`, `cmBundles.ts`):
   workspaces and configuration as it always did, so a newer installed one runs too (see "Which cm runs"). The app's
   own is that exact version: nothing reads `latest`, which lags behind what's published. A bump brings up the update
   screen for an installed one older than the new pin, so a pin is bumped only when a feature needs it, and never past
-  what the official installers have published.
+  what the official installers have published: `npm run cm:bump` and `npm run cm:check` ask the download site
+  (`installerQuestions`, the API of "Updating the installed one", step 3) for every edition (`cloud`, `enterprise`,
+  `dvcs`) on `windows`, `macos` and `macos-arm64`, and fail unless each has the pin or newer
+  (`unpublishedInstallers`).
 - **Bundles**: `win32-x64` (a zip), `darwin-x64`, `darwin-arm64` and `linux-x64` (gzipped tars), all unpacking into
   `client/` with `cm` or `cm.exe` inside (`CM_BUNDLE_FILES`). Windows on Arm runs the x64 one, emulated
   (`cmBundleFor`). Linux on Arm has none, and no installer either (releases build Linux on x64): a build from the
@@ -61,7 +64,8 @@ builds delete every version but the pinned one and the newest above it, which an
 until it starts, across restarts. When the installed one runs, once its version is known to be new enough
 (`CmRuntime.admits`), they delete every version: the app's own is downloaded again if it's ever needed. Development builds share the store and never prune. What can't be deleted (a `cm`
 still running from it) waits for the next start. The Windows
-uninstaller removes the store, but not on an update, which runs the old version's uninstaller too (`installer.nsh`).
+uninstaller removes the store, and the installed one's update beside it, but not on an update, which runs the old
+version's uninstaller too (`installer.nsh`).
 
 ## Setting it up
 
@@ -163,8 +167,7 @@ the update screen instead (`CmUpdateNeeded`, its words from `cmUpdateViewOf`): n
 is false), and the windows wait as they do for a setup.
 
 - **Words**: "Update Unity Version Control", "This app needs a newer version of Unity Version Control on this
-  computer.", both versions on a line of their own (`cmVersionWords`), then "It takes a minute, and your workspaces
-  aren't changed." Never `cm`, command line, installer, bundle or token; the installed one's path, and any error,
+  computer.", both versions on a line of their own (`cmVersionWords`), then "Your workspaces stay as they are." Never `cm`, command line, installer, bundle or token; the installed one's path, and any error,
   only under Details.
 - **Update** (primary) updates it with its own installer ("Updating the installed one"): the installer downloads in the
   background as soon as the screen shows (`cmRuntime.prepareUpdate`, a line under the buttons says how far: "Downloading
@@ -175,17 +178,20 @@ is false), and the windows wait as they do for a setup.
 - **A failure** says "Couldn't update Unity Version Control", why in plain words (`UPDATE_FAILURE_REASONS`: no newer
   version yet, the download failed, not signed by Unity, the permission declined, or the installer ended and the
   version is the same: "Close the other Unity Version Control apps, then try again. This computer may also not allow
-  installing programs."), "You can keep working with the version included with the app.", and offers Try Again and
+  installing programs."; on macOS, where Installer.app closes the same whether it was cancelled or finished,
+  `notFinished`: "The update wasn’t installed. Try again, and finish every step it asks for."), "You can keep working with the version included with the app.", and offers Try Again and
   Use the Included Version for Now, the error under Details. A failure of the download in the background shows nothing: the
   click tries it all again, and says why then.
 - **"Use the Included Version for Now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the
   setup screen when it isn't there, and saves the pinned version as `cmDeclinedUpdateFor`: the screen doesn't ask again
   until the pin moves. The choice stays as it was, so once the installed one is new enough, it runs again without
   asking.
-- **Linux** has no installer: the screen shows the command that updates it, with Copy, Check Again
+- **Linux** has no installer: the screen shows the command that updates it (main says so in the status's `updatesBy`,
+  from `OfficialClientUpdate.updatesBy`; the windows never decide it from their OS), with Copy, Check Again
   (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the Included Version for Now".
 - **Checked again as a window gains focus** (the user may come back from updating it another way), quietly, never on a
-  timer: new enough, it runs, its shells started again; none found any more, the app's own runs.
+  timer: new enough, it runs, its shells started again as they finish their commands, even at the same path, which now
+  holds the newer one (`CmClient.relocate` with `replaced`); none found any more, the app's own runs.
 
 To see it in a development build: the smoke test's fake `cm` (`scripts/e2e/fakeCm`) on a temp PATH as `cm`, with
 `UVCS_FAKE_CM_VERSION_FILE` naming a file that holds an older version, and no `UVCS_CM_PATH` (scripts/e2e/README.md).
@@ -201,31 +207,40 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
    `cloudedition.token` → `cloud`, `dvcs.token` → `dvcs`, none → `enterprise` (client only and full alike). On Windows
    it's the folder of `cm.exe` (`<install>\client\`); on macOS, links resolved first (`/usr/local/bin/cm` leads into
    PlasticSCM.app), it's inside the app bundle (`Contents/Applications/cm.app/Contents/MacOS/`, `Contents/MonoBundle/`,
-   `Contents/MacOS/`). `noCmInternalFiles.test.ts` names this one exception: `cm` prints no edition.
+   `Contents/MacOS/`). `noCmInternalFiles.test.ts` names this one exception: `cm` prints no edition. **Known limit**:
+   the official client also looks for the marker in the user's configuration folder when the installation has none;
+   the app looks only in the installation, as it never reads `cm`'s configuration folder (`noCmInternalFiles`), so
+   such an installation is taken for `enterprise`.
 2. **Platform** (`officialPlatformOf`): `windows`, `macos`, `macos-arm64` (the Mac's own architecture: Apple silicon
    even when the app runs under Rosetta, `app.runningUnderARM64Translation`) or `linux`.
 3. **The latest version** (`lastVersionUrl`, `parseLastVersion`): `GET
    https://www.plasticscm.com/api/lastversion/after/<installed>/for/<edition>/<platform>` answers JSON (`version`,
    `installerUri`, `downloadLink`, …) or `null` when nothing is newer. The installer is `installerUri`, or
-   `downloadLink` with `/download/` → `/download/downloadinstaller/`; it redirects to the file on Unity's CDN. A version
+   `downloadLink` with `/download/` → `/download/downloadinstaller/`; it redirects to the file on Unity's CDN. Only an
+   https address is taken, or one on the site asked (a local fake while developing). A version
    still below the pin is a failure (`noUpdate`), never installed.
 4. **Download** (`downloadBundle` with no SHA-256: Electron's `net`, so the system's proxy; resumed, its length checked)
-   into the `update` folder beside the app's own `cm` store (`cmStoreFolder`'s parent), named `installerFileName`
+   into the `update` folder beside the app's own `cm` store (`officialUpdateFolder`), named `installerFileName`
    (`unity-vcs-<version>-<edition>-<platform>.exe` or `.pkg.zip`) because Electron's `net.fetch` doesn't tell the
-   address a redirect ended at. Other files there (an older version's) are deleted; the folder is emptied once it
-   installed. macOS's zip is unpacked with the system's `tar` (`unpackBundle`) to its one `.pkg`.
+   address a redirect ended at. Other files there (an older version's) are deleted. The folder is deleted once it
+   installed, and once nothing needs it (`OfficialClientUpdate.discard`): "Use the Included Version for Now" stops the
+   download in the background, and a launch where a `cm` runs deletes what an earlier one left (`CmRuntime.pruneOnce`);
+   one an app update downloaded for Restart & Install stays. The Windows uninstaller removes it with the store, but not
+   on an update (`installer.nsh`). macOS's zip is unpacked with the system's `tar` (`unpackBundle`) to its one `.pkg`.
 5. **Signature**, checked on the click, right before it runs (no checksum is published; `installerSignature.ts`):
-   Windows, `Get-AuthenticodeSignature` through System32's PowerShell (`authenticodeCheck`) must say `Valid` and name
+   Windows, `Get-AuthenticodeSignature` through System32's PowerShell (`authenticodeCheck`; its scripts go with
+   `-EncodedCommand`, so no quote or line break meets Windows' command-line quoting) must say `Valid` and name
    `WINDOWS_INSTALLER_SIGNERS` (CN and O `Unity Technologies SF`); macOS, `pkgutil --check-signature`
    (`pkgutilCheck`) must say it's signed for distribution by a certificate Apple issued, notarized, and by a Developer
    ID Installer of `MAC_INSTALLER_TEAMS` (`Codice Software (BQ7R3Y4J72)`). Those are the signers of 11.0.16.10694's
    installers. Any other answer deletes the download (`notSigned`).
-6. **Run** (`installerCommands.ts`) with `CmClient` held (`CmClient.hold`): its shells end, as they hold `cm`'s files
-   and the Windows installer stops while `cm` runs, and no command starts a process or a shell until the installer
-   ended and the version was read again. A command asked meanwhile (from Settings, a view refreshing) waits, then runs
-   on the `cm` the installer left; one its caller cancels while it waits never runs. A command already running in a
-   process of its own goes on: an app update waits for the operations changing a workspace first ("Updates bring their
-   cm"). Then: Windows starts the installer elevated, so Windows asks for
+6. **Run** (`installerCommands.ts`) with `CmClient` held (`CmClient.hold`): from the click on, no command starts a
+   process or a shell until the installer ended and the version was read again. The commands already running end
+   first, in a shell or a process of their own (an operation too: the installer starts once it's done), along with
+   those queued for a shell; then the shells end, as they hold `cm`'s files and the Windows installer stops while
+   `cm` runs. A command asked meanwhile (from Settings, a view refreshing) waits, then runs on the `cm` the installer
+   left, and the shells of the workspaces the windows show start again (`CmShellPool.warmUpShown`); one its caller
+   cancels while it waits never runs. Then: Windows starts the installer elevated, so Windows asks for
    permission, unattended with its own small dialogs (`--mode unattended --unattendedmodeui minimalWithDialogs`),
    without the official client's option that starts it once done, and waits for it (`windowsInstallerRun`: .NET's
    `Process.Start` with the `runas` verb, so a declined prompt ends with Windows' `ERROR_CANCELLED`,
@@ -246,9 +261,11 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
 neither tool knows), and the distribution's package manager from /etc/os-release: `sudo apt-get update && sudo apt-get
 install --only-upgrade <package>`, `sudo dnf upgrade <package>` or `sudo zypper update <package>`.
 
-**Settings**: the installed card, when it's too old, has an Update link (none on Linux) that runs the same update, the
+**Settings**: the installed card, when it's too old, has an Update link (only where `updatesBy` is `installer`: none
+on Linux) that runs the same update, the
 card saying how far it is ("Downloading the update… 42%", "Updating… Your computer may ask for permission.") or
-"Couldn't update it." with the reason in its tip and Try Again.
+"Couldn't update it." with the reason in plain words in its tip (the error only on the update screen's Details) and
+Try Again.
 
 **Seeing every state without a real installer** (development builds only; a packaged app ignores
 `UVCS_FAKE_OFFICIAL_UPDATE`, so nothing there can skip the signature check):
@@ -258,7 +275,7 @@ card saying how far it is ("Downloading the update… 42%", "Updating… Your co
   zipped around a `.pkg`), and prints the variable to set.
 - `UVCS_FAKE_OFFICIAL_UPDATE` fakes the OS's part (`developmentUpdateTools`): `installs` (the fake `cm` then prints the
   new version, through `UVCS_FAKE_CM_VERSION_FILE`), `fails` (it ends with the same version), `declined`, `unsigned`,
-  or `linux` (with `UVCS_RENDERER_PLATFORM=linux`, the command). `UVCS_FAKE_OFFICIAL_UPDATE_MS` is how long the fake
+  or `linux` (the command: the windows show what main says, `updatesBy`). `UVCS_FAKE_OFFICIAL_UPDATE_MS` is how long the fake
   installer takes (1.5 s by default).
 
 **Verified only with fakes**: the tests and the smoke test run no installer, and nothing here was run against a real
@@ -281,7 +298,8 @@ running (`CmPrefetch`):
   progress (`OfficialClientUpdate.downloadAhead`, the latest version of its edition, at the update's pin or newer). The
   update card says so ("This update also updates the Unity Version Control installed on this computer.", with
   `cmVersionWords`' "Installed: … · Needed: … or later" under it: `installedCmNoteOf`, the status's `installedCm`).
-  "Restart & Install" waits for the operations changing a workspace, then runs that installer as Update does
+  "Restart & Install" waits for the operations changing a workspace, reads the installed version again (one updated
+  meanwhile needs no installer: `CmRuntime.installAhead`), then runs that installer as Update does
   ("Updating the installed one", steps 5 to 7: the signature, `CmClient` held, the permission asked, the version read
   again), the card saying "Updating the Unity Version Control installed on this computer…" (`waitingToInstall` with
   `waitingFor: 'installedCm'`, `waitingCardOf`), and then restarts into the new version. Declined, failed or not

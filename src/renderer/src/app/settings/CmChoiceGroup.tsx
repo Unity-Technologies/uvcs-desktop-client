@@ -3,7 +3,6 @@ import { Download, HardDrive, Package } from 'lucide-react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useCmRuntimeStore } from '../cmSetup/cmRuntimeStore';
-import { PLATFORM } from '../../lib/platform';
 import { Button } from '../../ui/Button';
 import { IMMUTABLE_QUERY } from '../queryMeta';
 import { cmChoiceCards, cmChoiceNote } from './cmChoiceCards';
@@ -26,7 +25,7 @@ export function CmChoiceGroup() {
     source: status.source,
     switchingToOwn: status.switchingToOwn,
     officialUpdate: status.officialUpdate,
-    canInstall: PLATFORM !== 'linux',
+    updatesBy: status.updatesBy,
   });
   const update = async (): Promise<void> => {
     await api.cmRuntime.updateInstalled();

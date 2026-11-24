@@ -1,4 +1,4 @@
-import type { OfficialUpdate } from './officialUpdate';
+import type { OfficialUpdate, OfficialUpdateMethod } from './officialUpdate';
 
 /**
  * The `cm` the app runs (docs/features/cm-runtime.md): the one it downloads and keeps for itself, pinned per app
@@ -73,6 +73,8 @@ export type CmRuntimeStatus =
       installedTooOld?: { installed: InstalledCm; requiredVersion: string };
       /** The installed one, too old, being updated from Settings. */
       officialUpdate?: OfficialUpdate;
+      /** How the installed one is updated here, for Settings' too old card; none where it can't be from here. */
+      updatesBy?: OfficialUpdateMethod;
     }
   | {
       kind: 'installing';
@@ -89,7 +91,14 @@ export type CmRuntimeStatus =
    * The installed `cm`, which runs by default, is older than the pinned version, the oldest the app runs: the update
    * screen asks to update it, or to run the app's own for now (docs/features/cm-runtime.md "The update screen").
    */
-  | { kind: 'installedTooOld'; installed: InstalledCm; requiredVersion: string; officialUpdate?: OfficialUpdate }
+  | {
+      kind: 'installedTooOld';
+      installed: InstalledCm;
+      requiredVersion: string;
+      officialUpdate?: OfficialUpdate;
+      /** How it's updated here: Update runs its installer, or the screen shows the command; none where it can't be from here. */
+      updatesBy?: OfficialUpdateMethod;
+    }
   | {
       kind: 'failed';
       version: string;

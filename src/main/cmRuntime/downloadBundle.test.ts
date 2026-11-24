@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmInstallFailureOf } from './cmInstallFailure';
-import { downloadBundle, STALL_TIMEOUT_MS } from './downloadBundle';
+import { downloadBundle, type Fetch, STALL_TIMEOUT_MS } from './downloadBundle';
 import { fakeBundleSite, sha256Of } from './testing/fakeBundleSite';
 
 const URL = 'https://downloads.example/11.0.16.10659/client-linux.tar.gz';
@@ -102,6 +102,19 @@ describe('downloadBundle', () => {
     const site = fakeBundleSite({ [URL]: BUNDLE }, { status: 407 });
     const download = downloadBundle({ fetch: site.fetch, url: URL, partialPath: await partialPath(), sha256: sha256Of(BUNDLE), onProgress: () => undefined });
     await expect(download.catch(cmInstallFailureOf)).resolves.toBe('proxyAuthentication');
+  });
+
+  it('stops when its caller cancels it, failing as cancelled rather than as the network', async () => {
+    const cancel = new AbortController();
+    // Never answers; rejects once aborted, or at once when asked aborted, as Electron's `net.fetch` does.
+    const hanging: Fetch = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        if (init.signal?.aborted) reject(init.signal.reason);
+        init.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+      });
+    const download = downloadBundle({ fetch: hanging, url: URL, partialPath: await partialPath(), sha256: null, onProgress: () => undefined, signal: cancel.signal });
+    cancel.abort();
+    await expect(download).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   describe('without a SHA-256 (the official installer, whose signature is checked instead)', () => {

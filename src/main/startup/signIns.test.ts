@@ -40,6 +40,8 @@ async function app() {
       warmUp: () => undefined,
       release: () => undefined,
       disposeAll: () => undefined,
+      endSessions: () => undefined,
+      warmUpShown: () => undefined,
       restartSessions: (restarts = () => true) => void ran.push(`(shells restarted: ${[WORKSPACE, OTHER].filter(restarts).length === 1 ? 'its workspace' : 'all'})`),
     }),
   };

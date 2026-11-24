@@ -3,7 +3,7 @@ import { cmChoiceCards, cmChoiceNote, type CmChoiceFacts } from './cmChoiceCards
 
 const PINNED = '11.0.16.10659';
 const INSTALLED = { path: '/usr/local/bin/cm', version: '11.0.16.10700' };
-const FACTS: CmChoiceFacts = { pinnedVersion: PINNED, installed: INSTALLED, source: 'installed', canInstall: true };
+const FACTS: CmChoiceFacts = { pinnedVersion: PINNED, installed: INSTALLED, source: 'installed', updatesBy: 'installer' };
 
 describe('cmChoiceCards', () => {
   it('shows the installed one first, then the included one', () => {
@@ -60,11 +60,11 @@ describe('cmChoiceCards', () => {
   });
 
   describe('updating an installed one older than the app needs', () => {
-    const tooOld = (officialUpdate?: CmChoiceFacts['officialUpdate'], canInstall = true) =>
-      cmChoiceCards({ ...FACTS, installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'managed', officialUpdate, canInstall })[0]!;
+    const tooOld = (officialUpdate?: CmChoiceFacts['officialUpdate'], updatesBy: CmChoiceFacts['updatesBy'] = 'installer') =>
+      cmChoiceCards({ ...FACTS, installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'managed', officialUpdate, updatesBy })[0]!;
 
     it('offers no Update link on Linux, which has no installer', () => {
-      expect(tooOld(undefined, false)).not.toHaveProperty('updateLabel');
+      expect(tooOld(undefined, 'command')).not.toHaveProperty('updateLabel');
     });
 
     it('says how far the update is while it runs, with no link', () => {
@@ -75,10 +75,10 @@ describe('cmChoiceCards', () => {
       expect(tooOld({ kind: 'installing', version: '11.0.16.10694' })).not.toHaveProperty('updateLabel');
     });
 
-    it('says it couldn’t, why in its tip, and offers Try Again', () => {
+    it('says it couldn’t, why in plain words in its tip, and offers Try Again', () => {
       expect(tooOld({ kind: 'failed', failure: 'declined', version: '11.0.16.10694', detail: 'The permission to install was not given.' })).toMatchObject({
         description: 'Couldn’t update it.',
-        tip: 'Installing it needs your permission. Try again, and allow it when your computer asks. The permission to install was not given.',
+        tip: 'Installing it needs your permission. Try again, and allow it when your computer asks.',
         warning: true,
         updateLabel: 'Try Again',
       });

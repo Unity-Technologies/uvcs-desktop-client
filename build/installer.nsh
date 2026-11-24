@@ -12,14 +12,16 @@
   WriteRegStr HKCU "Software\Classes\uvcs\shell\open\command" "" "$\"$INSTDIR\${APP_EXECUTABLE_FILENAME}$\" --uvcs-link -- $\"%1$\""
 !macroend
 
-; The app's own Unity Version Control (docs/features/cm-runtime.md "The store", `cmStoreFolder`) goes with the app,
-; but not on an update, which runs this uninstaller too: the new version keeps what the old one downloaded for it.
+; The app's own Unity Version Control (docs/features/cm-runtime.md "The store", `cmStoreFolder`) goes with the app, and
+; so does the installed one's update downloaded beside it (`officialUpdateFolder`), but not on an update, which runs
+; this uninstaller too: the new version keeps what the old one downloaded for it.
 ; $LOCALAPPDATA is the user's own as long as the installer installs per user (electron-builder.yml's nsis); a per-machine
 ; one would point it at ProgramData.
 !macro customUnInstall
   DeleteRegKey HKCU "Software\Classes\uvcs"
   ${ifNot} ${isUpdated}
     RMDir /r "$LOCALAPPDATA\Unity Version Control\cm"
+    RMDir /r "$LOCALAPPDATA\Unity Version Control\update"
     RMDir "$LOCALAPPDATA\Unity Version Control"
   ${endIf}
 !macroend

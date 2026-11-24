@@ -74,7 +74,7 @@ async function setup({ site = fakeSite(), platform = 'windows', verdict = { trus
     folder,
     editionOf: () => 'cloud',
     tools,
-    holdCm: () => {
+    holdCm: async () => {
       calls.push('hold cm');
       return () => calls.push('resume cm');
     },
@@ -194,6 +194,14 @@ describe('OfficialClientUpdate', () => {
       expect(calls.filter((call) => call.endsWith(' cm'))).toEqual(['hold cm', 'resume cm']);
     });
 
+    it('on macOS, when Installer.app closed and the installed one is still too old: its steps weren’t finished', async () => {
+      const site = fakeSite();
+      const fetch: Fetch = (url, init) => site.fetch(url.includes('/for/cloud/macos-arm64') ? LOOKUP : url, init);
+      const { update } = await setup({ site: { fetch, requests: [] }, platform: 'macos-arm64', versionAfter: '11.0.16.9000' });
+      expect(await update.install({ path: '/Applications/PlasticSCM.app/Contents/MacOS/cm', version: '11.0.16.9000' }, FLOOR)).toBe(false);
+      expect(update.state()).toMatchObject({ kind: 'failed', failure: 'notFinished' });
+    });
+
     it('when the installer ended and the installed one is still too old, keeping the download to try again', async () => {
       const { update, folder } = await setup({ outcome: { kind: 'ended', exitCode: 3 }, versionAfter: '11.0.16.9000' });
       expect(await update.install(INSTALLED, FLOOR)).toBe(false);
@@ -220,6 +228,44 @@ describe('OfficialClientUpdate', () => {
     expect(update.state()).toEqual({ kind: 'byCommand', command: 'sudo apt-get update && sudo apt-get install --only-upgrade plasticscm-cloud # /usr/bin/cm' });
     expect(await update.install(INSTALLED, FLOOR)).toBe(false);
     expect(site.requests).toEqual([]);
+  });
+
+  describe('dropped once nothing needs it', () => {
+    it('stops a background download and deletes what it downloaded', async () => {
+      const site = fakeSite();
+      let installerAsked = (): void => undefined;
+      const asked = new Promise<void>((resolve) => (installerAsked = resolve));
+      // The installer never arrives: only the drop ends its download.
+      const fetch: Fetch = (url, init) => {
+        if (url !== INSTALLER_PAGE) return site.fetch(url, init);
+        installerAsked();
+        return new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)));
+      };
+      const { update, folder } = await setup({ site: { fetch, requests: [] } });
+      const background = update.prepare(INSTALLED, FLOOR);
+      await asked;
+
+      await update.discard();
+      await background;
+      expect(update.state()).toBeNull();
+      expect(existsSync(folder)).toBe(false);
+    });
+
+    it('deletes an installer an earlier launch left behind', async () => {
+      const { update, folder } = await setup();
+      await mkdir(folder, { recursive: true });
+      await writeFile(join(folder, FILE), 'old');
+      await update.discard();
+      expect(existsSync(folder)).toBe(false);
+    });
+
+    it('keeps an installer an app update downloaded for Restart & Install', async () => {
+      const { update, folder } = await setup();
+      await update.downloadAhead(INSTALLED, FLOOR, () => undefined);
+      await update.discard();
+      expect(await readdir(folder)).toEqual([FILE]);
+      expect(update.state()).toEqual({ kind: 'downloaded', version: '11.0.16.10694' });
+    });
   });
 
   describe('along with an app update that needs a newer one', () => {

@@ -2,7 +2,7 @@ import { mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { meetsCmVersion, type InstalledCm } from '@shared/domain/cmRuntime';
-import type { OfficialUpdate, OfficialUpdateFailure } from '@shared/domain/officialUpdate';
+import type { OfficialUpdate, OfficialUpdateFailure, OfficialUpdateMethod } from '@shared/domain/officialUpdate';
 import { downloadBundle, type Fetch } from '../downloadBundle';
 import type { OfficialEdition } from './officialEdition';
 import { installerFileName, lastVersionUrl, parseLastVersion, type OfficialPlatform } from './officialRelease';
@@ -41,10 +41,11 @@ export interface OfficialClientUpdateOptions {
   editionOf: (cmPath: string) => OfficialEdition;
   tools: OfficialUpdateTools;
   /**
-   * Holds `CmClient` while the installer runs (`CmClient.hold`): its shells end, as the installer replaces the files
-   * they hold open and on Windows stops while one runs, and no command starts until the returned function resumes it.
+   * Holds `CmClient` while the installer runs (`CmClient.hold`): settles once the commands running ended and its shells
+   * with them, as the installer replaces the files they hold open and on Windows stops while one runs; no command starts
+   * until the function it settles with resumes it.
    */
-  holdCm: () => () => void;
+  holdCm: () => Promise<() => void>;
   /** The installed `cm` and its version, read again once the installer ended (`CmRuntime.installedCm`). */
   installedAgain: () => Promise<InstalledCm | null>;
   /** Where it stands changed (`state`). */
@@ -104,11 +105,15 @@ export class OfficialClientUpdate {
   private lastProgressAt = Number.NEGATIVE_INFINITY;
   /** Told how far the download is, 0 to 1, while an app update waits for it (`downloadAhead`). */
   private progressListener: ((fraction: number) => void) | null = null;
+  /** An app update asked for the installer (`downloadAhead`), to run on Restart & Install: `discard` keeps it. */
+  private keptForAppUpdate = false;
+  /** Stops the download running (`download`), when nothing needs it any more (`discard`). */
+  private stopDownload: AbortController | null = null;
 
   constructor(private readonly options: OfficialClientUpdateOptions) {}
 
   /** How the installed one is updated here: its installer, a command the user runs (Linux), or neither (no installer for this computer). */
-  updatesBy(): 'installer' | 'command' | null {
+  updatesBy(): OfficialUpdateMethod | null {
     const { platform } = this.options;
     if (platform === null) return null;
     return platform === 'linux' ? 'command' : 'installer';
@@ -122,10 +127,12 @@ export class OfficialClientUpdate {
   async downloadAhead(installed: InstalledCm, floor: string, onProgress: (fraction: number) => void): Promise<void> {
     if (this.updatesBy() !== 'installer') throw new OfficialUpdateError('noUpdate', 'This computer has no installer to download.');
     this.progressListener = onProgress;
+    this.keptForAppUpdate = true;
     try {
       await this.downloaded(installed, floor);
       onProgress(1);
     } catch (error) {
+      this.keptForAppUpdate = false;
       if (!this.installRequested) this.set(null);
       throw error;
     } finally {
@@ -155,6 +162,20 @@ export class OfficialClientUpdate {
   }
 
   /**
+   * Nothing needs the update any more: the user runs the included version for now, or a launch found none needed. A
+   * download in the background stops, and the folder it downloads into is deleted, along with what an earlier launch
+   * left there. An update the user asked to install, or one an app update downloaded for Restart & Install, stays.
+   */
+  async discard(): Promise<void> {
+    if (this.installRequested || this.installing || this.keptForAppUpdate) return;
+    this.stopDownload?.abort();
+    await this.preparing?.catch(() => undefined);
+    this.ready = null;
+    await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
+    if (this.current && this.current.kind !== 'byCommand') this.set(null);
+  }
+
+  /**
    * Installs the update the user asked for: downloads it when it isn't yet, checks it's signed by Unity, stops the app's
    * `cm` and runs it, then reads the installed version. True once the installed one meets the floor; otherwise the state
    * says why not. A second ask while it runs joins it.
@@ -178,6 +199,7 @@ export class OfficialClientUpdate {
       await this.checkSignature(installer);
       await this.runHoldingCm(installer, floor);
       this.ready = null;
+      this.keptForAppUpdate = false;
       await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
       this.set(null);
       return true;
@@ -195,13 +217,15 @@ export class OfficialClientUpdate {
    * run on the `cm` it left. Fails unless that version meets the floor.
    */
   private async runHoldingCm(installer: DownloadedInstaller, floor: string): Promise<void> {
-    const resumeCm = this.options.holdCm();
+    const resumeCm = await this.options.holdCm();
     try {
       const outcome = await this.options.tools.run(installer);
       if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');
       const after = await this.options.installedAgain();
       if (!after || !meetsCmVersion(after.version, floor)) {
-        throw new OfficialUpdateError('notUpdated', `The installer of ${installer.version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
+        // Installer.app ends `open -W` the same whether it was cancelled or finished: most likely closed unfinished.
+        const failure = this.options.platform === 'windows' ? 'notUpdated' : 'notFinished';
+        throw new OfficialUpdateError(failure, `The installer of ${installer.version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
       }
     } finally {
       resumeCm();
@@ -223,15 +247,22 @@ export class OfficialClientUpdate {
    */
   private downloaded(installed: InstalledCm, floor: string): Promise<DownloadedInstaller> {
     if (this.ready && meetsCmVersion(this.ready.version, floor)) return Promise.resolve(this.ready);
-    this.preparing ??= this.download(installed, floor).finally(() => (this.preparing = null));
+    if (!this.preparing) {
+      const stop = new AbortController();
+      this.stopDownload = stop;
+      this.preparing = this.download(installed, floor, stop.signal).finally(() => {
+        this.preparing = null;
+        if (this.stopDownload === stop) this.stopDownload = null;
+      });
+    }
     return this.preparing;
   }
 
-  private async download(installed: InstalledCm, floor: string): Promise<DownloadedInstaller> {
+  private async download(installed: InstalledCm, floor: string, signal: AbortSignal): Promise<DownloadedInstaller> {
     if (!this.installRequested) this.set({ kind: 'lookingUp', installRequested: false });
     const { fetch, folder, platform } = this.options;
     const edition = this.options.editionOf(installed.path);
-    const release = await this.latestRelease(installed, edition, floor);
+    const release = await this.latestRelease(installed, edition, floor, signal);
     const name = installerFileName(release.version, edition, platform!);
     const file = join(folder, name);
     await this.keepOnly(name);
@@ -239,7 +270,7 @@ export class OfficialClientUpdate {
       this.reportProgress(release.version, 0, null);
       const partialPath = `${file}.partial`;
       // The installer's page redirects to the file; a resumed download's range goes along.
-      const download = downloadBundle({ fetch, url: release.installerUrl, partialPath, sha256: null, onProgress: (received, total) => this.reportProgress(release.version, received, total) });
+      const download = downloadBundle({ fetch, url: release.installerUrl, partialPath, sha256: null, signal, onProgress: (received, total) => this.reportProgress(release.version, received, total) });
       await reaching(release.installerUrl, download);
       await rename(partialPath, file);
     }
@@ -250,13 +281,13 @@ export class OfficialClientUpdate {
   }
 
   /** The latest version of the installed edition, failing as `noUpdate` when it isn't newer or not as new as the floor. */
-  private async latestRelease(installed: InstalledCm, edition: OfficialEdition, floor: string) {
+  private async latestRelease(installed: InstalledCm, edition: OfficialEdition, floor: string, signal: AbortSignal) {
     const { platform, site, fetch } = this.options;
     const url = lastVersionUrl(site, installed.version, edition, platform!);
-    const response = await reaching(url, fetch(url, { headers: { Accept: 'application/json' } }));
+    const response = await reaching(url, fetch(url, { headers: { Accept: 'application/json' }, signal }));
     const body = await reaching(url, response.text());
     if (!response.ok) throw new OfficialUpdateError('unreachable', `HTTP ${response.status} from ${url}: ${body.slice(0, 200)}`);
-    const release = parseLastVersion(body);
+    const release = parseLastVersion(body, site);
     if (!release) throw new OfficialUpdateError('noUpdate', `${url} has no newer version: ${body.slice(0, 200) || 'an empty answer'}`);
     if (!meetsCmVersion(release.version, floor)) throw new OfficialUpdateError('noUpdate', `${url} has ${release.version}, older than ${floor}`);
     return release;

@@ -60,8 +60,11 @@ export interface CmRuntimeOptions {
   findInstalled: () => string | null;
   /** What `cm version` prints for the `cm` at a path. */
   versionOf: (cmPath: string) => Promise<string>;
-  /** The `cm` to run changed: `CmClient` starts its shells again with it (`relocate`). */
-  relocated: () => void;
+  /**
+   * The `cm` to run changed: `CmClient` starts its shells again with it (`relocate`); `replaced` when it's the installed
+   * one at the same path, replaced by a newer one outside the app (Check Again), whose shells still run the older one.
+   */
+  relocated: (change: { replaced: boolean }) => void;
   statusChanged: (status: CmRuntimeStatus) => void;
   /**
    * Once a `cm` runs, the store keeps the pinned version and the newest above it, an update's, or nothing when the
@@ -75,7 +78,7 @@ export interface CmRuntimeOptions {
    * Updates the installed one when it's too old, with its own installer (docs/features/cm-runtime.md "Updating the
    * installed one"); it tells where it stands through `officialUpdateChanged`.
    */
-  officialUpdate: Pick<OfficialClientUpdate, 'state' | 'prepare' | 'install' | 'downloadAhead' | 'updatesBy'>;
+  officialUpdate: Pick<OfficialClientUpdate, 'state' | 'prepare' | 'install' | 'downloadAhead' | 'updatesBy' | 'discard'>;
 }
 
 /** How often, at most, a download's progress reaches the windows. */
@@ -160,7 +163,9 @@ export class CmRuntime {
 
   status(): CmRuntimeStatus {
     const officialUpdate = this.options.officialUpdate.state();
-    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion, ...(officialUpdate && { officialUpdate }) };
+    const updatesBy = this.options.officialUpdate.updatesBy();
+    const update = { ...(officialUpdate && { officialUpdate }), ...(updatesBy && { updatesBy }) };
+    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion, ...update };
     if (this.isReady()) {
       const { switchingToOwn, unrunnable } = this;
       return {
@@ -168,7 +173,7 @@ export class CmRuntime {
         source: this.chosen.source,
         ...(switchingToOwn && { switchingToOwn }),
         ...(unrunnable && { installedTooOld: { installed: unrunnable, requiredVersion: this.pinnedVersion } }),
-        ...(officialUpdate && { officialUpdate }),
+        ...update,
       };
     }
     return this.progress ?? this.installingStatus({ phase: 'downloading', receivedBytes: 0, totalBytes: null });
@@ -226,6 +231,8 @@ export class CmRuntime {
   useIncludedForNow(): void {
     if (!this.updateNeeded) return;
     this.options.saveDeclinedUpdate(this.pinnedVersion);
+    // Its installer, downloading in the background since the screen showed, is needed no more.
+    void this.options.officialUpdate.discard();
     this.refusedInstalledPath = this.updateNeeded.path;
     this.updateNeeded = null;
     this.switchTo(this.choose());
@@ -267,6 +274,7 @@ export class CmRuntime {
     this.switchingToOwn = null;
     if (this.options.choice() === 'managed') this.options.saveChoice('automatic');
     this.options.saveDeclinedUpdate(null);
+    // Its shells ended while the installer ran (`CmClient.hold`) and started on the new one as they resumed.
     this.switchTo(this.choose(), { relocate: true });
   }
 
@@ -298,7 +306,7 @@ export class CmRuntime {
     this.updateNeeded = null;
     this.installedReplaced++;
     // Its shells, started before its version answered, run the executable the update replaced: started again.
-    this.switchTo(this.choose(), { relocate: true });
+    this.switchTo(this.choose(), { relocate: true, replaced: true });
   }
 
   /**
@@ -344,10 +352,10 @@ export class CmRuntime {
     this.announce();
   }
 
-  private switchTo(chosen: ChosenCm, { relocate = false } = {}): void {
+  private switchTo(chosen: ChosenCm, { relocate = false, replaced = false } = {}): void {
     if (relocate || chosen.path !== this.chosen.path || chosen.source !== this.chosen.source) {
       this.chosen = chosen;
-      this.options.relocated();
+      this.options.relocated({ replaced });
     }
     this.cancelRetry();
     this.progress = null;
@@ -408,8 +416,18 @@ export class CmRuntime {
       installed,
       neededVersion,
       download: (onProgress) => officialUpdate.downloadAhead(installed, neededVersion, onProgress),
-      install: () => officialUpdate.install(installed, neededVersion),
+      install: () => this.installAhead(installed, neededVersion),
     };
+  }
+
+  /**
+   * Restart & Install of an app update that needs a newer installed `cm`: runs the installer downloaded ahead, unless the
+   * installed one, read again now, already meets `neededVersion` (updated meanwhile, from Settings or another way).
+   */
+  private async installAhead(downloadedFor: InstalledCm, neededVersion: string): Promise<boolean> {
+    const installed = await this.installedCm();
+    if (installed && meetsCmVersion(installed.version, neededVersion)) return true;
+    return this.options.officialUpdate.install(installed ?? downloadedFor, neededVersion);
   }
 
   /** The `cm` installed on the computer, with its version; null when none is found or it doesn't run. */
@@ -483,12 +501,14 @@ export class CmRuntime {
 
   /**
    * Once a launch, as a `cm` first runs: what the store holds changes only by this app's own installs after that. While
-   * the installed one runs, the app's own isn't kept at all: it's downloaded again if ever needed.
+   * the installed one runs, the app's own isn't kept at all: it's downloaded again if ever needed. No update of the
+   * installed one is needed then either: an installer an earlier launch left goes (`OfficialClientUpdate.discard`).
    */
   private pruneOnce(): void {
     if (this.pruned) return;
     this.pruned = true;
     this.options.prune(this.chosen.source === 'installed' ? null : this.pinnedVersion);
+    void this.options.officialUpdate.discard();
   }
 
   private async install(): Promise<void> {
@@ -504,7 +524,7 @@ export class CmRuntime {
       this.progress = null;
       // A choice made while it downloaded may have left the app's own behind: the installed one runs, as announced.
       if (this.chosen.source !== 'managed') return;
-      this.options.relocated();
+      this.options.relocated({ replaced: false });
       this.announce();
     } catch (error) {
       await this.failed(error);
