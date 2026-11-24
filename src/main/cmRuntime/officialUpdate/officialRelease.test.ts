@@ -68,15 +68,8 @@ describe('parseLastVersion', () => {
 });
 
 describe('installerFileName', () => {
-  it("takes the file's name from where the download ended up", () => {
-    expect(installerFileName('https://d26z97tczqnlef.cloudfront.net/releases/11.0.16.10694/plasticscm/windows/unity-vcs-11.0.16.10694-win.exe')).toBe('unity-vcs-11.0.16.10694-win.exe');
-    expect(installerFileName('https://d26z97tczqnlef.cloudfront.net/releases/11.0.16.10694/plasticscm/windows/unity-vcs-on-prem-full-11.0.16.10694-win.exe')).toBe('unity-vcs-on-prem-full-11.0.16.10694-win.exe');
-    expect(installerFileName('https://d26z97tczqnlef.cloudfront.net/releases/11.0.16.10694/plasticscm/osx/unity-vcs-on-prem-client-11.0.16.10694-mac-arm.pkg.zip?x=1')).toBe('unity-vcs-on-prem-client-11.0.16.10694-mac-arm.pkg.zip');
-  });
-
-  it("refuses anything that isn't an installer's plain name", () => {
-    expect(installerFileName('https://cdn.example/releases/readme.html')).toBeNull();
-    expect(installerFileName('https://cdn.example/releases/..%2F..%2Fevil.exe')).toBeNull();
-    expect(installerFileName('https://cdn.example/')).toBeNull();
+  it('names the download by its version, edition and platform, as the OS opens it', () => {
+    expect(installerFileName('11.0.16.10694', 'cloud', 'windows')).toBe('unity-vcs-11.0.16.10694-cloud-windows.exe');
+    expect(installerFileName('11.0.16.10694', 'enterprise', 'macos-arm64')).toBe('unity-vcs-11.0.16.10694-enterprise-macos-arm64.pkg.zip');
   });
 });

@@ -15,7 +15,8 @@ const INSTALLED: InstalledCm = { path: 'C:\\Program Files\\PlasticSCM5\\client\\
 const SITE = 'https://www.plasticscm.com';
 const LOOKUP = `${SITE}/api/lastversion/after/11.0.16.9000/for/cloud/windows`;
 const INSTALLER_PAGE = `${SITE}/download/downloadinstaller/11.0.16.10694/plasticscm/windows/cloudedition`;
-const CDN = 'https://d26z97tczqnlef.cloudfront.net/releases/11.0.16.10694/plasticscm/windows/unity-vcs-11.0.16.10694-win.exe';
+/** The name the installer downloads under (`installerFileName`). */
+const FILE = 'unity-vcs-11.0.16.10694-cloud-windows.exe';
 const INSTALLER_BYTES = new TextEncoder().encode('the official installer');
 
 function answer(version: string): string {
@@ -27,14 +28,14 @@ interface SiteOptions {
   installerStatus?: number;
 }
 
-/** The download site as it answers: the version as JSON, the installer page redirecting to the file on the CDN. */
+/** The download site as it answers: the version as JSON, then the installer (its page's redirect followed by `fetch`). */
 function fakeSite({ lookup = { status: 200, body: answer('11.0.16.10694') }, installerStatus = 200 }: SiteOptions = {}) {
   const requests: string[] = [];
   const fetch: Fetch = async (url, init) => {
-    requests.push(`${init.method ?? 'GET'} ${url}${init.headers.Range ? ` ${init.headers.Range}` : ''}`);
+    requests.push(`GET ${url}${init.headers.Range ? ` ${init.headers.Range}` : ''}`);
     if (url === LOOKUP) return new Response(lookup.body, { status: lookup.status });
-    if (url === INSTALLER_PAGE) return Object.defineProperty(new Response(null, { status: installerStatus }), 'url', { value: CDN });
-    if (url === CDN) {
+    if (url === INSTALLER_PAGE) {
+      if (installerStatus !== 200) return new Response(null, { status: installerStatus });
       const start = Number(/bytes=(\d+)-/.exec(init.headers.Range ?? '')?.[1] ?? 0);
       const body = INSTALLER_BYTES.subarray(start);
       return new Response(body, { status: start > 0 ? 206 : 200, headers: { 'content-length': String(body.length) } });
@@ -85,8 +86,8 @@ describe('OfficialClientUpdate', () => {
   it('downloads the latest installer of the edition in the background, ready for the click', async () => {
     const { update, folder, site, kinds } = await setup();
     await update.prepare(INSTALLED, FLOOR);
-    expect(site.requests).toEqual([`GET ${LOOKUP}`, `HEAD ${INSTALLER_PAGE}`, `GET ${CDN}`]);
-    expect(await readdir(folder)).toEqual(['unity-vcs-11.0.16.10694-win.exe']);
+    expect(site.requests).toEqual([`GET ${LOOKUP}`, `GET ${INSTALLER_PAGE}`]);
+    expect(await readdir(folder)).toEqual([FILE]);
     expect(update.state()).toEqual({ kind: 'downloaded', version: '11.0.16.10694' });
     expect(kinds()).toEqual(['lookingUp', 'downloading', 'downloaded']);
   });
@@ -95,7 +96,7 @@ describe('OfficialClientUpdate', () => {
     const { update, folder, calls } = await setup();
     await update.prepare(INSTALLED, FLOOR);
     expect(await update.install(INSTALLED, FLOOR)).toBe(true);
-    const installer = join(folder, 'unity-vcs-11.0.16.10694-win.exe');
+    const installer = join(folder, FILE);
     expect(calls).toEqual([`check ${installer}`, 'stop cm', `run ${installer} 11.0.16.10694`]);
     expect(update.state()).toBeNull();
     expect(existsSync(folder)).toBe(false);
@@ -114,37 +115,31 @@ describe('OfficialClientUpdate', () => {
     const installed = update.install(INSTALLED, FLOOR);
     await background;
     expect(await installed).toBe(true);
-    expect(site.requests.filter((request) => request.startsWith(`GET ${CDN}`))).toHaveLength(1);
+    expect(site.requests.filter((request) => request.startsWith(`GET ${INSTALLER_PAGE}`))).toHaveLength(1);
   });
 
   it('resumes a download cut short by an earlier launch', async () => {
     const { update, folder, site } = await setup();
     await mkdir(folder, { recursive: true });
-    await writeFile(join(folder, 'unity-vcs-11.0.16.10694-win.exe.partial'), INSTALLER_BYTES.subarray(0, 5));
+    await writeFile(join(folder, `${FILE}.partial`), INSTALLER_BYTES.subarray(0, 5));
     await update.prepare(INSTALLED, FLOOR);
-    expect(site.requests.at(-1)).toBe(`GET ${CDN} bytes=5-`);
+    expect(site.requests.at(-1)).toBe(`GET ${INSTALLER_PAGE} bytes=5-`);
   });
 
   it("deletes an older version's installer left behind", async () => {
     const { update, folder } = await setup();
     await mkdir(folder, { recursive: true });
-    await writeFile(join(folder, 'unity-vcs-11.0.16.10600-win.exe'), 'old');
+    await writeFile(join(folder, 'unity-vcs-11.0.16.10600-cloud-windows.exe'), 'old');
     await update.prepare(INSTALLED, FLOOR);
-    expect(await readdir(folder)).toEqual(['unity-vcs-11.0.16.10694-win.exe']);
+    expect(await readdir(folder)).toEqual([FILE]);
   });
 
   it("runs the macOS package unpacked from the installer's zip", async () => {
-    const zipUrl = 'https://d26z97tczqnlef.cloudfront.net/releases/11.0.16.10694/plasticscm/osx/unity-vcs-11.0.16.10694-mac-arm.pkg.zip';
     const site = fakeSite();
-    const fetch: Fetch = async (url, init) => {
-      if (url.includes('/for/cloud/macos-arm64')) return site.fetch(LOOKUP, init);
-      if (url === INSTALLER_PAGE) return Object.defineProperty(new Response(null), 'url', { value: zipUrl });
-      if (url === zipUrl) return new Response(INSTALLER_BYTES, { headers: { 'content-length': String(INSTALLER_BYTES.length) } });
-      return new Response(null, { status: 404 });
-    };
+    const fetch: Fetch = (url, init) => site.fetch(url.includes('/for/cloud/macos-arm64') ? LOOKUP : url, init);
     const { update, folder, calls } = await setup({ site: { fetch, requests: [] }, platform: 'macos-arm64' });
     expect(await update.install({ path: '/Applications/PlasticSCM.app/Contents/MacOS/cm', version: '11.0.16.9000' }, FLOOR)).toBe(true);
-    const zip = join(folder, 'unity-vcs-11.0.16.10694-mac-arm.pkg.zip');
+    const zip = join(folder, 'unity-vcs-11.0.16.10694-cloud-macos-arm64.pkg.zip');
     expect(calls).toEqual([`unpack ${zip}`, `check ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')}`, 'stop cm', `run ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')} 11.0.16.10694`]);
   });
 
@@ -195,7 +190,7 @@ describe('OfficialClientUpdate', () => {
         version: '11.0.16.10694',
         detail: 'The installer of 11.0.16.10694 ended with exit code 3; the installed version is 11.0.16.9000.',
       });
-      expect(await readdir(folder)).toEqual(['unity-vcs-11.0.16.10694-win.exe']);
+      expect(await readdir(folder)).toEqual([FILE]);
     });
   });
 

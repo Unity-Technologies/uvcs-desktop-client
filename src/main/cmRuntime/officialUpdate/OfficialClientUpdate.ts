@@ -168,19 +168,17 @@ export class OfficialClientUpdate {
 
   private async download(installed: InstalledCm, floor: string): Promise<DownloadedInstaller> {
     if (!this.installRequested) this.set({ kind: 'lookingUp', installRequested: false });
-    const { fetch, folder } = this.options;
-    const release = await this.latestRelease(installed, floor);
-    const head = await fetch(release.installerUrl, { method: 'HEAD', headers: {} });
-    if (!head.ok) throw new OfficialUpdateError('unreachable', `HTTP ${head.status} from ${release.installerUrl}`);
-    const finalUrl = head.url || release.installerUrl;
-    const name = installerFileName(finalUrl);
-    if (!name) throw new OfficialUpdateError('unreachable', `${finalUrl} is no installer`);
+    const { fetch, folder, platform } = this.options;
+    const edition = this.options.editionOf(installed.path);
+    const release = await this.latestRelease(installed, edition, floor);
+    const name = installerFileName(release.version, edition, platform!);
     const file = join(folder, name);
     await this.keepOnly(name);
     if (!existsSync(file)) {
       this.reportProgress(release.version, 0, null);
       const partialPath = `${file}.partial`;
-      await downloadBundle({ fetch, url: finalUrl, partialPath, sha256: null, onProgress: (received, total) => this.reportProgress(release.version, received, total) });
+      // The installer's page redirects to the file; a resumed download's range goes along.
+      await downloadBundle({ fetch, url: release.installerUrl, partialPath, sha256: null, onProgress: (received, total) => this.reportProgress(release.version, received, total) });
       await rename(partialPath, file);
     }
     const installer = { path: name.endsWith('.zip') ? await this.unpackedPackage(file) : file, version: release.version };
@@ -190,9 +188,9 @@ export class OfficialClientUpdate {
   }
 
   /** The latest version of the installed edition, failing as `noUpdate` when it isn't newer or not as new as the floor. */
-  private async latestRelease(installed: InstalledCm, floor: string) {
+  private async latestRelease(installed: InstalledCm, edition: OfficialEdition, floor: string) {
     const { platform, site, fetch } = this.options;
-    const url = lastVersionUrl(site, installed.version, this.options.editionOf(installed.path), platform!);
+    const url = lastVersionUrl(site, installed.version, edition, platform!);
     const response = await fetch(url, { headers: { Accept: 'application/json' } });
     const body = await response.text();
     if (!response.ok) throw new OfficialUpdateError('unreachable', `HTTP ${response.status} from ${url}: ${body.slice(0, 200)}`);

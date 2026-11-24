@@ -56,16 +56,11 @@ export function parseLastVersion(body: string): OfficialRelease | null {
 }
 
 /**
- * The installer's file name, the last part of the address its download ended up at (`unity-vcs-11.0.16.10694-win.exe`,
- * `unity-vcs-on-prem-client-11.0.16.10694-mac-arm.pkg.zip`); null for anything but an installer's plain name, so no
- * address can name a file outside the folder it downloads into.
+ * The name the installer is downloaded under: its version, edition and platform, with the extension the OS opens it by
+ * (`unity-vcs-11.0.16.10694-cloud-windows.exe`, `unity-vcs-11.0.16.10694-cloud-macos-arm64.pkg.zip`). It's the app's own:
+ * Electron's `net.fetch` doesn't tell the address a redirect ended at, where the site's name for it is. The version is
+ * digits and dots (`parseLastVersion`), so no answer can name a file outside the folder it downloads into.
  */
-export function installerFileName(finalUrl: string): string | null {
-  let name: string;
-  try {
-    name = decodeURIComponent(new URL(finalUrl).pathname.split('/').pop() ?? '');
-  } catch {
-    return null;
-  }
-  return /^[\w.-]+\.(exe|pkg\.zip)$/.test(name) && !name.startsWith('.') ? name : null;
+export function installerFileName(version: string, edition: OfficialEdition, platform: OfficialPlatform): string {
+  return `unity-vcs-${version}-${edition}-${platform}${platform === 'windows' ? '.exe' : '.pkg.zip'}`;
 }
