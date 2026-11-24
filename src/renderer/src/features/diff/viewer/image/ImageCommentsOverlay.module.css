@@ -46,8 +46,7 @@
 }
 
 /* An area is drawn as the one dragged to write it (`.dragArea`): a whole-pixel line in its state's color over a faint
-   wash of the same color, so the image under it still reads as it is. No halo of the surface's color around it: on an
-   image, a light halo blended with the line into a washed-out double border. Only its bubble shows until it's pointed
+   wash of the same color, so the image under it still reads as it is. Only its bubble shows until it's pointed
    at, its card is open, or it's being written: every area drawn at once hid the image under their outlines. Its thread
    staying selected once the card closes doesn't keep it drawn. */
 .area {
@@ -56,12 +55,16 @@
   transition: opacity var(--duration-fast) var(--ease-out);
 }
 
-/* One look for both, so the area doesn't change as the drag that drew it ends. */
+/* One look for both, so the area doesn't change as the drag that drew it ends. A dark rim each side of the line keeps
+   it apart from an image of its own color (`--image-area-rim`). */
 .area,
 .dragArea {
   border: 2px solid var(--area-color);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--area-color) 10%, transparent);
+  box-shadow:
+    0 0 0 1px var(--image-area-rim),
+    inset 0 0 0 1px var(--image-area-rim);
 }
 
 .area:has(+ .bubble:hover),
