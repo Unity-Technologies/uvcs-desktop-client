@@ -154,7 +154,8 @@ describe('createMainWindow under the smoke test (`windowsStayHidden`)', () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
-  it('renders a window without ever showing it, its timers and animation frames running, in a build run from the checkout', () => {
+  it('renders a window without ever showing it, its timers and animation frames running, in a build run from the checkout on macOS', () => {
+    runOn('darwin');
     vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
     fakeElectron.app.isPackaged = false;
 
@@ -164,7 +165,18 @@ describe('createMainWindow under the smoke test (`windowsStayHidden`)', () => {
   });
 
   it('shows an installed app’s window as always, whatever its environment holds', () => {
+    runOn('darwin');
     vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+
+    const window = reopenedMaximizedFullScreen();
+    expect(window).toMatchObject({ shown: true, fullScreen: true });
+    expect(window.options.webPreferences).not.toHaveProperty('backgroundThrottling');
+  });
+
+  it('shows a window as always on Windows, where a window never shown draws no frames', () => {
+    runOn('win32');
+    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
 
     const window = reopenedMaximizedFullScreen();
     expect(window).toMatchObject({ shown: true, fullScreen: true });

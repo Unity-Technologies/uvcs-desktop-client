@@ -58,7 +58,7 @@ export function createMainWindow(
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
   const chrome = windowChrome(process.platform);
-  const hidden = windowsStayHidden(process.env, app.isPackaged);
+  const hidden = windowsStayHidden(process.env, app.isPackaged, process.platform);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
     ...bounds,

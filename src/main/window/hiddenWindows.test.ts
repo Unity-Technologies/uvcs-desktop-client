@@ -16,17 +16,22 @@ const TEXT_FILE = /\.(?:[cm]?[jt]sx?|json|ya?ml|sh|ps1|cmd|bat|nsh|md)$/;
 const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
 
 describe('windowsStayHidden', () => {
-  it('hides the windows of a build run from the checkout that the smoke test asks to', () => {
-    expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: '1' }, false)).toBe(true);
+  it('hides the windows of a build run from the checkout on macOS that the smoke test asks to', () => {
+    expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: '1' }, false, 'darwin')).toBe(true);
+  });
+
+  it('shows them on Windows and Linux, where a window never shown draws no frames and the run crawls', () => {
+    expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: '1' }, false, 'win32')).toBe(false);
+    expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: '1' }, false, 'linux')).toBe(false);
   });
 
   it('never hides an installed app’s windows, whatever its environment holds', () => {
-    expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: '1' }, true)).toBe(false);
+    expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: '1' }, true, 'darwin')).toBe(false);
   });
 
   it('shows them when nothing asks, or asks with anything but 1', () => {
-    expect(windowsStayHidden({}, false)).toBe(false);
-    for (const value of ['', '0', 'true', 'yes']) expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: value }, false)).toBe(false);
+    expect(windowsStayHidden({}, false, 'darwin')).toBe(false);
+    for (const value of ['', '0', 'true', 'yes']) expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: value }, false, 'darwin')).toBe(false);
   });
 });
 

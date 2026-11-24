@@ -500,7 +500,7 @@ function placeOfWorkspace(workspacePath: string | undefined): Place | undefined 
 }
 
 export function focusWindow(window: BrowserWindow): void {
-  if (windowsStayHidden(process.env, app.isPackaged)) return;
+  if (windowsStayHidden(process.env, app.isPackaged, process.platform)) return;
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();
