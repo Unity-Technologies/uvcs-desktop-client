@@ -51,6 +51,8 @@ const app = await electron.launch({
     UVCS_FAKE_WORKSPACE: workspace,
     UVCS_FAKE_CM_LOG: cmLog,
     UVCS_FAKE_CM_SIGN_IN: signInFile,
+    // Its windows render but never show, so a run never takes the focus (`windowsStayHidden`).
+    UVCS_HIDDEN_WINDOWS: '1',
     // The official client's config folder, read by the first-run import (`plasticConfigFolder`): an empty one.
     PLASTIC_HOME: join(temp, 'plastic4'),
   },

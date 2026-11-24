@@ -38,14 +38,17 @@ result shown. Keys sent earlier land nowhere, and what a dialog reads when it op
 seconds on a CI runner while it takes milliseconds locally: a step that doesn't wait passes on a laptop and fails now
 and then on CI.
 
-Nothing in a run may need the window drawn on screen. The OS draws no window that is minimized, hidden, on another
-desktop or under a sleeping display, though the page still renders and every step passes; and a busy machine runs
-agents' smoke tests where nobody looks. Playwright's `page.screenshot` waits for the window to be drawn, and its
-timeout would fail whichever step it follows, so screenshots are taken from the frame Electron holds (`screenshot`:
-`webContents.capturePage`), after two animation frames so the step's last change is in it, and bounded by the same
-15 s as every wait; never call `page.screenshot` in a step. That a minimized or hidden window still runs animation
-frames was checked on macOS only; elsewhere, should it not, the screenshot fails its step in 15 s rather than hanging.
-The window's real content size is set to the page's (`VIEWPORT`), so the frame copied holds the whole page.
+Its windows are never shown, so a run never takes the focus from the person working at the computer: both scripts
+launch the app with `UVCS_HIDDEN_WINDOWS=1` (`windowsStayHidden`), and every window then opens and renders hidden,
+with its timers and animation frames running (`backgroundThrottling` off), and on macOS the app never becomes the
+active one (`setActivationPolicy('accessory')`). An installed app ignores it, and only these two scripts set it
+(`hiddenWindows.test.ts`). So nothing in a run may need the window drawn on screen. Playwright's `page.screenshot`
+waits for the window to be drawn, and its timeout would fail whichever step it follows, so screenshots are taken from
+the frame Electron holds (`screenshot`: `webContents.capturePage`), after two animation frames so the step's last
+change is in it, and bounded by the same 15 s as every wait; never call `page.screenshot` in a step. That a hidden
+window still runs animation frames and renders its frame (WebGL too) was checked on macOS only; elsewhere, should it
+not, the screenshot fails its step in 15 s rather than hanging. The window's real content size is set to the page's
+(`VIEWPORT`), so the frame copied holds the whole page.
 
 It never touches UVCS infrastructure or the user's config: the only backend is the fake `cm` (`UVCS_CM_PATH`), the
 workspace is a temp folder (`workspaceFixture.mjs`: `.plastic/plastic.selector` and a few files, one edited, one
