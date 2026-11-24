@@ -11,9 +11,9 @@ there, while the production build, which ships, runs each effect once. Each run 
 `--user-data-dir`, opens a Unity organization's page and a workspace, answers the question about profile pictures,
 visits every sidebar view, a merge request's conversation with the larger comment editor opened over it (the panel,
 not its backdrop, under a press at its middle) and the merge page its server's rules refuse, the Branch Explorer's
-timeline, a diff, a model diff (a 3D model's, in its worker), a diff in a new window, a branch's permissions, the
+timeline, a diff, a model diff (a 3D model's, in its worker), the `.meta` of a binary file, a diff in a new window, a branch's permissions, the
 command palette and a link pasted in it, a session that ends and comes back, the repository explored without a
-workspace (from the home screen: its views and a changeset's diff) and Settings, and switches to the dark theme. It
+workspace (from the home screen: its views and a changeset's diff, in a window of its own too) and Settings, and switches to the dark theme. It
 fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays `Loading` (what shows
 only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton until it shows again),
 any `cm` command the fake couldn't answer, a server command while the sign-in screen covers the window, and an answer

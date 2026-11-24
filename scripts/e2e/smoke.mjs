@@ -255,6 +255,12 @@ try {
     await main.getByLabel('3D view of the model').waitFor();
     await main.getByRole('region', { name: 'What changed' }).waitFor();
   });
+  await step('The .meta of a binary file', async () => {
+    await main.getByText('Assets/hurt.wav', { exact: true }).first().click();
+    await main.getByText('Binary file', { exact: true }).waitFor();
+    await main.getByRole('button', { name: '.meta', exact: true }).click();
+    await main.getByText('loadInBackground: 1').first().waitFor();
+  });
   await step('A diff in a new window', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
     await main.getByRole('button', { name: 'Open diff' }).click();
@@ -337,10 +343,17 @@ try {
       await settled();
     });
   }
-  await step("A repository's changeset diff", async () => {
+  await step("A repository's changeset diff, in a new window too", async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets/ }).click();
     await main.getByRole('button', { name: 'Open diff' }).click();
-    await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().waitFor();
+    await main.getByText('src/player.cs', { exact: true }).first().waitFor();
+    const opened = app.waitForEvent('window');
+    await main.getByRole('button', { name: 'Open in new window' }).click();
+    const pageWindow = await opened;
+    pageWindow.on('pageerror', (error) => errors.push(`repository page window pageerror: ${error.message}`));
+    pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`repository page window console.error: ${message.text()}`));
+    await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
+    await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
