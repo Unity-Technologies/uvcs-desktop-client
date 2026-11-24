@@ -680,6 +680,10 @@ describe('Copy', () => {
     ]);
   });
 
+  it('copies an organization as its name and link', async () => {
+    expect(await copiedBy(organizationMenu('acme@unity', false))).toEqual(['Organization name: acme', 'Organization link: uvcs://acme.unity']);
+  });
+
   it('copies a changeset as its number, spec, full spec, comment and GUID', async () => {
     expect(await copiedBy(changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [changeset]))).toEqual([
       'Changeset number: 5',
