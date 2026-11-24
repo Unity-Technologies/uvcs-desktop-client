@@ -28,6 +28,7 @@ import { cutAction, pasteAction } from './cutPasteActions';
 import { checkinItems } from './filesCheckinOperation';
 import { filesItemLink } from './filesItemLink';
 import { fileMenuTargets, itemViews } from './fileMenuTargets';
+import type { FileView } from '../annotate/fileView';
 import { showFileView, useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
@@ -48,9 +49,12 @@ export const FILE_SHORTCUTS = {
   showChanges: hotkey('listDiff'),
 };
 
-/** The file annotated beside the tree, in the diff's place (from Go to file's actions too: the tree selects it). */
-function showAnnotated(workspacePath: string, path: string): void {
-  showFileView('annotate');
+/**
+ * The file shown beside the tree as `view`, its diff or its annotations, and selected in the tree: from Go to file's
+ * actions too, whose file the tree may not have selected.
+ */
+function showSelected(workspacePath: string, path: string, view: FileView): void {
+  showFileView(view);
   useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), path);
 }
 
@@ -115,9 +119,9 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
     xlinkDirectory !== null && menuAction('newXlink', () => createXlink(workspacePath, xlinkDirectory)),
     single && choosesDownloads && menuAction('chooseDownloads', () => openChooseDownloads(workspacePath, single.path)),
-    single && views?.changes && menuAction('changes', () => showFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
+    single && views?.changes && menuAction('changes', () => showSelected(workspacePath, single.path, 'diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
     single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
-    single && views?.annotate && menuAction('annotate', () => showAnnotated(workspacePath, single.path), { shortcut: FILE_SHORTCUTS.annotate }),
+    single && views?.annotate && menuAction('annotate', () => showSelected(workspacePath, single.path, 'annotate'), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     toolsSubmenu(workspacePlace(workspacePath), items.map((item) => toolSubject.item(absolutePath(workspacePath, item.path)))),
