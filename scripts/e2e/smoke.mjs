@@ -20,16 +20,10 @@ const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /**
  * Server commands still sent twice within a step on main (`duplicateReport`), each allowed in its step only, until the
- * change named removes it.
- * One that no longer happens only warns, so those changes can merge in any order; then its line goes.
+ * change named removes it: `{ step: 'Open workspace', command: 'status --header', why: '#349: what removes it' }`.
+ * One that no longer happens only warns, so those changes can merge in any order; then its line goes. None today.
  */
-const KNOWN_DUPLICATES = [
-  {
-    step: 'Open workspace',
-    command: 'status --header --xml',
-    why: '#349: as a workspace opens, its info and the Incoming read (`readWorkspaceLoad`) each ask for the header; goes once Incoming takes the one the info read',
-  },
-];
+const KNOWN_DUPLICATES = [];
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 const VIEWPORT = { width: 1400, height: 880 };
