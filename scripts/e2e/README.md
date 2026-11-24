@@ -24,7 +24,7 @@ After each smoke test, `setupScreen.mjs` runs the screens that stand in for the 
 (docs/features/cm-runtime.md), each launch with an empty store in a temp folder (`HOME`, `LOCALAPPDATA`,
 `XDG_DATA_HOME`), a local download site answering 404, and the fake `cm` on the PATH as the installed one. The setup
 screen: with the app's own chosen, it fails unless the window starts on the setup screen, nothing asks `cm` for more
-than its version meanwhile, and "Use the installed one" brings the app to Home and saves the automatic choice. The
+than its version meanwhile, and "Use the installed one" brings the app to Home and saves that choice. The
 update screen: with the default choice and the fake reporting an older version, it fails unless the update screen
 shows, and Check Again, once the fake reports the pinned version, brings the app to Home. The pinned bundles can't be
 served, so the download itself is left to the unit tests.

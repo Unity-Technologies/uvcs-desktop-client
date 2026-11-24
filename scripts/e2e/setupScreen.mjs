@@ -4,7 +4,7 @@
 //
 // 1. The setup screen: the app's own chosen in Settings, so it sets that up. It checks the window starts on the setup
 //    screen and nothing asks `cm` for anything but its version meanwhile, then that "Use the installed one" brings the
-//    app to Home on it, and saves the automatic choice. The pin can't be met without the real bundles, so the download
+//    app to Home on it, and saves that choice. The pin can't be met without the real bundles, so the download
 //    itself is never tested here: the unit tests cover it.
 // 2. The update screen: the default choice, with the installed `cm` older than the app needs
 //    (`UVCS_FAKE_CM_VERSION_FILE`). It checks the update screen shows, then that Check Again, once the "installed" one
@@ -63,7 +63,7 @@ async function setupScreen() {
     console.log('ok    Home, on the installed cm');
   });
   const saved = run.savedSettings();
-  if (saved.cmChoice !== 'automatic') errors.push(`the choice wasn't saved: cmChoice ${saved.cmChoice}`);
+  if (saved.cmChoice !== 'installed') errors.push(`the choice wasn't saved: cmChoice ${saved.cmChoice}`);
 }
 
 async function updateScreen() {

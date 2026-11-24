@@ -94,8 +94,9 @@ page hears it's back online (`useRetryWhenOnline`). The details name the address
 `chooseCm`, asked by `CmClient` for its executable (`CmRuntime.cmPath`), with the user's `cmChoice`:
 
 1. `UVCS_CM_PATH` (development, the smoke test): source `environment`.
-2. `automatic`, the default: the installed one (`findInstalledCm`: the PATH, then the installers' locations) when one is
-   found, unless this launch found it too old and the user runs the app's own for now (`refusedInstalledPath`).
+2. `automatic`, the default until the user chooses, and `installed`, chosen in Settings: the installed one
+   (`findInstalledCm`: the PATH, then the installers' locations) when one is found, unless this launch found it too old
+   and the user runs the app's own for now (`refusedInstalledPath`).
 3. The app's own of the pinned version: source `managed`. `managed` always runs it, even with one installed.
 4. Where the app has none of its own (Linux on Arm), the installed one, found or not: one not found shows
    `CmUnavailableScreen`.
@@ -108,13 +109,13 @@ first window reads as it opens (`system.cmVersion`), so it costs no command of i
 answers (the window's first reads, `readFirstScreenAhead`) still runs on it once. `CmRuntime.admits` then shows the
 update screen (status `installedTooOld`, "The update screen"), unless the user chose "Use the included version for
 now" for this pinned version (`cmDeclinedUpdateFor`): then the app's own runs at once, set up first when it isn't
-there. Where the app has none of its own, `CmUnavailableScreen` names both versions, and Check Again reads the version
-again. `UVCS_CM_PATH` is never checked.
+there. Where the app has none of its own, `CmUnavailableScreen` names both versions (the ready status's `installedTooOld`),
+and Check Again reads the version again. `UVCS_CM_PATH` is never checked.
 
 A change of choice (`cmRuntime.use`) restarts `CmClient`'s shells (`relocate`), and every window asks again which `cm`
 runs and whether it's set up (`cmChanged`; `system.cmVersion` answers per executable, and logs the new one). Choosing
-`automatic` reads the installed one's version first (`installedCm`), so an older one brings up the update screen
-rather than running. Going back to the app's own before it's there keeps the installed one running while it downloads,
+the installed one reads its version first (`usableInstalledCm`), and an older one is refused: Settings never offers it.
+Going back to the app's own before it's there keeps the installed one running while it downloads,
 Settings showing how far (`OwnCmSwitch`), and switches once it's set up; a failure leaves the installed one, and the
 choice, as they were. The app's own `cm` shares the user's `cm` configuration (the config folder, profiles, tokens):
 `cm` reads it backward compatibly, so the app's own and an installed one can be switched freely.
@@ -143,7 +144,7 @@ ready, and then the window's place or Home, with no click. What it shows is `cmS
   (`cmSetupIconProgress`).
 - **A failure** says why in plain words, whether it retries by itself, offers Try Again and, when one at the pinned
   version or newer is installed (only when the user chose the app's own), "Use the installed one (version)", which
-  switches to the automatic choice (`cmRuntime.use('automatic')`), with the address and error folded under Details.
+  switches to it (`cmRuntime.use('installed')`), with the address and error folded under Details.
 
 Where no `cm` is installed, users of a version before the app had its own `cm` see the screen once too, as on a first
 run: an installed `cm` is never taken as the app's own. A folder named at launch (Windows, Linux) opens once the setup is done: finding its
@@ -157,16 +158,16 @@ installed (`cmUnavailableView`).
 
 ## The update screen
 
-When the installed `cm` is older than the pinned version and the choice is automatic, the setup screen's place holds
+When the installed `cm` is older than the pinned version and the user hasn't chosen the app's own, the setup screen's place holds
 the update screen instead (`CmUpdateNeeded`, its words from `cmUpdateViewOf`): nothing runs `cm` (`CmRuntime.isReady`
 is false), and the windows wait as they do for a setup.
 
 - **Words**: "Update Unity Version Control", "This app needs a newer version of Unity Version Control on this
-  computer.", then what to do next. Never `cm`, command line, installer or bundle; the versions and the installed
-  one's path only under Details.
+  computer.", both versions on a line of their own (`cmVersionWords`), then what to do next. Never `cm`, command
+  line, installer or bundle; the installed one's path only under Details.
 - **"Use the included version for now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the
   setup screen when it isn't there, and saves the pinned version as `cmDeclinedUpdateFor`: the screen doesn't ask again
-  until the pin moves. The choice stays automatic, so once the installed one is new enough, it runs again without
+  until the pin moves. The choice stays as it was, so once the installed one is new enough, it runs again without
   asking.
 - **Check Again** (`cmRuntime.checkInstalledAgain`) reads the installed one's version again (one `cm version`, logged):
   new enough, it runs, its shells started again; still too old, the screen says so; none found any more, the app's own
@@ -185,15 +186,21 @@ failure there never stops the update: the new version sets its `cm` up as it sta
 
 ## Settings
 
-Settings › Workspaces › Command line client (`CmChoiceGroup`, `cmChoiceCards`): "Automatic", checked by default, says
-what it runs: the installed version and its path, from one `cm version` each time Settings opens; the included one when
-none is installed; or, in the caution color, that the installed one needs an update. "Included with the app" (its
-version, or its download's progress while it replaces the installed one) always runs the app's own. `UVCS_CM_PATH`
-overrides both: neither is checked, and a line says why.
+Settings › Workspaces › Command line client (`CmChoiceGroup`, `cmChoiceCards`): two cards, the installed one first, as
+the one the app prefers. The check marks the one that runs, chosen or not: until the user chooses (`automatic`), the
+installed one when it's new enough, and the included one otherwise. Clicking a card chooses it (`installed` or
+`managed`), and that sticks. "Installed on this computer" shows its version and path, from one `cm version` each time
+Settings opens; "Not found" and disabled when there is none; disabled, in the caution color, with the version it needs,
+when it's older than the app needs (`needsUpdate`). "Included with the app" shows its version, or its download's
+progress while it replaces the installed one. `UVCS_CM_PATH` overrides both: neither is checked, and a line says why.
+The words "automatic" and "Automatic" never show.
 
-Settings saved before the automatic choice existed (without `cmDeclinedUpdateFor`) move to it once, whatever they held
+Every place that shows a version names it with `cmVersionWords` ("Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or
+later"): the update screen, the cards, `CmUnavailableScreen`.
+
+Settings saved before the automatic choice existed (without `cmDeclinedUpdateFor`) move a `managed` to it once
 (`storedCmChoice`): `SettingsStore` writes every setting on each change, so a `managed` saved then can't be told apart
-from the old default. A `managed` saved since is the user's, and stays.
+from the old default. `installed` was always the user's choice and stays, as does a `managed` saved since.
 
 ## Seeing which cm runs
 
@@ -206,8 +213,7 @@ Client does from the menu bar: the app's own in its store, or the installed one.
 - **Running the app's own `cm` by default**, even with one installed: `cm` reads `client.conf` from its own folder
   first, so a configuration placed next to the installed one never reached the app's own, and two `cm` versions on one
   computer can write a workspace's metadata in different formats.
-- **An "Installed on this computer" choice** beside Automatic: it ran the installed one when found and the app's own
-  otherwise, which is what Automatic does.
+- **An "Automatic" card** beside the two: it was less clear than checking the one that runs.
 - **Switching to the app's own in silence** when the installed one is too old: the reasons above for running the
   installed one still hold, so the update screen asks first.
 
