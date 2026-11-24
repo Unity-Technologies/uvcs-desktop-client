@@ -15,10 +15,14 @@ export function sharedExtension(paths: string[]): string | null {
   return shared;
 }
 
-/** The name every selected item has (`manifest.json`), or null when they don't all share one. */
+/**
+ * The name every selected item has (`manifest.json`), to write as a rule on its own; null when they don't all share
+ * one, or when it starts with `#` or `!`, which a rules file reads as a comment or an exception rather than a name.
+ */
 export function sharedName(paths: string[]): string | null {
   if (paths.length === 0) return null;
   const shared = fileNameOf(paths[0]!);
+  if (shared.startsWith('#') || shared.startsWith('!')) return null;
   for (let index = 1; index < paths.length; index++) if (fileNameOf(paths[index]!) !== shared) return null;
   return shared;
 }
@@ -26,6 +30,11 @@ export function sharedName(paths: string[]): string | null {
 /** The rules the user wrote, one per line: each once, without the blank lines or the spaces around them. */
 export function rulesFromText(text: string): string[] {
   return [...new Set(text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== ''))];
+}
+
+/** Whether the rules written can be added: at least one is. */
+export function canAddRules(rules: string[]): boolean {
+  return rules.length > 0;
 }
 
 /** The button that adds the rules written: "Add rule", "Add 3 rules"; "Add rules" while none is. */

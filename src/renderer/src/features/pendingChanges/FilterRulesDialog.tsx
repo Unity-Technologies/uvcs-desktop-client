@@ -3,7 +3,7 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { TextArea } from '../../ui/TextField';
-import { addRulesLabel, rulesFieldRows, rulesFromText } from './filterRulePatterns';
+import { addRulesLabel, canAddRules, rulesFieldRows, rulesFromText } from './filterRulePatterns';
 import styles from './FilterRulesDialog.module.css';
 
 /**
@@ -24,11 +24,11 @@ function FilterRulesDialog({ fileName, suggested, finish }: { fileName: string; 
       description="One rule per line."
       width={480}
       onClose={() => finish(undefined)}
-      onSubmit={() => rules.length > 0 && finish(rules)}
+      onSubmit={() => canAddRules(rules) && finish(rules)}
       footer={
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={rules.length === 0}>
+          <Button type="submit" variant="primary" disabled={!canAddRules(rules)}>
             {addRulesLabel(rules.length)}
           </Button>
         </>

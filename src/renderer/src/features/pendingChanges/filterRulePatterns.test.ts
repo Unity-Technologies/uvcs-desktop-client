@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countedArray } from '@shared/testing/countedReads';
-import { addRulesLabel, itemRulePatterns, rulesFieldRows, rulesFromText, sharedExtension, sharedName } from './filterRulePatterns';
+import { addRulesLabel, canAddRules, itemRulePatterns, rulesFieldRows, rulesFromText, sharedExtension, sharedName } from './filterRulePatterns';
 
 describe('itemRulePatterns', () => {
   it('gives each item a rule from the workspace root', () => {
@@ -54,6 +54,11 @@ describe('sharedName', () => {
     expect(sharedName([])).toBeNull();
   });
 
+  it('is null for a name a rules file would read as a comment or an exception', () => {
+    expect(sharedName(['#notes.txt'])).toBeNull();
+    expect(sharedName(['a/!important', 'b/!important'])).toBeNull();
+  });
+
   it('stops at the first item whose name differs', () => {
     const { array: paths, reads } = countedArray(['a/x.asset', 'b/y.asset', ...Array.from({ length: 1_000 }, () => 'c/x.asset')]);
     expect(sharedName(paths)).toBeNull();
@@ -89,5 +94,12 @@ describe('addRulesLabel', () => {
 describe('rulesFieldRows', () => {
   it('fits the suggested rules and a line more, between 3 and 10 rows', () => {
     expect([1, 3, 9, 500].map(rulesFieldRows)).toEqual([3, 4, 10, 10]);
+  });
+});
+
+describe('canAddRules', () => {
+  it('needs at least one rule', () => {
+    expect(canAddRules([])).toBe(false);
+    expect(canAddRules(['/Library'])).toBe(true);
   });
 });
