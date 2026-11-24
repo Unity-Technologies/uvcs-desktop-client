@@ -496,7 +496,7 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(runtime.installedRevision()).toBe(0);
   });
 
-  it('updates it from Settings while its own runs, and runs it then unless the user chose its own', async () => {
+  it('updates it from Settings while its own runs, and runs it then', async () => {
     let version = OLDER;
     const { runtime, officialUpdate, statuses } = runtimeWith({ chosen: 'automatic', installed: [VERSION], declinedFor: VERSION, versionOf: async () => version });
     runtime.admits('/usr/bin/cm', OLDER);
@@ -512,14 +512,38 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
   });
 
-  it('keeps its own running after an update from Settings when the user chose it', async () => {
+  it('runs the installed one once updated from Settings, even when the user chose its own: updating it is choosing it', async () => {
     let version = OLDER;
-    const { runtime, officialUpdate } = runtimeWith({ chosen: 'managed', installed: [VERSION], versionOf: async () => version });
+    const { runtime, officialUpdate, choice, declined, statuses } = runtimeWith({ chosen: 'managed', installed: [VERSION], declinedFor: VERSION, versionOf: async () => version });
     officialUpdate.outcome.updatesTo = '11.0.16.10694';
     const update = runtime.updateInstalled();
     version = '11.0.16.10694';
     await update;
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(choice()).toBe('automatic');
+    expect(declined()).toBeNull();
+    expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
+  });
+
+  it('keeps the installed one chosen once updated, and forgets the included one was used for now', async () => {
+    let version = OLDER;
+    const { runtime, officialUpdate, choice, declined } = runtimeWith({ chosen: 'installed', installed: [VERSION], declinedFor: VERSION, versionOf: async () => version });
+    runtime.admits('/usr/bin/cm', OLDER);
+    officialUpdate.outcome.updatesTo = '11.0.16.10694';
+    const update = runtime.updateInstalled();
+    version = '11.0.16.10694';
+    await update;
+    expect(runtime.cmPath()).toBe('/usr/bin/cm');
+    expect(choice()).toBe('installed');
+    expect(declined()).toBeNull();
+  });
+
+  it('keeps the user’s choice when the update from Settings failed', async () => {
+    const { runtime, choice, declined } = runtimeWith({ chosen: 'managed', installed: [VERSION], declinedFor: VERSION, versionOf: async () => OLDER });
+    await runtime.updateInstalled();
     expect(runtime.cmPath()).toBe(MANAGED);
+    expect(choice()).toBe('managed');
+    expect(declined()).toBe(VERSION);
   });
 
   it('updates nothing from Settings when the installed one is new enough or none is found', async () => {
