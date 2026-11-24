@@ -63,10 +63,25 @@ export class OfficialUpdateError extends Error {
   }
 }
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** What reaching `url` gave, its failure naming the address for the details (`net::ERR_…` names none). */
+async function reaching<T>(url: string, request: Promise<T>): Promise<T> {
+  try {
+    return await request;
+  } catch (error) {
+    if (error instanceof OfficialUpdateError) throw error;
+    const message = messageOf(error);
+    throw new OfficialUpdateError('unreachable', message.includes(url) ? message : `${url}: ${message}`);
+  }
+}
+
 function failureOf(error: unknown): OfficialUpdateError {
   if (error instanceof OfficialUpdateError) return error;
   // Anything else stopped the download: the network's, mostly; the address and the error are in the details.
-  return new OfficialUpdateError('unreachable', error instanceof Error ? error.message : String(error));
+  return new OfficialUpdateError('unreachable', messageOf(error));
 }
 
 /**
@@ -178,7 +193,8 @@ export class OfficialClientUpdate {
       this.reportProgress(release.version, 0, null);
       const partialPath = `${file}.partial`;
       // The installer's page redirects to the file; a resumed download's range goes along.
-      await downloadBundle({ fetch, url: release.installerUrl, partialPath, sha256: null, onProgress: (received, total) => this.reportProgress(release.version, received, total) });
+      const download = downloadBundle({ fetch, url: release.installerUrl, partialPath, sha256: null, onProgress: (received, total) => this.reportProgress(release.version, received, total) });
+      await reaching(release.installerUrl, download);
       await rename(partialPath, file);
     }
     const installer = { path: name.endsWith('.zip') ? await this.unpackedPackage(file) : file, version: release.version };
@@ -191,8 +207,8 @@ export class OfficialClientUpdate {
   private async latestRelease(installed: InstalledCm, edition: OfficialEdition, floor: string) {
     const { platform, site, fetch } = this.options;
     const url = lastVersionUrl(site, installed.version, edition, platform!);
-    const response = await fetch(url, { headers: { Accept: 'application/json' } });
-    const body = await response.text();
+    const response = await reaching(url, fetch(url, { headers: { Accept: 'application/json' } }));
+    const body = await reaching(url, response.text());
     if (!response.ok) throw new OfficialUpdateError('unreachable', `HTTP ${response.status} from ${url}: ${body.slice(0, 200)}`);
     const release = parseLastVersion(body);
     if (!release) throw new OfficialUpdateError('noUpdate', `${url} has no newer version: ${body.slice(0, 200) || 'an empty answer'}`);

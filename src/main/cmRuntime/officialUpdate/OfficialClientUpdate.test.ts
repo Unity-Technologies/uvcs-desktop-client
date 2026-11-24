@@ -158,6 +158,15 @@ describe('OfficialClientUpdate', () => {
       expect(calls).toEqual([]);
     });
 
+    it('when the network fails, naming the address it tried', async () => {
+      const offline: Fetch = async () => {
+        throw new Error('net::ERR_INTERNET_DISCONNECTED');
+      };
+      const { update } = await setup({ site: { fetch: offline, requests: [] } });
+      expect(await update.install(INSTALLED, FLOOR)).toBe(false);
+      expect(update.state()).toEqual({ kind: 'failed', failure: 'unreachable', version: null, detail: `${LOOKUP}: net::ERR_INTERNET_DISCONNECTED` });
+    });
+
     it("when the site can't be reached or has no installer", async () => {
       const lookupFailed = await setup({ site: fakeSite({ lookup: { status: 500, body: '{"error":"Invalid version number"}' } }) });
       expect(await lookupFailed.update.install(INSTALLED, FLOOR)).toBe(false);
