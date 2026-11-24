@@ -188,7 +188,7 @@ const FILES = {
 
 /**
  * Revisions by id, for `cm cat revid:N`: the two sides of the change every `cm diff` reports, the one revision of the
- * file whose permissions alone changed, and the revision before `src/camera.cs`'s (Files' last change of it).
+ * file whose permissions alone changed, and the revision before `src/camera.cs`'s (its `parentrevid` in `tree.cjs`).
  */
 const REVISIONS = {
   200: FILES['src/camera.cs'].parent,
