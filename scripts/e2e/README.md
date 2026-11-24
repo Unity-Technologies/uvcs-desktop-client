@@ -49,7 +49,7 @@ here: a step only opens what a new view or page adds and waits for it to settle.
 test couldn't reach.
 
 A step waits for what it is about to use before it types or presses a key, as a person would: the dialog open, the
-result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (Go to file's paths) can take
+result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (the palette's results) can take
 seconds on a CI runner while it takes milliseconds locally: a step that doesn't wait passes on a laptop and fails now
 and then on CI.
 

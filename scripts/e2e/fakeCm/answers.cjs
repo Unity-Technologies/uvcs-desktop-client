@@ -31,7 +31,7 @@ const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REPOSITORY_SPEC, REVISIO
 const ORGANIZATION = 'studio@unity';
 /** A cloud organization of the owner's too: with two, the owner's account is the one Home shows first (`mainAccountOf`). */
 const OWNER_CLOUD_ORGANIZATION = 'workshop@cloud';
-/** A second Unity account, with one organization of its own: the home screen's switcher lists both accounts. */
+/** A second Unity account, with one organization of its own: Home's account switcher, tried by hand, lists both. */
 const OTHER_USER = 'zoe@example.com';
 const OTHER_ORGANIZATION = 'arcade@unity';
 const ACCOUNTS = [
@@ -86,7 +86,7 @@ const COMMANDS = {
   setowner: () => '',
   'codereview reviewer': reviewerList,
   'codereview subscription': reviewSubscription,
-  // A merge request's state or destination: `cm` prints nothing.
+  // A merge request's state or destination: `cm` prints nothing. No smoke step moves one; it stays for trying it by hand.
   'mergerequest edit': () => '',
   // A new merge request: `cm` prints its id alone. The fake keeps no new review: the lists read stay as they are.
   'mergerequest create': () => `${NEW_MERGE_REQUEST_ID}\n`,
