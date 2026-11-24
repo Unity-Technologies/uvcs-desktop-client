@@ -43,7 +43,7 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
   const shellReadings: (OutputReading | undefined)[] = [];
-  const pools: { cmPath: string; disposed: boolean; restarted: boolean; ended: number; shownWarmedAgain: number; shown: string[]; warmed: string[]; released: string[] }[] = [];
+  const pools: { cmPath: string; disposed: boolean; restarted: boolean; ended: number; ending: Promise<void>; shownWarmedAgain: number; shown: string[]; warmed: string[]; released: string[] }[] = [];
   /** With `answerLater`, the commands running, each answered when the test calls `answerRunning`. */
   const running: (() => void)[] = [];
   // An answer that throws (a stopped session) rejects, as the real runners do.
@@ -54,7 +54,7 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
       return answered(() => printed(answer(options), options.reading));
     },
     createShellPool: (cmPath) => {
-      const pool = { cmPath, disposed: false, restarted: false, ended: 0, shownWarmedAgain: 0, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
+      const pool = { cmPath, disposed: false, restarted: false, ended: 0, ending: Promise.resolve(), shownWarmedAgain: 0, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
       pools.push(pool);
       return {
         run: (cwd, args, reading) => {
@@ -69,7 +69,10 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
         release: (cwd) => void pool.released.push(cwd),
         disposeAll: () => void (pool.disposed = true),
         restartSessions: () => void (pool.restarted = true),
-        endSessions: () => void pool.ended++,
+        endSessions: () => {
+          pool.ended++;
+          return pool.ending;
+        },
         warmUpShown: () => void pool.shownWarmedAgain++,
       };
     },
@@ -695,7 +698,7 @@ describe('CmClient sessions', () => {
       createShellPool: (cmPath) => {
         const pool = { cmPath, disposed: false };
         pools.push(pool);
-        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true), restartSessions: vi.fn(), endSessions: vi.fn(), warmUpShown: vi.fn() };
+        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true), restartSessions: vi.fn(), endSessions: async () => undefined, warmUpShown: vi.fn() };
       },
     });
 
@@ -843,6 +846,19 @@ describe('CmClient held while Unity Version Control updates', () => {
     const resume = await held;
     expect(pools[0]!.ended).toBe(1);
     resume();
+  });
+
+  it('settles only once its shells’ processes ended, as they hold the files the installer replaces', async () => {
+    const { cm, pools } = fakeClient();
+    let closed = (): void => undefined;
+    pools[0]!.ending = new Promise((resolve) => (closed = resolve));
+    let holding = false;
+    const held = cm.hold().then((resume) => ((holding = true), resume));
+    await settle();
+    expect({ holding, ended: pools[0]!.ended }).toEqual({ holding: false, ended: 1 });
+
+    closed();
+    (await held)();
   });
 
   it('stays held until every hold is resumed, each resume counting once', async () => {
