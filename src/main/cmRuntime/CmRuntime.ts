@@ -8,6 +8,7 @@ import { cmBundleFor, type CmVersionPin } from './cmBundles';
 import { cmInstallFailureOf } from './cmInstallFailure';
 import type { CmInstaller, CmInstallProgress } from './CmInstaller';
 import { retryDelayAfter } from './installRetries';
+import type { OfficialClientUpdate } from './officialUpdate/OfficialClientUpdate';
 
 /** A download of another version's `cm`, ahead of the update that runs it. */
 export interface CmPrefetch {
@@ -57,6 +58,11 @@ export interface CmRuntimeOptions {
   /** Shows a file in the OS's file manager (`shell.showItemInFolder`). */
   reveal: (path: string) => void;
   timers: CmRuntimeTimers;
+  /**
+   * Updates the installed one when it's too old, with its own installer (docs/features/cm-runtime.md "Updating the
+   * installed one"); it tells where it stands through `officialUpdateChanged`.
+   */
+  officialUpdate: Pick<OfficialClientUpdate, 'state' | 'prepare' | 'install'>;
 }
 
 /** How often, at most, a download's progress reaches the windows. */
@@ -136,7 +142,8 @@ export class CmRuntime {
   }
 
   status(): CmRuntimeStatus {
-    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion };
+    const officialUpdate = this.options.officialUpdate.state();
+    if (this.updateNeeded) return { kind: 'installedTooOld', installed: this.updateNeeded, requiredVersion: this.pinnedVersion, ...(officialUpdate && { officialUpdate }) };
     if (this.isReady()) {
       const { switchingToOwn, unrunnable } = this;
       return {
@@ -144,6 +151,7 @@ export class CmRuntime {
         source: this.chosen.source,
         ...(switchingToOwn && { switchingToOwn }),
         ...(unrunnable && { installedTooOld: { installed: unrunnable, requiredVersion: this.pinnedVersion } }),
+        ...(officialUpdate && { officialUpdate }),
       };
     }
     return this.progress ?? this.installingStatus({ phase: 'downloading', receivedBytes: 0, totalBytes: null });
@@ -215,6 +223,33 @@ export class CmRuntime {
     if (!this.updateNeeded) return Promise.resolve();
     this.checkingInstalled ??= this.readInstalledAgain().finally(() => (this.checkingInstalled = null));
     return this.checkingInstalled;
+  }
+
+  /**
+   * The update screen shows: the installed one's installer downloads in the background, ready for Update (on Linux, the
+   * command that updates it is found). Asked by the screen, never on a timer.
+   */
+  prepareUpdate(): void {
+    if (this.updateNeeded) void this.options.officialUpdate.prepare(this.updateNeeded, this.pinnedVersion);
+  }
+
+  /**
+   * Update, on the update screen or Settings' too old installed card: updates the installed one with its installer.
+   * Once it's new enough it runs, its shells started again, with no restart: unless the user chose the app's own in
+   * Settings, which keeps running. A failure stays where it was asked, saying why (`officialUpdate`'s state).
+   */
+  async updateInstalled(): Promise<void> {
+    const installed = this.updateNeeded ?? (await this.installedCm());
+    if (!installed || meetsCmVersion(installed.version, this.pinnedVersion)) return;
+    if (!(await this.options.officialUpdate.install(installed, this.pinnedVersion))) return;
+    this.updateNeeded = null;
+    this.refusedInstalledPath = null;
+    this.switchTo(this.choose(), { relocate: true });
+  }
+
+  /** The installed one's update moved on: the windows hear it. */
+  officialUpdateChanged(): void {
+    this.announce();
   }
 
   private async readInstalledAgain(): Promise<void> {
