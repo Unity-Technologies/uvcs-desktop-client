@@ -143,7 +143,7 @@ describe('createMainWindow', () => {
   });
 });
 
-describe('createMainWindow under the smoke test (`windowsStayHidden`)', () => {
+describe('createMainWindow under the smoke test (`windowsStayInBackground`)', () => {
   const reopenedMaximizedFullScreen = (): FakeWindow => {
     vi.mocked(loadWindowBounds).mockReturnValueOnce({ bounds: null, maximized: true });
     createMainWindow(memorySettings(), { reopen: { bounds: { x: 0, y: 0, width: 1000, height: 700, maximized: true }, fullScreen: true } });
@@ -154,37 +154,25 @@ describe('createMainWindow under the smoke test (`windowsStayHidden`)', () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
-  it('renders a window without ever showing it, its timers and animation frames running, in a build run from the checkout on macOS', () => {
-    runOn('darwin');
-    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+  it('shows a window without taking the focus, never maximized or full screen, its frames drawn while covered, in a build run from the checkout', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
     fakeElectron.app.isPackaged = false;
 
     const window = reopenedMaximizedFullScreen();
-    expect(window).toMatchObject({ shown: false, shownInactive: false, maximized: false, fullScreen: false });
+    expect(window).toMatchObject({ shown: false, shownInactive: true, maximized: false, fullScreen: false });
     expect(window.options.webPreferences?.backgroundThrottling).toBe(false);
   });
 
   it('shows an installed app’s window as always, whatever its environment holds', () => {
-    runOn('darwin');
-    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
 
     const window = reopenedMaximizedFullScreen();
     expect(window).toMatchObject({ shown: true, fullScreen: true });
     expect(window.options.webPreferences).not.toHaveProperty('backgroundThrottling');
   });
 
-  it('shows a window as always on Windows, where a window never shown draws no frames', () => {
-    runOn('win32');
-    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
-    fakeElectron.app.isPackaged = false;
-
-    const window = reopenedMaximizedFullScreen();
-    expect(window).toMatchObject({ shown: true, fullScreen: true });
-    expect(window.options.webPreferences).not.toHaveProperty('backgroundThrottling');
-  });
-
-  it('shows a window as always when nothing asks to hide it', () => {
-    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '');
+  it('shows a window as always when nothing asks to keep it back', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '');
     fakeElectron.app.isPackaged = false;
 
     const window = reopenedMaximizedFullScreen();

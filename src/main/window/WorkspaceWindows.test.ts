@@ -851,13 +851,7 @@ describe('page windows', () => {
   });
 });
 
-describe('focusWindow under the smoke test (`windowsStayHidden`)', () => {
-  const PLATFORM = process.platform;
-  /** `focusWindow` reads `process.platform`: hidden windows are macOS's only. */
-  const runOn = (platform: NodeJS.Platform): void => {
-    Object.defineProperty(process, 'platform', { value: platform });
-  };
-
+describe('focusWindow under the smoke test (`windowsStayInBackground`)', () => {
   const minimizedWindow = (): FakeWindow => {
     createMainWindow(memorySettings());
     const window = fakeElectron.windows().at(-1)!;
@@ -865,14 +859,10 @@ describe('focusWindow under the smoke test (`windowsStayHidden`)', () => {
     return window;
   };
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    runOn(PLATFORM);
-  });
+  afterEach(() => vi.unstubAllEnvs());
 
-  it('leaves the window hidden and the focus where it is, in a build run from the checkout on macOS', () => {
-    runOn('darwin');
-    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+  it('leaves the window where it is and the focus with the person, in a build run from the checkout', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
     fakeElectron.app.isPackaged = false;
     const window = minimizedWindow();
 
@@ -882,8 +872,7 @@ describe('focusWindow under the smoke test (`windowsStayHidden`)', () => {
   });
 
   it('brings an installed app’s window forward as always, whatever its environment holds', () => {
-    runOn('darwin');
-    vi.stubEnv('UVCS_HIDDEN_WINDOWS', '1');
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
     const window = minimizedWindow();
 
     focusWindow(asBrowserWindow(window));

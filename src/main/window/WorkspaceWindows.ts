@@ -11,7 +11,7 @@ import { askBeforeUnloading } from './leaveRequests';
 import { PageWindowRegistry, type FollowChanges } from './PageWindowRegistry';
 import { savedBoundsOf } from './savedWindowBounds';
 import { inSessionOrder, windowsToReopen } from './windowSession';
-import { windowsStayHidden } from './hiddenWindows';
+import { windowsStayInBackground } from './backgroundWindows';
 
 interface WorkspaceWindowsOptions {
   settings: SettingsStore;
@@ -500,7 +500,7 @@ function placeOfWorkspace(workspacePath: string | undefined): Place | undefined 
 }
 
 export function focusWindow(window: BrowserWindow): void {
-  if (windowsStayHidden(process.env, app.isPackaged, process.platform)) return;
+  if (windowsStayInBackground(process.env, app.isPackaged)) return;
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();

@@ -12,7 +12,7 @@ import { windowIcon } from './appIcon';
 import { cascadedWindowBounds, keepWindowBoundsSaved, loadWindowBounds, reopenedWindowBounds, type SavedBoundsKey } from './savedWindowBounds';
 import { fitWindowControls, followPageZoom } from './pageZoom';
 import { titleBarOptions } from './titleBar';
-import { windowsStayHidden } from './hiddenWindows';
+import { windowsStayInBackground } from './backgroundWindows';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
 /** Until the user leaves a window somewhere (`loadWindowBounds`). */
@@ -58,7 +58,7 @@ export function createMainWindow(
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
   const chrome = windowChrome(process.platform);
-  const hidden = windowsStayHidden(process.env, app.isPackaged, process.platform);
+  const underTest = windowsStayInBackground(process.env, app.isPackaged);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
     ...bounds,
@@ -73,8 +73,8 @@ export function createMainWindow(
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       sandbox: true,
-      // A window kept hidden still runs its timers and animation frames, and its page reads as visible.
-      ...(hidden ? { backgroundThrottling: false } : {}),
+      // A window left behind others still runs its timers and animation frames, and its page reads as visible.
+      ...(underTest ? { backgroundThrottling: false } : {}),
     },
   });
 
@@ -85,7 +85,8 @@ export function createMainWindow(
   window.once('ready-to-show', () => {
     // The page has its zoom by now: the window shows with its controls where the zoomed top bar puts them.
     fitWindowControls(window, chrome);
-    if (hidden) return;
+    // Never maximized or full screen, which would show it and take the focus.
+    if (underTest) return window.showInactive();
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
     if (inBackground) window.showInactive();
