@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
 import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
-import { readBranchNames } from './cm/branchNames';
+import { cmBranchNameReads } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
 import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
 import { createCmRuntime } from './cmRuntime/createCmRuntime';
@@ -86,7 +86,7 @@ const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serv
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
-  (place) => readBranchNames(cm, place),
+  cmBranchNameReads(cm),
   Date.now,
   // A repository's names are kept while a window explores it (`windows.explores`); its last window lets them go.
   (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),

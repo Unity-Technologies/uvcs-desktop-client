@@ -264,16 +264,18 @@ and many people use the same server. Every `cm` command other than local reads (
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
 - **Reuse**: what a command already returned answers later questions instead of another command. Code reviews name
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
-  their branch lists already carry, and share one review list with the palette; the Merge requests view and the review's page name it
-  from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
-  (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
-  `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
-  renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending
-  changes share the Locks view's read of every lock (`locksQuery`), and ask which locks are mine only when some lock
-  holds one of them. Left changes look the selector's object id up only when an automatic shelve by another client
-  could match it. On a branch they take the id from the top bar's branch query (`leftChangesQuery`, `KnownBranch`),
-  used only while the workspace is still on that branch (`selectorObjectRef`). Arriving from a switch looks for changes
-  to restore only when this app left some there.
+  their branch lists already carry, and share one review list with the palette; the sidebar's count on Merge requests
+  needs no name and reads none (`reviewListSummariesQuery`). The Merge requests view and the review's page name it
+  (`CodeReviewsApi.branchNames`) from the branch lists already read (`BranchNamesCache.remember`); else one branch
+  alone, a review's page, is read by its id (`readBranchName`: `where id = N`, then among the hidden ones only when
+  that finds none), and two or more read every branch's id and name once (`readBranchNames`, two light queries, kept
+  ten minutes, and only while a window shows the workspace: `watchShownWorkspaces`). The top bar takes the branch
+  comment from the branch query. The recent branches and renaming a workspace take its GUID and name from the reads
+  the workspace info shares (`WorkspaceHeaders`). Pending changes share the Locks view's read of every lock
+  (`locksQuery`), and ask which locks are mine only when some lock holds one of them. Left changes look the selector's
+  object id up only when an automatic shelve by another client could match it. On a branch they take the id from the
+  top bar's branch query (`leftChangesQuery`, `KnownBranch`), used only while the workspace is still on that branch
+  (`selectorObjectRef`). Arriving from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
   a changeset's, branch's or shelve's diff, Incoming, update conflicts, a merge's destination version of each
   conflicting file, a model's `.mtl`, `.bin`, `.meta` and textures in any of them, both sides) follows one procedure
