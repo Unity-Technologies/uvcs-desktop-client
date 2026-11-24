@@ -26,8 +26,12 @@ After each smoke test, `setupScreen.mjs` runs the screens that stand in for the 
 screen: with the app's own chosen, it fails unless the window starts on the setup screen, nothing asks `cm` for more
 than its version meanwhile, and "Use the installed one" brings the app to Home and saves that choice. The
 update screen: with the default choice and the fake reporting an older version, it fails unless the update screen
-shows, and Check Again, once the fake reports the pinned version, brings the app to Home. The pinned bundles can't be
-served, so the download itself is left to the unit tests.
+shows, and checking again (Check Again on Linux, the window gaining focus elsewhere), once the fake reports the pinned
+version, brings the app to Home. Updating the installed one: with a fake of Unity's download site
+(`fakeOfficialSite.mjs`, `UVCS_OFFICIAL_UPDATES_URL`) and the development build's fake installer
+(`UVCS_FAKE_OFFICIAL_UPDATE`), it fails unless the update downloads in the background, Update brings the app to Home,
+and a declined permission says it couldn't update; on Linux, unless the screen shows the command. No installer runs.
+The pinned bundles can't be served, so their download is left to the unit tests.
 
 A step waits for what it is about to use before it types or presses a key, as a person would: the dialog open, the
 result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (Go to file's paths) can take
