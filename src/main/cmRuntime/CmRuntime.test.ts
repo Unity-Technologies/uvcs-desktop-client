@@ -278,6 +278,18 @@ describe('CmRuntime with an update waiting', () => {
       expect(officialUpdate.installs).toEqual([{ path: '/usr/bin/cm', version: INSTALLED_VERSION }]);
     });
 
+    it('runs no installer on Restart & Install when the installed one was updated to the update’s version meanwhile', async () => {
+      let version = INSTALLED_VERSION;
+      const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic', versionOf: async () => version });
+      runtime.admits('/usr/bin/cm', INSTALLED_VERSION);
+      const prefetch = await runtime.prefetchFor(LATER);
+      if (prefetch?.kind !== 'installed') throw new Error('expected the installed one’s update');
+
+      version = '11.0.16.10800';
+      expect(await prefetch.install()).toBe(true);
+      expect(officialUpdate.installs).toEqual([]);
+    });
+
     it('reads its version when it hasn’t answered yet', async () => {
       const { runtime } = runtimeWith({ chosen: 'installed' });
       expect(await runtime.prefetchFor(LATER)).toMatchObject({ kind: 'installed', installed: { version: INSTALLED_VERSION } });
