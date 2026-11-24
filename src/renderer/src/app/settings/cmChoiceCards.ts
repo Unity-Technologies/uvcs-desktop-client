@@ -1,4 +1,5 @@
 import { meetsCmVersion, type CmChoice, type CmSource, type InstalledCm, type OwnCmSwitch } from '@shared/domain/cmRuntime';
+import { includedVersionText, installedAndNeededText, installedVersionText } from '@shared/domain/cmVersionWords';
 
 /** One card of Settings' choice of which Unity Version Control the app runs (`cmChoice`). */
 export interface CmChoiceCard {
@@ -34,18 +35,18 @@ function automaticCard({ choice, pinnedVersion, installed, source }: CmChoiceFac
   if (installed === undefined) return { ...base, description: 'Looking…' };
   if (installed === null) {
     if (pinnedVersion === null) return { ...base, description: 'Not found on this computer', warning: true };
-    return { ...base, description: `Version ${pinnedVersion}, included with the app: none is installed` };
+    return { ...base, description: `${includedVersionText(pinnedVersion)} · None installed` };
   }
   // Never one older than the app's own (`CmRuntime.admits`): any feature may rely on a newer `cm`.
   if (pinnedVersion !== null && !meetsCmVersion(installed.version, pinnedVersion)) {
     return {
       ...base,
-      description: `Installed version ${installed.version} needs an update`,
-      tip: `Needs version ${pinnedVersion} or later. Until then, the one included with the app runs. ${installed.path}`,
+      description: installedAndNeededText(installed.version, pinnedVersion),
+      tip: `The installed version needs an update. Until then, the one included with the app runs. ${installed.path}`,
       warning: true,
     };
   }
-  return { ...base, description: `Version ${installed.version}, installed on this computer`, tip: `${AUTOMATIC_TIP} ${installed.path}` };
+  return { ...base, description: installedVersionText(installed.version), tip: `${AUTOMATIC_TIP} ${installed.path}` };
 }
 
 function managedCard({ choice, pinnedVersion, source, switchingToOwn }: CmChoiceFacts): CmChoiceCard {
@@ -58,7 +59,7 @@ function managedCard({ choice, pinnedVersion, source, switchingToOwn }: CmChoice
   if (switchingToOwn?.kind === 'failed') {
     return { ...base, description: 'Couldn’t download it. Choose it to try again.', tip: switchingToOwn.detail, disabled: false, warning: true };
   }
-  return { ...base, description: `Version ${pinnedVersion}, updated with the app`, disabled: false };
+  return { ...base, description: `${includedVersionText(pinnedVersion)} · Updated with the app`, disabled: false };
 }
 
 /**

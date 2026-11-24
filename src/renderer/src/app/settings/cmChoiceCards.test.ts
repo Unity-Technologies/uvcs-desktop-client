@@ -12,24 +12,24 @@ describe('cmChoiceCards', () => {
     expect(automatic).toEqual({
       choice: 'automatic',
       label: 'Automatic',
-      description: 'Version 11.0.16.10700, installed on this computer',
+      description: 'Installed: 11.0.16.10700',
       tip: `${TIP} /usr/local/bin/cm`,
       disabled: false,
       selected: true,
       warning: false,
     });
-    expect(managed).toEqual({ choice: 'managed', label: 'Included with the app', description: 'Version 11.0.16.10659, updated with the app', disabled: false, selected: false, warning: false });
+    expect(managed).toEqual({ choice: 'managed', label: 'Included with the app', description: 'Included: 11.0.16.10659 · Updated with the app', disabled: false, selected: false, warning: false });
   });
 
   it('says Automatic runs the included one when none is installed', () => {
-    expect(cmChoiceCards({ ...FACTS, installed: null, source: 'managed' })[0]).toMatchObject({ description: 'Version 11.0.16.10659, included with the app: none is installed', selected: true, warning: false });
+    expect(cmChoiceCards({ ...FACTS, installed: null, source: 'managed' })[0]).toMatchObject({ description: 'Included: 11.0.16.10659 · None installed', selected: true, warning: false });
   });
 
   it('warns that an installed one older than the app needs an update, and still lets Automatic be chosen', () => {
     const [automatic] = cmChoiceCards({ ...FACTS, choice: 'managed', installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'managed' });
     expect(automatic).toMatchObject({
-      description: 'Installed version 11.0.16.9000 needs an update',
-      tip: 'Needs version 11.0.16.10659 or later. Until then, the one included with the app runs. /usr/local/bin/cm',
+      description: 'Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later',
+      tip: 'The installed version needs an update. Until then, the one included with the app runs. /usr/local/bin/cm',
       disabled: false,
       selected: false,
       warning: true,
@@ -47,7 +47,7 @@ describe('cmChoiceCards', () => {
   // Where it has none (Linux on Arm), `system.cmVersion` stops an older one before any window shows Settings.
   it('compares no versions, and offers no included one, where the app has none of its own', () => {
     const [automatic, managed] = cmChoiceCards({ ...FACTS, pinnedVersion: null, installed: { ...INSTALLED, version: '11.0.16.9000' } });
-    expect(automatic).toMatchObject({ description: 'Version 11.0.16.9000, installed on this computer', warning: false });
+    expect(automatic).toMatchObject({ description: 'Installed: 11.0.16.9000', warning: false });
     expect(managed).toMatchObject({ description: 'Not available on this computer', disabled: true, selected: false });
     expect(cmChoiceCards({ ...FACTS, pinnedVersion: null, installed: null })[0]).toMatchObject({ description: 'Not found on this computer', warning: true });
   });
