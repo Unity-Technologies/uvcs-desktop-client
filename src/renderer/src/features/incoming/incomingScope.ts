@@ -1,6 +1,7 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { spec } from '@shared/domain/specs';
 import type { ChangesetListChoice } from '../../components/changesetList/changesetListChoice';
+import { viewOfferFor } from '../../components/fileListViewMenuModel';
 import type { StatusTone } from '../../components/StatusBadge';
 import { isStatusGroup, statusGroup, type FileListContent, type GroupedFileListFacts, type StatusGroup } from '../../components/statusGroups';
 import { DIFF_ENTRY_FACTS, diffEntryTones } from '../diff/diffEntrySources';
@@ -37,6 +38,9 @@ export type IncomingListGroup = IncomingFileGroup | StatusGroup;
  * its own groups saying whether it conflicts, and its revision's date.
  */
 export const INCOMING_FILE_FACTS: GroupedFileListFacts<DiffEntry, IncomingListGroup> = { toneOf: DIFF_ENTRY_FACTS.toneOf, dateOf: DIFF_ENTRY_FACTS.dateOf, statusGroup };
+
+/** What Incoming's view menu offers: grouping by status, and its files' dates. */
+export const INCOMING_VIEW_OFFER = viewOfferFor(INCOMING_FILE_FACTS, { statusGroups: true });
 
 /** What a group of Incoming's list is, as its tooltip: its own groups say; a status group's name does. */
 export function incomingGroupTip(group: IncomingListGroup): string | undefined {

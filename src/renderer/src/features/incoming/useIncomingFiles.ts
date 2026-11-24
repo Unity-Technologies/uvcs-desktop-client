@@ -9,7 +9,7 @@ import { diffEntryKey } from '../diff/DiffEntryList';
 import { listedEntries } from '../diff/listedEntries';
 import { useDiffEntries } from '../diff/useDiffEntries';
 import { pairIncomingMetas } from './incomingMetaPairs';
-import { INCOMING_FILE_FACTS, INCOMING_TONE_LABELS, incomingFileContent, incomingFileTones, scopeDiffToRead, scopeKey, type IncomingListGroup, type IncomingScope } from './incomingScope';
+import { INCOMING_FILE_FACTS, INCOMING_TONE_LABELS, INCOMING_VIEW_OFFER, incomingFileContent, incomingFileTones, scopeDiffToRead, scopeKey, type IncomingListGroup, type IncomingScope } from './incomingScope';
 
 const NO_FILES: DiffEntry[] = [];
 const noMeta = (): DiffEntry | undefined => undefined;
@@ -35,7 +35,7 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
   const metaOf = pairs?.metaOf ?? noMeta;
 
   const tonesOf = useCallback((file: DiffEntry) => incomingFileTones(file, collides(file)), [collides]);
-  const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, { isViewFilter: true, reading: !files, toneLabels: INCOMING_TONE_LABELS });
+  const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, { isViewFilter: true, reading: !files, toneLabels: INCOMING_TONE_LABELS, viewOffer: INCOMING_VIEW_OFFER });
   const content = useMemo<FileListContent<DiffEntry, IncomingListGroup>>(
     // Only the whole update is what updating merges: a changeset's files are what it did, without groups.
     () => (scope.kind === 'all' ? incomingFileContent(filter.visible, collides) : { sorted: filter.visible }),

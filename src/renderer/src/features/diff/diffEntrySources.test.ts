@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { DIFF_ENTRY_FACTS, describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones, permissionsNote } from './diffEntrySources';
+import { DIFF_ENTRY_FACTS, DIFF_VIEW_OFFER, describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones, permissionsNote } from './diffEntrySources';
 
 describe('diffEntrySources', () => {
   it('reads both sides of a file under an xlink in the xlinked repository, where its ids are', () => {
@@ -125,5 +125,11 @@ describe("a diff entry's date", () => {
   it('is none where cm printed none, or a date it cannot read', () => {
     expect(DIFF_ENTRY_FACTS.dateOf!(entry)).toBeUndefined();
     expect(DIFF_ENTRY_FACTS.dateOf!({ ...entry, date: '20/11/2026 9:15' })).toBeUndefined();
+  });
+});
+
+describe('DIFF_VIEW_OFFER', () => {
+  it("offers a diff's list the sort by date", () => {
+    expect(DIFF_VIEW_OFFER).toEqual({ statusGroups: true, dates: true });
   });
 });

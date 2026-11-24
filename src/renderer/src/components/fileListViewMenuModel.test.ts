@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileListViewMenu } from './fileListViewMenuModel';
+import { fileListViewMenu, viewOfferFor } from './fileListViewMenuModel';
 import type { FileListView } from './fileListViewStore';
 
 const view: FileListView = { layout: 'list', sort: 'path', groupByStatus: false };
@@ -45,5 +45,10 @@ describe('fileListViewMenuModel', () => {
 
   it('names the sort by date on the button where the list has dates', () => {
     expect(fileListViewMenu({ ...view, sort: 'date' }, { statusGroups: true, dates: true }).summary).toBe('View options: List, sorted by date');
+  });
+
+  it('offers the sort by date exactly where the list has dates to sort by', () => {
+    expect(viewOfferFor({ dateOf: () => 1 }, { statusGroups: true }).dates).toBe(true);
+    expect(viewOfferFor({}, { statusGroups: true }).dates).toBe(false);
   });
 });

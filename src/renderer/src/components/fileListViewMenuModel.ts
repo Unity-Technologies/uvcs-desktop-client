@@ -1,3 +1,4 @@
+import type { FileListFacts } from './fileListOrder';
 import type { FileListLayout, FileListSort, FileListView } from './fileListViewStore';
 
 /** What a list offers in its view menu beyond what every list has (layout, sort). */
@@ -6,8 +7,16 @@ export interface FileListViewOffer {
   changelists?: boolean;
   /** Whether its files can go in a group per status (`GroupedFileListFacts.statusGroup`). */
   statusGroups: boolean;
-  /** Whether its files have dates to sort by (`FileListFacts.dateOf`). */
+  /** Whether its files have dates to sort by: read from the list's facts (`viewOfferFor`), never written out. */
   dates: boolean;
+}
+
+/**
+ * The offer of a list whose files `facts` describes: a sort by date where they have dates (`FileListFacts.dateOf`), so
+ * the menu offers it exactly where `fileListOrder` can sort by it.
+ */
+export function viewOfferFor(facts: Pick<FileListFacts<never>, 'dateOf'>, offer: Omit<FileListViewOffer, 'dates'>): FileListViewOffer {
+  return { ...offer, dates: facts.dateOf !== undefined };
 }
 
 export type FileListGrouping = 'changelist' | 'status';

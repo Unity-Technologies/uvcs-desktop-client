@@ -2,7 +2,7 @@ import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdent
 import type { DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, MergeChange, MergePlan } from '@shared/domain/merge';
 import { comparePaths } from '@shared/pathOrder';
 import { ownTone, statusTones } from '../../components/changeFilter';
-import type { FileListViewOffer } from '../../components/fileListViewMenuModel';
+import { viewOfferFor } from '../../components/fileListViewMenuModel';
 import type { GroupedFileListFacts } from '../../components/statusGroups';
 import type { StatusTone } from '../../components/StatusBadge';
 import { withoutRepeatedFolders } from '../../lib/enclosingFolders';
@@ -167,7 +167,7 @@ export const MERGE_ITEM_FACTS: GroupedFileListFacts<MergeItem, MergeGroup> = { t
  * The merge page's view menu offers no grouping: its own groups already say what the merge does to each item. Its items
  * have no dates, so no sort by date either.
  */
-export const MERGE_VIEW_OFFER: FileListViewOffer = { statusGroups: false, dates: false };
+export const MERGE_VIEW_OFFER = viewOfferFor(MERGE_ITEM_FACTS, { statusGroups: false });
 
 /** An item's statuses for the filter's chips: what the merge does to it, and "Conflicts" for a conflict. */
 export function mergeItemTones(item: MergeItem): readonly StatusTone[] {

@@ -3,6 +3,7 @@ import type { DiffEntry, PermissionsChange } from '@shared/domain/diff';
 import { revisionIn, type RevisionRef } from '@shared/domain/revision';
 import { statusTones } from '../../components/changeFilter';
 import { statusGroup, type StatusGroup } from '../../components/statusGroups';
+import { viewOfferFor } from '../../components/fileListViewMenuModel';
 import type { GroupedFileListFacts } from '../../components/useGroupedFileTree';
 import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
@@ -58,6 +59,9 @@ function diffEntryLabel(entry: DiffEntry): string {
  * the one its row shows last, a group per status, and its revision's date.
  */
 export const DIFF_ENTRY_FACTS: GroupedFileListFacts<DiffEntry, StatusGroup> = { toneOf: diffEntryTone, statusGroup, dateOf: diffEntryDate };
+
+/** What a diff's view menu offers: grouping by status, and its dates. */
+export const DIFF_VIEW_OFFER = viewOfferFor(DIFF_ENTRY_FACTS, { statusGroups: true });
 
 /** When the entry's revision was made (`DiffEntry.date`), parsed whatever UTC offset `cm` printed it with. */
 function diffEntryDate(entry: DiffEntry): number | undefined {
