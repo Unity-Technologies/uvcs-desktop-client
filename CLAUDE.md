@@ -92,7 +92,8 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
    output": "No list is one string").
 6. **What does it refresh?** An operation declares what it `affects` (`refreshScopes.ts`); reads refresh nothing.
 7. **Check it.** Watch the command log (⌘⇧L) while exercising the change and count the commands. Development builds
-   warn `[server budget]` in the console when a server command repeats more than twice in ten seconds.
+   warn `[server budget]` in the console when a server command repeats more than twice in ten seconds, and the smoke
+   test fails when one step sends the same command line twice from the same folder.
 
 ## Safety
 
@@ -108,7 +109,7 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
 
 ## Commands
 
-npm (Node ≥ 22.12; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). The app downloads its own `cm` on the first run (docs/features/cm-runtime.md); sign in once with it or an installed
+npm (Node ≥ 22.18; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). The app downloads its own `cm` on the first run (docs/features/cm-runtime.md); sign in once with it or an installed
 one. `UVCS_CM_PATH` runs another `cm`, and `UVCS_CM_BUNDLES_URL` downloads the app's own from another site.
 
 ```bash
@@ -275,6 +276,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
+| `scripts/e2e/smoke.mjs` (`duplicateReport`)               | no step sends the same command line twice from the same folder (scripts/e2e/README.md, "Duplicate server commands") |
 | `main/cm/noStickyShellOptions.test.ts`                    | no option a `cm shell` keeps for its session (`--username`, `--server`…: `STICKY_SHELL_OPTIONS`) reaches a pooled shell |
 | `main/cm/commandOutputs.test.ts`, `testing/fakeCmClient.test.ts` | no list is read as one string; every command says how it's read (`COMMAND_OUTPUTS`) |
 | `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |

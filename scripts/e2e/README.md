@@ -16,8 +16,9 @@ command palette and a link pasted in it, a session that ends and comes back, the
 workspace (from the home screen: its views and a changeset's diff, in a window of its own too) and Settings, and switches to the dark theme. It
 fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays `Loading` (what shows
 only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton until it shows again),
-any `cm` command the fake couldn't answer, a server command while the sign-in screen covers the window, and an answer
-to the profile pictures question that wasn't saved. Beyond those and the larger editor being on top, it asserts only
+any `cm` command the fake couldn't answer, a server command while the sign-in screen covers the window, a step that
+sent the same command line twice from the same folder ("Duplicate server commands" below), and an answer to the
+profile pictures question that wasn't saved. Beyond those and the larger editor being on top, it asserts only
 that things appear, never pixels or copy.
 About 15 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
 runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
@@ -81,10 +82,35 @@ Settings › Issue tracker shows its empty state: no tracker is connected, and n
 fake Jira Cloud and GitHub for looking at the trackers' flows in a development build (`UVCS_FAKE_TRACKERS`,
 docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn't load it.
 
+## Duplicate server commands
+
+The rule: the same command line, sent twice from the same folder, within one step, fails the run. Local commands are
+left out (`needsServer`, held to the app's `needsSignIn` by its tests). The incoming check (`isIncomingCheck`) is the
+one read on a timer, whose poll or check as the window gains focus may send it once more in any step: it may be sent
+at most twice (`timesAllowed`), and a third time fails. The
+logic is a module with its own tests (`duplicateReport`, `scripts/build/duplicateServerCommands.mts`); the smoke test
+only writes each step's start into the fake's log, collects it, and reports, naming the step and the command.
+
+A step ends once its reads did (`readsSettled`): the page marks itself while its query client reads or changes
+anything, or a selection waits to settle before it reads (`<html data-reading>`, `markReadsInFlight`, `settleTimeout`),
+and the step waits for the mark to clear and stay clear two frames later, when what the last answer showed has asked
+for what it needs. A step waits so on every window it opened, before closing it, and the commands of all its windows
+count together. A step that reads again on purpose names what does (`step(name, run, { rereads: 'Check again' })`),
+and its commands aren't checked.
+
+What it can't see: two reads of the same data written as different command lines (another `--format`, another
+condition), and reads that start outside the query client and its settle waits, which may land in the next step.
+
+`KNOWN_DUPLICATES` lists the duplicates still on `main`, each by its step and how its command line starts, with the
+issue and the change that removes it; it allows that duplicate in that step only. One that no longer happens prints a
+warning without failing, so that change can merge before or after the line goes; remove the line then. Never add a
+line to get a new duplicate through: fix it, or name the issue that will.
+
 ## The fake `cm` (`fakeCm/`)
 
 - `cm.cjs` runs a command as a process (`cm find …`) or as `cm shell` (commands on stdin, each answer ending with
-  `CommandResult <code>`, as `CmShellSession` reads it). Every command is logged to `UVCS_FAKE_CM_LOG`, `ok` or `ERR`.
+  `CommandResult <code>`, as `CmShellSession` reads it). Every command is logged to `UVCS_FAKE_CM_LOG`,
+  one JSON line each: its arguments, the folder it ran in, and whether the fake knew it (`readCommandLog`).
 - `answers.cjs` maps commands (`COMMANDS`, one or two words: `find`, `lock list`) to their output. `--format` output
   is the command's own template filled from the objects' fields (`format.cjs`), so a new field is one more property
   on the objects. `find` keeps only the objects its query's comparisons match

@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
+import { readCommandLog } from '../build/duplicateServerCommands.mts';
 import { fakeCmExecutable } from './fakeCm/executable.mjs';
 import { startFakeOfficialSite } from './fakeOfficialSite.mjs';
 import { createWorkspace } from './workspaceFixture.mjs';
@@ -66,8 +67,8 @@ async function setupScreen() {
   await run.steps(async (window) => {
     await window.getByRole('heading', { name: /couldn.t be set up/ }).waitFor();
     console.log('ok    The setup screen, its download failed');
-    const asked = run.commandsRun().filter((line) => !/^ok\s+version\b/.test(line));
-    if (asked.length > 0) errors.push(`cm was asked for more than its version during the setup: ${asked.join(', ')}`);
+    const asked = run.commandsRun().filter(({ args, known }) => !(known && args[0] === 'version'));
+    if (asked.length > 0) errors.push(`cm was asked for more than its version during the setup: ${asked.map(({ args }) => args.join(' ')).join(', ')}`);
 
     await window.getByRole('button', { name: /^Use the Installed Version/ }).click();
     await window.getByRole('region', { name: 'All workspaces' }).waitFor();
@@ -165,8 +166,8 @@ async function launch(name, settings, extraEnv = {}, cmVersion = null) {
         await app.close();
       }
     },
-    /** The commands the fake `cm` ran so far, as logged (`ok version`). */
-    commandsRun: () => (existsSync(cmLog) ? readFileSync(cmLog, 'utf8').split('\n').filter(Boolean) : []),
+    /** The commands the fake `cm` ran so far, as logged (`readCommandLog`): this run writes no steps. */
+    commandsRun: () => (existsSync(cmLog) ? readCommandLog(readFileSync(cmLog, 'utf8')) : []),
     savedSettings: () => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8')),
   };
 }

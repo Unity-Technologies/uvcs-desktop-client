@@ -325,8 +325,13 @@ and many people use the same server. Every `cm` command other than local reads (
   records (Parsing).
   Equivalent filters must share one query key (`compactFilter`). A parse failure must fail, never degrade to an empty
   filter (`parseWorkspaceStatus`): `cm find changeset where changesetid > -1` reads the whole repository.
-- **Guard**: development builds warn in the console (`[server budget]`) when the same server command runs more than
-  twice in ten seconds (`main/cm/repeatedCommands.ts`).
+- **Guards**: one thing is read once. The smoke test fails when the same command line is sent twice from the same
+  folder within one step (opening the workspace, showing a view): one read under two query keys, or two features each
+  reading what one already read. What it checks, what it leaves out and what it can't see: scripts/e2e/README.md,
+  "Duplicate server commands".
+  Development builds also warn in the console (`[server budget]`) when the same server command runs more than twice in
+  ten seconds (`main/cm/repeatedCommands.ts`). A tighter window, a second run within 2 s, was tried and dropped: it
+  flagged the reads a sign-in or a Refresh runs again on purpose, as it can't tell what caused a command.
 
 ## Parsing `cm` output
 
