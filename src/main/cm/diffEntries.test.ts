@@ -135,6 +135,34 @@ describe('reading diff entries', () => {
     ]);
   });
 
+  it("reads when each item's revision was made, as cm prints it in the round-trip format", () => {
+    // `cm diff cs:41 --repositorypaths --format=… --dateformat=o`: a deleted item's date is its last revision's.
+    const output =
+      formatOutput(['C', '"/src/player.cs"', '""', '40', '41', 'F', GAME, '""', '""', '"2026-11-20T09:15:02.1234567+01:00"']) +
+      formatOutput(['D', '"/src/enemy.cs"', '""', '-1', '12', 'F', GAME, '""', '""', '"2026-03-02T18:40:00.0000000+01:00"']);
+
+    expect(diffEntriesIn(output).map(({ path, date }) => ({ path, date }))).toEqual([
+      { path: 'src/enemy.cs', date: '2026-03-02T18:40:00.0000000+01:00' },
+      { path: 'src/player.cs', date: '2026-11-20T09:15:02.1234567+01:00' },
+    ]);
+  });
+
+  it('reads no date where cm prints none, or the empty date of a revision it knows nothing of', () => {
+    const output =
+      formatOutput(['C', '"/plugins/editor"', '""', '-1', '-1', 'X', GAME, '""', '""', '""']) +
+      formatOutput(['C', '"/src/old.cs"', '""', '40', '41', 'F', GAME, '""', '""', '"0001-01-01T00:00:00.0000000"']);
+
+    expect(diffEntriesIn(output).map((entry) => entry.date)).toEqual([undefined, undefined]);
+  });
+
+  it("dates a moved and changed item by its content change's revision", () => {
+    const output =
+      formatOutput(['C', '"/src/arith.ts"', '""', '55', '69', 'F', GAME, '""', '""', '"2026-11-20T09:15:02.0000000+01:00"']) +
+      formatOutput(['M', '"/src/arith.ts"', '"/src/math.ts"', '-1', '50', 'F', GAME, '""', '""', '"2026-01-05T10:00:00.0000000+01:00"']);
+
+    expect(diffEntriesIn(output)[0]?.date).toBe('2026-11-20T09:15:02.0000000+01:00');
+  });
+
   it('reads a big diff in one pass: doubling it about doubles the work, sorting included', () => {
     const diffOf = (size: number) => formatOutput(...Array.from({ length: size }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % size}.ts"`, '""', '12', '13', 'F', GAME]));
     const charactersReadFor = (size: number) => countCharactersRead(() => diffEntriesIn(diffOf(size))).charactersRead;

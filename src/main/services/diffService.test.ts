@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
-import { DIFF_FORMAT } from '../cm/diffEntries';
+import { DIFF_OUTPUT_ARGS } from '../cm/diffEntries';
 import { FOUND_PARENTS } from '../cm/xlinkSides';
 import { formatOutput, recordsOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -28,7 +28,9 @@ describe('diff entries', () => {
 
     const entries = await service.entries(IN_WORKSPACE, { kind: 'changeset', changesetId: 37 });
 
-    expect(commands).toMatchObject([{ via: 'query', args: ['diff', 'cs:37', '--repositorypaths', `--format=${DIFF_FORMAT}`], options: { cwd: WORKSPACE } }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['diff', 'cs:37', ...DIFF_OUTPUT_ARGS], options: { cwd: WORKSPACE } }]);
+    // Dates in the round-trip format the renderer parses, whatever date format cm's own config sets.
+    expect(commands[0]?.args).toContain('--dateformat=o');
     expect(entries).toEqual([
       { status: 'changed', path: 'src/player.cs', oldPath: undefined, itemType: 'file', baseRevisionId: 13, revisionId: 37, repository: 'game@local' },
     ]);
@@ -41,7 +43,7 @@ describe('diff entries', () => {
     await service.entries(IN_WORKSPACE, { kind: 'shelve', shelveId: 3 });
     await service.entries(IN_WORKSPACE, { kind: 'range', fromSpec: 'cs:10', toSpec: 'lb:v1.0' });
 
-    expect(commands.map((command) => command.args.slice(1, -2))).toEqual([['br:/main/task1', '--integration'], ['sh:3'], ['cs:10', 'lb:v1.0']]);
+    expect(commands.map((command) => command.args.slice(1, -DIFF_OUTPUT_ARGS.length))).toEqual([['br:/main/task1', '--integration'], ['sh:3'], ['cs:10', 'lb:v1.0']]);
   });
 });
 
@@ -57,7 +59,7 @@ describe('a diff handed to a page window', () => {
     expect(await service.entries(IN_WORKSPACE, target)).toEqual(handed);
     expect(fake.commands).toEqual([]);
     await service.entries(IN_WORKSPACE, target);
-    expect(fake.lines()).toEqual([`diff cs:37 --repositorypaths --format=${DIFF_FORMAT}`]);
+    expect(fake.lines()).toEqual([`diff cs:37 ${DIFF_OUTPUT_ARGS.join(' ')}`]);
   });
 });
 
@@ -69,7 +71,7 @@ describe('branch diff entries', () => {
 
     const entries = await service.entries(IN_WORKSPACE, TASK);
 
-    expect(lines()).toEqual([`diff br:/main/task1 --integration --repositorypaths --format=${DIFF_FORMAT}`]);
+    expect(lines()).toEqual([`diff br:/main/task1 --integration ${DIFF_OUTPUT_ARGS.join(' ')}`]);
     expect(linesVia('execute')).toEqual([]);
     expect(entries.map((entry) => entry.path)).toEqual(['src/player.cs']);
   });
@@ -81,8 +83,8 @@ describe('branch diff entries', () => {
     const entries = await service.entries(IN_WORKSPACE, TASK);
 
     expect(fake.lines()).toEqual([
-      `diff br:/main/task1 --integration --repositorypaths --format=${DIFF_FORMAT}`,
-      `diff br:/main/task1 --repositorypaths --format=${DIFF_FORMAT}`,
+      `diff br:/main/task1 --integration ${DIFF_OUTPUT_ARGS.join(' ')}`,
+      `diff br:/main/task1 ${DIFF_OUTPUT_ARGS.join(' ')}`,
     ]);
     expect(entries.map((entry) => entry.path)).toEqual(['src/player.cs']);
   });
@@ -184,7 +186,7 @@ describe('diffs of a repository explored without a workspace', () => {
     await service.entries(onRepository, { kind: 'shelve', shelveId: 3 });
     await service.entries(onRepository, { kind: 'range', fromSpec: 'cs:10', toSpec: 'lb:v1.0' });
 
-    expect(commands.map((command) => command.args.slice(1, -2))).toEqual([
+    expect(commands.map((command) => command.args.slice(1, -DIFF_OUTPUT_ARGS.length))).toEqual([
       ['cs:37@game@local'],
       ['br:/main/task1@game@local', '--integration'],
       ['sh:3@game@local'],
