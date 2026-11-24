@@ -308,7 +308,8 @@ try {
   });
   await step('Diff', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
-    await main.getByText('src/player.cs', { exact: true }).first().click();
+    // Visible only: the views shown lately stay mounted, hidden, and may name the same file (`mountedViews`).
+    await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().click();
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
   });
