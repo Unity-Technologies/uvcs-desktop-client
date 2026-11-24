@@ -211,8 +211,9 @@ and many people use the same server. Every `cm` command other than local reads (
   under the same head. It waits for the check rather than run before it. It tells `cm` where the workspace stands, as
   the workspace info says (`incomingChanges(workspacePath, at)`, `workspaceLoadAt`), so it reads no `cm status
   --header`. What collides locally follows Changes' pending changes as they are read, never reading them itself
-  (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print
-  (`localChangesForUpdateOf`), the conflicts worked out again from the diff already read (`withLocalCollisions`,
+  (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print, each kind
+  decided on its own (`localChangesForUpdateOf`; a checkout deleted on disk, which Changes lists only as deleted, is
+  the one it misses, and updating checks again), the conflicts worked out again from the diff already read (`withLocalCollisions`,
   `findUpdateConflicts`), the same object while they come out the same. At "100+" a hover reads nothing heavy:
   the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
   says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
