@@ -45,6 +45,13 @@ describe('unpublishedInstallers', () => {
     expect(problems).toEqual(['cloud on macos: nothing published after 11.0.16.10658', 'enterprise on windows: the latest is 11.0.16.10600']);
   });
 
+  it('names an installer the site gives without https, apart from one not published', () => {
+    const plain = JSON.stringify({ version: PIN, installerUri: 'http://www.plasticscm.com/download/downloadinstaller/x' });
+    expect(unpublishedInstallers(PIN, answering((url) => (url.endsWith('/cloud/windows') ? plain : latest(PIN))))).toEqual([
+      'cloud on windows: its installer isn’t served over https: http://www.plasticscm.com/download/downloadinstaller/x',
+    ]);
+  });
+
   it('names an answer it can’t read', () => {
     expect(unpublishedInstallers(PIN, answering((url) => (url.endsWith('/dvcs/windows') ? '{"error":"Invalid version number"}' : latest(PIN))))).toEqual([
       'dvcs on windows: nothing published after 11.0.16.10658',

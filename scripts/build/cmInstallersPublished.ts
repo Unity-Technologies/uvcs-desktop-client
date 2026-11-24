@@ -6,7 +6,7 @@
  */
 import { compareCmVersions } from '../../src/shared/domain/cmRuntime.ts';
 import type { OfficialEdition } from '../../src/main/cmRuntime/officialUpdate/officialEdition.ts';
-import { lastVersionUrl, parseLastVersion, type OfficialPlatform } from '../../src/main/cmRuntime/officialUpdate/officialRelease.ts';
+import { isTrustedInstallerUrl, lastVersionUrl, readLastVersion, type OfficialPlatform } from '../../src/main/cmRuntime/officialUpdate/officialRelease.ts';
 
 /** Every edition, on every platform with an installer (Linux updates by its package manager: none to check). */
 export const INSTALLER_TARGETS: readonly { edition: OfficialEdition; platform: OfficialPlatform }[] = (['cloud', 'enterprise', 'dvcs'] as const).flatMap((edition) =>
@@ -39,8 +39,9 @@ export function installerQuestions(site: string, version: string): InstallerQues
 /** The editions and platforms whose answer has nothing at `version` or newer, one line each; none when all have it. */
 export function unpublishedInstallers(version: string, answers: readonly (InstallerQuestion & { body: string })[]): string[] {
   return answers.flatMap(({ edition, platform, url, body }) => {
-    const release = parseLastVersion(body, new URL(url).origin);
+    const release = readLastVersion(body);
     if (!release) return [`${edition} on ${platform}: nothing published after ${versionJustBefore(version)}`];
+    if (!isTrustedInstallerUrl(release.installerUrl, new URL(url).origin)) return [`${edition} on ${platform}: its installer isn’t served over https: ${release.installerUrl}`];
     return compareCmVersions(release.version, version) < 0 ? [`${edition} on ${platform}: the latest is ${release.version}`] : [];
   });
 }

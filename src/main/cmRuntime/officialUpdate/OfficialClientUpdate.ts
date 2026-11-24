@@ -37,15 +37,20 @@ export interface OfficialClientUpdateOptions {
   fetch: Fetch;
   /** Where the installer downloads: a folder of the app's own, emptied once it's installed. */
   folder: string;
+  /**
+   * Whether dropping the update deletes the folder (`discard`): packaged builds. Development builds share it with the
+   * packaged app, as they share the `cm` store, and only stop their own download.
+   */
+  discardDeletes: boolean;
   /** The edition of the installation a `cm` belongs to (`officialEditionOf`, its links resolved). */
   editionOf: (cmPath: string) => OfficialEdition;
   tools: OfficialUpdateTools;
   /**
    * Holds `CmClient` while the installer runs (`CmClient.hold`): settles once the commands running ended and its shells
    * with them, as the installer replaces the files they hold open and on Windows stops while one runs; no command starts
-   * until the function it settles with resumes it.
+   * until the function it settles with resumes it. Null, holding nothing, while an operation runs in a process of its own.
    */
-  holdCm: () => Promise<() => void>;
+  holdCm: () => Promise<(() => void) | null>;
   /** The installed `cm` and its version, read again once the installer ended (`CmRuntime.installedCm`). */
   installedAgain: () => Promise<InstalledCm | null>;
   /** Where it stands changed (`state`). */
@@ -109,6 +114,8 @@ export class OfficialClientUpdate {
   private keptForAppUpdate = false;
   /** Stops the download running (`download`), when nothing needs it any more (`discard`). */
   private stopDownload: AbortController | null = null;
+  /** A drop deleting the folder (`discard`): a download asked meanwhile starts once it's done. */
+  private discarding: Promise<void> | null = null;
 
   constructor(private readonly options: OfficialClientUpdateOptions) {}
 
@@ -164,14 +171,30 @@ export class OfficialClientUpdate {
   /**
    * Nothing needs the update any more: the user runs the included version for now, or a launch found none needed. A
    * download in the background stops, and the folder it downloads into is deleted, along with what an earlier launch
-   * left there. An update the user asked to install, or one an app update downloaded for Restart & Install, stays.
+   * left there (packaged builds only: `discardDeletes`). An update the user asked to install, or one an app update downloaded for Restart & Install, stays.
    */
   async discard(): Promise<void> {
-    if (this.installRequested || this.installing || this.keptForAppUpdate) return;
+    if (this.isWanted()) return;
+    const stopping = this.preparing;
     this.stopDownload?.abort();
-    await this.preparing?.catch(() => undefined);
+    // A download asked from now on is a new one, which waits for the drop (`download`).
+    this.preparing = null;
+    this.discarding ??= this.dropAfter(stopping).finally(() => (this.discarding = null));
+    await this.discarding;
+  }
+
+  /** The update is wanted: the user asked to install it, it installs, or an app update keeps it for Restart & Install. */
+  private isWanted(): boolean {
+    return this.installRequested || this.installing !== null || this.keptForAppUpdate;
+  }
+
+  /** Deletes the folder once `stopping` stopped, unless the update was asked for again meanwhile. */
+  private async dropAfter(stopping: Promise<DownloadedInstaller> | null): Promise<void> {
+    await stopping?.catch(() => undefined);
+    // Asked for again while it stopped: a download started since (`preparing`) waits for this drop, then keeps its file.
+    if (this.isWanted() || this.preparing !== null) return;
     this.ready = null;
-    await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
+    if (this.options.discardDeletes) await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
     if (this.current && this.current.kind !== 'byCommand') this.set(null);
   }
 
@@ -218,6 +241,7 @@ export class OfficialClientUpdate {
    */
   private async runHoldingCm(installer: DownloadedInstaller, floor: string): Promise<void> {
     const resumeCm = await this.options.holdCm();
+    if (!resumeCm) throw new OfficialUpdateError('operationRunning', 'An operation of Unity Version Control was running: the installer was not started.');
     try {
       const outcome = await this.options.tools.run(installer);
       if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');
@@ -250,15 +274,19 @@ export class OfficialClientUpdate {
     if (!this.preparing) {
       const stop = new AbortController();
       this.stopDownload = stop;
-      this.preparing = this.download(installed, floor, stop.signal).finally(() => {
-        this.preparing = null;
+      const preparing: Promise<DownloadedInstaller> = this.download(installed, floor, stop.signal).finally(() => {
+        // A drop may have let this one go and another started since (`discard`).
+        if (this.preparing === preparing) this.preparing = null;
         if (this.stopDownload === stop) this.stopDownload = null;
       });
+      this.preparing = preparing;
     }
     return this.preparing;
   }
 
   private async download(installed: InstalledCm, floor: string, signal: AbortSignal): Promise<DownloadedInstaller> {
+    // A drop deleting the folder finishes first: it would delete what this downloads.
+    await this.discarding;
     if (!this.installRequested) this.set({ kind: 'lookingUp', installRequested: false });
     const { fetch, folder, platform } = this.options;
     const edition = this.options.editionOf(installed.path);

@@ -31,7 +31,7 @@ interface CmRuntimeWiring {
    * `CmClient.hold`: lets the commands running end, then ends its shells and starts no command while the installed one
    * is updated, as they hold its files open.
    */
-  holdCm: () => Promise<() => void>;
+  holdCm: () => Promise<(() => void) | null>;
 }
 
 /** A path with its links resolved (macOS's /usr/local/bin/cm leads into PlasticSCM.app); as it is when it can't be. */
@@ -91,6 +91,7 @@ export function createCmRuntime({ settings, prunes, relocated, logCommand, statu
     // Beside the app's own `cm` store, and emptied once the installer ran or nothing needs it. Not the OS's temporary
     // folder: Electron's on macOS ignores TMPDIR, so no test could keep its downloads apart.
     folder: officialUpdateFolder(process.platform, process.env, homedir()),
+    discardDeletes: prunes,
     editionOf: (cmPath) => officialEditionOf(resolvedPath(cmPath), process.platform, existsSync),
     tools: updateToolsFor(development),
     holdCm,

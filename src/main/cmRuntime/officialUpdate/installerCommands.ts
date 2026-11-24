@@ -1,10 +1,11 @@
 import { win32 } from 'node:path';
 
-/** A process to start: what, with which arguments, and what to add to its environment. */
+/** A process to start: what, with which arguments, what to add to its environment, and what to write to its input. */
 export interface ToolCommand {
   command: string;
   args: string[];
   env: Record<string, string>;
+  input?: string;
 }
 
 /**
@@ -23,23 +24,27 @@ function powerShellPath(env: NodeJS.ProcessEnv): string {
 }
 
 /**
- * PowerShell running `script`, passed with `-EncodedCommand` (base64 of its UTF-16LE text, as PowerShell reads it): the
- * script's double quotes and line breaks never go through Windows' command-line quoting, which `-Command` would need
- * them escaped for.
+ * PowerShell running `statements`, read from its input (`-Command -`): no quote of the script meets Windows'
+ * command-line quoting, and no encoded script reaches the command line. PowerShell reads its input as typed, a line
+ * at a time, so the statements go as one line: a block split over lines could wait for more.
  */
-function powerShell(script: string, installer: string, env: NodeJS.ProcessEnv): ToolCommand {
-  const encoded = Buffer.from(script, 'utf16le').toString('base64');
-  return { command: powerShellPath(env), args: ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], env: { [INSTALLER_PATH_VARIABLE]: installer } };
+function powerShell(statements: string[], installer: string, env: NodeJS.ProcessEnv): ToolCommand {
+  return {
+    command: powerShellPath(env),
+    args: ['-NoProfile', '-NonInteractive', '-Command', '-'],
+    env: { [INSTALLER_PATH_VARIABLE]: installer },
+    input: `${statements.join('; ')}\n`,
+  };
 }
 
 /** Prints the installer's Authenticode signature as `authenticodeVerdict` reads it: its status, and its signer's subject. */
 export function authenticodeCheck(installer: string, env: NodeJS.ProcessEnv): ToolCommand {
-  const script = [
+  const statements = [
     `$signature = Get-AuthenticodeSignature -LiteralPath $env:${INSTALLER_PATH_VARIABLE}`,
     '"Status=$($signature.Status)"',
     '"Subject=$($signature.SignerCertificate.Subject)"',
-  ].join('; ');
-  return powerShell(script, installer, env);
+  ];
+  return powerShell(statements, installer, env);
 }
 
 /**
@@ -50,19 +55,17 @@ export function authenticodeCheck(installer: string, env: NodeJS.ProcessEnv): To
  * keeps only a translated message; .NET's carries Windows' own code.
  */
 export function windowsInstallerRun(installer: string, env: NodeJS.ProcessEnv): ToolCommand {
-  const script = [
+  const declined = `$cause = $_.Exception; while ($cause) { if ($cause.NativeErrorCode -eq 1223) { exit ${DECLINED_EXIT_CODE} }; $cause = $cause.InnerException }`;
+  const statements = [
     `$start = New-Object System.Diagnostics.ProcessStartInfo $env:${INSTALLER_PATH_VARIABLE}`,
     "$start.Arguments = '--mode unattended --unattendedmodeui minimalWithDialogs'",
     "$start.Verb = 'runas'",
     '$start.UseShellExecute = $true',
-    'try { $installer = [System.Diagnostics.Process]::Start($start) } catch {',
-    '  $cause = $_.Exception; while ($cause) { if ($cause.NativeErrorCode -eq 1223) { exit ' + DECLINED_EXIT_CODE + ' }; $cause = $cause.InnerException }',
-    '  [Console]::Error.WriteLine($_.Exception.Message); exit 1',
-    '}',
+    `try { $installer = [System.Diagnostics.Process]::Start($start) } catch { ${declined}; [Console]::Error.WriteLine($_.Exception.Message); exit 1 }`,
     '$installer.WaitForExit()',
     'exit $installer.ExitCode',
-  ].join('\n');
-  return powerShell(script, installer, env);
+  ];
+  return powerShell(statements, installer, env);
 }
 
 /** Checks the macOS package's signature and notarization, printed as `pkgutilVerdict` reads it. */
