@@ -210,8 +210,9 @@ and many people use the same server. Every `cm` command other than local reads (
   a new key (new changesets leave it alone, `isAffectedByNewChangesets`), and only an operation or Refresh reads it again
   under the same head. It waits for the check rather than run before it. It tells `cm` where the workspace stands, as
   the workspace info says (`incomingChanges(workspacePath, at)`, `workspaceLoadAt`), so it reads no `cm status
-  --header`. What collides locally follows Changes' pending changes as they are read, never reading them itself
-  (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print, each kind
+  --header`. So once per head it runs one find, one diff and one local `cm status --controlledchanged --changed`, which
+  says what collides as it reads. After that, what collides follows Changes' pending changes whenever Changes read
+  them after the incoming changes, never reading them itself (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print, each kind
   decided on its own (`localChangesForUpdateOf`; a checkout deleted on disk, which Changes lists only as deleted, is
   the one it misses, and updating checks again), the conflicts worked out again from the diff already read (`withLocalCollisions`,
   `findUpdateConflicts`), the same object while they come out the same. At "100+" a hover reads nothing heavy:
@@ -529,8 +530,9 @@ by name, and never passes it to `cm`.
     `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
     asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
-    (`WorkspaceHeaders`): the incoming changes read without a head (before updating or checking in, from the
-    renderer's `incomingChanges` without `at`) take it from there. Reads that need only what is loaded take
+    (`WorkspaceHeaders`): the incoming changes read without a head take it from there (the renderer's
+    `incomingChanges` without `at`: before updating, before catching up a check-in, and a partial workspace's check,
+    `checkPartialIncoming`). Reads that need only what is loaded take
     `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
     read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace
