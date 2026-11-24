@@ -1,4 +1,4 @@
-import { extensionOf } from '../../lib/text';
+import { extensionOf, fileNameOf } from '../../lib/text';
 
 /** A rule for each selected item, leaving out the items inside a selected folder: its rule already covers them. */
 export function itemRulePatterns(paths: string[]): string[] {
@@ -13,6 +13,19 @@ export function sharedExtension(paths: string[]): string | null {
   if (shared === null) return null;
   for (let index = 1; index < paths.length; index++) if (extensionOf(paths[index]!) !== shared) return null;
   return shared;
+}
+
+/** The name every selected item has (`manifest.json`), or null when they don't all share one. */
+export function sharedName(paths: string[]): string | null {
+  if (paths.length === 0) return null;
+  const shared = fileNameOf(paths[0]!);
+  for (let index = 1; index < paths.length; index++) if (fileNameOf(paths[index]!) !== shared) return null;
+  return shared;
+}
+
+/** The rules the user wrote, one per line: each once, without the blank lines or the spaces around them. */
+export function rulesFromText(text: string): string[] {
+  return [...new Set(text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== ''))];
 }
 
 /** Whether a folder above `path` is in `selected`: workspace paths use forward slashes on every OS (`PendingChange.path`). */

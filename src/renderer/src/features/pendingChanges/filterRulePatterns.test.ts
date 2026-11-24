@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countedArray } from '@shared/testing/countedReads';
-import { itemRulePatterns, sharedExtension } from './filterRulePatterns';
+import { itemRulePatterns, rulesFromText, sharedExtension, sharedName } from './filterRulePatterns';
 
 describe('itemRulePatterns', () => {
   it('gives each item a rule from the workspace root', () => {
@@ -39,5 +39,43 @@ describe('sharedExtension', () => {
     const { array: paths, reads } = countedArray(['a.asset', 'b.json', ...Array.from({ length: 1_000 }, (_, index) => `c${index}.asset`)]);
     expect(sharedExtension(paths)).toBeNull();
     expect(reads()).toBe(2);
+  });
+});
+
+describe('sharedName', () => {
+  it('is the name all the items have, wherever they are', () => {
+    expect(sharedName(['anewfile.txt2'])).toBe('anewfile.txt2');
+    expect(sharedName(['src/New directory', 'tests/New directory'])).toBe('New directory');
+    expect(sharedName(['Música/canción.wav', 'Otra/canción.wav'])).toBe('canción.wav');
+  });
+
+  it('is null when the names differ', () => {
+    expect(sharedName(['a/manifest.json', 'b/package.json'])).toBeNull();
+    expect(sharedName([])).toBeNull();
+  });
+
+  it('stops at the first item whose name differs', () => {
+    const { array: paths, reads } = countedArray(['a/x.asset', 'b/y.asset', ...Array.from({ length: 1_000 }, () => 'c/x.asset')]);
+    expect(sharedName(paths)).toBeNull();
+    expect(reads()).toBe(2);
+  });
+});
+
+describe('rulesFromText', () => {
+  it('reads a rule from each line, in either line break', () => {
+    expect(rulesFromText('/Library\n*.tmp')).toEqual(['/Library', '*.tmp']);
+    expect(rulesFromText('/Library\r\n*.tmp\r\n')).toEqual(['/Library', '*.tmp']);
+  });
+
+  it('leaves out blank lines, the spaces around a rule and repeated rules', () => {
+    expect(rulesFromText('\n  /Temp  \n\n/Temp\n   \n')).toEqual(['/Temp']);
+  });
+
+  it('keeps the spaces inside a rule', () => {
+    expect(rulesFromText('/New directory')).toEqual(['/New directory']);
+  });
+
+  it('is empty when nothing is written', () => {
+    expect(rulesFromText('  \n\n')).toEqual([]);
   });
 });
