@@ -39,10 +39,10 @@ export interface CmRuntimeOptions {
   saveChoice: (choice: CmChoice) => void;
   /**
    * The pinned version for which the user ran the app's own rather than update an older installed one
-   * (`cmDeclinedUpdateFor`), and saving it: not asked again until the pin moves.
+   * (`cmDeclinedUpdateFor`), and saving it: not asked again until the pin moves. Null once the installed one is updated.
    */
   declinedUpdateFor: () => string | null;
-  saveDeclinedUpdate: (pinnedVersion: string) => void;
+  saveDeclinedUpdate: (pinnedVersion: string | null) => void;
   /** The `cm` installed on the computer (`findInstalledCm`), null when none was found. */
   findInstalled: () => string | null;
   /** What `cm version` prints for the `cm` at a path. */
@@ -237,8 +237,10 @@ export class CmRuntime {
 
   /**
    * Update, on the update screen or Settings' too old installed card: updates the installed one with its installer.
-   * Once it's new enough it runs, its shells started again, with no restart: unless the user chose the app's own in
-   * Settings, which keeps running. A failure stays where it was asked, saying why (`officialUpdate`'s state).
+   * Once it's new enough it runs, its shells started again, with no restart. Asking to update it is choosing it: a
+   * choice of the app's own goes back to the default (`automatic`), and "Use the included version for now" is
+   * forgotten (`cmDeclinedUpdateFor`). A failure stays where it was asked, saying why (`officialUpdate`'s state), and
+   * changes no choice.
    */
   async updateInstalled(): Promise<void> {
     const installed = this.updateNeeded ?? (await this.installedCm());
@@ -247,6 +249,9 @@ export class CmRuntime {
     this.installedReplaced++;
     this.updateNeeded = null;
     this.refusedInstalledPath = null;
+    this.switchingToOwn = null;
+    if (this.options.choice() === 'managed') this.options.saveChoice('automatic');
+    this.options.saveDeclinedUpdate(null);
     this.switchTo(this.choose(), { relocate: true });
   }
 

@@ -230,8 +230,10 @@ Settings' Update link, never on a timer. It isn't `cm`, so the server budget doe
    (`open -W`, `macInstallerRun`). Only the click starts it (`noExternalUi.test.ts`).
 7. **Then** the installed one's version is read again (`CmRuntime.installedCm`). The pinned version or newer: it runs
    (`CmRuntime.updateInstalled`, its shells started again, `installedRevision` moved so no window keeps an answer the
-   older one gave; the first window's answers read ahead are dropped, `EarlyCalls.dropAll`), unless the user chose the
-   app's own in Settings, which keeps running. Otherwise it failed (`notUpdated`): no exit code is trusted, only the
+   older one gave; the first window's answers read ahead are dropped, `EarlyCalls.dropAll`). Asking to update it is
+   choosing it, so it runs even when the user had chosen the app's own: that choice goes back to the default
+   (`automatic`), and "Use the Included Version for Now" is forgotten (`cmDeclinedUpdateFor` cleared); Settings' check
+   mark moves to it. Otherwise it failed (`notUpdated`), and no choice changes: no exit code is trusted, only the
    version.
 
 **Linux** (`linuxUpdateCommand.ts`): the package that owns the installed `cm`, links resolved (`dpkg -S`, else `rpm -qf
