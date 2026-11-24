@@ -21,9 +21,10 @@ export function leftChangesQuery(workspacePath: string, selector: WorkspaceSelec
 }
 
 /**
- * The branch the workspace is on, as the top bar read it by name (`branchQuery`): taken from the cache however old, as
- * a branch keeps its id, or the top bar's read awaited. None off a branch, or when it couldn't be read: the main
- * process then looks the id up itself, only if another app left changes.
+ * The branch the workspace is on, as the top bar read it by name (`branchQuery`): taken from the cache however old, or
+ * the top bar's read awaited. A name changes branch only when the branch is deleted and one is created with its name;
+ * then the worst is a change another app left being offered once the top bar reads the branch again. None off a
+ * branch, or when it couldn't be read: the main process then looks the id up itself, only if another app left changes.
  */
 async function branchOn(workspacePath: string, selector: WorkspaceSelector | undefined): Promise<KnownBranch | undefined> {
   if (selector?.kind !== 'branch') return undefined;
