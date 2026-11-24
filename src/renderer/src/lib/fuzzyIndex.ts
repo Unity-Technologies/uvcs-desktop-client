@@ -87,21 +87,30 @@ export function fuzzyMatchPositions(text: string, query: string): number[] {
 /**
  * How convincing a match is, from 0 to 1, comparable across lists (files, branches, commands): the whole name,
  * its start or a run of it beat letters picked here and there, which score by how many start a word or continue a run.
+ * A query of several words is looked for both as typed ("open link" in "Open link…") and without its spaces
+ * ("openlink" in "OpenLink.ts"), the way `toNeedle` matches it; the better of the two counts.
  */
 export function fuzzyMatchQuality(text: string, query: string): number {
   const needle = toNeedle(query);
   if (!needle) return 0;
 
   const haystack = text.toLowerCase();
-  const name = haystack.slice(haystack.lastIndexOf('/') + 1);
-  if (name === needle || haystack === needle) return 1;
-  if (name.startsWith(needle)) return 0.9;
-  if (name.includes(needle)) return 0.8;
-  if (haystack.includes(needle)) return 0.7;
+  const asTyped = query.trim().toLowerCase().replace(/\s+/g, ' ');
+  const whole = Math.max(wholeMatchQuality(haystack, needle), wholeMatchQuality(haystack, asTyped));
+  if (whole > 0) return whole;
 
   const positions = fuzzyMatchPositions(text, query);
   const anchored = positions.filter(
     (position, index) => position === 0 || position === positions[index - 1]! + 1 || WORD_SEPARATORS.has(haystack[position - 1]!),
   );
   return (0.6 * anchored.length) / needle.length;
+}
+
+/** The quality of `needle` found whole in the lowered `haystack`: as its name, its name's start, in its name, in its folders; 0 when it isn't. */
+function wholeMatchQuality(haystack: string, needle: string): number {
+  const name = haystack.slice(haystack.lastIndexOf('/') + 1);
+  if (name === needle || haystack === needle) return 1;
+  if (name.startsWith(needle)) return 0.9;
+  if (name.includes(needle)) return 0.8;
+  return haystack.includes(needle) ? 0.7 : 0;
 }
