@@ -223,7 +223,9 @@ export class OfficialClientUpdate {
       if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');
       const after = await this.options.installedAgain();
       if (!after || !meetsCmVersion(after.version, floor)) {
-        throw new OfficialUpdateError('notUpdated', `The installer of ${installer.version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
+        // Installer.app ends `open -W` the same whether it was cancelled or finished: most likely closed unfinished.
+        const failure = this.options.platform === 'windows' ? 'notUpdated' : 'notFinished';
+        throw new OfficialUpdateError(failure, `The installer of ${installer.version} ended with exit code ${outcome.exitCode}; the installed version is ${after?.version ?? 'not found'}.`);
       }
     } finally {
       resumeCm();

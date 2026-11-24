@@ -176,7 +176,8 @@ is false), and the windows wait as they do for a setup.
 - **A failure** says "Couldn't update Unity Version Control", why in plain words (`UPDATE_FAILURE_REASONS`: no newer
   version yet, the download failed, not signed by Unity, the permission declined, or the installer ended and the
   version is the same: "Close the other Unity Version Control apps, then try again. This computer may also not allow
-  installing programs."), "You can keep working with the version included with the app.", and offers Try Again and
+  installing programs."; on macOS, where Installer.app closes the same whether it was cancelled or finished,
+  `notFinished`: "The update wasn’t installed. Try again, and finish every step it asks for."), "You can keep working with the version included with the app.", and offers Try Again and
   Use the Included Version for Now, the error under Details. A failure of the download in the background shows nothing: the
   click tries it all again, and says why then.
 - **"Use the Included Version for Now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the

@@ -13,6 +13,7 @@ export const UPDATE_FAILURE_REASONS: Readonly<Record<OfficialUpdateFailure, stri
   notSigned: 'The download isn’t signed by Unity, so it wasn’t installed. Try again to download a new copy.',
   declined: 'Installing it needs your permission. Try again, and allow it when your computer asks.',
   notUpdated: 'Close the other Unity Version Control apps, then try again. This computer may also not allow installing programs.',
+  notFinished: 'The update wasn’t installed. Try again, and finish every step it asks for.',
 };
 
 /** How far a download is, 0 to 1; null before its size is known. */

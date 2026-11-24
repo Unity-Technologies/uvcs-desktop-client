@@ -21,7 +21,12 @@ export type OfficialUpdateFailure =
   /** The user didn't give the installer the permission it asked for. */
   | 'declined'
   /** The installer ended and the version installed is still too old: another app held it, or this computer refused. */
-  | 'notUpdated';
+  | 'notUpdated'
+  /**
+   * macOS: Installer.app closed and the installed version is still too old. It ends the same whether it was cancelled
+   * or finished, so the user most likely closed it before its last step.
+   */
+  | 'notFinished';
 
 export type OfficialUpdate =
   /** Asking the download site for the latest version of the installed edition. */
