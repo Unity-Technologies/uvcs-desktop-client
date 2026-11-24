@@ -98,6 +98,8 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
   let now = 0;
   let choice: CmChoice = chosen ?? 'managed';
   let relocations = 0;
+  /** Relocations that said the `cm` at the same path was replaced, so its shells start again (`CmClient.relocate`). */
+  let replacements = 0;
   let declined: string | null = declinedFor ?? null;
   const pruned: (string | null)[] = [];
   const revealed: string[] = [];
@@ -114,7 +116,10 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
     saveDeclinedUpdate: (pinned) => (declined = pinned),
     findInstalled: () => '/usr/bin/cm',
     versionOf: async () => `${INSTALLED_VERSION}\n`,
-    relocated: () => relocations++,
+    relocated: ({ replaced }) => {
+      relocations++;
+      if (replaced) replacements++;
+    },
     statusChanged: (status) => statuses.push(status),
     prune: (pinned) => pruned.push(pinned),
     reveal: (path) => revealed.push(path),
@@ -123,7 +128,7 @@ function runtimeWith(setup: Partial<CmRuntimeOptions> & { installed?: string[]; 
     ...overrides,
   });
   officialUpdate.onChange = () => runtime.officialUpdateChanged();
-  return { officialUpdate, runtime, installer, statuses, timers, pruned, revealed, advance: (ms: number) => (now += ms), relocations: () => relocations, choice: () => choice, declined: () => declined };
+  return { officialUpdate, runtime, installer, statuses, timers, pruned, revealed, advance: (ms: number) => (now += ms), relocations: () => relocations, replacements: () => replacements, choice: () => choice, declined: () => declined };
 }
 
 describe('CmRuntime', () => {
@@ -466,9 +471,9 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(statuses.at(-1)).toEqual(TOO_OLD);
   });
 
-  it('runs the installed one once Check Again finds it new enough, starting its shells again', async () => {
+  it('runs the installed one once Check Again finds it new enough, starting its shells again on the replaced cm', async () => {
     let version = OLDER;
-    const { runtime, statuses, relocations } = runtimeWith({ chosen: 'automatic', installed: [VERSION], versionOf: async () => version });
+    const { runtime, statuses, relocations, replacements } = runtimeWith({ chosen: 'automatic', installed: [VERSION], versionOf: async () => version });
     runtime.start();
     runtime.admits('/usr/bin/cm', OLDER);
     await runtime.checkInstalledAgain();
@@ -480,6 +485,8 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
     expect(runtime.cmPath()).toBe('/usr/bin/cm');
     expect(relocations()).toBe(1);
+    // Updated outside the app, at the same path: the shells started before still run the older one.
+    expect(replacements()).toBe(1);
   });
 
   it('says which version Check Again found when it’s still too old', async () => {
@@ -526,10 +533,12 @@ describe('CmRuntime with an installed cm older than its own', () => {
 
   it('runs the installed one once its update installed, starting its shells again, with no restart', async () => {
     let version = OLDER;
-    const { runtime, officialUpdate, statuses, relocations } = runtimeWith({ chosen: 'automatic', installed: [VERSION], versionOf: async () => version });
+    const { runtime, officialUpdate, statuses, relocations, replacements } = runtimeWith({ chosen: 'automatic', installed: [VERSION], versionOf: async () => version });
     runtime.admits('/usr/bin/cm', OLDER);
     officialUpdate.outcome.updatesTo = version = '11.0.16.10694';
     await runtime.updateInstalled();
+    // Its shells ended while the installer ran (`CmClient.hold`), and started on the new one as it resumed.
+    expect(replacements()).toBe(0);
     expect(officialUpdate.installs).toEqual([{ path: '/usr/bin/cm', version: OLDER }]);
     expect(statuses.at(-1)).toEqual({ kind: 'ready', source: 'installed' });
     expect(runtime.cmPath()).toBe('/usr/bin/cm');

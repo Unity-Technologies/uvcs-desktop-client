@@ -707,6 +707,16 @@ describe('CmClient sessions', () => {
     expect(processes).toEqual([locations[0]]);
   });
 
+  it('starts its sessions again once the cm at the same path was replaced by an update, and only then', () => {
+    const { cm, pools } = fakeClient();
+
+    cm.relocate();
+    expect(pools).toMatchObject([{ restarted: false, disposed: false }]);
+
+    cm.relocate({ replaced: true });
+    expect(pools).toMatchObject([{ cmPath: CM_PATH, restarted: true, disposed: false }]);
+  });
+
   it('ends every session on dispose', () => {
     const { cm, pools } = fakeClient();
 
