@@ -51,7 +51,7 @@ function atHead({ branch, loadedChangeset, headChangeset }: BranchAtHead): Branc
  * the head moves (a new key) or an operation refreshes them. Window focus and mounting never read them again; what
  * collides locally follows the local changes instead (`withLocalCollisions`).
  */
-export function readsOncePerHead(readFor: IncomingChangesFor | undefined): boolean {
+export function readsOncePerHead(readFor: IncomingChangesFor | undefined): readFor is BranchAtHead {
   return typeof readFor === 'object' && !('partial' in readFor);
 }
 
@@ -62,7 +62,7 @@ export function readsOncePerHead(readFor: IncomingChangesFor | undefined): boole
  * refreshes.
  */
 export function incomingChangesQuery(workspacePath: string, readFor: IncomingChangesFor | undefined) {
-  const at = readsOncePerHead(readFor) ? (readFor as BranchAtHead) : undefined;
+  const at = readsOncePerHead(readFor) ? readFor : undefined;
   return {
     queryKey: incomingChangesKey(workspacePath, readFor),
     queryFn: () => api.merge.incomingChanges(workspacePath, at && { branch: at.branch, loadedChangeset: at.loadedChangeset }),
