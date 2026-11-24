@@ -79,7 +79,7 @@ function Failure({ view }: { view: Extract<View, { kind: 'failed' }> }) {
         <Button variant="primary" icon={<RefreshCw size={14} className={retrying ? 'spinning' : undefined} />} onClick={() => void retry()} disabled={retrying}>
           Try Again
         </Button>
-        {view.installedCm && <Button onClick={() => void api.cmRuntime.use('automatic')}>{installedCmLabel(view.installedCm)}</Button>}
+        {view.installedCm && <Button onClick={() => void api.cmRuntime.use('installed')}>{installedCmLabel(view.installedCm)}</Button>}
       </div>
       <div className={styles.details}>
         <FoldedOutput output={view.detail} />

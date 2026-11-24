@@ -1,4 +1,4 @@
-import type { CmChoice, CmRuntimeStatus, InstalledCm } from '../domain/cmRuntime';
+import type { CmRuntimeStatus, CmUserChoice, InstalledCm } from '../domain/cmRuntime';
 
 /**
  * The `cm` the app runs (docs/features/cm-runtime.md): the app's own, set up on the first run and with updates, or the
@@ -9,11 +9,8 @@ export interface CmRuntimeApi {
   status(): Promise<CmRuntimeStatus>;
   /** Tries setting up the app's own `cm` again, after it failed. */
   retry(): Promise<void>;
-  /**
-   * Runs the installed `cm` when there is one (`automatic`), or always the app's own; saved as the `cmChoice` setting.
-   * An installed one older than the app's own is never run: the update screen shows instead.
-   */
-  use(choice: CmChoice): Promise<void>;
+  /** Runs the installed `cm` from now on, or the app's own again; saved as the `cmChoice` setting. An installed one older than the app's own is refused. */
+  use(choice: CmUserChoice): Promise<void>;
   /** The update screen's "Use the included version for now": runs the app's own until the pinned version moves. */
   useIncludedForNow(): Promise<void>;
   /** The update screen's Check Again: reads the installed `cm`'s version again, and runs it once it's new enough. */

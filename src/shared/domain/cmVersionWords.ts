@@ -3,6 +3,11 @@
  * Command line client, `CmUnavailableScreen`): "Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later".
  */
 
+/** A version on its own, where what it belongs to is named already (a Settings card): "Version 11.0.16.10700". */
+export function versionText(version: string): string {
+  return `Version ${version}`;
+}
+
 /** The version installed on the computer: "Installed: 11.0.16.10700". */
 export function installedVersionText(version: string): string {
   return `Installed: ${version}`;
@@ -13,12 +18,12 @@ export function neededVersionText(pinnedVersion: string): string {
   return `Needed: ${pinnedVersion} or later`;
 }
 
-/** The app's own version: "Included: 11.0.16.10659". */
-export function includedVersionText(pinnedVersion: string): string {
-  return `Included: ${pinnedVersion}`;
-}
-
 /** An installed version and the one needed, on one line: "Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later". */
 export function installedAndNeededText(installedVersion: string, pinnedVersion: string): string {
   return `${installedVersionText(installedVersion)} · ${neededVersionText(pinnedVersion)}`;
+}
+
+/** A version too old and the one needed, where what it belongs to is named already: "Version 11.0.16.9000 · Needed: 11.0.16.10659 or later". */
+export function versionAndNeededText(version: string, pinnedVersion: string): string {
+  return `${versionText(version)} · ${neededVersionText(pinnedVersion)}`;
 }
