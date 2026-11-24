@@ -8,7 +8,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { watchRefreshes } from '../../testing/operationOutcome';
 import { notifyIncoming } from './incomingNotifications';
-import { incomingChangesKey } from './useIncomingChanges';
+import { incomingChangesKey } from './incomingChangesRead';
 import { recheckIncoming } from './useIncomingSummary';
 
 const ws = '/ws';
@@ -108,7 +108,7 @@ describe('recheckIncoming in a partial workspace', () => {
     expect(await recheckIncoming(ws)).toEqual({ branch: '/main', partial: true, headChangeset: 7, itemCount: 2 });
 
     expect(fakeApi.argsOf('merge.branchHead')).toEqual([[ws, '/main']]);
-    expect(queryClient.getQueryData(incomingChangesKey(ws))).toEqual(changes(7, ['Code/Ship.cs', 'Code/Hull.cs']));
+    expect(queryClient.getQueryData(incomingChangesKey(ws, { branch: '/main', partial: true }))).toEqual(changes(7, ['Code/Ship.cs', 'Code/Hull.cs']));
   });
 
   it('reads only the head while it stays where it was', async () => {
@@ -129,7 +129,7 @@ describe('recheckIncoming in a partial workspace', () => {
     fakeApi.answer('merge.branchHead', () => 7);
     fakeApi.answer('merge.incomingChanges', () => answers.shift());
     await recheckIncoming(ws);
-    await queryClient.invalidateQueries({ queryKey: incomingChangesKey(ws) });
+    await queryClient.invalidateQueries({ queryKey: incomingChangesKey(ws, { branch: '/main', partial: true }) });
 
     expect(await recheckIncoming(ws)).toEqual({ branch: '/main', partial: true, headChangeset: 7, itemCount: 0 });
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { DiffEntry } from '@shared/domain/diff';
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { DiffEntry } from './domain/diff';
+import type { PendingChange } from './domain/pendingChanges';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
 
 function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {

@@ -37,6 +37,15 @@ export function usePendingChangesOf(workspacePath: string | null) {
   });
 }
 
+/**
+ * The pending changes Changes read (and the sidebar's count keeps fresh), without ever reading them itself: a new
+ * observer of a stale query would scan the disk again as it mounts.
+ */
+export function useReadPendingChanges(workspacePath: string) {
+  const { pendingChanges: filter } = useSettings();
+  return useQuery({ ...pendingChangesQuery(workspacePath, filter), enabled: false });
+}
+
 export function usePendingChangesCount(): number | undefined {
   const { data } = usePendingChanges();
   return data?.changes.filter(isCheckinCandidate).length;

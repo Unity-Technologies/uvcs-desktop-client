@@ -202,9 +202,20 @@ and many people use the same server. Every `cm` command other than local reads (
   workspace's check reads only its branch head (`limit 1`), comparing its items again only when the head moved
   (docs/features/incoming.md "A partial workspace"). Nothing else polls: left changes, locks and lists wait for an
   event, a focus or an operation.
-- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (the update's `cm diff`
-  and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
-  native client does, and its card lists the newest of what that read brought. At "100+" a hover reads nothing heavy:
+- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (`useIncomingChanges`:
+  the newest page of changesets, `cm find ... limit 201`, the update's `cm diff cs:<loaded> cs:<head>` and the local
+  `cm status`) once per head, to warn about conflicts before any hover, as the native client does, and its card lists
+  the newest of what that read brought. That read is keyed by the branch, loaded changeset and head the check saw
+  (`incomingChangesFor`, `incomingChangesQuery`): never stale, so focus and mounting never read it again, a new head is
+  a new key (new changesets leave it alone, `isAffectedByNewChangesets`), and only an operation or Refresh reads it again
+  under the same head. It waits for the check rather than run before it. It tells `cm` where the workspace stands, as
+  the workspace info says (`incomingChanges(workspacePath, at)`, `workspaceLoadAt`), so it reads no `cm status
+  --header`. So once per head it runs one find, one diff and one local `cm status --controlledchanged --changed`, which
+  says what collides as it reads. After that, what collides follows Changes' pending changes whenever Changes read
+  them after the incoming changes, never reading them itself (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print, each kind
+  decided on its own (`localChangesForUpdateOf`; a checkout deleted on disk, which Changes lists only as deleted, is
+  the one it misses, and updating checks again), the conflicts worked out again from the diff already read (`withLocalCollisions`,
+  `findUpdateConflicts`), the same object while they come out the same. At "100+" a hover reads nothing heavy:
   the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
   says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
   card (that click), opening Incoming or Update reads the diff, Update again right before updating
@@ -264,16 +275,18 @@ and many people use the same server. Every `cm` command other than local reads (
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
 - **Reuse**: what a command already returned answers later questions instead of another command. Code reviews name
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
-  their branch lists already carry, and share one review list with the palette; the Merge requests view and the review's page name it
-  from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
-  (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
-  `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
-  renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending
-  changes share the Locks view's read of every lock (`locksQuery`), and ask which locks are mine only when some lock
-  holds one of them. Left changes look the selector's object id up only when an automatic shelve by another client
-  could match it. On a branch they take the id from the top bar's branch query (`leftChangesQuery`, `KnownBranch`),
-  used only while the workspace is still on that branch (`selectorObjectRef`). Arriving from a switch looks for changes
-  to restore only when this app left some there.
+  their branch lists already carry, and share one review list with the palette; the sidebar's count on Merge requests
+  needs no name and reads none (`reviewListSummariesQuery`). The Merge requests view and the review's page name it
+  (`CodeReviewsApi.branchNames`) from the branch lists already read (`BranchNamesCache.remember`); else one branch
+  alone, a review's page, is read by its id (`readBranchName`: `where id = N`, then among the hidden ones only when
+  that finds none), and two or more read every branch's id and name once (`readBranchNames`, two light queries, kept
+  ten minutes, and only while a window shows the workspace: `watchShownWorkspaces`). The top bar takes the branch
+  comment from the branch query. The recent branches and renaming a workspace take its GUID and name from the reads
+  the workspace info shares (`WorkspaceHeaders`). Pending changes share the Locks view's read of every lock
+  (`locksQuery`), and ask which locks are mine only when some lock holds one of them. Left changes look the selector's
+  object id up only when an automatic shelve by another client could match it. On a branch they take the id from the
+  top bar's branch query (`leftChangesQuery`, `KnownBranch`), used only while the workspace is still on that branch
+  (`selectorObjectRef`). Arriving from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
   a changeset's, branch's or shelve's diff, Incoming, update conflicts, a merge's destination version of each
   conflicting file, a model's `.mtl`, `.bin`, `.meta` and textures in any of them, both sides) follows one procedure
@@ -529,7 +542,10 @@ by name, and never passes it to `cm`.
     `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
     asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
-    (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
+    (`WorkspaceHeaders`): the incoming changes read without a head take it from there (the renderer's
+    `incomingChanges` without `at`: before updating, before catching up a check-in, and a partial workspace's check,
+    `checkPartialIncoming`). Reads that need only what is loaded take
+    `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
     read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace
     (`readWorkspaceGlance`) reads only its branch and pending changes: its row already shows the repository.

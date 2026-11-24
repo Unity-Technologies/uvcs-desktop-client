@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { readBranchNames } from '../cm/branchNames';
+import { cmBranchNameReads } from '../cm/branchNames';
 import { findQueryArgs } from '../cm/findQuery';
 import { FOUND_CHANGE_REQUEST_THREADS } from '../cm/changeRequestThreads';
 import { FOUND_REVIEW_COMMENTS } from '../cm/reviewCommentRecords';
@@ -21,7 +21,7 @@ const ON_REPOSITORY = repositoryPlace('game@local');
 /** Wired as `createServices` wires it: branch ids in the server's notes are named by the cache, which reads every branch only when it must. */
 function reviewComments(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  const branchNames = new BranchNamesCache((place) => readBranchNames(fake.cm, place));
+  const branchNames = new BranchNamesCache(cmBranchNameReads(fake.cm));
   return { ...fake, service: createReviewCommentsService(serviceContext(fake.cm), { branchNames }) };
 }
 

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { readBranchNames } from '../cm/branchNames';
+import { cmBranchNameReads } from '../cm/branchNames';
 import { FOUND_REVIEWS } from '../cm/codeReviewRecords';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
@@ -42,22 +42,27 @@ const ON_DELETED_BRANCH = review(8, 'Branch', 'id:99');
 /** Wired as `createServices` wires them: branch names come from the cache, which reads every branch only when it must. */
 function codeReviews(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  const branchNames = new BranchNamesCache((place) => readBranchNames(fake.cm, place));
+  const branchNames = new BranchNamesCache(cmBranchNameReads(fake.cm));
   return { ...fake, branchNames, service: createCodeReviewsService(serviceContext(fake.cm), { branchNames }) };
 }
 
 const user = (name: string): MemberRef => ({ name, kind: 'user' });
 const group = (name: string): MemberRef => ({ name, kind: 'group' });
 
+/** The repository's branches as `cm find branch` lists them: /main/task1 (37), and /main/old (21), hidden. */
 const EVERY_BRANCH_NAME: Record<string, CmAnswer> = {
-  'find branch': ({ line }) => (line.includes("hidden = 'true'") ? formatOutput(['21', '/main/old']) : formatOutput(['37', '/main/task1'])),
+  'find branch': ({ line }) => {
+    const branches = line.includes("hidden = 'true'") ? [['21', '/main/old']] : [['37', '/main/task1']];
+    const id = /where id = (\d+)/.exec(line)?.[1];
+    return formatOutput(...branches.filter(([branchId]) => id === undefined || branchId === id));
+  },
 };
 
 describe('code review list', () => {
   it('lists every review the filters keep with one cm find, filtered on the server, with no cap', async () => {
     const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
-    await service.list(IN_WORKSPACE, { reviewerIsMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
+    await service.listSummaries(IN_WORKSPACE, { reviewerIsMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
 
     expect(commands).toMatchObject([
       {
@@ -71,34 +76,29 @@ describe('code review list', () => {
     ]);
   });
 
-  it('names each target: changesets and shelves by number, branches by the names of every branch, read once', async () => {
-    const { service, lines } = codeReviews({
-      'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET, ON_SHELVE, ON_DELETED_BRANCH),
-      ...EVERY_BRANCH_NAME,
-    });
+  it("names the branches reviews target by their ids from the names of every branch, read once; a deleted one has none", async () => {
+    const { service, lines } = codeReviews(EVERY_BRANCH_NAME);
 
-    const reviews = await service.list(IN_WORKSPACE, {});
-
-    expect(reviews.map((listed) => listed.target)).toEqual([
-      { kind: 'branch', branch: '/main/task1' },
-      { kind: 'changeset', changesetId: 120 },
-      { kind: 'shelve', shelveId: 3 },
-      { kind: 'unknown', description: 'an unknown branch' },
-    ]);
+    expect(await service.branchNames(IN_WORKSPACE, [37, 21, 99])).toEqual({ 37: '/main/task1', 21: '/main/old' });
     expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
 
-    await service.list(IN_WORKSPACE, {});
+    expect(await service.branchNames(IN_WORKSPACE, [37])).toEqual({ 37: '/main/task1' });
     expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
   });
 
-  it('asks nothing more when the branch lists already read name every target', async () => {
-    const { service, branchNames, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
+  it('asks nothing when the branch lists already read name every branch asked for', async () => {
+    const { service, branchNames, lines } = codeReviews({});
     branchNames.remember(IN_WORKSPACE, [{ id: 37, name: '/main/task1' }]);
 
-    const [listed] = await service.list(IN_WORKSPACE, {});
+    expect(await service.branchNames(IN_WORKSPACE, [37])).toEqual({ 37: '/main/task1' });
+    expect(lines()).toEqual([]);
+  });
 
-    expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
-    expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'order by date desc')]);
+  it('asks nothing when no branch is asked for', async () => {
+    const { service, lines } = codeReviews({});
+
+    expect(await service.branchNames(IN_WORKSPACE, [])).toEqual({});
+    expect(lines()).toEqual([]);
   });
 
   it('caps a list only when asked, as the palette and the branch chips read the newest reviews', async () => {
@@ -116,6 +116,21 @@ describe('code review list', () => {
 
     expect(found.map((summary) => summary.id)).toEqual([6]);
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
+  });
+
+  it("names a branch review's branch, and a deleted one's as an unknown branch", async () => {
+    const { service } = codeReviews({ 'find review': ({ line }) => recordsOutput(FOUND_REVIEWS, line.includes('id = 5') ? ON_TASK1 : ON_DELETED_BRANCH), ...EVERY_BRANCH_NAME });
+
+    expect((await service.get(IN_WORKSPACE, 5)).target).toEqual({ kind: 'branch', branch: '/main/task1' });
+    expect((await service.get(IN_WORKSPACE, 8)).target).toEqual({ kind: 'unknown', description: 'an unknown branch' });
+  });
+
+  it("names a review's branch by its id alone, never reading every branch's name", async () => {
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1), ...EVERY_BRANCH_NAME });
+
+    await service.get(IN_WORKSPACE, 5);
+
+    expect(lines().filter((line) => line.startsWith('find branch'))).toEqual([expect.stringContaining('find branch where id = 37 ')]);
   });
 
   it("finds the reviews of one branch by its spec with one cm find, for the change requests a check-in can apply", async () => {
@@ -139,9 +154,9 @@ describe('code review list', () => {
   it('asks the server for the merge requests in one state, and for no state when none is asked', async () => {
     const { service, lines } = codeReviews({ 'find review': '' });
 
-    await service.list(IN_WORKSPACE, { mergeRequestState: 'Merged' });
-    await service.list(IN_WORKSPACE, { mergeRequestState: 'Closed', status: 'Reviewed' });
-    await service.list(IN_WORKSPACE, {});
+    await service.listSummaries(IN_WORKSPACE, { mergeRequestState: 'Merged' });
+    await service.listSummaries(IN_WORKSPACE, { mergeRequestState: 'Closed', status: 'Reviewed' });
+    await service.listSummaries(IN_WORKSPACE, {});
 
     expect(lines()).toEqual([
       foundLine(FOUND_REVIEWS, "where mergerequeststatus = 'Merged' order by date desc"),
@@ -152,12 +167,11 @@ describe('code review list', () => {
 
   it('carries a merge request’s state and destination in the reviews it lists', async () => {
     const request = { ...ON_TASK1, mergerequeststatusname: 'Open', destination: 'br:/main' };
-    const { service } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, request, ON_CHANGESET), ...EVERY_BRANCH_NAME });
+    const { service } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, request, ON_CHANGESET) });
 
-    const [listed, plain] = await service.list(IN_WORKSPACE, {});
-    const [summary] = await service.listSummaries(IN_WORKSPACE, {});
+    const [listed, plain] = await service.listSummaries(IN_WORKSPACE, {});
 
-    expect([listed?.mergeRequest, plain?.mergeRequest, summary?.mergeRequest]).toEqual([{ state: 'Open', destination: '/main' }, undefined, { state: 'Open', destination: '/main' }]);
+    expect([listed?.mergeRequest, plain?.mergeRequest]).toEqual([{ state: 'Open', destination: '/main' }, undefined]);
   });
 
   it('lists summaries with branch targets by id, never reading branch names', async () => {
@@ -456,9 +470,9 @@ describe('code reviews of a repository explored without a workspace', () => {
   it('lists them and names their branches naming the repository, outside every workspace', async () => {
     const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1), ...EVERY_BRANCH_NAME });
 
-    const [listed] = await service.list(ON_REPOSITORY, {});
+    const [listed] = await service.listSummaries(ON_REPOSITORY, {});
 
-    expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
+    expect(await service.branchNames(ON_REPOSITORY, [listed?.targetBranchId ?? 0, 21])).toEqual({ 37: '/main/task1', 21: '/main/old' });
     expect(commands.map(({ args }) => args[2])).toEqual([
       "order by date desc on repository 'game@local'",
       "on repository 'game@local'",
