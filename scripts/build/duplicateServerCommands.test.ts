@@ -1,10 +1,13 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { needsSignIn } from '../../src/main/cm/repeatedCommands';
+import { branchHeadArgs, incomingChangesetsArgs } from '../../src/main/merge/incoming';
 import {
   BEFORE_THE_FIRST_STEP,
   commandsByStep,
   duplicateReport,
   duplicatesIn,
+  isIncomingCheck,
   needsServer,
   readableCommandLine,
   readCommandLog,
@@ -56,6 +59,41 @@ describe('needsServer', () => {
   it('counts a status that asks the server for its header', () => {
     expect(needsServer(['status', '--header', '--xml'])).toBe(true);
   });
+
+  it("agrees with the app's own `needsSignIn`, whose list it copies", () => {
+    const local = ['getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist'];
+    const commands = [
+      ...local.map((command) => [command]),
+      ['wk', 'list'],
+      ['workspace', 'list'],
+      ['workspace', 'create', 'demo'],
+      ['wk', 'delete', 'demo'],
+      ['status', '--header', '--xml'],
+      ['status', '--compact'],
+      ['status', '--cset'],
+      ['status', '--format={path}'],
+      ['find', 'branch'],
+      LOCKS,
+    ];
+    for (const args of commands) expect([args, needsServer(args)]).toEqual([args, needsSignIn(args)]);
+  });
+});
+
+describe('isIncomingCheck', () => {
+  it("knows the incoming check's commands as the app builds them, for a workspace on a changeset and a partial one", () => {
+    expect(isIncomingCheck(incomingChangesetsArgs('/main/task-001', 5))).toBe(true);
+    expect(isIncomingCheck(branchHeadArgs('/main/task-001'))).toBe(true);
+  });
+
+  it("takes other changeset reads for what they are: Incoming's list, a changeset list", () => {
+    expect(isIncomingCheck(['find', 'changeset', "where changesetid > 5 and branch = '/main' order by changesetid desc limit 201", '--format={changesetid}\u001f{guid}\u001e'])).toBe(false);
+    expect(isIncomingCheck(['find', 'changeset', "where date >= '2026-10-25' order by changesetid desc", '--format={changesetid}\u001f{owner}\u001e'])).toBe(false);
+  });
+
+  it('never compares it: the poll and the focus check may run it twice in one step', () => {
+    const check = incomingChangesetsArgs('/main/task-001', 5);
+    expect(duplicatesIn(stepOf(sent(check), sent(check)))).toEqual([]);
+  });
 });
 
 describe('duplicatesIn', () => {
@@ -81,7 +119,7 @@ describe('duplicatesIn', () => {
 });
 
 describe('duplicateReport', () => {
-  const allowedStatus = { command: 'status --header', why: '#349' };
+  const allowedStatus = { step: 'Locks', command: 'status --header', why: '#349' };
 
   it('fails on a duplicate no entry allows', () => {
     const report = duplicateReport([stepOf(sent(LOCKS), sent(LOCKS))], []);
@@ -91,6 +129,13 @@ describe('duplicateReport', () => {
   it('passes a duplicate an entry allows, by how its command line starts', () => {
     const steps = [stepOf(sent(['status', '--header', '--xml']), sent(['status', '--header', '--xml']))];
     expect(duplicateReport(steps, [allowedStatus])).toEqual({ failures: [], unused: [] });
+  });
+
+  it('fails on an allowed duplicate in another step than the one its entry names, and names the entry unused', () => {
+    const status = ['status', '--header', '--xml'];
+    const report = duplicateReport([{ step: 'Changes', commands: [sent(status), sent(status)] }], [allowedStatus]);
+    expect(report.failures.map(({ step }) => step)).toEqual(['Changes']);
+    expect(report.unused).toEqual([allowedStatus]);
   });
 
   it('names an allowed entry that matched nothing, so it can go, without failing', () => {

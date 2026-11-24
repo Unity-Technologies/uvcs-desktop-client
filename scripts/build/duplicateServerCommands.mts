@@ -1,6 +1,6 @@
 /**
- * The smoke test's duplicate check (scripts/e2e/README.md, ARCHITECTURE.md "Server budget"): within one step, the same
- * server command sent twice from the same folder is one read too many, unless the step says what reads it again (an
+ * The smoke test's duplicate check (scripts/e2e/README.md, "Duplicate server commands"): the same command line, sent
+ * twice from the same folder, within one step, is one read too many, unless the step says what reads it again (an
  * operation, a refresh). It reads the fake `cm`'s log (`scripts/e2e/fakeCm/cm.cjs`), where the smoke test writes a
  * line as each step starts. Not the build's, but here, where the tests and the type check of the scripts' logic look.
  * `.mts`: the smoke test imports it as a module.
@@ -33,8 +33,9 @@ export interface DuplicateCommand {
   times: number;
 }
 
-/** A duplicate still on `main`, allowed until a change removes it: `command` is how its command line starts. */
+/** A duplicate still on `main`, allowed until a change removes it: in `step`, a command line starting with `command`. */
 export interface AllowedDuplicate {
+  step: string;
   command: string;
   /** The issue and what removes it. */
   why: string;
@@ -82,11 +83,30 @@ export function needsServer(args: readonly string[]): boolean {
 
 const LOCAL_COMMANDS = new Set(['getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
 
+/**
+ * The incoming check's `cm find` (`incomingChangesetsArgs`, or `branchHeadArgs` for a partial workspace): the one read
+ * on a timer (a poll every minute, and again as the window gains focus once 20 s old), so it may run in any step, even
+ * twice in one. The comparison leaves it out; its tests hold it to the commands the app builds.
+ */
+export function isIncomingCheck(args: readonly string[]): boolean {
+  const [command, object, query = '', format] = args;
+  return (
+    command === 'find' &&
+    object === 'changeset' &&
+    / order by changesetid desc limit \d+$/.test(query) &&
+    (format === `--format={changesetid}${FIELD}{owner}${RECORD}` || format === `--format={changesetid}${RECORD}`)
+  );
+}
+
+/** `--format`'s separators (`recordFormat` in main/cm/formatRecords.ts). */
+const FIELD = '\u001f';
+const RECORD = '\u001e';
+
 /** Each server command sent more than once in the step from the same folder, in the order first sent. */
 export function duplicatesIn(step: LoggedStep): DuplicateCommand[] {
   const times = new Map<string, DuplicateCommand>();
   for (const { args, cwd } of step.commands) {
-    if (!needsServer(args)) continue;
+    if (!needsServer(args) || isIncomingCheck(args)) continue;
     const commandLine = args.join(' ');
     const key = `${cwd}\n${commandLine}`;
     const seen = times.get(key) ?? { step: step.step, commandLine, cwd, times: 0 };
@@ -101,7 +121,7 @@ export function duplicateReport(steps: readonly LoggedStep[], allowed: readonly 
   const used = new Set<AllowedDuplicate>();
   const failures: DuplicateCommand[] = [];
   for (const duplicate of steps.filter((step) => step.rereads === undefined).flatMap(duplicatesIn)) {
-    const entry = allowed.find(({ command }) => duplicate.commandLine.startsWith(command));
+    const entry = allowed.find(({ step, command }) => duplicate.step === step && duplicate.commandLine.startsWith(command));
     if (entry) used.add(entry);
     else failures.push(duplicate);
   }
