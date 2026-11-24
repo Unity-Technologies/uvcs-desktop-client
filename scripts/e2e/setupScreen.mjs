@@ -78,8 +78,7 @@ async function setupScreen() {
 }
 
 async function updateScreen() {
-  const run = await launch('update', {});
-  writeFileSync(run.versionFile, '11.0.16.1');
+  const run = await launch('update', {}, {}, '11.0.16.1');
   await run.steps(async (window) => {
     await window.getByRole('heading', { name: 'Update Unity Version Control' }).waitFor();
     console.log('ok    The update screen, the installed cm older than the app needs');
@@ -95,16 +94,14 @@ async function updateScreen() {
 
 async function officialUpdate() {
   if (process.platform === 'linux') {
-    const run = await launch('update-linux', {});
-    writeFileSync(run.versionFile, '11.0.16.1');
+    const run = await launch('update-linux', {}, {}, '11.0.16.1');
     await run.steps(async (window) => {
       await window.getByText(/apt-get install --only-upgrade|dnf upgrade|zypper update/).waitFor();
       console.log('ok    The update screen on Linux, with the command that updates it');
     });
     return;
   }
-  const installs = await launch('official-update', {}, { UVCS_FAKE_OFFICIAL_UPDATE: 'installs' });
-  writeFileSync(installs.versionFile, '11.0.16.1');
+  const installs = await launch('official-update', {}, { UVCS_FAKE_OFFICIAL_UPDATE: 'installs' }, '11.0.16.1');
   await installs.steps(async (window) => {
     await window.getByText('The update is ready to install.').waitFor();
     console.log('ok    The update screen, its update downloaded in the background');
@@ -112,8 +109,7 @@ async function officialUpdate() {
     await window.getByRole('region', { name: 'All workspaces' }).waitFor();
     console.log('ok    Home, on the installed cm once Update installed it');
   });
-  const declined = await launch('official-update-declined', {}, { UVCS_FAKE_OFFICIAL_UPDATE: 'declined' });
-  writeFileSync(declined.versionFile, '11.0.16.1');
+  const declined = await launch('official-update-declined', {}, { UVCS_FAKE_OFFICIAL_UPDATE: 'declined' }, '11.0.16.1');
   await declined.steps(async (window) => {
     await window.getByRole('button', { name: 'Update', exact: true }).click();
     await window.getByRole('heading', { name: 'Couldn’t update Unity Version Control' }).waitFor();
@@ -121,8 +117,11 @@ async function officialUpdate() {
   });
 }
 
-/** Launches the app over its own user data, store and fake `cm` log, named `name`, with these settings saved. */
-async function launch(name, settings, extraEnv = {}) {
+/**
+ * Launches the app over its own user data, store and fake `cm` log, named `name`, with these settings saved, and the
+ * fake `cm` printing `cmVersion` (the pinned one when none), written before the app's first `cm version` asks.
+ */
+async function launch(name, settings, extraEnv = {}, cmVersion = null) {
   const folder = join(temp, name);
   const userData = join(folder, 'user-data');
   const cmLog = join(folder, 'cm.log');
@@ -132,6 +131,7 @@ async function launch(name, settings, extraEnv = {}) {
   mkdirSync(join(folder, 'home'));
   mkdirSync(join(folder, 'tmp'));
   writeFileSync(join(userData, 'settings.json'), JSON.stringify({ theme: 'light', ...settings }));
+  if (cmVersion) writeFileSync(versionFile, cmVersion);
   const app = await electron.launch({
     args: ['.', `--user-data-dir=${userData}`],
     cwd: projectFolder,
