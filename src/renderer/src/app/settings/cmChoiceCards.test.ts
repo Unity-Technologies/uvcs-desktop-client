@@ -75,10 +75,10 @@ describe('cmChoiceCards', () => {
       expect(tooOld({ kind: 'installing', version: '11.0.16.10694' })).not.toHaveProperty('updateLabel');
     });
 
-    it('says it couldn’t, why in its tip, and offers Try Again', () => {
+    it('says it couldn’t, why in plain words in its tip, and offers Try Again', () => {
       expect(tooOld({ kind: 'failed', failure: 'declined', version: '11.0.16.10694', detail: 'The permission to install was not given.' })).toMatchObject({
         description: 'Couldn’t update it.',
-        tip: 'Installing it needs your permission. Try again, and allow it when your computer asks. The permission to install was not given.',
+        tip: 'Installing it needs your permission. Try again, and allow it when your computer asks.',
         warning: true,
         updateLabel: 'Try Again',
       });

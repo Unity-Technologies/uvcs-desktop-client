@@ -28,7 +28,7 @@ describe('cmUpdateViewOf', () => {
       title: 'Update Unity Version Control',
       body: 'This app needs a newer version of Unity Version Control on this computer.',
       versions: 'Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later',
-      hint: 'It takes a minute, and your workspaces aren’t changed.',
+      hint: 'Your workspaces stay as they are.',
       updateLabel: 'Update',
       includedLabel: 'Use the Included Version for Now',
       background: null,
