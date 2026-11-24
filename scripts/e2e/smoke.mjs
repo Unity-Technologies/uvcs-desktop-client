@@ -1,14 +1,16 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
 // model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
-// error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
-// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`/<checkout>-<hash>.
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+// error, any `cm` command the fake doesn't know, a view that doesn't show, or a step that sends the same server command
+// twice. It asserts only that things appear, never pixels or copy. Screenshots go to
+// <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`/<checkout>-<hash>.
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
+import { commandsByStep, duplicateReport, needsServer, readableCommandLine, readCommandLog } from '../build/duplicateServerCommands.mts';
 import { fakeCmExecutable } from './fakeCm/executable.mjs';
 import { createWorkspace } from './workspaceFixture.mjs';
 
@@ -16,6 +18,16 @@ import { createWorkspace } from './workspaceFixture.mjs';
 const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Merge requests', 'Locks', 'Sync'];
 /** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
+/**
+ * Server commands still sent twice within a step on main (`duplicateReport`), each until the change named removes it.
+ * One that no longer happens only warns, so those changes can merge in any order; then its line goes.
+ */
+const KNOWN_DUPLICATES = [
+  {
+    command: 'status --header --xml',
+    why: '#349: as a workspace opens, its info and the Incoming read (`readWorkspaceLoad`) each ask for the header; goes once Incoming takes the one the info read',
+  },
+];
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 const VIEWPORT = { width: 1400, height: 880 };
@@ -93,16 +105,10 @@ async function withTimeout(promise, ms, what) {
   }
 }
 
-/** The commands the fake `cm` ran so far, as logged (`ok find branch …`). */
-function commandsRun() {
-  return existsSync(cmLog) ? readFileSync(cmLog, 'utf8').split('\n').filter(Boolean) : [];
+/** The fake `cm`'s log so far: the commands it ran and where each step started (`readCommandLog`). */
+function commandLog() {
+  return existsSync(cmLog) ? readCommandLog(readFileSync(cmLog, 'utf8')) : [];
 }
-
-/**
- * Commands that need no sign-in (`needsSignIn` in main/cm/repeatedCommands.ts): those that only read this machine, and
- * a `cm status` told not to work out the workspace's header, which would ask the server for its branch's head.
- */
-const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
 // `checkVisibility()` (`settled`) takes an element laid out with `display: contents` for hidden: no loader may use it.
 const LOADING = 'main [aria-busy="true"], main [aria-label="Loading"]';
@@ -145,9 +151,31 @@ function stillLoading(loading) {
   });
 }
 
-async function step(name, run) {
+/**
+ * Waits until the window reads and changes nothing (`markReadsInFlight`), and still doesn't two frames later, once what
+ * the last answer showed has asked for what it needs: each command logged then belongs to the step that sent it.
+ */
+async function readsSettled() {
+  await window.waitForFunction(
+    () =>
+      new Promise((answer) => {
+        const idle = () => document.documentElement.dataset.reading === 'false';
+        const idleBefore = idle();
+        requestAnimationFrame(() => requestAnimationFrame(() => answer(idleBefore && idle())));
+      }),
+  );
+}
+
+/**
+ * Runs a step, its start written to the fake `cm`'s log so the duplicate check (`duplicateReport`) counts each step's
+ * commands apart. `rereads` names what, in the step, reads again on purpose (an operation, a refresh): its commands
+ * aren't checked.
+ */
+async function step(name, run, { rereads } = {}) {
+  appendFileSync(cmLog, `${JSON.stringify({ step: name, rereads })}\n`);
   try {
     await run();
+    await readsSettled();
     await screenshot(name.toLowerCase().replaceAll(' ', '-'));
     console.log(`ok    ${name}`);
   } catch (error) {
@@ -294,7 +322,7 @@ try {
     await main.getByRole('button', { name: 'More merge request actions' }).click();
     await window.getByRole('menuitem', { name: 'Close merge request' }).click();
     await settled();
-  });
+  }, { rereads: 'Close merge request' });
   await step('Branch Explorer timeline', async () => {
     // From another view its shortcut opens the Branch Explorer with the timeline shown.
     await window.keyboard.press(process.platform === 'darwin' ? 'Meta+Alt+T' : 'Alt+Shift+T');
@@ -441,20 +469,20 @@ try {
     if ((await signInScreen.count()) !== 1) throw new Error(`${await signInScreen.count()} sign-in screens`);
     // Covered, the place's shortcuts are off (going to a view, Refresh): the window stays on Branches, and asks the
     // server nothing.
-    const before = commandsRun().length;
+    const before = commandLog().length;
     for (const key of ['5', '7', '8', 'R']) await window.keyboard.press(`ControlOrMeta+${key}`);
     await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
     if (await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).isVisible()) throw new Error('a view shortcut ran while covered');
-    const serverCommands = commandsRun().slice(before).filter((line) => !LOCAL_COMMAND.test(line));
-    if (serverCommands.length > 0) throw new Error(`server commands ran while signed out: ${serverCommands.join('; ')}`);
-  });
+    const serverCommands = commandLog().slice(before).filter((line) => line.args && needsServer(line.args));
+    if (serverCommands.length > 0) throw new Error(`server commands ran while signed out: ${serverCommands.map(({ args }) => args.join(' ')).join('; ')}`);
+  }, { rereads: 'Refresh' });
   await step('Signed in again', async () => {
     writeFileSync(signInFile, '');
     await window.getByRole('button', { name: 'Check again' }).click();
     await window.getByRole('heading', { name: 'Your session for the server on this computer ended' }).waitFor({ state: 'detached' });
     await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
     await settled();
-  });
+  }, { rereads: 'Check again' });
   await step('Explore a repository', async () => {
     await window.getByRole('button', { name: 'Home' }).first().click();
     await window.getByRole('navigation').getByRole('button', { name: /^This computer/ }).click();
@@ -520,8 +548,17 @@ if (errors.length === 0 && (savedSettings.showGravatar !== false || savedSetting
 }
 
 // Every command the fake couldn't answer, its `--format` separators made visible.
-const failedCommands = existsSync(cmLog) ? readFileSync(cmLog, 'utf8').split('\n').filter((line) => line.startsWith('ERR')) : [];
-errors.push(...failedCommands.map((line) => `the fake cm failed: ${line.slice(4).replace(/[\u001e\u001f]/g, '|')} (teach it: scripts/e2e/README.md)`));
+const log = commandLog();
+const unknownCommands = log.filter((line) => line.args && !line.known);
+errors.push(...unknownCommands.map(({ args }) => `the fake cm failed: ${readableCommandLine(args.join(' '))} (teach it: scripts/e2e/README.md)`));
+
+// A server command sent twice within a step, unless a known duplicate (`KNOWN_DUPLICATES`). Only after a clean run: a
+// step that failed may have left its reads half done.
+if (errors.length === 0) {
+  const { failures, unused } = duplicateReport(commandsByStep(log), KNOWN_DUPLICATES);
+  errors.push(...failures.map(({ step, commandLine, cwd, times }) => `"${step}" sent a server command ${times} times: ${readableCommandLine(commandLine)} (in ${cwd}; ARCHITECTURE.md "Server budget")`));
+  for (const { command, why } of unused) console.warn(`warning: the known duplicate ${readableCommandLine(command)} didn't happen; remove it from KNOWN_DUPLICATES (${why})`);
+}
 console.log(`\n${VIEWS.length} views in ${((Date.now() - started) / 1000).toFixed(1)} s; screenshots in ${shots}`);
 // Windows may hold cm.exe a moment after the app quits.
 rmSync(temp, { recursive: true, force: true, maxRetries: 5 });
