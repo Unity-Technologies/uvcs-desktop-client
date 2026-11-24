@@ -1,7 +1,12 @@
-/* An organization's sidebar row, with its star laid over the row's right end: shown while the pointer or focus is on
-   the row, kept in its place while hidden (`opacity`), so the row never changes size. */
+/* An organization's sidebar row, with its star laid over the row's right end: shown while the pointer is on the row or
+   the keyboard on the row or the star, kept in its place while hidden (`opacity`), so the row never changes size. */
 .entry {
   position: relative;
+}
+
+/* The star's room, kept at all times, so a long name ends in its ellipsis before the star rather than under it. */
+.entry[data-starred] > button:first-child {
+  padding-right: 28px;
 }
 
 .star {
@@ -14,6 +19,6 @@
 }
 
 .entry:hover .star,
-.star:focus-visible {
+.entry:focus-within .star {
   opacity: 1;
 }

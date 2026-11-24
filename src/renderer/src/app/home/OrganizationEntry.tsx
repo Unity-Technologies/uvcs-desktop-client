@@ -15,9 +15,11 @@ export function OrganizationEntry({ server, children }: { server: string; childr
   const favorite = isFavoriteOrganization(useSettings().favoriteOrganizations, server);
   const rail = useInRail();
   return (
-    <div className={styles.entry}>
-      <ActionContextMenu entries={() => organizationMenu(server, favorite)}>{children}</ActionContextMenu>
-      {!rail && <FavoriteOrganizationButton server={server} size="small" className={styles.star} />}
-    </div>
+    <ActionContextMenu entries={() => organizationMenu(server, favorite)}>
+      <div className={styles.entry} data-starred={!rail || undefined}>
+        {children}
+        {!rail && <FavoriteOrganizationButton server={server} size="small" className={styles.star} />}
+      </div>
+    </ActionContextMenu>
   );
 }
