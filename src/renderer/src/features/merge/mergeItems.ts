@@ -163,8 +163,11 @@ export function mergeItemGroups(items: MergeItem[]): TreeGroup<MergeItem, MergeG
  */
 export const MERGE_ITEM_FACTS: GroupedFileListFacts<MergeItem, MergeGroup> = { toneOf: (item) => ownTone(mergeItemTones(item)) };
 
-/** The merge page's view menu offers no grouping: its own groups already say what the merge does to each item. */
-export const MERGE_VIEW_OFFER: FileListViewOffer = { statusGroups: false };
+/**
+ * The merge page's view menu offers no grouping: its own groups already say what the merge does to each item. Its items
+ * have no dates, so no sort by date either.
+ */
+export const MERGE_VIEW_OFFER: FileListViewOffer = { statusGroups: false, dates: false };
 
 /** An item's statuses for the filter's chips: what the merge does to it, and "Conflicts" for a conflict. */
 export function mergeItemTones(item: MergeItem): readonly StatusTone[] {

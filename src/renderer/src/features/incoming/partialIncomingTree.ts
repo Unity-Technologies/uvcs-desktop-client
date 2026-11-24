@@ -31,8 +31,11 @@ export function partialItemTreeGroups(groups: readonly PartialItemGroup[]): Tree
 
 export const PARTIAL_ITEM_FACTS: GroupedFileListFacts<PartialIncomingItem, PartialTreeGroup> = { toneOf: (item) => ownTone(partialItemTones(item)) };
 
-/** The groups are the view's own (conflicts first, then by kind): the view menu offers no grouping by status. */
-export const PARTIAL_VIEW_OFFER: FileListViewOffer = { statusGroups: false };
+/**
+ * The groups are the view's own (conflicts first, then by kind): the view menu offers no grouping by status. Its items
+ * have no dates, so no sort by date either.
+ */
+export const PARTIAL_VIEW_OFFER: FileListViewOffer = { statusGroups: false, dates: false };
 
 /** The item a selected row stands for: an item's own row, or a folder's row that is an item (a moved folder). */
 export function partialItemAt(

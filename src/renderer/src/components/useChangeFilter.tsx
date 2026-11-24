@@ -35,7 +35,7 @@ export interface ListFlag<T> {
 }
 
 const NO_TONE_LABELS: Partial<Record<StatusTone, string>> = {};
-const BY_STATUS: FileListViewOffer = { statusGroups: true };
+const BY_STATUS: FileListViewOffer = { statusGroups: true, dates: true };
 
 export interface ChangeFilterResult<T> {
   visible: T[];

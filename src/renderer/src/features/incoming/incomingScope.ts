@@ -34,9 +34,9 @@ export type IncomingListGroup = IncomingFileGroup | StatusGroup;
 
 /**
  * What Incoming's list knows of each file to sort and group it (`useGroupedFileTree`): what the branch did to it,
- * its own groups saying whether it conflicts.
+ * its own groups saying whether it conflicts, and its revision's date.
  */
-export const INCOMING_FILE_FACTS: GroupedFileListFacts<DiffEntry, IncomingListGroup> = { toneOf: DIFF_ENTRY_FACTS.toneOf, statusGroup };
+export const INCOMING_FILE_FACTS: GroupedFileListFacts<DiffEntry, IncomingListGroup> = { toneOf: DIFF_ENTRY_FACTS.toneOf, dateOf: DIFF_ENTRY_FACTS.dateOf, statusGroup };
 
 /** What a group of Incoming's list is, as its tooltip: its own groups say; a status group's name does. */
 export function incomingGroupTip(group: IncomingListGroup): string | undefined {

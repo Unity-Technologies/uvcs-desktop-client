@@ -21,8 +21,13 @@ export function changeTone(change: PendingChange): StatusTone {
   return TONES[categoryOf(change)];
 }
 
-/** What the Changes list knows of each change to sort it beyond its path (`fileListOrder`): its own status. */
-export const PENDING_CHANGE_FACTS: FileListFacts<PendingChange> = { toneOf: changeTone };
+/** What the Changes list knows of each change to sort it beyond its path (`fileListOrder`): its own status and date. */
+export const PENDING_CHANGE_FACTS: FileListFacts<PendingChange> = { toneOf: changeTone, dateOf: changeDate };
+
+/** When the change's file was last modified on disk; none for what has no file there (a deleted file, a folder). */
+function changeDate(change: PendingChange): number | undefined {
+  return change.lastModified ? Date.parse(change.lastModified) : undefined;
+}
 
 /** The statuses the filter chips find a pending change by: a moved file that changed by C and M. */
 export function changeTones(change: PendingChange): readonly StatusTone[] {

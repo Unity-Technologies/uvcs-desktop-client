@@ -54,9 +54,14 @@ function diffEntryLabel(entry: DiffEntry): string {
 
 /**
  * What a diff's list knows of each entry beyond its path, to sort and group it (`useGroupedFileTree`): its own status,
- * the one its row shows last, and a group per status.
+ * the one its row shows last, a group per status, and its revision's date.
  */
-export const DIFF_ENTRY_FACTS: GroupedFileListFacts<DiffEntry, StatusGroup> = { toneOf: diffEntryTone, statusGroup };
+export const DIFF_ENTRY_FACTS: GroupedFileListFacts<DiffEntry, StatusGroup> = { toneOf: diffEntryTone, statusGroup, dateOf: diffEntryDate };
+
+/** When the entry's revision was made (`DiffEntry.date`), parsed whatever UTC offset `cm` printed it with. */
+function diffEntryDate(entry: DiffEntry): number | undefined {
+  return entry.date ? Date.parse(entry.date) : undefined;
+}
 
 /** The statuses the filter chips find an entry by: a moved file that changed by C and M. */
 export function diffEntryTones(entry: DiffEntry): readonly StatusTone[] {

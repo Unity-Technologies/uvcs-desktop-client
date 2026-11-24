@@ -40,7 +40,7 @@ interface ChangedFilesSectionProps {
 }
 
 /** A details panel's short list is never grouped: its view menu offers the layout and the order. */
-const NO_GROUPINGS: FileListViewOffer = { statusGroups: false };
+const NO_GROUPINGS: FileListViewOffer = { statusGroups: false, dates: true };
 
 /**
  * The changes pane of a details panel: what a changeset, branch, label, shelve or code review changed.

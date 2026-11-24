@@ -6,6 +6,8 @@ export interface FileListViewOffer {
   changelists?: boolean;
   /** Whether its files can go in a group per status (`GroupedFileListFacts.statusGroup`). */
   statusGroups: boolean;
+  /** Whether its files have dates to sort by (`FileListFacts.dateOf`). */
+  dates: boolean;
 }
 
 export type FileListGrouping = 'changelist' | 'status';
@@ -37,16 +39,22 @@ export const SORTS: ViewMenuChoice<FileListSort>[] = [
   { value: 'name', label: 'Name' },
   { value: 'status', label: 'Status' },
   { value: 'extension', label: 'Extension' },
+  { value: 'date', label: 'Date' },
 ];
 
-const SORT_WORDS: Record<FileListSort, string> = { path: 'by path', name: 'by name', status: 'by status', extension: 'by extension' };
+const SORT_WORDS: Record<FileListSort, string> = { path: 'by path', name: 'by name', status: 'by status', extension: 'by extension', date: 'by date' };
 
-/** The menu for `view` in a list offering `offer`. */
+/**
+ * The menu for `view` in a list offering `offer`. A list without dates offers no sort by date, and shows its files by
+ * path while it is the sort chosen, as `fileListOrder` orders them.
+ */
 export function fileListViewMenu(view: FileListView, offer: FileListViewOffer): FileListViewMenuModel {
   const groupings: FileListViewMenuModel['groupings'] = [];
   if (offer.changelists !== undefined) groupings.push({ value: 'changelist', label: 'Changelist', on: offer.changelists });
   if (offer.statusGroups) groupings.push({ value: 'status', label: 'Status', on: view.groupByStatus });
-  return { layouts: LAYOUTS, layout: view.layout, groupings, sorts: SORTS, sort: view.sort, summary: viewSummary(view.layout, groupings, view.sort) };
+  const sorts = offer.dates ? SORTS : SORTS.filter((sort) => sort.value !== 'date');
+  const sort = sorts.some((offered) => offered.value === view.sort) ? view.sort : 'path';
+  return { layouts: LAYOUTS, layout: view.layout, groupings, sorts, sort, summary: viewSummary(view.layout, groupings, sort) };
 }
 
 /** "Tree", "List, grouped by changelist and status", "Tree, sorted by name": what isn't the default is named. */

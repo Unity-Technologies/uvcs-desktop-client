@@ -118,7 +118,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     isViewFilter: true,
     reading: !snapshot,
     actions: <ReviewModeButton place={workspacePlace(workspacePath)} />,
-    viewOffer: { statusGroups: true, changelists: grouping === 'changelist' },
+    viewOffer: { statusGroups: true, changelists: grouping === 'changelist', dates: true },
     onChangelistsChange: (on) => setGrouping(on ? 'changelist' : 'none'),
   });
   const order = useRankedOrder(sorted, PENDING_CHANGE_FACTS);
