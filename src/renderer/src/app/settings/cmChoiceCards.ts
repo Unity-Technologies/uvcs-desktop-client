@@ -38,7 +38,12 @@ function automaticCard({ choice, pinnedVersion, installed, source }: CmChoiceFac
   }
   // Never one older than the app's own (`CmRuntime.admits`): any feature may rely on a newer `cm`.
   if (pinnedVersion !== null && !meetsCmVersion(installed.version, pinnedVersion)) {
-    return { ...base, description: `Installed version ${installed.version} needs an update to ${pinnedVersion} or later`, tip: `${AUTOMATIC_TIP} ${installed.path}`, warning: true };
+    return {
+      ...base,
+      description: `Installed version ${installed.version} needs an update`,
+      tip: `Needs version ${pinnedVersion} or later. Until then, the one included with the app runs. ${installed.path}`,
+      warning: true,
+    };
   }
   return { ...base, description: `Version ${installed.version}, installed on this computer`, tip: `${AUTOMATIC_TIP} ${installed.path}` };
 }

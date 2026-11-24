@@ -27,7 +27,13 @@ describe('cmChoiceCards', () => {
 
   it('warns that an installed one older than the app needs an update, and still lets Automatic be chosen', () => {
     const [automatic] = cmChoiceCards({ ...FACTS, choice: 'managed', installed: { ...INSTALLED, version: '11.0.16.9000' }, source: 'managed' });
-    expect(automatic).toMatchObject({ description: 'Installed version 11.0.16.9000 needs an update to 11.0.16.10659 or later', disabled: false, selected: false, warning: true });
+    expect(automatic).toMatchObject({
+      description: 'Installed version 11.0.16.9000 needs an update',
+      tip: 'Needs version 11.0.16.10659 or later. Until then, the one included with the app runs. /usr/local/bin/cm',
+      disabled: false,
+      selected: false,
+      warning: true,
+    });
   });
 
   it('checks the included one when it was chosen', () => {
