@@ -108,7 +108,10 @@ export function FilesView() {
         <>
           <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={() => openGoToFile()} />
           {showsChooseDownloadsButton(workspace?.kind) && (
-            <IconButton icon={<FolderDown size={14} />} label="Choose what to download…" onClick={() => openChooseDownloads(workspacePath)} />
+            // Labeled, not an icon: in a partial workspace choosing what to download is how its files get there.
+            <Button icon={<FolderDown size={14} />} onClick={() => openChooseDownloads(workspacePath)}>
+              Choose what to download…
+            </Button>
           )}
           <IconButton icon={<RefreshCw size={14} />} label="Refresh" shortcut={hotkey('refresh')} onClick={() => void invalidateWorkspace(workspacePath)} />
         </>
