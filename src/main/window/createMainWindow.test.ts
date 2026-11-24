@@ -142,3 +142,49 @@ describe('createMainWindow', () => {
     expect(window.titleBarOverlay).toMatchObject({ height: 62 });
   });
 });
+
+describe('createMainWindow in an agent’s launch (`windowsStayInBackground`)', () => {
+  const reopenedMaximizedFullScreen = (): FakeWindow => {
+    vi.mocked(loadWindowBounds).mockReturnValueOnce({ bounds: null, maximized: true });
+    createMainWindow(memorySettings(), { reopen: { bounds: { x: 0, y: 0, width: 1000, height: 700, maximized: true }, fullScreen: true } });
+    const window = fakeElectron.windows().at(-1)!;
+    window.emit('ready-to-show');
+    return window;
+  };
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('shows a window without taking the focus, never maximized or full screen, its frames drawn while covered, in a build run from the checkout', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+
+    const window = reopenedMaximizedFullScreen();
+    expect(window).toMatchObject({ shown: false, shownInactive: true, maximized: false, fullScreen: false });
+    expect(window.options.webPreferences?.backgroundThrottling).toBe(false);
+  });
+
+  it('saves none of its bounds, so the person’s next launch opens where they left their windows', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+
+    reopenedMaximizedFullScreen().emit('close', closeEvent());
+    expect(boundsSavedOnClose).toEqual([]);
+  });
+
+  it('shows an installed app’s window as always, whatever its environment holds', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+
+    const window = reopenedMaximizedFullScreen();
+    expect(window).toMatchObject({ shown: true, fullScreen: true });
+    expect(window.options.webPreferences).not.toHaveProperty('backgroundThrottling');
+  });
+
+  it('shows a window as always when nothing asks to keep it back', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '');
+    fakeElectron.app.isPackaged = false;
+
+    const window = reopenedMaximizedFullScreen();
+    expect(window).toMatchObject({ shown: true, fullScreen: true });
+    expect(window.options.webPreferences).not.toHaveProperty('backgroundThrottling');
+  });
+});

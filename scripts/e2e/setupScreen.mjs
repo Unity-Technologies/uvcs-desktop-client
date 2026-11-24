@@ -144,6 +144,8 @@ async function launch(name, settings, extraEnv = {}, cmVersion = null) {
       PLASTIC_HOME: join(folder, 'plastic4'),
       UVCS_OFFICIAL_UPDATES_URL: officialSite.url,
       UVCS_FAKE_OFFICIAL_UPDATE_MS: '200',
+      // Its windows show but never take the focus (`windowsStayInBackground`).
+      UVCS_BACKGROUND_WINDOWS: '1',
       ...extraEnv,
     },
   });

@@ -57,6 +57,8 @@ const app = await electron.launch({
     UVCS_FAKE_WORKSPACE: workspace,
     UVCS_FAKE_CM_LOG: cmLog,
     UVCS_FAKE_CM_SIGN_IN: signInFile,
+    // Its windows show but never take the focus (`windowsStayInBackground`).
+    UVCS_BACKGROUND_WINDOWS: '1',
     // The official client's config folder, read by the first-run import (`plasticConfigFolder`): an empty one.
     PLASTIC_HOME: join(temp, 'plastic4'),
   },
@@ -245,7 +247,8 @@ try {
   });
   await step('Diff', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
-    await main.getByText('src/player.cs', { exact: true }).first().click();
+    // Visible only: the views shown lately stay mounted, hidden, and may name the same file (`mountedViews`).
+    await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().click();
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
   });

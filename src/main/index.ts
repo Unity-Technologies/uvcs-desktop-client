@@ -37,6 +37,7 @@ import { handleLaunchRequests, isTheRunningApp, launchNamesAFolder } from './sta
 import { receiveLinks, registerAsLinkHandler } from './startup/linkRequests';
 import type { LinkRequests } from './links/LinkRequests';
 import { trackOperations } from './startup/operationTracking';
+import { KEEP_COVERED_WINDOWS_DRAWING, windowsStayInBackground } from './window/backgroundWindows';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
@@ -205,6 +206,10 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   void launched.then(openFirst, openFirst);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
+}
+
+if (windowsStayInBackground(process.env, app.isPackaged)) {
+  app.commandLine.appendSwitch(KEEP_COVERED_WINDOWS_DRAWING.switch, KEEP_COVERED_WINDOWS_DRAWING.value);
 }
 
 if (isTheRunningApp()) {

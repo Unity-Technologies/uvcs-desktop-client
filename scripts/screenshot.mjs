@@ -26,7 +26,12 @@ const [output = join(tmpdir(), 'uvcs.png'), ...steps] = process.argv.slice(2).fi
 // A Chromium switch: the window keeps its size in points and draws each one with more pixels.
 const scaleArgs = scaleOption ? [`--force-device-scale-factor=${scaleOption.slice('--scale='.length)}`] : [];
 
-const app = await electron.launch({ args: ['.', ...scaleArgs], cwd: fileURLToPath(new URL('..', import.meta.url)) });
+// Its windows show but never take the focus (`windowsStayInBackground`): agents take these while a person works.
+const app = await electron.launch({
+  args: ['.', ...scaleArgs],
+  cwd: fileURLToPath(new URL('..', import.meta.url)),
+  env: { ...process.env, UVCS_BACKGROUND_WINDOWS: '1' },
+});
 const window = await app.firstWindow();
 
 // Sizes and captures the real window rather than Playwright's emulated viewport, which would draw at one pixel

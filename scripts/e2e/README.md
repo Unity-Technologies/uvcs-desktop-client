@@ -53,14 +53,23 @@ result shown. Keys sent earlier land nowhere, and what a dialog reads when it op
 seconds on a CI runner while it takes milliseconds locally: a step that doesn't wait passes on a laptop and fails now
 and then on CI.
 
-Nothing in a run may need the window drawn on screen. The OS draws no window that is minimized, hidden, on another
-desktop or under a sleeping display, though the page still renders and every step passes; and a busy machine runs
-agents' smoke tests where nobody looks. Playwright's `page.screenshot` waits for the window to be drawn, and its
-timeout would fail whichever step it follows, so screenshots are taken from the frame Electron holds (`screenshot`:
-`webContents.capturePage`), after two animation frames so the step's last change is in it, and bounded by the same
-15 s as every wait; never call `page.screenshot` in a step. That a minimized or hidden window still runs animation
-frames was checked on macOS only; elsewhere, should it not, the screenshot fails its step in 15 s rather than hanging.
-The window's real content size is set to the page's (`VIEWPORT`), so the frame copied holds the whole page.
+A run never takes the focus from the person working at the computer: both scripts launch the app with
+`UVCS_BACKGROUND_WINDOWS=1`, as every launch of an agent's does (`windowsStayInBackground`), and every window then
+shows without being activated (`showInactive`), never maximized or full screen, and nothing focuses it; the app saves
+no window bounds or session. It may show over the person's window, but the keyboard stays theirs, and the app's icon
+in the Dock or taskbar says a run is on. A window left behind others keeps running its timers and animation frames
+(`backgroundThrottling` off) and drawing (`KEEP_COVERED_WINDOWS_DRAWING`: Chromium's occlusion check on Windows off).
+Hidden windows were tried and dropped: on Windows a window never shown draws no frames, and each step waited for one.
+An installed app ignores the variable, and only the scripts agents run set it (`backgroundWindows.test.ts`). So
+nothing in a run may need the OS's focus: the window never has it, so `document.hasFocus()` may be false and an app
+menu's accelerator never fires (a step presses keys the page handles). Nor may a step lead to a native dialog
+(`dialog.showMessageBox`), which a person would have to answer. Nor may it need the window drawn on screen, which it
+may not be (minimized, on another desktop, under a sleeping display): Playwright's `page.screenshot` waits for the
+window to be drawn, and its timeout would fail whichever step it follows, so screenshots are taken from the frame
+Electron holds (`screenshot`: `webContents.capturePage`), after two animation frames so the step's last change is in
+it, and bounded by the same 15 s as every wait; never call `page.screenshot` in a step. Should a window not drawn stop
+its animation frames, the screenshot fails its step in 15 s rather than hanging. The window's real content size is set
+to the page's (`VIEWPORT`), so the frame copied holds the whole page.
 
 It never touches UVCS infrastructure or the user's config: the only backend is the fake `cm` (`UVCS_CM_PATH`), the
 workspace is a temp folder (`workspaceFixture.mjs`: `.plastic/plastic.selector` and a few files, one edited, one
