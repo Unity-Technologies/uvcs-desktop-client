@@ -12,6 +12,7 @@ import {
   readIncomingChanges,
   readIncomingChangesetPage,
   readIncomingSummary,
+  readLocalChangesForUpdate,
   summarizeIncoming,
 } from './incoming';
 
@@ -174,6 +175,39 @@ describe('readChangesetIncomingChanges', () => {
 
     expect(await readChangesetIncomingChanges(cm, '/work')).toMatchObject({ changesetCount: 0, files: [], conflicts: [], blockedPaths: [] });
     expect(lines().some((line) => line.startsWith('diff'))).toBe(false);
+  });
+});
+
+describe('readIncomingChanges', () => {
+  it('asks no status header when told where the workspace stands: the shared header already said', async () => {
+    const { cm, lines } = fakeCmClient({
+      'find changeset': changesetsFound('/main', { id: 43, owner: 'ana' }),
+      'diff cs:41 cs:43': diffRecord('C', 'src/a.txt', { base: 10, revision: 20 }),
+      'status --controlledchanged --changed': pendingStatus('/work', change('CH', 'src/a.txt')),
+    });
+
+    const changes = await readIncomingChanges(cm, '/work', { selector: { kind: 'branch', name: '/main' }, loadedChangeset: 41, partial: false });
+
+    expect(changes).toMatchObject({ branch: '/main', headChangeset: 43, conflicts: [{ path: 'src/a.txt' }] });
+    expect(lines().map((line) => line.split(' ').slice(0, 2).join(' '))).toEqual(['find changeset', 'diff cs:41', 'status --controlledchanged']);
+  });
+});
+
+describe('readLocalChangesForUpdate', () => {
+  it('is what is checked out or changed, read with one local status that asks the server nothing', async () => {
+    const { cm, lines, commands } = fakeCmClient({
+      'status --controlledchanged --changed': pendingStatus('/work', change('CH', 'src/a.txt'), change('CO', 'src/b.txt')),
+    });
+
+    const local = await readLocalChangesForUpdate(cm, '/work');
+
+    expect(local.map((change) => [change.path, change.kinds])).toEqual([
+      ['src/a.txt', ['changed']],
+      ['src/b.txt', ['checkedOut']],
+    ]);
+    expect(lines()).toHaveLength(1);
+    expect(lines()[0]).toContain('--compact');
+    expect(commands[0]?.readsRecords).toBe(true);
   });
 });
 

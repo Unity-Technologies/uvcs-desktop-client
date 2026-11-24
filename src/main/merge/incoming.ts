@@ -1,4 +1,5 @@
 import type { Changeset } from '@shared/domain/changeset';
+import type { PendingChange } from '@shared/domain/pendingChanges';
 import {
   INCOMING_CHANGESETS_PAGE,
   type BranchAtChangeset,
@@ -95,10 +96,11 @@ function distinctAuthors(owners: string[]): string[] {
  * What updating brings: the newest page of incoming changesets (`readIncomingChangesetPage` reads the older ones), the
  * one diff from the loaded changeset to the head, and which local changes it collides with. A partial workspace on a
  * branch isn't at a changeset: what it gets is the items its branch head changes in the folders it loaded
- * (`readPartialIncomingItems`).
+ * (`readPartialIncomingItems`). Where the workspace stands is `load` when given (the service passes the header shared
+ * with the workspace info, `WorkspaceHeaders.status`), or else one `cm status --header`.
  */
-export async function readIncomingChanges(cm: CmClient, workspacePath: string): Promise<IncomingChanges> {
-  const load = await readWorkspaceLoad(cm, workspacePath);
+export async function readIncomingChanges(cm: CmClient, workspacePath: string, load?: WorkspaceLoad): Promise<IncomingChanges> {
+  load ??= await readWorkspaceLoad(cm, workspacePath);
   const { selector, loadedChangeset } = load;
   if (selector.kind === 'branch' && loadedChangeset === null) return readPartialIncomingChanges(cm, workspacePath, selector.name);
   return changesetIncomingChangesOf(cm, workspacePath, load);
@@ -124,12 +126,22 @@ async function changesetIncomingChangesOf(cm: CmClient, workspacePath: string, l
   const { summary, changesets, moreChangesets } = await readNewestIncomingChangesets(cm, workspacePath, load);
   if (!summary.branch || changesets.length === 0) return { ...summary, changesets, moreChangesets, files: [], conflicts: [], blockedPaths: [] };
 
-  const [files, { changes: local }] = await Promise.all([
+  const [files, local] = await Promise.all([
     queryDiffEntries(cm, [spec.changeset(summary.loadedChangeset), spec.changeset(summary.headChangeset)], { cwd: workspacePath }),
-    readPendingChanges(cm, workspacePath, ['--controlledchanged', '--changed']),
+    readLocalChangesForUpdate(cm, workspacePath),
   ]);
 
   return { ...summary, changesets, moreChangesets, files, conflicts: findUpdateConflicts(files, local), blockedPaths: findUpdateBlockers(files, local) };
+}
+
+/**
+ * The local changes an update can collide with (`findUpdateConflicts`, `findUpdateBlockers`): what is checked out or
+ * changed. A local read (`cm status --compact`), which the renderer repeats as the local changes move, while what came
+ * in is read once per head.
+ */
+export async function readLocalChangesForUpdate(cm: CmClient, workspacePath: string): Promise<PendingChange[]> {
+  const { changes } = await readPendingChanges(cm, workspacePath, ['--controlledchanged', '--changed']);
+  return changes;
 }
 
 type WorkspaceLoad = Awaited<ReturnType<typeof readWorkspaceLoad>>;
