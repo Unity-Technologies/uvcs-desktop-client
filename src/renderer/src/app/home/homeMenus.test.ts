@@ -7,7 +7,8 @@ import { repositoryPlace } from '@shared/domain/place';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { isSubmenu, type Action, type MenuEntry } from '../../lib/actions';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { missingWorkspaceMenu, repositoryMenu, workspaceMenu } from './homeMenus';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
+import { missingWorkspaceMenu, organizationMenu, repositoryMenu, workspaceMenu } from './homeMenus';
 
 const game: WorkspaceSummary = { name: 'game', path: '/wk/game', guid: 'guid-game' };
 
@@ -44,5 +45,24 @@ describe('repositoryMenu', () => {
     fakeApi.answer('windows.openPlace', async () => undefined);
     entry(menu, 'exploreInNewWindow')!.run();
     expect(fakeApi.calls()).toEqual([{ method: 'windows.openPlace', args: [repositoryPlace('game@local')] }]);
+  });
+});
+
+describe('organizationMenu', () => {
+  it('adds an organization to the favorites, or takes a favorite out', async () => {
+    fakeApi.answer('settings.setFavoriteOrganization', async () => DEFAULT_SETTINGS);
+
+    await entry(organizationMenu('acme@unity', false), 'favorite')!.run();
+    await entry(organizationMenu('acme@unity', true), 'unfavorite')!.run();
+
+    expect(fakeApi.calls()).toEqual([
+      { method: 'settings.setFavoriteOrganization', args: ['acme@unity', true] },
+      { method: 'settings.setFavoriteOrganization', args: ['acme@unity', false] },
+    ]);
+  });
+
+  it('offers only the one that applies', () => {
+    expect(entry(organizationMenu('acme@unity', false), 'unfavorite')).toBeUndefined();
+    expect(entry(organizationMenu('acme@unity', true), 'favorite')).toBeUndefined();
   });
 });

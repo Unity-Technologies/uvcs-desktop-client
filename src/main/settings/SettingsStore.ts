@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { withFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { storedGravatarChoice } from '@shared/domain/gravatarChoice';
 import { storedCmChoice } from '@shared/domain/storedCmChoice';
 import { withRecentComment } from '@shared/domain/recentComments';
@@ -60,6 +61,11 @@ export class SettingsStore {
   /** Puts a check-in's comment first among its repository's recent comments. */
   rememberRecentComment(repository: string, comment: string): AppSettings {
     return this.update(withRecentComment(this.settings, repository, comment));
+  }
+
+  /** Adds an organization to the favorites, or removes it. */
+  setFavoriteOrganization(server: string, favorite: boolean): AppSettings {
+    return this.update({ favoriteOrganizations: withFavoriteOrganization(this.settings.favoriteOrganizations, server, favorite) });
   }
 
   onChanged(listener: ChangeListener): void {

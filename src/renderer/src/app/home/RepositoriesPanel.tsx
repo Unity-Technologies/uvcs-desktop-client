@@ -14,6 +14,7 @@ import { useDeletedRepositories, useProjects, useRepositories } from '../workspa
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
 import { deletedRepositoriesTip, repositoriesShown } from './deletedRepositories';
+import { FavoriteOrganizationButton } from './FavoriteOrganizationButton';
 import { useDeletedRepositoriesStore } from './deletedRepositoriesStore';
 import { noRepositoriesState, projectChoices, repositoriesInProject, shownProject } from './repositoryProjects';
 import { ProjectFilter } from './ProjectFilter';
@@ -62,6 +63,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
         total={listed?.length}
         actions={
           <>
+            <FavoriteOrganizationButton server={server} />
             <IconButton icon={<ServerCog size={14} />} label="Server permissions…" onClick={() => openServerPermissions(server)} />
             <IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void refetch()} />
             <Button variant="primary" icon={<DatabasePlus size={14} />} onClick={() => openCreateRepositoryDialog({ server, project, onWorkspaceCreated: onOpen })}>

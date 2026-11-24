@@ -61,3 +61,12 @@ export async function rememberRecentComment(repository: string, comment: string)
 export async function forgetRecentWorkspace(workspacePath: string): Promise<void> {
   queryClient.setQueryData(queryKeys.settings, await api.settings.forgetRecentWorkspace(workspacePath));
 }
+
+/** Adds an organization to the favorites the home sidebar lists first, or removes it. A store that can't save it says so. */
+export async function setFavoriteOrganization(server: string, favorite: boolean): Promise<void> {
+  try {
+    queryClient.setQueryData(queryKeys.settings, await api.settings.setFavoriteOrganization(server, favorite));
+  } catch (error) {
+    toast.error("Couldn't save the settings", error);
+  }
+}
