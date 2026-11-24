@@ -2,17 +2,18 @@ import { readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { filesUnder } from '@shared/testing/filesUnder';
-import { windowsStayHidden } from './hiddenWindows';
+import { keepsAppInactive, windowsStayHidden } from './hiddenWindows';
 
 const ROOT = join(__dirname, '..', '..', '..');
 /** The smoke test's scripts, the only ones that run the app with its windows hidden. */
 const SETS_IT = ['scripts/e2e/smoke.mjs', 'scripts/e2e/setupScreen.mjs'];
-/** What only names the switch: its own module and this test, and the docs that say what it does. */
-const NAMES_IT = ['src/main/window/hiddenWindows.ts', 'src/main/window/hiddenWindows.test.ts', 'scripts/e2e/README.md'];
-/** Where a launch could set it: the app's sources, the scripts, CI and the packaging. */
-const SCANNED_DIRECTORIES = ['src', 'scripts', '.github'];
-const SCANNED_FILES = ['package.json', 'electron-builder.yml'];
-const TEXT_FILE = /\.(?:[cm]?[jt]sx?|json|ya?ml|sh|ps1|md)$/;
+/** What only names the switch: its own module, and the docs that say what it does. Tests never launch the app. */
+const NAMES_IT = ['src/main/window/hiddenWindows.ts', 'scripts/e2e/README.md'];
+/** Where a launch could set it: the app's sources, the scripts, CI, the installers and the build's configuration. */
+const SCANNED_DIRECTORIES = ['src', 'scripts', '.github', 'build'];
+const SCANNED_FILES = ['package.json', 'electron-builder.yml', 'electron-builder.windows-signed.yml', 'electron.vite.config.ts'];
+const TEXT_FILE = /\.(?:[cm]?[jt]sx?|json|ya?ml|sh|ps1|cmd|bat|nsh|md)$/;
+const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
 
 describe('windowsStayHidden', () => {
   it('hides the windows of a build run from the checkout that the smoke test asks to', () => {
@@ -29,9 +30,21 @@ describe('windowsStayHidden', () => {
   });
 });
 
+describe('keepsAppInactive', () => {
+  it('keeps a hidden run from becoming the active app on macOS, where starting would make it so', () => {
+    expect(keepsAppInactive('darwin', true)).toBe(true);
+  });
+
+  it('leaves the app as it always is elsewhere, and on macOS when its windows show', () => {
+    expect(keepsAppInactive('win32', true)).toBe(false);
+    expect(keepsAppInactive('linux', true)).toBe(false);
+    expect(keepsAppInactive('darwin', false)).toBe(false);
+  });
+});
+
 describe('who hides the windows', () => {
-  it('only the smoke test’s scripts set UVCS_HIDDEN_WINDOWS: no npm script, no launch a person uses', () => {
-    const files = [...SCANNED_DIRECTORIES.flatMap((directory) => filesUnder(join(ROOT, directory), (name) => TEXT_FILE.test(name))), ...SCANNED_FILES.map((file) => join(ROOT, file))];
+  it('only the smoke test’s scripts name UVCS_HIDDEN_WINDOWS: no npm script, installer or launch a person uses', () => {
+    const files = [...SCANNED_DIRECTORIES.flatMap((directory) => filesUnder(join(ROOT, directory), (name) => TEXT_FILE.test(name) && !TEST_FILE.test(name))), ...SCANNED_FILES.map((file) => join(ROOT, file))];
     const naming = files
       .filter((file) => readFileSync(file, 'utf8').includes('UVCS_HIDDEN_WINDOWS'))
       .map((file) => relative(ROOT, file).split(sep).join('/'));

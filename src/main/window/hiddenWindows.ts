@@ -7,3 +7,8 @@
 export function windowsStayHidden(environment: NodeJS.ProcessEnv, isPackaged: boolean): boolean {
   return !isPackaged && environment.UVCS_HIDDEN_WINDOWS === '1';
 }
+
+/** macOS makes an app the active one as it starts, taking the focus though it shows no window: a hidden run stays out of it. */
+export function keepsAppInactive(platform: NodeJS.Platform, hidden: boolean): boolean {
+  return hidden && platform === 'darwin';
+}

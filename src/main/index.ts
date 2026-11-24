@@ -37,7 +37,7 @@ import { handleLaunchRequests, isTheRunningApp, launchNamesAFolder } from './sta
 import { receiveLinks, registerAsLinkHandler } from './startup/linkRequests';
 import type { LinkRequests } from './links/LinkRequests';
 import { trackOperations } from './startup/operationTracking';
-import { windowsStayHidden } from './window/hiddenWindows';
+import { keepsAppInactive, windowsStayHidden } from './window/hiddenWindows';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
@@ -186,8 +186,7 @@ const api = createServices({
 const early = new EarlyCalls(apiMethods(api));
 
 function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkRequests): void {
-  // macOS would make the app the active one, taking the focus, though it shows no window (`windowsStayHidden`).
-  if (process.platform === 'darwin' && windowsStayHidden(process.env, app.isPackaged)) app.setActivationPolicy('accessory');
+  if (keepsAppInactive(process.platform, windowsStayHidden(process.env, app.isPackaged))) app.setActivationPolicy('accessory');
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   void revisionDownloads.removeLeftOvers();
