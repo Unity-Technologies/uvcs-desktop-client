@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
-import { changeStatus, changeTones } from './changeTone';
+import { changeStatus, changeTones, PENDING_CHANGE_FACTS } from './changeTone';
 
 const change = (...kinds: ChangeKind[]): PendingChange => ({ path: 'src/app/a.ts', oldPath: 'src/lib/a.ts', kinds, itemType: 'file', size: 1, lastModified: '' });
 
@@ -26,5 +26,15 @@ describe('changeTones', () => {
     expect(changeTones(change('moved', 'changed'))).toEqual(['changed', 'moved']);
     expect(changeTones(change('moved'))).toEqual(['moved']);
     expect(changeTones(change('changed'))).toEqual(['changed']);
+  });
+});
+
+describe("a pending change's date", () => {
+  it('is when its file was last modified on disk', () => {
+    expect(PENDING_CHANGE_FACTS.dateOf!({ ...change('changed'), lastModified: '2026-11-24T10:00:00.000Z' })).toBe(Date.UTC(2026, 10, 24, 10));
+  });
+
+  it('is none for what has no file on disk (a deleted file, a folder)', () => {
+    expect(PENDING_CHANGE_FACTS.dateOf!(change('deleted'))).toBeUndefined();
   });
 });

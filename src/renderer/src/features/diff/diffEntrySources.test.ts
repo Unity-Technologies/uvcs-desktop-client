@@ -112,3 +112,17 @@ describe('an item whose file permissions alone changed', () => {
     expect(permissionsNote({ ...onlyPermissions, permissionsChange: undefined, status: 'moved', oldPath: 'build.sh' })).toBeNull();
   });
 });
+
+describe("a diff entry's date", () => {
+  const entry: DiffEntry = { status: 'changed', path: 'src/a.ts', itemType: 'file', baseRevisionId: 1, revisionId: 2, repository: 'game@local' };
+
+  it('is the moment its revision was made, whatever the offset cm printed it with', () => {
+    const date = DIFF_ENTRY_FACTS.dateOf!;
+    expect(date({ ...entry, date: '2026-11-20T09:15:02.1234567+01:00' })).toBe(Date.UTC(2026, 10, 20, 8, 15, 2, 123));
+    expect(date({ ...entry, date: '2026-11-20T08:15:03.0000000+00:00' })! > date({ ...entry, date: '2026-11-20T09:15:02.0000000+01:00' })!).toBe(true);
+  });
+
+  it('is none where cm printed none', () => {
+    expect(DIFF_ENTRY_FACTS.dateOf!(entry)).toBeUndefined();
+  });
+});
