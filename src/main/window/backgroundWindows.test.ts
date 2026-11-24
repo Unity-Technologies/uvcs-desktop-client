@@ -5,8 +5,11 @@ import { filesUnder } from '@shared/testing/filesUnder';
 import { windowsStayInBackground } from './backgroundWindows';
 
 const ROOT = join(__dirname, '..', '..', '..');
-/** The smoke test's scripts, the only ones that run the app with its windows in the background. */
-const SETS_IT = ['scripts/e2e/smoke.mjs', 'scripts/e2e/setupScreen.mjs'];
+/**
+ * The only scripts that run the app with its windows in the background: the smoke test's, the one-shot screenshot, and
+ * `app:debug` when an agent asks with `--background`. Never `npm run dev`, `npm start` or an installer.
+ */
+const SETS_IT = ['scripts/app-debug.mjs', 'scripts/e2e/setupScreen.mjs', 'scripts/e2e/smoke.mjs', 'scripts/screenshot.mjs'];
 /** What only names the switch: its own module, and the docs that say what it does. Tests never launch the app. */
 const NAMES_IT = ['src/main/window/backgroundWindows.ts', 'scripts/e2e/README.md'];
 /** Where a launch could set it: the app's sources, the scripts, CI, the installers and the build's configuration. */
@@ -31,7 +34,7 @@ describe('windowsStayInBackground', () => {
 });
 
 describe('who keeps the windows in the background', () => {
-  it('only the smoke test’s scripts name UVCS_BACKGROUND_WINDOWS: no npm script, installer or launch a person uses', () => {
+  it('only the scripts agents run name UVCS_BACKGROUND_WINDOWS: no npm script, installer or launch a person uses', () => {
     const files = [...SCANNED_DIRECTORIES.flatMap((directory) => filesUnder(join(ROOT, directory), (name) => TEXT_FILE.test(name) && !TEST_FILE.test(name))), ...SCANNED_FILES.map((file) => join(ROOT, file))];
     const naming = files
       .filter((file) => readFileSync(file, 'utf8').includes('UVCS_BACKGROUND_WINDOWS'))
