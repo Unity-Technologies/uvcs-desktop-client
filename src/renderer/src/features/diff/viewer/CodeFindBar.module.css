@@ -215,7 +215,8 @@
   background: var(--text-tertiary);
   color: var(--bg-subtle);
   cursor: pointer;
-  transform: translate(40%, -40%);
+  /* Whole pixels: a fractional shift draws the X off its center. */
+  transform: translate(7px, -7px);
   transition: background-color var(--duration-fast);
 }
 

@@ -92,7 +92,7 @@ export function CodeFindBar({ bar }: { bar: CodeFindBarModel }) {
       )}
       <Tooltip content="Close" shortcut={hotkey('textCloseFind')}>
         <button type="button" className={styles.close} aria-label="Close" onClick={bar.close}>
-          <X size={11} strokeWidth={2.5} />
+          <X size={10} strokeWidth={3} />
         </button>
       </Tooltip>
     </div>
