@@ -3,7 +3,7 @@
 // bundle, and the fake `cm` as the one "installed on this computer" (on the PATH).
 //
 // 1. The setup screen: the app's own chosen in Settings, so it sets that up. It checks the window starts on the setup
-//    screen and nothing asks `cm` for anything but its version meanwhile, then that "Use the installed one" brings the
+//    screen and nothing asks `cm` for anything but its version meanwhile, then that "Use the Installed Version" brings the
 //    app to Home on it, and saves that choice. The pin can't be met without the real bundles, so the download
 //    itself is never tested here: the unit tests cover it.
 // 2. The update screen: the default choice, with the installed `cm` older than the app needs
@@ -69,7 +69,7 @@ async function setupScreen() {
     const asked = run.commandsRun().filter((line) => !/^ok\s+version\b/.test(line));
     if (asked.length > 0) errors.push(`cm was asked for more than its version during the setup: ${asked.join(', ')}`);
 
-    await window.getByRole('button', { name: /^Use the installed one/ }).click();
+    await window.getByRole('button', { name: /^Use the Installed Version/ }).click();
     await window.getByRole('region', { name: 'All workspaces' }).waitFor();
     console.log('ok    Home, on the installed cm');
   });

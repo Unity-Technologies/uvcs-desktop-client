@@ -5,7 +5,7 @@ import { AppMark } from '../../components/AppMark';
 import { Button } from '../../ui/Button';
 import { useTheme } from '../settings/useTheme';
 import { FoldedOutput } from '../../ui/FoldedOutput';
-import { cmSetupViewOf, installedCmLabel, type CmSetupView as View } from './cmSetupView';
+import { cmSetupViewOf, type CmSetupView as View } from './cmSetupView';
 import { useCmRuntimeStore, useSecondsLeft } from './cmRuntimeStore';
 import { CmUpdateNeeded } from './CmUpdateNeeded';
 import { useRetryWhenOnline } from './useRetryWhenOnline';
@@ -77,9 +77,9 @@ function Failure({ view }: { view: Extract<View, { kind: 'failed' }> }) {
       <p className={styles.reason}>{view.reason}</p>
       <div className={styles.actions}>
         <Button variant="primary" icon={<RefreshCw size={14} className={retrying ? 'spinning' : undefined} />} onClick={() => void retry()} disabled={retrying}>
-          Try Again
+          {view.tryAgainLabel}
         </Button>
-        {view.installedCm && <Button onClick={() => void api.cmRuntime.use('installed')}>{installedCmLabel(view.installedCm)}</Button>}
+        {view.useInstalledLabel && <Button onClick={() => void api.cmRuntime.use('installed')}>{view.useInstalledLabel}</Button>}
       </div>
       <div className={styles.details}>
         <FoldedOutput output={view.detail} />

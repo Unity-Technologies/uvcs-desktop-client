@@ -28,7 +28,7 @@ describe('cmUpdateViewOf', () => {
       versions: 'Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later',
       hint: 'It takes a minute, and your workspaces aren’t changed.',
       updateLabel: 'Update',
-      includedLabel: 'Use the included version for now',
+      includedLabel: 'Use the Included Version for Now',
       background: null,
       detail: '/usr/local/bin/cm',
     });
@@ -80,7 +80,7 @@ describe('cmUpdateViewOf', () => {
         versions: 'Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later',
         hint: 'You can keep working with the version included with the app.',
         tryAgainLabel: 'Try Again',
-        includedLabel: 'Use the Included Version',
+        includedLabel: 'Use the Included Version for Now',
         detail: 'The installer of 11.0.16.10694 ended with exit code 1.\n/usr/local/bin/cm',
       });
     });
@@ -91,6 +91,13 @@ describe('cmUpdateViewOf', () => {
       expect(failed('unreachable').body).toBe('The update couldn’t be downloaded. Check your connection, then try again.');
       expect(failed('notSigned').body).toBe('The download isn’t signed by Unity, so it wasn’t installed. Try again to download a new copy.');
     });
+  });
+
+  it('calls the included version the same on the offer, a failure and Linux’s command', () => {
+    const labels = [cmUpdateViewOf(TOO_OLD, 'none', true), cmUpdateViewOf(withUpdate({ kind: 'failed', failure: 'declined', version: null, detail: 'x' }), 'none', true), cmUpdateViewOf(TOO_OLD, 'none', false)].map(
+      (view) => 'includedLabel' in view && view.includedLabel,
+    );
+    expect(labels).toEqual(['Use the Included Version for Now', 'Use the Included Version for Now', 'Use the Included Version for Now']);
   });
 
   describe('on Linux', () => {

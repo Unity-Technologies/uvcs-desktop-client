@@ -107,8 +107,8 @@ the next launch on without asking.
 **Never an installed `cm` older than the pinned version** (`meetsCmVersion`): it's caught by the `cm version` the
 first window reads as it opens (`system.cmVersion`), so it costs no command of its own; what started before that
 answers (the window's first reads, `readFirstScreenAhead`) still runs on it once. `CmRuntime.admits` then shows the
-update screen (status `installedTooOld`, "The update screen"), unless the user chose "Use the included version for
-now" for this pinned version (`cmDeclinedUpdateFor`): then the app's own runs at once, set up first when it isn't
+update screen (status `installedTooOld`, "The update screen"), unless the user chose "Use the Included Version for
+Now" for this pinned version (`cmDeclinedUpdateFor`): then the app's own runs at once, set up first when it isn't
 there. Where the app has none of its own, `CmUnavailableScreen` names both versions (the ready status's `installedTooOld`),
 and Check Again reads the version again. `UVCS_CM_PATH` is never checked.
 
@@ -143,7 +143,7 @@ ready, and then the window's place or Home, with no click. What it shows is `cmS
   button and no Cancel: there is nothing else to do. The Dock or taskbar icon shows the same progress
   (`cmSetupIconProgress`).
 - **A failure** says why in plain words, whether it retries by itself, offers Try Again and, when one at the pinned
-  version or newer is installed (only when the user chose the app's own), "Use the installed one (version)", which
+  version or newer is installed (only when the user chose the app's own), "Use the Installed Version (version)", which
   switches to it (`cmRuntime.use('installed')`), with the address and error folded under Details.
 
 Where no `cm` is installed, users of a version before the app had its own `cm` see the screen once too, as on a first
@@ -176,14 +176,14 @@ is false), and the windows wait as they do for a setup.
   version yet, the download failed, not signed by Unity, the permission declined, or the installer ended and the
   version is the same: "Close the other Unity Version Control apps, then try again. This computer may also not allow
   installing programs."), "You can keep working with the version included with the app.", and offers Try Again and
-  Use the Included Version, the error under Details. A failure of the download in the background shows nothing: the
+  Use the Included Version for Now, the error under Details. A failure of the download in the background shows nothing: the
   click tries it all again, and says why then.
-- **"Use the included version for now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the
+- **"Use the Included Version for Now"** (`cmRuntime.useIncludedForNow`) runs the app's own, set up first with the
   setup screen when it isn't there, and saves the pinned version as `cmDeclinedUpdateFor`: the screen doesn't ask again
   until the pin moves. The choice stays as it was, so once the installed one is new enough, it runs again without
   asking.
 - **Linux** has no installer: the screen shows the command that updates it, with Copy, Check Again
-  (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the included version for now".
+  (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the Included Version for Now".
 - **Checked again as a window gains focus** (the user may come back from updating it another way), quietly, never on a
   timer: new enough, it runs, its shells started again; none found any more, the app's own runs.
 
@@ -287,6 +287,9 @@ The words "automatic" and "Automatic" never show.
 
 Every place that shows a version names it with `cmVersionWords` ("Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or
 later", and "Installing: 11.0.16.10729" while it's updated): the update screen, the cards, `CmUnavailableScreen`.
+Their buttons come from `cmScreenLabels` (the setup and update screens, `CmUnavailableScreen`, the cards' links), in
+title case as every button of the app ("Check Again", "Use the Included Version for Now"), so one action reads the
+same on every screen.
 
 Settings saved before the automatic choice existed (without `cmDeclinedUpdateFor`) move a `managed` to it once
 (`storedCmChoice`): `SettingsStore` writes every setting on each change, so a `managed` saved then can't be told apart
