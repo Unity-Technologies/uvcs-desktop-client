@@ -153,6 +153,12 @@ describe('the incoming changes on screen at a head', () => {
   /** The read the query has under way, or the last one done: awaited, whatever a focus or a refresh started. */
   const readOf = (summary: BranchIncoming) => client.getQueryCache().find({ queryKey: query(summary).queryKey, exact: true })?.promise;
 
+  it('tell cm where the workspace stands, so it reads no header', async () => {
+    await showOnce(client, query(checked));
+
+    expect(fakeApi.argsOf('merge.incomingChanges')).toEqual([['/w', { branch: '/main', loadedChangeset: 41 }]]);
+  });
+
   it('are never read again on a window focus or as a view shows them, however long the head stays', async () => {
     const view = new QueryObserver(client, query(checked));
     view.subscribe(() => {});

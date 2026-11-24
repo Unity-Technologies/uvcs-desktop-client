@@ -95,8 +95,9 @@ function distinctAuthors(owners: string[]): string[] {
  * What updating brings: the newest page of incoming changesets (`readIncomingChangesetPage` reads the older ones), the
  * one diff from the loaded changeset to the head, and which local changes it collides with. A partial workspace on a
  * branch isn't at a changeset: what it gets is the items its branch head changes in the folders it loaded
- * (`readPartialIncomingItems`). Where the workspace stands is `load` when given (the service passes the header shared
- * with the workspace info, `WorkspaceHeaders.status`), or else one `cm status --header`.
+ * (`readPartialIncomingItems`). Where the workspace stands is `load` when given (the service passes what the renderer
+ * told, `workspaceLoadAt`, or the header shared with the workspace info, `WorkspaceHeaders.status`), or else one
+ * `cm status --header`.
  */
 export async function readIncomingChanges(cm: CmClient, workspacePath: string, load?: WorkspaceLoad): Promise<IncomingChanges> {
   load ??= await readWorkspaceLoad(cm, workspacePath);
@@ -131,6 +132,14 @@ async function changesetIncomingChangesOf(cm: CmClient, workspacePath: string, l
   ]);
 
   return { ...summary, changesets, moreChangesets, files, conflicts: findUpdateConflicts(files, local), blockedPaths: findUpdateBlockers(files, local) };
+}
+
+/**
+ * Where a workspace loaded from `at.loadedChangeset` of `at.branch` stands, as the renderer's workspace info told it:
+ * what the incoming changes read for a head take instead of asking `cm status --header`.
+ */
+export function workspaceLoadAt({ branch, loadedChangeset }: BranchAtChangeset): WorkspaceLoad {
+  return { selector: { kind: 'branch', name: branch }, loadedChangeset, partial: false };
 }
 
 type WorkspaceLoad = Awaited<ReturnType<typeof readWorkspaceLoad>>;

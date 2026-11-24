@@ -208,8 +208,9 @@ and many people use the same server. Every `cm` command other than local reads (
   the newest of what that read brought. That read is keyed by the branch, loaded changeset and head the check saw
   (`incomingChangesFor`, `incomingChangesQuery`): never stale, so focus and mounting never read it again, a new head is
   a new key (new changesets leave it alone, `isAffectedByNewChangesets`), and only an operation or Refresh reads it again
-  under the same head. It waits for the check rather than run before it. Where the workspace stands comes from the
-  `cm status --header` the workspace info shares (`WorkspaceHeaders.status`). What collides locally follows Changes' pending changes as they are read, never reading them itself
+  under the same head. It waits for the check rather than run before it. It tells `cm` where the workspace stands, as
+  the workspace info says (`incomingChanges(workspacePath, at)`, `workspaceLoadAt`), so it reads no `cm status
+  --header`. What collides locally follows Changes' pending changes as they are read, never reading them itself
   (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print
   (`localChangesForUpdateOf`), the conflicts worked out again from the diff already read (`withLocalCollisions`,
   `findUpdateConflicts`), the same object while they come out the same. At "100+" a hover reads nothing heavy:
@@ -527,7 +528,8 @@ by name, and never passes it to `cm`.
     `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
     asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
-    (`WorkspaceHeaders`). Reads that need only what is loaded take
+    (`WorkspaceHeaders`): the incoming changes read without a head (before updating or checking in, from the
+    renderer's `incomingChanges` without `at`) take it from there. Reads that need only what is loaded take
     `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
     read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace

@@ -56,15 +56,16 @@ export function readsOncePerHead(readFor: IncomingChangesFor | undefined): boole
 }
 
 /**
- * The query of the incoming changes read for `readFor`. At a head, never stale (`readsOncePerHead`), and keyed by the
- * loaded changeset too: an update or a checkin gives it a new key, read as it shows rather than once more under the old
- * one. The other reads keep the default refreshes.
+ * The query of the incoming changes read for `readFor`. At a head, it tells `cm` where the workspace stands, so no
+ * header is read, is never stale (`readsOncePerHead`), and is keyed by the loaded changeset too: an update or a checkin
+ * gives it a new key, read as it shows rather than once more under the old one. The other reads keep the default
+ * refreshes.
  */
 export function incomingChangesQuery(workspacePath: string, readFor: IncomingChangesFor | undefined) {
-  const at = readsOncePerHead(readFor);
+  const at = readsOncePerHead(readFor) ? (readFor as BranchAtHead) : undefined;
   return {
     queryKey: incomingChangesKey(workspacePath, readFor),
-    queryFn: () => api.merge.incomingChanges(workspacePath),
+    queryFn: () => api.merge.incomingChanges(workspacePath, at && { branch: at.branch, loadedChangeset: at.loadedChangeset }),
     // Left out otherwise: an undefined staleTime would replace the default rather than keep it.
     ...(at && { staleTime: Infinity, meta: keyedByWorkspaceInfo('loadedChangeset') }),
   };

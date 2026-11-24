@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MergeOperation, MergeResolutions, MergeResult } from '@shared/domain/merge';
-import { changedStatus, mergePreviewOutput } from '../cm/testing/cmOutput';
+import { change, changedStatus, changesetsFound, diffRecord, mergePreviewOutput, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { fakeCmClient, optionValue } from '../cm/testing/fakeCmClient';
 import { runMerge } from '../merge/runMerge';
 import type { LeftChangesFinder } from '../workspace/leftChanges';
@@ -113,5 +113,33 @@ describe('running a merge', () => {
 
     await expect(run({ sourceSpec: 'sh:12', deleteShelve: true })).rejects.toThrow('The merge failed.');
     expect(finishAppliedShelve).not.toHaveBeenCalled();
+  });
+});
+
+describe('the incoming changes', () => {
+  const behind = () =>
+    fakeCmClient({
+      'status --header --xml': statusHeader('/main', { changeset: 41 }),
+      'find changeset': changesetsFound('/main', { id: 43, owner: 'ana' }),
+      'diff cs:41 cs:43': diffRecord('C', 'src/a.txt', { base: 10, revision: 20 }),
+      'status --controlledchanged --changed': pendingStatus(WORKSPACE, change('CH', 'src/a.txt')),
+    });
+  const commandsOf = (lines: string[]) => lines.map((line) => line.split(' ').slice(0, 2).join(' '));
+
+  it('read where the workspace info says the workspace stands ask no status header: one find, one diff, one local status', async () => {
+    const { cm, lines, linesVia } = behind();
+
+    const changes = await merge(cm).service.incomingChanges(WORKSPACE, { branch: '/main', loadedChangeset: 41 });
+
+    expect(changes).toMatchObject({ branch: '/main', loadedChangeset: 41, headChangeset: 43, conflicts: [{ path: 'src/a.txt' }] });
+    expect(commandsOf(lines())).toEqual(['find changeset', 'diff cs:41', 'status --controlledchanged']);
+    expect(linesVia('query')).toEqual(lines());
+  });
+
+  it("read without it, before updating or checking in, ask the workspace's header first", async () => {
+    const { cm, lines } = behind();
+
+    expect(await merge(cm).service.incomingChanges(WORKSPACE)).toMatchObject({ branch: '/main', loadedChangeset: 41, headChangeset: 43 });
+    expect(commandsOf(lines())).toEqual(['status --header', 'find changeset', 'diff cs:41', 'status --controlledchanged']);
   });
 });
