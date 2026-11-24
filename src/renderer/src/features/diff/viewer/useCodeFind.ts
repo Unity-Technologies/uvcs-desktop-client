@@ -1,15 +1,17 @@
+import type { Editor } from '@pierre/diffs/edit';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { focusAs } from '../../../lib/focusRing';
-import { matchesShortcut } from '../../../lib/shortcuts';
-import { hotkey } from '../../../lib/shortcutRegistry';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import {
+  canReplace,
   findInText,
   findOpening,
   findBarRight,
   firstMatchFrom,
   matchCountWords,
   matchMarks,
+  placeAfterReplace,
+  replaceEdits,
   rowNeedsScroll,
   shownMatchMarks,
   sidewaysScrollBy,
@@ -17,6 +19,7 @@ import {
   steppedMatch,
   type CodeMatch,
   MAX_MATCHES,
+  type FindMode,
   type FindOptions,
   type TextPlace,
 } from './codeFind';
@@ -24,7 +27,7 @@ import { lineUnderPointer } from './lineActions';
 import { paneRect, pierreShadowRoot, rowTextRange, rowUnderPointer, sideLineRowSelector } from './pierreDom';
 import { useDiffShadowRoot } from './useDiffShadowRoot';
 import { useWordMarks, type WordMarkColors } from './useWordMarks';
-import { closePierreSearchPanel, pierreSearchPanelIn } from './pierreSearchPanel';
+import { searchKeyMode } from './pierreSearchKeys';
 
 interface CodeFindOptions {
   /** The scrolling element around the diff. */
@@ -33,10 +36,10 @@ interface CodeFindOptions {
   textOf: (side: DiffSide) => string;
   /** The one side the diff shows alone; null for two. */
   onlySide: DiffSide | null;
-  /** The newer side is typed into: Find there is the editor's own search panel. */
+  /** The newer side is typed into: the search there replaces too (`canReplace`). */
   typedInto: boolean;
-  /** Opens the editor's search panel in the text typed into (`openPierreSearchPanel`). */
-  openEditorSearch: () => void;
+  /** Pierre's editor of the text typed into, which takes the replacements; none where nothing is typed into. */
+  editor?: RefObject<Editor | null>;
   /** Scrolls the diff to a line, unfolding the region that holds it (`scrollToShownLine`). */
   scrollTo: (container: HTMLElement, line: ChangedLine) => void;
 }
@@ -48,6 +51,18 @@ export interface CodeFindBarModel {
   right: number | null;
   query: string;
   setQuery: (query: string) => void;
+  /** Whether the bar shows its replace field: only over the text typed into (`canReplace`). */
+  replacing: boolean;
+  /** Shows or hides the replace field; null where the side can't be replaced in. */
+  toggleReplace: (() => void) | null;
+  /** Shows the replace field where the side can be replaced in (Replace's key in the bar). */
+  showReplace: () => void;
+  replacement: string;
+  setReplacement: (replacement: string) => void;
+  /** Replaces the match shown, then shows the next. */
+  replace: () => void;
+  /** Replaces every match. */
+  replaceAll: () => void;
   options: FindOptions;
   setOptions: (options: FindOptions) => void;
   countWords: string;
@@ -61,14 +76,17 @@ const SHOWN_MATCH: WordMarkColors = { deletions: 'var(--bg-match-current)', addi
 const NO_MATCHES: CodeMatch[] = [];
 
 /**
- * Finding text in a diff's read-only side (docs/features/diff.md, "Find in the code"). ⌘F in the diff, or Find in its
- * menu, opens the bar on the side last pressed, from the line pressed, or the editor's search panel where that side is
- * typed into (`findOpening`). Every decision is `codeFind`'s; this holds the
- * bar's state, marks the matches on the rows on screen (`useWordMarks`, every line's row: `sideLineRowSelector`) and
+ * Finding text in a diff, and replacing it in the text typed into (docs/features/diff.md, "Find in the code"). ⌘F in
+ * the diff, or Find in its menu, opens the bar on the side last pressed, from the line pressed (`findOpening`); ⌥⌘F
+ * (Ctrl+H) or Replace opens it replacing, where that side is typed into (`canReplace`). Pierre's editor never opens its
+ * own search panel: the keys that would are taken first (`searchKeyMode`). Every decision is `codeFind`'s; this holds
+ * the bar's state, puts replacements into the editor as one change each, marks the matches on the rows on screen (`useWordMarks`, every line's row: `sideLineRowSelector`) and
  * brings the match shown into view.
  */
-export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEditorSearch, scrollTo }: CodeFindOptions) {
+export function useCodeFind({ containerRef, textOf, onlySide, typedInto, editor, scrollTo }: CodeFindOptions) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<FindMode>('find');
+  const [replacement, setReplacement] = useState('');
   const [side, setSide] = useState<DiffSide>(sideToFind(onlySide, null));
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<FindOptions>({ matchCase: false, wholeWord: false, regex: false });
@@ -79,10 +97,11 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
   const [startLine, setStartLine] = useState(1);
   const pressed = useRef<ChangedLine | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const latest = useRef({ scrollTo, openEditorSearch });
-  latest.current = { scrollTo, openEditorSearch };
+  const latest = useRef({ scrollTo });
+  latest.current = { scrollTo };
 
   const shownSide = onlySide ?? side;
+  const replaceable = canReplace(shownSide, typedInto);
   const text = textOf(shownSide);
   const found = useMemo(
     () => (open ? findInText(text, query, options, MAX_MATCHES, startLine) : { matches: NO_MATCHES, capped: false }),
@@ -98,15 +117,11 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
   useWordMarks(containerRef, root, allMarks, OTHER_MATCHES, sideLineRowSelector);
   useWordMarks(containerRef, root, shownMarks, SHOWN_MATCH, sideLineRowSelector);
 
-  // While the bar is open: it stands over its side's pane as the diff is laid out anew (split or unified, a resize),
-  // and it closes when Pierre's search panel opens in the text typed into (⌘F there), so the diff shows one search.
+  // While the bar is open, it stands over its side's pane as the diff is laid out anew (split or unified, a resize).
   useEffect(() => {
     const container = containerRef.current;
     if (!open || !container || !root) return;
-    const follow = (): void => {
-      if (pierreSearchPanelIn(container)) return setOpen(false);
-      setRight(barRight(container, root, shownSide));
-    };
+    const follow = (): void => setRight(barRight(container, root, shownSide));
     follow();
     const mutations = new MutationObserver(follow);
     mutations.observe(root, { childList: true, subtree: true });
@@ -126,17 +141,16 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
     // Only when another match shows: what's on screen moving (typing elsewhere, a scroll) doesn't bring it back.
   }, [matchKey]);
 
-  /** Opens Find on `on` (a side right-clicked), else the side last pressed: the bar, or the editor's panel (`findOpening`). */
-  const openFind = (on?: DiffSide): void => {
-    const opening = findOpening(onlySide, typedInto, pressed.current, on);
-    if (opening.kind === 'editor') {
-      setOpen(false);
-      return latest.current.openEditorSearch();
-    }
-    closePierreSearchPanel(containerRef.current);
+  /**
+   * Opens the search on `on` (a side right-clicked), else the side last pressed (`findOpening`), replacing too where
+   * `mode` asks and the side is typed into (`canReplace`).
+   */
+  const openFind = (wanted: FindMode = 'find', on?: DiffSide): void => {
+    const opening = findOpening(onlySide, pressed.current, on);
     setSide(opening.side);
     setFrom(opening.from);
     setStartLine(opening.from?.line ?? 1);
+    setMode(wanted === 'replace' && canReplace(onlySide ?? opening.side, typedInto) ? 'replace' : 'find');
     setOpen(true);
     // The field is there once React shows the bar.
     requestAnimationFrame(() => {
@@ -145,11 +159,31 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
     });
   };
 
+  /** Closes the bar, back to the text typed into where it searched there, else to the diff. */
   const close = (): void => {
     setOpen(false);
+    const typed = replaceable ? editor?.current : null;
+    if (typed) return typed.focus();
     const container = containerRef.current;
     if (container) focusAs(container, 'app');
   };
+
+  /** Applies `edits` to the text typed into, as one change its history undoes. */
+  const applyEdits = (edits: ReturnType<typeof replaceEdits>): boolean => {
+    const typed = editor?.current;
+    if (!replaceable || !typed || edits.length === 0) return false;
+    typed.applyEdits(edits);
+    return true;
+  };
+
+  const replace = (): void => {
+    if (!shownMatch) return;
+    const [edit] = replaceEdits(text, [shownMatch], query, options, replacement);
+    if (applyEdits([edit!])) setFrom(placeAfterReplace(edit!));
+  };
+
+  // Every match, past the ones the bar counts (`MAX_MATCHES`).
+  const replaceAll = (): void => void applyEdits(replaceEdits(text, findInText(text, query, options, Infinity).matches, query, options, replacement));
 
   const step = (backwards: boolean): void => {
     const next = steppedMatch(found.matches.length, current, backwards);
@@ -164,12 +198,17 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
     pressed.current = row && lineUnderPointer(row);
   };
 
-  /** ⌘F in the diff, outside the text typed into (whose editor takes it first). */
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented || !matchesShortcut(event.nativeEvent, hotkey('textFind'))) return;
+  /**
+   * The keys that open a search, anywhere in the code (`searchKeyMode`), taken on their way down, before Pierre's editor
+   * opens a search panel of its own: ⌘F finds, ⌥⌘F or Ctrl+H finds and replaces. The bar stands outside the code and
+   * takes its own keys (`findBarKeyAction`).
+   */
+  const onKeyDownCapture = (event: KeyboardEvent): void => {
+    const wanted = searchKeyMode(event.nativeEvent);
+    if (!wanted) return;
     event.preventDefault();
     event.stopPropagation();
-    openFind();
+    openFind(wanted);
   };
 
   const bar: CodeFindBarModel | null = open
@@ -178,16 +217,23 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
         right,
         query,
         setQuery,
+        replacing: mode === 'replace' && replaceable,
+        toggleReplace: replaceable ? () => setMode(mode === 'replace' ? 'find' : 'replace') : null,
+        showReplace: () => replaceable && setMode('replace'),
+        replacement,
+        setReplacement,
+        replace,
+        replaceAll,
         options,
         setOptions,
-        countWords: matchCountWords(query, current, found),
+        countWords: matchCountWords(current, found),
         hasMatches: found.matches.length > 0,
         step,
         close,
       }
     : null;
 
-  return { bar, openFind, onKeyDown, onPointerDownCapture };
+  return { bar, openFind, onKeyDownCapture, onPointerDownCapture };
 }
 
 /** Where the bar stands over the pane of `side` (`findBarRight`), measured in the diff as it's laid out now. */

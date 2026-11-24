@@ -1,6 +1,7 @@
 import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import {
+  canReplace,
   findBarKeyAction,
   findBarRight,
   findInText,
@@ -8,6 +9,8 @@ import {
   firstMatchFrom,
   matchCountWords,
   matchMarks,
+  placeAfterReplace,
+  replaceEdits,
   rowNeedsScroll,
   shownMatchMarks,
   sidewaysScrollBy,
@@ -136,17 +139,16 @@ describe('steppedMatch', () => {
 describe('matchCountWords', () => {
   const found = (count: number, capped = false) => ({ matches: Array.from({ length: count }, () => ({ line: 1, start: 0, end: 1 })), capped });
 
-  it('says nothing before a query, and that nothing matched after one', () => {
-    expect(matchCountWords('', null, found(0))).toBe('');
-    expect(matchCountWords('x', null, found(0))).toBe('No results');
+  it('says nothing matched, before a query too', () => {
+    expect(matchCountWords(null, found(0))).toBe('No results');
   });
 
   it('says which match shows of how many', () => {
-    expect(matchCountWords('x', 2, found(12))).toBe('3 of 12');
+    expect(matchCountWords(2, found(12))).toBe('3 of 12');
   });
 
   it('says there are more past the limit', () => {
-    expect(matchCountWords('x', 0, found(10_000, true))).toBe('1 of 10,000+');
+    expect(matchCountWords(0, found(10_000, true))).toBe('1 of 10,000+');
   });
 });
 
@@ -180,26 +182,67 @@ describe('matchMarks', () => {
 describe('findOpening', () => {
   const pressedOld = { side: 'deletions' as const, lineNumber: 12 };
 
-  it('opens the bar on the read-only side pressed, from the line pressed', () => {
-    expect(findOpening(null, true, pressedOld)).toEqual({ kind: 'bar', side: 'deletions', from: { line: 12, character: 0 } });
+  it('opens on the side pressed, from the line pressed', () => {
+    expect(findOpening(null, pressedOld)).toEqual({ side: 'deletions', from: { line: 12, character: 0 } });
+    expect(findOpening(null, { side: 'additions', lineNumber: 3 })).toEqual({ side: 'additions', from: { line: 3, character: 0 } });
   });
 
-  it("leaves the side typed into to its editor's search panel, so one side never has two", () => {
-    expect(findOpening(null, true, { side: 'additions', lineNumber: 3 })).toEqual({ kind: 'editor' });
-    expect(findOpening(null, true, null)).toEqual({ kind: 'editor' });
-    expect(findOpening('additions', true, null)).toEqual({ kind: 'editor' });
-  });
-
-  it('opens the bar on a newer side nothing types into', () => {
-    expect(findOpening(null, false, { side: 'additions', lineNumber: 3 })).toEqual({ kind: 'bar', side: 'additions', from: { line: 3, character: 0 } });
+  it('opens on the newer side, from the top, before anything is pressed', () => {
+    expect(findOpening(null, null)).toEqual({ side: 'additions', from: null });
   });
 
   it('searches from the top of the side right-clicked when the line pressed was on the other side', () => {
-    expect(findOpening(null, false, pressedOld, 'additions')).toEqual({ kind: 'bar', side: 'additions', from: null });
+    expect(findOpening(null, pressedOld, 'additions')).toEqual({ side: 'additions', from: null });
   });
 
   it('searches the one side a diff shows alone, whichever was pressed', () => {
-    expect(findOpening('deletions', false, { side: 'additions', lineNumber: 2 })).toEqual({ kind: 'bar', side: 'deletions', from: null });
+    expect(findOpening('deletions', { side: 'additions', lineNumber: 2 })).toEqual({ side: 'deletions', from: null });
+  });
+});
+
+describe('canReplace', () => {
+  it('replaces only in the text typed into, the newer side', () => {
+    expect(canReplace('additions', true)).toBe(true);
+    expect(canReplace('deletions', true)).toBe(false);
+    expect(canReplace('additions', false)).toBe(false);
+  });
+});
+
+describe('replaceEdits', () => {
+  const edit = (line: number, start: number, end: number, newText: string) => ({ range: { start: { line, character: start }, end: { line, character: end } }, newText });
+
+  it('replaces each match with the text typed, at its zero-based line and characters', () => {
+    const text = 'let speed = 1;\r\nspeed += speed;';
+    const { matches } = findInText(text, 'speed', ANY_CASE);
+    expect(replaceEdits(text, matches, 'speed', ANY_CASE, 'velocity')).toEqual([edit(0, 4, 9, 'velocity'), edit(1, 0, 5, 'velocity'), edit(1, 9, 14, 'velocity')]);
+  });
+
+  it("takes the text typed literally, `$1` and all, outside a regular expression", () => {
+    const { matches } = findInText('a(b)', '(b)', ANY_CASE);
+    expect(replaceEdits('a(b)', matches, '(b)', ANY_CASE, '$1$&')).toEqual([edit(0, 1, 4, '$1$&')]);
+  });
+
+  it('puts in what a regular expression captured, each match read where it stands', () => {
+    const options = { ...ANY_CASE, regex: true };
+    const text = 'get(x) set(y)';
+    const { matches } = findInText(text, '(\\w+)\\((\\w)\\)', options);
+    expect(replaceEdits(text, matches, '(\\w+)\\((\\w)\\)', options, '$2.$1()')).toEqual([edit(0, 0, 6, 'x.get()'), edit(0, 7, 13, 'y.set()')]);
+  });
+
+  it('reads a whole word at its edges in the line, as it was found', () => {
+    const options = { ...ANY_CASE, regex: true, wholeWord: true };
+    const { matches } = findInText('speed speedy', 'spe(ed)', options);
+    expect(replaceEdits('speed speedy', matches, 'spe(ed)', options, '[$1]')).toEqual([edit(0, 0, 5, '[ed]')]);
+  });
+});
+
+describe('placeAfterReplace', () => {
+  it('goes on just past the text put in, never finding what it wrote', () => {
+    expect(placeAfterReplace({ range: { start: { line: 4, character: 2 }, end: { line: 4, character: 7 } }, newText: 'speedy' })).toEqual({ line: 5, character: 8 });
+  });
+
+  it('goes on past a replacement of several lines, on its last', () => {
+    expect(placeAfterReplace({ range: { start: { line: 4, character: 2 }, end: { line: 4, character: 7 } }, newText: 'a\nbc' })).toEqual({ line: 6, character: 2 });
   });
 });
 
@@ -215,19 +258,29 @@ describe('findBarKeyAction', () => {
   });
 
   it('closes with Esc and steps with Enter and Shift+Enter', () => {
-    expect(findBarKeyAction(press('Escape'), true)).toBe('close');
-    expect(findBarKeyAction(press('Enter'), true)).toBe('next');
-    expect(findBarKeyAction(press('Enter', { shiftKey: true }), true)).toBe('previous');
+    expect(findBarKeyAction(press('Escape'), 'search', true)).toBe('close');
+    expect(findBarKeyAction(press('Enter'), 'search', true)).toBe('next');
+    expect(findBarKeyAction(press('Enter', { shiftKey: true }), 'search', true)).toBe('previous');
+  });
+
+  it('replaces the match shown with Enter in the replace field', () => {
+    expect(findBarKeyAction(press('Enter'), 'replace', true)).toBe('replaceOne');
+    expect(findBarKeyAction(press('Escape'), 'replace', true)).toBe('close');
+  });
+
+  it("shows the replace field with Replace's key: ⌥⌘F on macOS, Ctrl+H elsewhere", () => {
+    expect(findBarKeyAction(press('f', { metaKey: true, altKey: true }), 'search', true)).toBe('showReplace');
+    expect(findBarKeyAction(press('h', { ctrlKey: true }), 'search', false)).toBe('showReplace');
   });
 
   it("takes ⌘F (Ctrl+F off macOS) to select its text again, so it never reaches the view's filter", () => {
-    expect(findBarKeyAction(press('f', { metaKey: true }), true)).toBe('reselect');
-    expect(findBarKeyAction(press('f', { ctrlKey: true }), false)).toBe('reselect');
+    expect(findBarKeyAction(press('f', { metaKey: true }), 'search', true)).toBe('reselect');
+    expect(findBarKeyAction(press('f', { ctrlKey: true }), 'search', false)).toBe('reselect');
   });
 
   it('leaves every other key to the field', () => {
-    expect(findBarKeyAction(press('f'), true)).toBeNull();
-    expect(findBarKeyAction(press('a', { metaKey: true }), true)).toBeNull();
+    expect(findBarKeyAction(press('f'), 'search', true)).toBeNull();
+    expect(findBarKeyAction(press('a', { metaKey: true }), 'search', true)).toBeNull();
   });
 });
 

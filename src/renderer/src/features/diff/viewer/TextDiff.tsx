@@ -33,7 +33,6 @@ import { releasingSelection } from './lineMenu';
 import { useCodeMenu } from './useCodeMenu';
 import { CodeFindBar } from './CodeFindBar';
 import { useCodeFind } from './useCodeFind';
-import { openPierreSearchPanel } from './pierreSearchPanel';
 import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
@@ -254,16 +253,13 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // What the place does with a line (a review's comment on it), a button by the line under the pointer.
   const lineAction = useLineActionButton(placeLineAction, lineLinks.options, container, layout, selectedForAction);
   const codeSides = textDiffSides({ wholeFile, sides, editable, editorAttached: edit });
-  // ⌘F and Find in the menu: the app's bar on a read-only side, Pierre's search panel in the text typed into.
+  // ⌘F and Find in the menu, on either side; ⌥⌘F (Ctrl+H) and Replace in the text typed into.
   const codeFind = useCodeFind({
     containerRef: container,
     textOf: (side) => (side === 'deletions' ? original : current),
     onlySide: codeSides.onlySide,
     typedInto: codeSides.typedInto,
-    openEditorSearch: () => {
-      editor.current?.focus();
-      openPierreSearchPanel(container.current, 'find');
-    },
+    editor,
     scrollTo: scrollToShownLine,
   });
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
@@ -316,6 +312,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const expandedFocus = useExpandedDiffFocus();
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
+    codeFind.onKeyDownCapture(event);
+    if (event.isPropagationStopped()) return;
     const typesText = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
     if (typesText && typeWhileAttaching(event.key)) return event.preventDefault();
     if (!isTyping() || !matchesShortcut(event.nativeEvent, hotkey('leaveEditor'))) return;
@@ -333,7 +331,6 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented && isTyping()) return event.stopPropagation();
     codeMenu.onKeyDown(event);
-    codeFind.onKeyDown(event);
     if (!event.defaultPrevented) discard.onKeyDown(event);
   };
 

@@ -19,7 +19,7 @@ export interface CodeMenuState {
   canRedo: boolean;
   /** Every line can be selected: the editor's text, or a side whose lines are picked by their numbers. */
   canSelectAll: boolean;
-  /** Find opens a search: the editor's search panel, or the find bar of a place's read-only side (a text diff's: `useCodeFind`). */
+  /** Find opens the place's search (`useCodeFind`): always where text is typed into, on a read-only side where the place has one. */
   canFind: boolean;
 }
 
@@ -43,9 +43,8 @@ const NOTHING_SELECTED = 'Select some text first';
 /**
  * The right-click menu of code (a diff's sides, the whole-file editor, a merge's hand-editing), in the menus' one
  * grammar (`groupedMenu`): the editor's history; finding in the text, a line of it, and comparing what's selected with
- * the clipboard; the clipboard; deleting and selecting. Read-only text offers only what reads it. Replace is Pierre's
- * search panel, which only the editor has; Find is too, and on a read-only side the place's own find bar where it has
- * one (a text diff). Typed into, Cut and Copy are the editor's own (`runEditorClipboard`),
+ * the clipboard; the clipboard; deleting and selecting. Read-only text offers only what reads it. Find opens the place's
+ * search (`useCodeFind`) where it has one; Replace too, only in the text typed into. Typed into, Cut and Copy are the editor's own (`runEditorClipboard`),
  * which take a bare caret's whole line, as ⌘X and ⌘C do; read-only, Copy copies the text selected, and lines picked by
  * their numbers have their own "Copy lines" (`lineMenuEntries`), and are code to compare. Neither Paste nor "Compare with clipboard" waits
  * on the clipboard to show: reading it to find out would ask the OS for its content (an image, a huge text) at every
