@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { filesUnder } from '@shared/testing/filesUnder';
-import { keepsAppInactive, windowsStayHidden } from './hiddenWindows';
+import { windowsStayHidden } from './hiddenWindows';
 
 const ROOT = join(__dirname, '..', '..', '..');
 /** The smoke test's scripts, the only ones that run the app with its windows hidden. */
@@ -27,18 +27,6 @@ describe('windowsStayHidden', () => {
   it('shows them when nothing asks, or asks with anything but 1', () => {
     expect(windowsStayHidden({}, false)).toBe(false);
     for (const value of ['', '0', 'true', 'yes']) expect(windowsStayHidden({ UVCS_HIDDEN_WINDOWS: value }, false)).toBe(false);
-  });
-});
-
-describe('keepsAppInactive', () => {
-  it('keeps a hidden run from becoming the active app on macOS, where starting would make it so', () => {
-    expect(keepsAppInactive('darwin', true)).toBe(true);
-  });
-
-  it('leaves the app as it always is elsewhere, and on macOS when its windows show', () => {
-    expect(keepsAppInactive('win32', true)).toBe(false);
-    expect(keepsAppInactive('linux', true)).toBe(false);
-    expect(keepsAppInactive('darwin', false)).toBe(false);
   });
 });
 

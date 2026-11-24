@@ -40,18 +40,18 @@ and then on CI.
 
 Its windows are never shown, so a run never takes the focus from the person working at the computer: both scripts
 launch the app with `UVCS_HIDDEN_WINDOWS=1` (`windowsStayHidden`), and every window then opens and renders hidden,
-with its timers and animation frames running (`backgroundThrottling` off), and on macOS the app never becomes the
-active one (`setActivationPolicy('accessory')`). An installed app ignores it, and only these two scripts set it
-(`hiddenWindows.test.ts`). So nothing in a run may need the window drawn on screen, nor the OS's focus: the window
-never has it, so `document.hasFocus()` may be false and an app menu's accelerator never fires (a step presses keys the
-page handles). Nor may a step lead to a native dialog (`dialog.showMessageBox`): attached to a window never shown, it
-would wait for ever instead of failing. Playwright's `page.screenshot` waits for the window to be drawn, and its
-timeout would fail whichever step it follows, so screenshots are taken from the frame Electron holds (`screenshot`:
-`webContents.capturePage`), after two animation frames so the step's last change is in it, and bounded by the same 15
-s as every wait; never call `page.screenshot` in a step. That a hidden window still runs animation frames and renders
-its frame (WebGL too) was checked on macOS only; elsewhere, should it not, the screenshot fails its step in 15 s
-rather than hanging. The window's real content size is set to the page's (`VIEWPORT`), so the frame copied holds the
-whole page.
+with its timers and animation frames running (`backgroundThrottling` off). Its icon stays in the Dock or taskbar while
+it runs, so a person can tell a run is on; with no window shown, the app never becomes the active one. An installed
+app ignores it, and only these two scripts set it (`hiddenWindows.test.ts`). So nothing in a run may need the window
+drawn on screen, nor the OS's focus: the window never has it, so `document.hasFocus()` may be false and an app menu's
+accelerator never fires (a step presses keys the page handles). Nor may a step lead to a native dialog
+(`dialog.showMessageBox`): attached to a window never shown, it would wait for ever instead of failing. Playwright's
+`page.screenshot` waits for the window to be drawn, and its timeout would fail whichever step it follows, so
+screenshots are taken from the frame Electron holds (`screenshot`: `webContents.capturePage`), after two animation
+frames so the step's last change is in it, and bounded by the same 15 s as every wait; never call `page.screenshot` in
+a step. That a hidden window still runs animation frames and renders its frame (WebGL too) was checked on macOS only;
+elsewhere, should it not, the screenshot fails its step in 15 s rather than hanging. The window's real content size is
+set to the page's (`VIEWPORT`), so the frame copied holds the whole page.
 
 It never touches UVCS infrastructure or the user's config: the only backend is the fake `cm` (`UVCS_CM_PATH`), the
 workspace is a temp folder (`workspaceFixture.mjs`: `.plastic/plastic.selector` and a few files, one edited, one

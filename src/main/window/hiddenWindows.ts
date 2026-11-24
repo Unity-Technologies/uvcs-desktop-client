@@ -1,6 +1,6 @@
 /**
- * Whether every window opens and renders but is never shown, and on macOS the app never becomes the active one: the
- * smoke test's runs (scripts/e2e) then never take the focus from the person working at the computer. Only for a build
+ * Whether every window opens and renders but is never shown: the smoke test's runs (scripts/e2e) then never take the
+ * focus from the person working at the computer, while the app's icon in the Dock or taskbar says one is running. Only for a build
  * run from the checkout (`npm run e2e`), with `UVCS_HIDDEN_WINDOWS=1`, which only the smoke test sets
  * (`hiddenWindows.test.ts`): an installed app always shows its windows, whatever its environment holds.
  */
@@ -8,7 +8,3 @@ export function windowsStayHidden(environment: NodeJS.ProcessEnv, isPackaged: bo
   return !isPackaged && environment.UVCS_HIDDEN_WINDOWS === '1';
 }
 
-/** macOS makes an app the active one as it starts, taking the focus though it shows no window: a hidden run stays out of it. */
-export function keepsAppInactive(platform: NodeJS.Platform, hidden: boolean): boolean {
-  return hidden && platform === 'darwin';
-}
