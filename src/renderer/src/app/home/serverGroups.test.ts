@@ -67,6 +67,10 @@ describe('serverGroups with a filter', () => {
     ]);
   });
 
+  it('takes each word typed, in any order, as every list filter does', () => {
+    expect(serverGroups(servers, { filter: 'eastus prod' })[0]).toEqual({ label: 'Cloud organizations', servers: [profile('core_prod_az_eastus@cloud')] });
+  });
+
   it('matches the name shown, not the kind after it', () => {
     expect(serverGroups(servers, { filter: 'cloud' }).map((group) => group.label)).toEqual(['Servers']);
   });

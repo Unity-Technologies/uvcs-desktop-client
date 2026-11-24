@@ -1,6 +1,7 @@
 import { isFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { serverKind, type ServerKind } from '@shared/domain/organizations';
 import type { ServerProfile } from '@shared/domain/repository';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { describeServer } from '../../lib/servers';
 
 /** A group of the home sidebar's places to browse: one kind of server, by name. */
@@ -28,7 +29,7 @@ export const ORGANIZATION_FILTER_MIN = 10;
 interface ServerGroupOptions {
   /** The servers of the organizations marked as favorites (`AppSettings.favoriteOrganizations`). */
   favorites?: readonly string[];
-  /** Text the names must hold, whatever its case: the sidebar's filter. */
+  /** The sidebar's filter: every word of it, in any order and case, in an organization's name. */
   filter?: string;
 }
 
@@ -63,10 +64,9 @@ export function favoriteButtonLabel(name: string, favorite: boolean): string {
   return favorite ? `Remove ${name} from favorites` : `Add ${name} to favorites`;
 }
 
+/** Every list's filter rule (docs/ARCHITECTURE.md "Filters"), on the name shown, which `HighlightQuery` marks. */
 function matchesFilter(server: string, filter: string): boolean {
-  if (!canBeFavorite(server)) return true;
-  const text = filter.trim().toLocaleLowerCase();
-  return describeServer(server).label.toLocaleLowerCase().includes(text);
+  return !canBeFavorite(server) || matchesWordFilter([describeServer(server).label], filter);
 }
 
 /**

@@ -59,8 +59,8 @@ there are two or more (`accountSwitchCommands`), on the home screen only.
   a list that orders itself by use moves under the user's hand. The main process changes the list
   (`withFavoriteOrganization`), so two windows don't overwrite each other's; it changes nothing in `cm`.
 - **The filter** (`OrganizationFilter`): from ten organizations, Unity and cloud ones together
-  (`showsOrganizationFilter`, `ORGANIZATION_FILTER_MIN`), a quiet field above them, drawn as one more row, keeps the
-  organizations whose name holds the text; this computer and the servers, few, always show. Most people have one to
+  (`showsOrganizationFilter`, `ORGANIZATION_FILTER_MIN`), a search field above them keeps the
+  organizations whose name holds every word typed, and marks them, by every list's rule (ARCHITECTURE.md "Filters"); this computer and the servers, few, always show. Most people have one to
   three organizations and never see it. Picking another account empties it, and going back finds it empty
   (`typedFilterFor`); folded, the sidebar shows none and filters nothing (`sidebarFilter`). It shows by count, not when More appears,
   which depends on the window's height: a filter that came and went on a resize would look broken.

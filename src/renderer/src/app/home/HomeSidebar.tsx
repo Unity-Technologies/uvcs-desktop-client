@@ -4,6 +4,7 @@ import type { ServerProfile } from '@shared/domain/repository';
 import { ServerIcon } from '../../components/ServerIcon';
 import { describeServer } from '../../lib/servers';
 import { NavFooter, NavGroups, NavItem, Sidebar, type NavSection, type NavSectionItem } from '../../ui/nav/SidebarNav';
+import { HighlightQuery } from '../../ui/Highlight';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { useCommands } from '../commands/commandStore';
 import { openSettingsDialog } from '../settings/SettingsDialog';
@@ -56,7 +57,9 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
     const railLabel = server === 'local' ? 'Local' : undefined;
     const entry = item({ kind: 'server', server }, icon, label, { railLabel, detail: serverEntryDetail(profile, rail) });
     if (!canBeFavorite(server)) return entry;
-    return { ...entry, element: <OrganizationEntry server={server}>{entry.element}</OrganizationEntry> };
+    // Marked by the filter, which looks only at organizations' names (this computer and the servers are never marked).
+    const element = <HighlightQuery query={filter.text}>{entry.element}</HighlightQuery>;
+    return { ...entry, element: <OrganizationEntry server={server}>{element}</OrganizationEntry> };
   };
   const servers = homeServersOf(accounts, shown);
   const filter = sidebarFilter({ servers, reading, rail, account, typed });

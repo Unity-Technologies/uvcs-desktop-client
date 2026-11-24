@@ -13,7 +13,7 @@ export function OrganizationFilter({ value, onChange, noMatches }: OrganizationF
   return (
     <div className={styles.filter}>
       <SearchField value={value} onChange={onChange} placeholder="Filter organizations" aria-label="Filter organizations" width="100%" />
-      {noMatches && <div className={styles.noMatches}>No organization matches</div>}
+      {noMatches && <div className={styles.noMatches}>No matching organizations</div>}
     </div>
   );
 }
