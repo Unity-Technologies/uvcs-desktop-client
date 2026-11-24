@@ -77,6 +77,22 @@ describe('SettingsStore recent comments', () => {
   });
 });
 
+describe('SettingsStore favorite organizations', () => {
+  it('keeps every window’s favorites when they change one after another', () => {
+    const { settings, filePath } = store();
+    settings.setFavoriteOrganization('acme@unity', true);
+    settings.setFavoriteOrganization('games@cloud', true);
+    settings.setFavoriteOrganization('acme@unity', false);
+
+    expect(settings.get().favoriteOrganizations).toEqual(['games@cloud']);
+    expect(JSON.parse(readFileSync(filePath, 'utf8')).favoriteOrganizations).toEqual(['games@cloud']);
+  });
+
+  it('starts with none', () => {
+    expect(store().settings.get().favoriteOrganizations).toEqual([]);
+  });
+});
+
 describe('SettingsStore reading its file', () => {
   it("keeps a file it can't read as settings aside, named for when, and starts from the defaults", () => {
     const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));

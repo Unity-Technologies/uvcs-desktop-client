@@ -82,6 +82,11 @@ export interface AppSettings {
    * shows unless something on it names another (`homeAccountOf`); empty until one is picked. It changes nothing in `cm`.
    */
   homeAccount: string;
+  /**
+   * The organizations the home sidebar lists first, under Favorites, by server (`acme@unity`, `acme@cloud`), changed
+   * one at a time by the main process (`withFavoriteOrganization`). It changes nothing in `cm`.
+   */
+  favoriteOrganizations: string[];
   /** The merge tool files no rule matches open in: `auto` (the UVCS merge tool, else the first found) or a tool id. */
   mergeTool: string;
   /** Which tool opens which files, tried in order before `mergeTool` (Settings › Merge). */
@@ -147,6 +152,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   gravatarChoiceAsked: false,
   notifyOnIncoming: false,
   homeAccount: '',
+  favoriteOrganizations: [],
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
   mergeToolArgs: {},

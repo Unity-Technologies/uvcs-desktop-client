@@ -11,4 +11,6 @@ export interface SettingsApi {
    * place, so windows checking in to other repositories meanwhile keep theirs (`withRecentComment`).
    */
   rememberRecentComment(repository: string, comment: string): Promise<AppSettings>;
+  /** Adds an organization (its server, `acme@unity`) to the favorites, or removes it: changed in one place, as above. */
+  setFavoriteOrganization(server: string, favorite: boolean): Promise<AppSettings>;
 }
