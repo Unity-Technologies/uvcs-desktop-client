@@ -1535,7 +1535,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   a list of changes letters every row, as its filter chips do. In Changes every folder holds changes, so only its own
   change marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source
   did); `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read
-  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list
+  for pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. Every lock is the
+  Locks view's own query (`locksQuery`, scope `everyone`), one read for both; only the user's locks in this workspace
+  are a read of their own (`mineInThisWorkspace`), asked once a lock holds a change. The Changes list
   renders its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of
   them (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
   whether a shelve takes it, the folder a private file counts in), and how many of the changes each folder holds can go
