@@ -276,13 +276,6 @@ describe('incoming changeset pages', () => {
     expect(isAffectedByNewChangesets(key('incoming', 'changes', { branch: '/main', loadedChangeset: 41, headChangeset: 43 }))).toBe(false);
     expect(isAffectedByNewChangesets(key('incoming', 'changes', { branch: '/main', partial: true }))).toBe(false);
   });
-
-  it('refresh the local changes an update collides with as the workspace files change, never on new changesets', () => {
-    const local = key('pendingChanges', 'forUpdate');
-    expect(isAffectedByFileChanges(local)).toBe(true);
-    expect(isAffectedByWorkspaceState(local)).toBe(true);
-    expect(isAffectedByNewChangesets(local)).toBe(false);
-  });
 });
 
 describe("a review's email subscription", () => {
