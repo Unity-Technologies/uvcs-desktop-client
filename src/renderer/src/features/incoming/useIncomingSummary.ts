@@ -12,7 +12,7 @@ import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorks
 import { branchWorkedOn } from '../../components/workingObject';
 import { notifyIncoming } from './incomingNotifications';
 import { incomingPollInterval } from './incomingPollInterval';
-import { incomingChangesKey } from './useIncomingChanges';
+import { incomingChangesKey } from './incomingChangesRead';
 
 /** Coming back to the window checks again if the last check is older than this. */
 const RECHECK_ON_FOCUS_AFTER_MS = 20_000;
@@ -104,7 +104,7 @@ async function checkPartialIncoming(workspacePath: string, { branch }: PartialBr
   const headChangeset = await api.merge.branchHead(workspacePath, branch);
   if (headChangeset === null) return NOTHING_INCOMING;
   const changes = await queryClient.fetchQuery<IncomingChanges>({
-    queryKey: incomingChangesKey(workspacePath),
+    queryKey: incomingChangesKey(workspacePath, { branch, partial: true }),
     queryFn: () => api.merge.incomingChanges(workspacePath),
     staleTime: (query) => (comparedWithHead(query.state.data, branch, headChangeset) ? Infinity : 0),
   });

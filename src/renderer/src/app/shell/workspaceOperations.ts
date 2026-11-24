@@ -8,7 +8,7 @@ import { planSwitch } from '../../features/branches/switchOptions';
 import { knownIncomingSummary } from '../../features/incoming/incomingChipState';
 import { incomingCount } from '../../features/incoming/incomingCount';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
-import { incomingChangesKey } from '../../features/incoming/useIncomingChanges';
+import { incomingChangesFor, incomingChangesKey } from '../../features/incoming/incomingChangesRead';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { askWholeBranchDownload } from '../../features/partialWorkspace/WholeBranchDialog';
 import { wholeBranchCancellable } from '../../features/partialWorkspace/wholeBranchDownload';
@@ -40,7 +40,9 @@ export async function updateWorkspace(workspacePath: string): Promise<boolean> {
 export async function updateUnlessUpToDate(workspacePath: string): Promise<void> {
   const checked = await recheckIncoming(workspacePath).catch(() => undefined);
   // The success moment counts as the chip did: further than the check once the incoming changes were read.
-  const summary = knownIncomingSummary(checked, queryClient.getQueryData<IncomingChanges>(incomingChangesKey(workspacePath)));
+  const readFor = incomingChangesFor(checked, false);
+  const read = readFor && queryClient.getQueryData<IncomingChanges>(incomingChangesKey(workspacePath, readFor));
+  const summary = knownIncomingSummary(checked, read);
   if (summary?.branch && incomingCount(summary)?.count === 0) toast.info('Already up to date', `Your workspace has everything on ${branchLabel(summary.branch)}.`);
   else if ((await updateWorkspace(workspacePath)) && summary) showUpdatedMoment(workspacePath, summary);
 }

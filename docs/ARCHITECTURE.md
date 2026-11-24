@@ -202,9 +202,20 @@ and many people use the same server. Every `cm` command other than local reads (
   workspace's check reads only its branch head (`limit 1`), comparing its items again only when the head moved
   (docs/features/incoming.md "A partial workspace"). Nothing else polls: left changes, locks and lists wait for an
   event, a focus or an operation.
-- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (the update's `cm diff`
-  and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
-  native client does, and its card lists the newest of what that read brought. At "100+" a hover reads nothing heavy:
+- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (`useIncomingChanges`:
+  the newest page of changesets, `cm find ... limit 201`, the update's `cm diff cs:<loaded> cs:<head>` and the local
+  `cm status`) once per head, to warn about conflicts before any hover, as the native client does, and its card lists
+  the newest of what that read brought. That read is keyed by the branch, loaded changeset and head the check saw
+  (`incomingChangesFor`, `incomingChangesQuery`): never stale, so focus and mounting never read it again, a new head is
+  a new key (new changesets leave it alone, `isAffectedByNewChangesets`), and only an operation or Refresh reads it again
+  under the same head. It waits for the check rather than run before it. It tells `cm` where the workspace stands, as
+  the workspace info says (`incomingChanges(workspacePath, at)`, `workspaceLoadAt`), so it reads no `cm status
+  --header`. So once per head it runs one find, one diff and one local `cm status --controlledchanged --changed`, which
+  says what collides as it reads. After that, what collides follows Changes' pending changes whenever Changes read
+  them after the incoming changes, never reading them itself (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print, each kind
+  decided on its own (`localChangesForUpdateOf`; a checkout deleted on disk, which Changes lists only as deleted, is
+  the one it misses, and updating checks again), the conflicts worked out again from the diff already read (`withLocalCollisions`,
+  `findUpdateConflicts`), the same object while they come out the same. At "100+" a hover reads nothing heavy:
   the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
   says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
   card (that click), opening Incoming or Update reads the diff, Update again right before updating
@@ -526,7 +537,10 @@ by name, and never passes it to `cm`.
     `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
     asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
-    (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
+    (`WorkspaceHeaders`): the incoming changes read without a head take it from there (the renderer's
+    `incomingChanges` without `at`: before updating, before catching up a check-in, and a partial workspace's check,
+    `checkPartialIncoming`). Reads that need only what is loaded take
+    `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
     read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace
     (`readWorkspaceGlance`) reads only its branch and pending changes: its row already shows the repository.

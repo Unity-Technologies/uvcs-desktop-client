@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import type { MergeApi } from '@shared/api/merge';
 import type { MergeOperation } from '@shared/domain/merge';
-import { readBranchHead, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary } from '../merge/incoming';
+import { readBranchHead, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary, workspaceLoadAt } from '../merge/incoming';
 import { DirectoryDecisions } from '../merge/directoryDecisions';
 import { findMergedInto } from '../merge/mergedInto';
 import { countMergeConflicts } from '../merge/mergeConflictCounts';
@@ -41,7 +41,8 @@ export function createMergeService({ cm, operations, workspaceCopies, headers }:
     mergedInto: (workspacePath, sourceChangeset, destinationBranch) => findMergedInto(cm, workspacePath, sourceChangeset, destinationBranch),
     incomingSummary: (workspacePath, loaded) => readIncomingSummary(cm, workspacePath, loaded),
     branchHead: (workspacePath, branch) => readBranchHead(cm, workspacePath, branch),
-    incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
+    // Where the workspace stands, as the renderer told it, or else from the header the workspace info shares.
+    incomingChanges: async (workspacePath, at) => readIncomingChanges(cm, workspacePath, at ? workspaceLoadAt(at) : await headers.status(workspacePath)),
     incomingChangesets: (workspacePath, request) => readIncomingChangesetPage(cm, workspacePath, request),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, async (context) => updateWithMerge(cm, workspacePath, await kindOf(workspacePath), resolutions, backupsRoot, context)),
