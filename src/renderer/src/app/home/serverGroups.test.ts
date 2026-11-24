@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { serverEntryDetail, serverGroups } from './serverGroups';
+import { canBeFavorite, ORGANIZATION_FILTER_MIN, serverEntryDetail, serverGroups, showsOrganizationFilter } from './serverGroups';
 
 const profile = (server: string) => ({ server, user: 'ana', workingMode: 'SSOWorkingMode' });
 
@@ -23,6 +23,81 @@ describe('serverGroups', () => {
   it('leaves out a kind the user has none of', () => {
     expect(serverGroups([profile('local')]).map((group) => group.label)).toEqual(['Servers']);
     expect(serverGroups([])).toEqual([]);
+  });
+});
+
+describe('serverGroups with favorites', () => {
+  const servers = ['local', 'codice@cloud', 'data@cloud', 'snakes-org@unity', 'unity@unity', 'build:8087'].map(profile);
+  const listed = (groups: ReturnType<typeof serverGroups>) => groups.map(({ label, servers: inGroup }) => [label, inGroup.map((entry) => entry.server)]);
+
+  it('lists the favorites first, by name, and only there', () => {
+    expect(listed(serverGroups(servers, { favorites: ['unity@unity', 'data@cloud'] }))).toEqual([
+      ['Favorites', ['data@cloud', 'unity@unity']],
+      ['Unity organizations', ['snakes-org@unity']],
+      ['Cloud organizations', ['codice@cloud']],
+      ['Servers', ['local', 'build:8087']],
+    ]);
+  });
+
+  it('leaves out a group whose every organization is a favorite', () => {
+    expect(listed(serverGroups(servers, { favorites: ['snakes-org@unity', 'unity@unity'] })).map(([label]) => label)).toEqual([
+      'Favorites',
+      'Cloud organizations',
+      'Servers',
+    ]);
+  });
+
+  it("ignores a favorite the account doesn't hold, and a server, which can't be one", () => {
+    expect(listed(serverGroups(servers, { favorites: ['other@unity', 'build:8087'] }))[0]).toEqual(['Unity organizations', ['snakes-org@unity', 'unity@unity']]);
+  });
+
+  it('matches a favorite whatever its case', () => {
+    expect(listed(serverGroups(servers, { favorites: ['Unity@unity'] }))[0]).toEqual(['Favorites', ['unity@unity']]);
+  });
+});
+
+describe('serverGroups with a filter', () => {
+  const servers = ['local', 'core_prod_az_eastus@cloud', 'core_int_gcp_westeu@cloud', 'codice@cloud', 'Core-Tools@unity'].map(profile);
+
+  it('lists the servers whose name holds the text, whatever its case', () => {
+    expect(serverGroups(servers, { filter: 'CORE' }).map(({ label, servers: inGroup }) => [label, inGroup.map((entry) => entry.server)])).toEqual([
+      ['Unity organizations', ['Core-Tools@unity']],
+      ['Cloud organizations', ['core_int_gcp_westeu@cloud', 'core_prod_az_eastus@cloud']],
+    ]);
+  });
+
+  it('matches the name shown, not the kind after it', () => {
+    expect(serverGroups(servers, { filter: 'cloud' })).toEqual([]);
+    expect(serverGroups(servers, { filter: 'computer' }).map((group) => group.label)).toEqual(['Servers']);
+  });
+
+  it('filters the favorites too', () => {
+    const groups = serverGroups(servers, { favorites: ['codice@cloud', 'core_prod_az_eastus@cloud'], filter: 'prod' });
+    expect(groups.map(({ label, servers: inGroup }) => [label, inGroup.map((entry) => entry.server)])).toEqual([['Favorites', ['core_prod_az_eastus@cloud']]]);
+  });
+
+  it('lists everything with no text, or only spaces', () => {
+    expect(serverGroups(servers, { filter: '  ' })).toEqual(serverGroups(servers));
+  });
+});
+
+describe('showsOrganizationFilter', () => {
+  const organizations = (count: number) => Array.from({ length: count }, (_, index) => profile(index % 2 ? `org${index}@unity` : `org${index}@cloud`));
+
+  it('offers the filter from ten organizations, Unity and cloud ones together', () => {
+    expect(ORGANIZATION_FILTER_MIN).toBe(10);
+    expect(showsOrganizationFilter(organizations(9))).toBe(false);
+    expect(showsOrganizationFilter(organizations(10))).toBe(true);
+  });
+
+  it("doesn't count this computer or the servers", () => {
+    expect(showsOrganizationFilter([...organizations(9), profile('local'), profile('build:8087')])).toBe(false);
+  });
+});
+
+describe('canBeFavorite', () => {
+  it('takes organizations, not this computer or a server', () => {
+    expect(['acme@unity', 'acme@cloud', 'local', 'build:8087'].map(canBeFavorite)).toEqual([true, true, false, false]);
   });
 });
 

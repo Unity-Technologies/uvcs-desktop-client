@@ -1,3 +1,4 @@
+import { isFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { serverKind, type ServerKind } from '@shared/domain/organizations';
 import type { ServerProfile } from '@shared/domain/repository';
 import { describeServer } from '../../lib/servers';
@@ -14,15 +15,52 @@ const GROUPS: { label: string; kinds: readonly ServerKind[] }[] = [
   { label: 'Servers', kinds: ['local', 'server'] },
 ];
 
+/** The kinds a user can mark as a favorite: the organizations, of which some people have dozens. */
+const ORGANIZATION_KINDS: readonly ServerKind[] = ['unityOrganization', 'cloudOrganization'];
+
 /**
- * The servers the sidebar lists, grouped by kind: Unity organizations, then the cloud organizations from before them,
- * then this computer and on-premises servers. Each by name, this computer first among the servers; a group with none
- * is left out.
+ * From how many organizations the sidebar offers its filter (`showsOrganizationFilter`). Most people have one to three
+ * and never see it; past about ten names, people stop scanning a list and start reading it, which is when typing a few
+ * letters is faster.
  */
-export function serverGroups(servers: readonly ServerProfile[]): ServerGroup[] {
-  return GROUPS.map(({ label, kinds }) => ({ label, servers: servers.filter((profile) => kinds.includes(serverKind(profile.server))).sort(byPlace) })).filter(
-    (group) => group.servers.length > 0,
-  );
+export const ORGANIZATION_FILTER_MIN = 10;
+
+interface ServerGroupOptions {
+  /** The servers of the organizations marked as favorites (`AppSettings.favoriteOrganizations`). */
+  favorites?: readonly string[];
+  /** Text the names must hold, whatever its case: the sidebar's filter. */
+  filter?: string;
+}
+
+/**
+ * The servers the sidebar lists, grouped: the favorite organizations, then the other Unity organizations, the cloud
+ * organizations from before them, then this computer and on-premises servers. Each by name, this computer first among
+ * the servers; a group with none is left out. A favorite shows only under Favorites. With a filter, only the servers
+ * whose name holds it.
+ */
+export function serverGroups(servers: readonly ServerProfile[], { favorites = [], filter = '' }: ServerGroupOptions = {}): ServerGroup[] {
+  const shown = servers.filter((profile) => matchesFilter(profile.server, filter)).sort(byPlace);
+  const isFavorite = (profile: ServerProfile): boolean => isFavoriteOrganization(favorites, profile.server) && canBeFavorite(profile.server);
+  const groups = [
+    { label: 'Favorites', servers: shown.filter(isFavorite) },
+    ...GROUPS.map(({ label, kinds }) => ({ label, servers: shown.filter((profile) => !isFavorite(profile) && kinds.includes(serverKind(profile.server))) })),
+  ];
+  return groups.filter((group) => group.servers.length > 0);
+}
+
+/** Whether the server is an organization, which the user can mark as a favorite. */
+export function canBeFavorite(server: string): boolean {
+  return ORGANIZATION_KINDS.includes(serverKind(server));
+}
+
+/** Whether the sidebar offers its filter: only to someone with many organizations (`ORGANIZATION_FILTER_MIN`). */
+export function showsOrganizationFilter(servers: readonly ServerProfile[]): boolean {
+  return servers.filter((profile) => canBeFavorite(profile.server)).length >= ORGANIZATION_FILTER_MIN;
+}
+
+function matchesFilter(server: string, filter: string): boolean {
+  const text = filter.trim().toLocaleLowerCase();
+  return describeServer(server).label.toLocaleLowerCase().includes(text);
 }
 
 /**
