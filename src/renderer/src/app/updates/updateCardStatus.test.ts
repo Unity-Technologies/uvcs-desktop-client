@@ -15,7 +15,7 @@ describe('updateCardOf', () => {
   });
 
   it('keeps showing an update waiting for an operation to install, even a version put off', () => {
-    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart' } as const;
+    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'operation' } as const;
 
     expect(updateCardOf(waiting, '1.2.0', false)).toEqual(waiting);
   });

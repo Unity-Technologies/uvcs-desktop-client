@@ -68,8 +68,17 @@ function fakeOfficialUpdate() {
       state = next;
       official.onChange();
     },
+    /** How the installed one updates on the computer the test plays. */
+    by: 'installer' as 'installer' | 'command' | null,
+    updatesBy: () => official.by,
+    /** What `downloadAhead` was asked: the installed one and the floor. */
+    downloadsAhead: [] as { installed: InstalledCm; floor: string }[],
     prepare: async (installed: InstalledCm) => void official.prepared.push(installed),
-    install: async (installed: InstalledCm) => {
+    downloadAhead: async (installed: InstalledCm, floor: string, onProgress: (fraction: number) => void) => {
+      official.downloadsAhead.push({ installed, floor });
+      onProgress(1);
+    },
+    install: async (installed: InstalledCm, _floor?: string) => {
       official.installs.push(installed);
       return official.outcome.updatesTo !== null;
     },
@@ -227,9 +236,10 @@ describe('CmRuntime with an update waiting', () => {
 
   it('downloads the cm the update pins, reporting how far it is', async () => {
     const { runtime, installer } = runtimeWith({ installed: [VERSION] });
-    const prefetch = runtime.prefetchFor(NEXT);
+    const prefetch = await runtime.prefetchFor(NEXT);
+    expect(prefetch?.kind).toBe('own');
     const fractions: number[] = [];
-    const downloading = prefetch!.download((fraction) => fractions.push(fraction));
+    const downloading = prefetch!.kind === 'own' ? prefetch!.download((fraction) => fractions.push(fraction)) : null;
     installer.progress({ phase: 'downloading', receivedBytes: 25, totalBytes: 100 });
     installer.progress({ phase: 'finishing' });
     await installer.succeed();
@@ -237,13 +247,53 @@ describe('CmRuntime with an update waiting', () => {
     expect(fractions).toEqual([0.25, 1]);
   });
 
-  it('downloads nothing for the same version, nor when the installed one runs', () => {
-    expect(runtimeWith({ installed: [VERSION] }).runtime.prefetchFor(PIN)).toBeNull();
-    expect(runtimeWith({ chosen: 'automatic' }).runtime.prefetchFor(NEXT)).toBeNull();
+  it('downloads nothing for the same version, nor when the installed one runs and is new enough', async () => {
+    expect(await runtimeWith({ installed: [VERSION] }).runtime.prefetchFor(PIN)).toBeNull();
+    expect(await runtimeWith({ chosen: 'automatic' }).runtime.prefetchFor(NEXT)).toBeNull();
   });
 
-  it('downloads nothing where the platform has no bundle', () => {
-    expect(runtimeWith({ arch: 'arm64' }).runtime.prefetchFor(NEXT)).toBeNull();
+  it('downloads nothing where the platform has no bundle, nor for UVCS_CM_PATH', async () => {
+    expect(await runtimeWith({ arch: 'arm64' }).runtime.prefetchFor(NEXT)).toBeNull();
+    expect(await runtimeWith({ environmentPath: '/dev/cm' }).runtime.prefetchFor(NEXT)).toBeNull();
+  });
+
+  describe('when the installed one runs and is older than the update needs', () => {
+    const LATER: CmVersionPin = { ...PIN, version: '11.0.16.10800' };
+
+    it('downloads its installer with the update, and runs it at the update’s version when asked', async () => {
+      const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic' });
+      runtime.admits('/usr/bin/cm', INSTALLED_VERSION);
+      const prefetch = await runtime.prefetchFor(LATER);
+      expect(prefetch).toMatchObject({ kind: 'installed', installed: { path: '/usr/bin/cm', version: INSTALLED_VERSION }, neededVersion: '11.0.16.10800' });
+      if (prefetch?.kind !== 'installed') return;
+      await prefetch.download(() => undefined);
+      expect(officialUpdate.downloadsAhead).toEqual([{ installed: { path: '/usr/bin/cm', version: INSTALLED_VERSION }, floor: '11.0.16.10800' }]);
+      officialUpdate.outcome.updatesTo = '11.0.16.10800';
+      expect(await prefetch.install()).toBe(true);
+      expect(officialUpdate.installs).toEqual([{ path: '/usr/bin/cm', version: INSTALLED_VERSION }]);
+    });
+
+    it('reads its version when it hasn’t answered yet', async () => {
+      const { runtime } = runtimeWith({ chosen: 'installed' });
+      expect(await runtime.prefetchFor(LATER)).toMatchObject({ kind: 'installed', installed: { version: INSTALLED_VERSION } });
+    });
+
+    it('names the command on Linux, downloading nothing', async () => {
+      const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic' });
+      officialUpdate.by = 'command';
+      expect(await runtime.prefetchFor(LATER)).toEqual({ kind: 'installedByCommand', installed: { path: '/usr/bin/cm', version: INSTALLED_VERSION }, neededVersion: '11.0.16.10800' });
+    });
+
+    it('asks nothing where it can’t be updated from here', async () => {
+      const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic' });
+      officialUpdate.by = null;
+      expect(await runtime.prefetchFor(LATER)).toBeNull();
+    });
+
+    it('leaves it alone when the app’s own runs: that one downloads instead', async () => {
+      const { runtime } = runtimeWith({ chosen: 'managed', installed: [VERSION] });
+      expect((await runtime.prefetchFor(LATER))?.kind).toBe('own');
+    });
   });
 });
 
