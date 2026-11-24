@@ -222,6 +222,44 @@ describe('OfficialClientUpdate', () => {
     expect(site.requests).toEqual([]);
   });
 
+  describe('dropped once nothing needs it', () => {
+    it('stops a background download and deletes what it downloaded', async () => {
+      const requests: string[] = [];
+      const site = fakeSite();
+      // The installer never finishes arriving: only the drop ends it.
+      const fetch: Fetch = (url, init) => {
+        requests.push(url);
+        if (url !== INSTALLER_PAGE) return site.fetch(url, init);
+        return new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)));
+      };
+      const { update, folder } = await setup({ site: { fetch, requests } });
+      const background = update.prepare(INSTALLED, FLOOR);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(requests).toContain(INSTALLER_PAGE);
+
+      await update.discard();
+      await background;
+      expect(update.state()).toBeNull();
+      expect(existsSync(folder)).toBe(false);
+    });
+
+    it('deletes an installer an earlier launch left behind', async () => {
+      const { update, folder } = await setup();
+      await mkdir(folder, { recursive: true });
+      await writeFile(join(folder, FILE), 'old');
+      await update.discard();
+      expect(existsSync(folder)).toBe(false);
+    });
+
+    it('keeps an installer an app update downloaded for Restart & Install', async () => {
+      const { update, folder } = await setup();
+      await update.downloadAhead(INSTALLED, FLOOR, () => undefined);
+      await update.discard();
+      expect(await readdir(folder)).toEqual([FILE]);
+      expect(update.state()).toEqual({ kind: 'downloaded', version: '11.0.16.10694' });
+    });
+  });
+
   describe('along with an app update that needs a newer one', () => {
     const NEXT_FLOOR = '11.0.16.10690';
 

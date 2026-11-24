@@ -59,6 +59,9 @@ function fakeOfficialUpdate() {
   let state: OfficialUpdate | null = null;
   const official = {
     prepared: [] as InstalledCm[],
+    /** How many times the update was dropped, nothing needing it (`discard`). */
+    discards: 0,
+    discard: async () => void official.discards++,
     installs: [] as InstalledCm[],
     /** What the next install does to the installed one's version, and its result. */
     outcome: { updatesTo: null as string | null },
@@ -315,6 +318,15 @@ describe('CmRuntime with an update waiting', () => {
 });
 
 describe('CmRuntime pruning the store', () => {
+  it('drops the installed one’s update once a launch, as soon as a cm runs that needs none', () => {
+    const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic', installed: [VERSION] });
+    runtime.start();
+    expect(officialUpdate.discards).toBe(0);
+    runtime.admits('/usr/bin/cm', INSTALLED_VERSION);
+    runtime.admits('/usr/bin/cm', INSTALLED_VERSION);
+    expect(officialUpdate.discards).toBe(1);
+  });
+
   it('prunes once a launch, as soon as a cm runs', async () => {
     const ready = runtimeWith({ installed: [VERSION] });
     ready.runtime.start();
@@ -465,6 +477,16 @@ describe('CmRuntime with an installed cm older than its own', () => {
     expect(choice()).toBe('automatic');
     expect(declined()).toBe(VERSION);
     expect(relocations()).toBeGreaterThan(0);
+  });
+
+  it('drops the update downloading in the background once the user runs its own for now', () => {
+    const { runtime, officialUpdate } = runtimeWith({ chosen: 'automatic', installed: [VERSION] });
+    runtime.start();
+    runtime.admits('/usr/bin/cm', OLDER);
+    runtime.prepareUpdate();
+    expect(officialUpdate.discards).toBe(0);
+    runtime.useIncludedForNow();
+    expect(officialUpdate.discards).toBe(1);
   });
 
   it('runs its own without asking when the user chose it for this pinned version before', () => {
