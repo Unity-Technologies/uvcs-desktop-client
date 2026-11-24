@@ -99,6 +99,7 @@ export function TooltipLayer() {
         move={tip.move}
         pointerX={tip.pointerX}
         pointerY={tip.pointerY}
+        side={tip.side}
       />
     )
   );

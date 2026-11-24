@@ -25,7 +25,8 @@ interface PinBubbleProps {
 /**
  * A pin's bubble: the avatar of who started the thread, its tip at the spot, as a comment on a canvas reads in design
  * tools; a plus for a comment being written. Always white, so it reads over anything; where the thread stands is a
- * mark on it (`CommentPins.module.css`).
+ * mark on it (`CommentPins.module.css`). Its tooltip opens above it: under the bubble is the spot it's about (an area
+ * drawn while it's pointed at), which the reader wants to see while reading the comment.
  */
 export function PinBubble({ pin, selected, style, ref, className, onPointerDown, onPointerEnter, onPointerLeave, onFocus, onBlur, onClick }: PinBubbleProps) {
   return (
@@ -39,6 +40,7 @@ export function PinBubble({ pin, selected, style, ref, className, onPointerDown,
       data-writing={pin.author === null || undefined}
       data-movable={pin.movable || undefined}
       data-tip={pin.tip}
+      data-tip-side="above"
       aria-label={pin.tip}
       aria-pressed={selected}
       style={style}

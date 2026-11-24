@@ -1,10 +1,13 @@
 import type { TipText } from './followTip';
 import { readTipAttributes } from './tipAttributes';
+import type { TooltipSide } from './tooltipPlacement';
 
 /** A tooltip found on the page, read from its attributes (`readTipAttributes`). */
 export interface FoundTip extends TipText {
   /** The element the tip is read from: followed while it shows. */
   host: Element;
+  /** `data-tip-side="above"`: an element whose tip mustn't cover what lies under the cursor (a comment's pin). */
+  side?: TooltipSide;
 }
 
 /** How far up from the hovered node to look for a label cut off with an ellipsis. */
@@ -21,7 +24,7 @@ export function findTip(target: Element | null): FoundTip | null {
     const tip = readTipAttributes((name) => host.getAttribute(name));
     // A menu or popover trigger that is open already shows what it does.
     if (!tip || host.dataset.state === 'open' || (host.hasAttribute('data-tip-overflow') && !isClipped(host))) return null;
-    return { ...tip, host };
+    return { ...tip, host, side: host.dataset.tipSide === 'above' ? 'above' : undefined };
   }
 
   let element = target instanceof HTMLElement ? target : null;
