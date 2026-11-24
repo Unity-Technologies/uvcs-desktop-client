@@ -17,7 +17,8 @@ workspace holds unchanged reads its revision from the disk, as History does the 
 History's switch (`FileViewSwitch`; ⌘T in Files, the menu's Annotate; elsewhere Annotate opens the history; only
 where there is something to annotate) shows the file annotated instead, with what is annotated in place of the
 description (kept as the selection moves), its revision by id in its repository (`itemRevision`), or
-as on disk while it has changes. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
+as on disk while it has changes. Annotate and Show changes show the details panel if it was hidden, annotated when
+asked with the panel hidden (`showFileView`, `fileViewForAnnotateCommand`): what they change is never out of sight. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
 the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
 into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Every folder listing of the
 workspace is one query (`directoryListingQuery`), shared by the tree, Go to file's actions, Paste and the name checks.
