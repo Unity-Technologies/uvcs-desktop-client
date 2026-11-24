@@ -50,7 +50,7 @@
    at, its card is open, or it's being written: every area drawn at once hid the image under their outlines. Its thread
    staying selected once the card closes doesn't keep it drawn. */
 .area {
-  --area-color: var(--border-comment);
+  --area-color: var(--image-area-settled);
   opacity: 0;
   transition: opacity var(--duration-fast) var(--ease-out);
 }
@@ -75,7 +75,7 @@
 }
 
 .area[data-emphasized] {
-  --area-color: var(--status-changed);
+  --area-color: var(--image-area-waiting);
 }
 
 .area[data-earlier] {
@@ -85,7 +85,7 @@
 /* The area a comment is being written on stays drawn as it was dragged, so the reviewer sees what they're commenting. */
 .area[data-selected],
 .area[data-writing] {
-  --area-color: var(--accent);
+  --area-color: var(--image-area-selected);
 }
 
 /* While commenting, the whole viewport takes the pointer: a click marks a point, a drag an area. */
@@ -97,7 +97,7 @@
 }
 
 .dragArea {
-  --area-color: var(--accent);
+  --area-color: var(--image-area-selected);
   position: absolute;
 }
 
