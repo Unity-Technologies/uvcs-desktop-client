@@ -51,6 +51,18 @@ const allSources = filesUnder(MAIN_DIRECTORY, isAppSource).map((file) => ({ file
 const relative = (file: string): string => file.slice(MAIN_DIRECTORY.length + 1).split(sep).join('/');
 const allArgLists = allSources.flatMap(({ file, source }) => findArgLists(source, file));
 const describeList = (list: CmArgs): string => `${list.file}: ${list.text}`;
+const sourceOf = (file: string): string => allSources.find((source) => relative(source.file) === file)!.source;
+const filesCalling = (call: RegExp): string[] => allSources.filter(({ source }) => call.test(source)).map(({ file }) => relative(file));
+
+/** A class method's first line, as the app writes them: `  private async name(…`, indented once. */
+const METHOD_START = /^ {2}(?:(?:private|async|static|readonly) )*(\w+)\(/gm;
+
+/** The methods of a class whose body holds `call` (a global pattern), each once, sorted. */
+function methodsCalling(source: string, call: RegExp): string[] {
+  const starts = [...source.matchAll(METHOD_START)].map((match) => ({ name: match[1]!, at: match.index }));
+  const names = [...source.matchAll(call)].map((match) => starts.filter((start) => start.at < match.index).at(-1)?.name ?? '(none)');
+  return [...new Set(names)].sort();
+}
 
 describe('findArgLists', () => {
   it('reads whole argument lists, including spreads and nested arrays', () => {
@@ -125,11 +137,19 @@ describe('merge tools open only on the user’s request', () => {
     expect(launching).toEqual(['services/mergeToolsService.ts']);
   });
 
-  it('runs the installed one’s installer only when the user clicks Update, never as background work', () => {
-    // `CmRuntime.updateInstalled` is the one caller of `install`, and only the service behind the Update buttons calls it.
+  it('runs the installed one’s installer only on the user’s click: Update, or Restart & Install of an app update, never as background work', () => {
+    // Two callers of `install`, both in `CmRuntime`: Update (`updateInstalled`), and the app update's prefetch
+    // (`installAhead`), which only Restart & Install runs.
     const installs = allSources.filter(({ source }) => /officialUpdate\.install\(/.test(source)).map(({ file }) => relative(file));
     expect(installs).toEqual(['cmRuntime/CmRuntime.ts']);
-    const updates = allSources.filter(({ source }) => /\.updateInstalled\(/.test(source)).map(({ file }) => relative(file));
-    expect(updates).toEqual(['services/cmRuntimeService.ts']);
+    expect(methodsCalling(sourceOf('cmRuntime/CmRuntime.ts'), /officialUpdate\.install\(/g)).toEqual(['installAhead', 'updateInstalled']);
+    // Update: only the service behind the Update buttons calls it.
+    expect(filesCalling(/\.updateInstalled\(/)).toEqual(['services/cmRuntimeService.ts']);
+    // Restart & Install: `installAhead` is only the prefetch's `install`, which `AppUpdates` keeps as `installCm` and runs
+    // only from `install`, the one the service behind Restart & Install calls.
+    expect(methodsCalling(sourceOf('cmRuntime/CmRuntime.ts'), /this\.installAhead\(/g)).toEqual(['installedPrefetchFor']);
+    expect(methodsCalling(sourceOf('update/AppUpdates.ts'), /\binstallCm\(\)/g)).toEqual(['installCmFirst']);
+    expect(methodsCalling(sourceOf('update/AppUpdates.ts'), /this\.installCmFirst\(/g)).toEqual(['install']);
+    expect(filesCalling(/\bupdates\.install\(\)/)).toEqual(['services/updatesService.ts']);
   });
 });
