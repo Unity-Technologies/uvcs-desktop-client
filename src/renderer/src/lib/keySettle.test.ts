@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { keySettle } from './keySettle';
+import { pendingSettleCount } from './settleTimeout';
 
 describe('keySettle', () => {
   beforeEach(() => vi.useFakeTimers());
@@ -37,5 +38,17 @@ describe('keySettle', () => {
     settle.stop();
     vi.advanceTimersByTime(300);
     expect(settled.mock.calls).toEqual([['cs:4']]);
+  });
+
+  it('counts its wait as pending until the key settles or it stops: the smoke test waits for it (`settleTimeout`)', () => {
+    const settle = keySettle(() => {}, 300);
+    settle.show('cs:4');
+    settle.show('cs:5');
+    expect(pendingSettleCount()).toBe(1);
+    vi.advanceTimersByTime(300);
+    expect(pendingSettleCount()).toBe(0);
+    settle.show('cs:6');
+    settle.stop();
+    expect(pendingSettleCount()).toBe(0);
   });
 });
