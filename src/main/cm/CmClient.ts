@@ -340,6 +340,23 @@ export class CmClient {
     else start();
   }
 
+  /**
+   * Settles once no hold is on (`hold`), checked again as it resumes: a hold may have started in the same turn. A
+   * command its caller cancels meanwhile fails as it would running; one whose time ran out (`gaveUpWaiting`) fails as a
+   * shell command's timeout does, logged, never with the signal's bare reason.
+   */
+  private async waitWhileHeld(args: string[], cwd: string, signal: AbortSignal | undefined): Promise<void> {
+    const startedAt = Date.now();
+    try {
+      while (this.held) await this.notHeld(signal);
+    } catch (error) {
+      if (!signal || !gaveUpWaiting(signal)) throw error;
+      const stopped = new Error('The cm command took too long and was stopped.', { cause: error });
+      this.log(args, cwd, startedAt, endedWithoutExitCode(stopped), false);
+      throw stopped;
+    }
+  }
+
   /** Settles once no hold is on (`hold`); fails as the command would if its caller cancels it meanwhile. */
   private async notHeld(signal: AbortSignal | undefined): Promise<void> {
     while (this.held) {
@@ -419,11 +436,10 @@ export class CmClient {
    * waits while the installed `cm` is updated (`hold`); only then is `inShell` asked, as it may warm sessions up.
    */
   private async run(requested: string[], options: CmRunOptions & Placed, inShell: () => boolean, reading: OutputReading): Promise<string> {
-    // Checked again as it resumes: a hold may have started in the same turn (`hold`).
-    while (this.held) await this.notHeld(options.signal);
-    const useShell = inShell();
     const { cwd } = options;
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
+    await this.waitWhileHeld(args, cwd, options.signal);
+    const useShell = inShell();
     const gate = this.signInGate && !this.signInGate.passes(args) ? this.signInGate : null;
     // Only a folder the command was given tells its workspace: one run in any directory (`anyDirectory`) runs in the
     // shown workspace's by chance, and may be about another (a glance at another workspace's header).
