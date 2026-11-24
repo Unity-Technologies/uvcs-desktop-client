@@ -3,9 +3,9 @@ import { authenticodeCheck, DECLINED_EXIT_CODE, INSTALLER_PATH_VARIABLE, macInst
 
 const WINDOWS_ENV = { SystemRoot: 'C:\\Windows' };
 const WINDOWS_INSTALLER = 'C:\\Users\\José María\\AppData\\Local\\Temp\\unity-version-control-update\\unity-vcs-11.0.16.10694-win.exe';
-/** The script PowerShell runs: `-EncodedCommand` takes it as base64 of its UTF-16LE text. */
-function scriptOf(command: { args: string[] }): string {
-  return Buffer.from(command.args.at(-1)!, 'base64').toString('utf16le');
+/** The script PowerShell runs: `-Command -` reads it from its input. */
+function scriptOf(command: { input?: string }): string {
+  return command.input ?? '';
 }
 
 const MAC_PACKAGE = '/var/folders/x y/T/unity-version-control-update/unity-vcs-11.0.16.10694-mac-arm.pkg.zip.unpacked/unity-vcs-osx-arm64-11.0.16.10694.pkg';
@@ -36,15 +36,17 @@ describe('windowsInstallerRun', () => {
   });
 
   it('runs PowerShell without the user’s profile, nor a prompt', () => {
-    expect(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV).args.slice(0, 3)).toEqual(['-NoProfile', '-NonInteractive', '-EncodedCommand']);
+    expect(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV).args).toEqual(['-NoProfile', '-NonInteractive', '-Command', '-']);
   });
 
-  it('passes the script encoded, so its quotes and lines reach PowerShell as written, whatever the command line does to them', () => {
-    const run = windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV);
-    expect(run.args.at(-1)).toMatch(/^[A-Za-z0-9+/]+=*$/);
-    const script = scriptOf(run);
-    expect(script.split('\n').length).toBeGreaterThan(1);
-    expect(script).toContain("'--mode unattended --unattendedmodeui minimalWithDialogs'");
+  it('passes the script on its input, one line PowerShell runs whole, so no quote meets the command line', () => {
+    for (const command of [windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV), authenticodeCheck(WINDOWS_INSTALLER, WINDOWS_ENV)]) {
+      expect(command.args).toEqual(['-NoProfile', '-NonInteractive', '-Command', '-']);
+      // Read line by line, as typed: one line, ended, so no block waits for more.
+      expect(scriptOf(command)).toMatch(/^[^\n]+\n$/);
+      expect(scriptOf(command)).not.toContain('José');
+    }
+    expect(scriptOf(windowsInstallerRun(WINDOWS_INSTALLER, WINDOWS_ENV))).toContain("'--mode unattended --unattendedmodeui minimalWithDialogs'");
     expect(scriptOf(authenticodeCheck(WINDOWS_INSTALLER, WINDOWS_ENV))).toContain('"Status=$($signature.Status)"');
   });
 });
