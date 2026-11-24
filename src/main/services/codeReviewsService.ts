@@ -1,6 +1,7 @@
 import type { Place } from '@shared/domain/place';
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
-import { type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
+import type { CodeReviewFilter, CodeReviewSummary } from '@shared/domain/codeReview';
+import { branchTargetIdsOf, withTargetNamed } from '@shared/domain/reviewTargetNames';
 import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
 import { addReviewersArgs, createReviewArgs, deleteReviewsArgs, listReviewersArgs, ownStatusArgs, removeReviewersArgs, renameReviewArgs, reRequestReviewArgs } from '../cm/codeReviewArgs';
@@ -48,29 +49,22 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
    * `cm` reports branch targets only by object id; the names come from the branch lists already read, or from the
    * names of every branch, read once in a while (`BranchNamesCache`).
    */
-  async function resolveTargets(place: Place, reviews: RawCodeReview[]): Promise<CodeReview[]> {
-    const branchIds = reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId);
-    const names = branchIds.length > 0 ? await branchNames.resolve(place, branchIds) : new Map<number, string>();
-
-    return reviews.map((review) => ({
-      ...summaryOf(review),
-      target: targetOf(review, names),
-    }));
+  async function branchNamesOf(place: Place, branchIds: number[]): Promise<Record<number, string>> {
+    if (branchIds.length === 0) return {};
+    return Object.fromEntries(await branchNames.resolve(place, branchIds));
   }
 
   return {
-    async list(place, filter) {
-      return resolveTargets(place, await findListedReviews(place, filter));
-    },
-
     async listSummaries(place, filter) {
       return (await findListedReviews(place, filter)).map(summaryOf);
     },
 
+    branchNames: branchNamesOf,
+
     async get(place, reviewId) {
-      const [review] = await resolveTargets(place, await findReviewById(place, reviewId));
+      const [review] = (await findReviewById(place, reviewId)).map(summaryOf);
       if (!review) throw new Error(`Code review ${reviewId} was not found.`);
-      return review;
+      return withTargetNamed(review, await branchNamesOf(place, branchTargetIdsOf([review])));
     },
 
     reviewers(place, reviewId) {
@@ -172,12 +166,4 @@ function summaryOf({ targetType, targetId, ...summary }: RawCodeReview): CodeRev
   if (targetType === 'changeset') return { ...summary, target: { kind: 'changeset', changesetId: targetId } };
   if (targetType === 'shelve') return { ...summary, target: { kind: 'shelve', shelveId: targetId } };
   return summary;
-}
-
-function targetOf({ targetType, targetId }: RawCodeReview, branchNames: ReadonlyMap<number, string>): CodeReviewTarget {
-  if (targetType === 'changeset') return { kind: 'changeset', changesetId: targetId };
-  if (targetType === 'shelve') return { kind: 'shelve', shelveId: targetId };
-  const branch = targetType === 'branch' ? branchNames.get(targetId) : undefined;
-  if (branch !== undefined) return { kind: 'branch', branch };
-  return { kind: 'unknown', description: targetType === 'branch' ? 'an unknown branch' : 'changes of an unknown kind' };
 }

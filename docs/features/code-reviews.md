@@ -126,11 +126,13 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   can't ask for. A chip of its own, not a third choice of a reviewer menu ("Any reviewer, I'm a reviewer, Waiting for
   me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.
   The sidebar counts the same reviews on **Merge requests** (`useWaitingForMeBadge`, `waitingBadge`), from the list the
-  view reads (`useCodeReviewsListFilter`: one query key, one `cm find review` in the time range), so the count shows as
-  the window opens. It reads that list once the first screen is in (the pending changes read, or failed; at once on a
+  view reads (`useCodeReviewsListFilter`: one `cm find review` in the time range, `reviewListSummariesQuery`), so the
+  count shows as the window opens. The count needs no branch name and reads none: only the view names the branches,
+  from that same read (`namedReviewListQuery`, `CodeReviewsApi.branchNames`), which may read every branch's name. It reads that list once the first screen is in (the pending changes read, or failed; at once on a
   repository, which reads none: `badgeReadsReviews`), so it never competes with the window's first reads, and rarely
   (`SLOW_CHANGING_QUERY`): a focus reads it again only while the view shows it; a write on a review and the Refresh
-  button do. Opening the view within its own staleness (thirty seconds) shows that list without reading it again. The
+  button do. Opening the view within its own staleness (thirty seconds) names that list without reading it again; a
+  refresh with both on screen reads it once, the view's read joining the count's. The
   read is bounded by the view's time range (the last three months unless the user chose another), so a user who chose
   Any time reads every review as each window opens: the count must agree with the view's Waiting for me. Counting only
   once the view was opened, as a sidebar read nothing, was tried: the count was missing until then, where the user

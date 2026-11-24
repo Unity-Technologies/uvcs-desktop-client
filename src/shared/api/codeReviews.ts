@@ -3,9 +3,17 @@ import type { Place } from '../domain/place';
 import type { CodeReview, CodeReviewer, CodeReviewFilter, CodeReviewStatus, CodeReviewSummary, CreateCodeReviewRequest, CreatedMergeRequest, CreateMergeRequestRequest, MergeRequestState, ReviewSubscription } from '../domain/codeReview';
 
 export interface CodeReviewsApi {
-  list(place: Place, filter: CodeReviewFilter): Promise<CodeReview[]>;
-  /** Like `list`, but a single `cm find`: for searches that never show the targets. */
+  /**
+   * The reviews `filter` keeps, as one `cm find review` lists them: branch targets by object id (`targetBranchId`),
+   * which `branchNames` names when a view shows them.
+   */
   listSummaries(place: Place, filter: CodeReviewFilter): Promise<CodeReviewSummary[]>;
+  /**
+   * The names of the branches reviews target, by object id (`branchTargetIdsOf`): from the branch lists already read,
+   * or else from the names of every branch, read once in a while (`BranchNamesCache`). A branch deleted since has none.
+   */
+  branchNames(place: Place, branchIds: number[]): Promise<Record<number, string>>;
+  /** One review, its target named. */
   get(place: Place, reviewId: number): Promise<CodeReview>;
   /**
    * The review's reviewers, each with its status and whether it's a user or a group (`CodeReviewer.kind`): one

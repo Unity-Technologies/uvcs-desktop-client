@@ -264,10 +264,11 @@ and many people use the same server. Every `cm` command other than local reads (
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
 - **Reuse**: what a command already returned answers later questions instead of another command. Code reviews name
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
-  their branch lists already carry, and share one review list with the palette; the Merge requests view and the review's page name it
-  from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
-  (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
-  `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
+  their branch lists already carry, and share one review list with the palette; the sidebar's count on Merge requests
+  needs no name and reads none (`reviewListSummariesQuery`). The Merge requests view and the review's page name it
+  (`CodeReviewsApi.branchNames`) from the branch lists already read (`BranchNamesCache.remember`), or else read every
+  branch's id and name once (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the
+  workspace: `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
   renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
