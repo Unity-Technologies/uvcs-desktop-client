@@ -2,9 +2,9 @@ import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import {
   findBarKeyAction,
+  findBarRight,
   findInText,
   findOpening,
-  findPlaceholder,
   firstMatchFrom,
   matchCountWords,
   matchMarks,
@@ -16,7 +16,7 @@ import {
   type FindOptions,
 } from './codeFind';
 
-const ANY_CASE: FindOptions = { matchCase: false, wholeWord: false };
+const ANY_CASE: FindOptions = { matchCase: false, wholeWord: false, regex: false };
 
 describe('findInText', () => {
   it('finds nothing before a query', () => {
@@ -38,7 +38,7 @@ describe('findInText', () => {
   it('ignores case unless asked to match it', () => {
     const text = 'Player player PLAYER';
     expect(findInText(text, 'player', ANY_CASE).matches).toHaveLength(3);
-    expect(findInText(text, 'player', { matchCase: true, wholeWord: false }).matches).toEqual([{ line: 1, start: 7, end: 13 }]);
+    expect(findInText(text, 'player', { matchCase: true, wholeWord: false, regex: false }).matches).toEqual([{ line: 1, start: 7, end: 13 }]);
   });
 
   it('folds letters beyond ASCII one for one, keeping each match its length', () => {
@@ -54,12 +54,31 @@ describe('findInText', () => {
   });
 
   it('finds whole words only when asked, letters, digits and underscores making a word', () => {
-    const wholeWord = { matchCase: false, wholeWord: true };
+    const wholeWord = { matchCase: false, wholeWord: true, regex: false };
     expect(findInText('id ids _id id2 (id) día', 'id', wholeWord).matches).toEqual([
       { line: 1, start: 0, end: 2 },
       { line: 1, start: 16, end: 18 },
     ]);
     expect(findInText('ñame', 'ame', wholeWord).matches).toEqual([]);
+  });
+
+  it('takes the query as a regular expression when asked, whole words and case as for text', () => {
+    const regex = { matchCase: false, wholeWord: false, regex: true };
+    expect(findInText('speed = 12f; turn = 200f;', '\\d+f', regex).matches).toEqual([
+      { line: 1, start: 8, end: 11 },
+      { line: 1, start: 20, end: 24 },
+    ]);
+    expect(findInText('a|b ab', 'a|b', { ...regex, wholeWord: true }).matches).toEqual([
+      { line: 1, start: 0, end: 1 },
+      { line: 1, start: 2, end: 3 },
+    ]);
+  });
+
+  it('finds nothing for a regular expression that does not compile yet, and skips empty matches', () => {
+    const regex = { matchCase: false, wholeWord: false, regex: true };
+    expect(findInText('(a|b)', '(a|', regex)).toEqual({ matches: [], capped: false });
+    expect(findInText('baab', 'a*', regex).matches).toEqual([{ line: 1, start: 1, end: 3 }]);
+    expect(findInText('one\ntwo', '^', regex).matches).toEqual([]);
   });
 
   it('counts characters as the page does: an emoji is two', () => {
@@ -223,14 +242,6 @@ describe('sideToFind', () => {
   });
 });
 
-describe('findPlaceholder', () => {
-  it('names the version searched where the diff shows two', () => {
-    expect(findPlaceholder('deletions', null)).toBe('Find in the older version');
-    expect(findPlaceholder('additions', null)).toBe('Find in the newer version');
-    expect(findPlaceholder('deletions', 'deletions')).toBe('Find');
-  });
-});
-
 describe('rowNeedsScroll', () => {
   const view = { start: 100, end: 500 };
 
@@ -255,5 +266,16 @@ describe('sidewaysScrollBy', () => {
   it('puts characters out of view a third of the way across the code', () => {
     expect(sidewaysScrollBy({ start: 1000, end: 1040 }, shown)).toBe(740);
     expect(sidewaysScrollBy({ start: 20, end: 60 }, shown)).toBe(-240);
+  });
+});
+
+describe('findBarRight', () => {
+  it("stands the bar at the top right of the side's own pane", () => {
+    expect(findBarRight({ start: 0, end: 600 }, { start: 0, end: 1200 })).toBe(616);
+    expect(findBarRight({ start: 600, end: 1190 }, { start: 0, end: 1200 })).toBe(26);
+  });
+
+  it("leaves it at the diff's top right where the side has no pane of its own", () => {
+    expect(findBarRight(null, { start: 0, end: 1200 })).toBeNull();
   });
 });

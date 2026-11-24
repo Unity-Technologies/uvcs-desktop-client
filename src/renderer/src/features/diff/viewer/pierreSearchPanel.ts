@@ -81,3 +81,18 @@ function keyEventOf(key: string, mac: boolean): KeyboardEventInit {
     shiftKey: held('shift'),
   };
 }
+
+/**
+ * Pierre's search panel in the diff inside `container` (`data-search-panel`, which its editor draws in the diff's shadow
+ * root while it's open), or null. The app's own find bar on a read-only side (`useCodeFind`) closes when it opens, so
+ * the diff never shows two searches.
+ */
+export function pierreSearchPanelIn(container: Element | null): Element | null {
+  return pierreShadowRoot(container)?.querySelector('[data-search-panel]') ?? null;
+}
+
+/** Closes Pierre's search panel, as its own close button does (`data-search-close`): `Editor` has no public way to. */
+export function closePierreSearchPanel(container: Element | null): void {
+  const close = pierreSearchPanelIn(container)?.querySelector('[data-search-close]');
+  if (close instanceof HTMLElement) close.click();
+}

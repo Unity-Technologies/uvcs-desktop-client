@@ -13,6 +13,8 @@ export interface FindOptions {
   matchCase: boolean;
   /** Only where the text stands as a word of its own: no letter, digit or underscore just before or after it. */
   wholeWord: boolean;
+  /** The text is a regular expression (JavaScript's, Unicode-aware), as in Pierre's search panel. */
+  regex: boolean;
 }
 
 /** Where a match is: its line, one-based, and its characters in that line (UTF-16, as the page counts them), `[start, end)`. */
@@ -38,14 +40,17 @@ const NOTHING_FOUND: FoundMatches = { matches: [], capped: false };
 
 /**
  * Every place `query` stands in `text`, line by line (a match never spans a line break: LF, CRLF or a lone CR, as
- * Pierre breaks the lines it shows), in the order of the text. Literal text, never a pattern. Ignoring case, letters
- * match as Unicode folds them one for one (`σ` finds `Σ` and `ς`), so each match keeps its length in the line and marks
- * the characters it found. Past `limit`, the matches kept are those from `fromLine` on, going round from the top: the
- * ones around where the user searches from, never only the file's first.
+ * Pierre breaks the lines it shows), in the order of the text. The text literally, unless `regex`: then a pattern, one
+ * that doesn't compile (a `(` typed on the way to `(a|b)`) finding nothing, and an empty match (`^`, `a*`) skipped, as
+ * there's nothing to mark. Ignoring case, letters match as Unicode folds them one for one (`σ` finds `Σ` and `ς`), so
+ * each match keeps its length in the line and marks the characters it found. Past `limit`, the matches kept are those
+ * from `fromLine` on, going round from the top: the ones around where the user searches from, never only the file's
+ * first.
  */
 export function findInText(text: string, query: string, options: FindOptions, limit = MAX_MATCHES, fromLine = 1): FoundMatches {
   if (!query) return NOTHING_FOUND;
   const pattern = matchPattern(query, options);
+  if (!pattern) return NOTHING_FOUND;
   const lines = text.split(/\r\n|\n|\r/);
   const first = Math.min(Math.max(fromLine, 1), lines.length) - 1;
   const after: CodeMatch[] = [];
@@ -55,6 +60,10 @@ export function findInText(text: string, query: string, options: FindOptions, li
     const kept = index >= first ? after : before;
     pattern.lastIndex = 0;
     for (let found = pattern.exec(lines[index]!); found; found = pattern.exec(lines[index]!)) {
+      if (found[0].length === 0) {
+        pattern.lastIndex++;
+        continue;
+      }
       if (after.length + before.length === limit) return { matches: [...before, ...after], capped: true };
       kept.push({ line: index + 1, start: found.index, end: found.index + found[0].length });
     }
@@ -62,10 +71,15 @@ export function findInText(text: string, query: string, options: FindOptions, li
   return { matches: [...before, ...after], capped: false };
 }
 
-function matchPattern(query: string, { matchCase, wholeWord }: FindOptions): RegExp {
-  const literal = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const source = wholeWord ? `(?<![\\p{L}\\p{N}_])${literal}(?![\\p{L}\\p{N}_])` : literal;
-  return new RegExp(source, matchCase ? 'gu' : 'giu');
+/** The pattern a search runs, line by line; null for a regular expression that doesn't compile. */
+function matchPattern(query: string, { matchCase, wholeWord, regex }: FindOptions): RegExp | null {
+  const text = regex ? `(?:${query})` : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const source = wholeWord ? `(?<![\\p{L}\\p{N}_])${text}(?![\\p{L}\\p{N}_])` : text;
+  try {
+    return new RegExp(source, matchCase ? 'gu' : 'giu');
+  } catch {
+    return null;
+  }
 }
 
 /** A place in a side's text: a line, one-based, and a character in it. */
@@ -164,12 +178,6 @@ export function findBarKeyAction(event: PressedKey, mac?: boolean): FindBarKeyAc
   return null;
 }
 
-/** The field's placeholder: which version it searches, where the diff shows two. */
-export function findPlaceholder(side: DiffSide, onlySide: DiffSide | null): string {
-  if (onlySide) return 'Find';
-  return side === 'deletions' ? 'Find in the older version' : 'Find in the newer version';
-}
-
 /** A box's extent along one axis, in the page's pixels. */
 export interface Extent {
   start: number;
@@ -189,4 +197,17 @@ export function rowNeedsScroll(row: Extent | null, view: Extent): boolean {
 export function sidewaysScrollBy(characters: Extent, shown: Extent): number {
   if (characters.start >= shown.start && characters.end <= shown.end) return 0;
   return characters.start - shown.start - (shown.end - shown.start) / 3;
+}
+
+/** How far in from the diff's right edge the bar stands, as Pierre's search panel stands in its pane (16 pixels). */
+export const FIND_BAR_INSET = 16;
+
+/**
+ * Where the bar stands, as pixels from the right edge of the diff's frame: at the top right of the pane of the side it
+ * searches, as the search box of each side of a diff in the desktop client did, and as Pierre's panel stands over the
+ * text typed into. Null where that side has no pane of its own (a unified diff, one side shown alone): then at the
+ * diff's top right.
+ */
+export function findBarRight(pane: Extent | null, frame: Extent): number | null {
+  return pane ? Math.max(frame.end - pane.end, 0) + FIND_BAR_INSET : null;
 }

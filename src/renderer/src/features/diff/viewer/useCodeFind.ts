@@ -6,7 +6,7 @@ import type { ChangedLine, DiffSide } from './changeBlocks';
 import {
   findInText,
   findOpening,
-  findPlaceholder,
+  findBarRight,
   firstMatchFrom,
   matchCountWords,
   matchMarks,
@@ -24,6 +24,7 @@ import { lineUnderPointer } from './lineActions';
 import { paneRect, pierreShadowRoot, rowTextRange, rowUnderPointer, sideLineRowSelector } from './pierreDom';
 import { useDiffShadowRoot } from './useDiffShadowRoot';
 import { useWordMarks, type WordMarkColors } from './useWordMarks';
+import { closePierreSearchPanel, pierreSearchPanelIn } from './pierreSearchPanel';
 
 interface CodeFindOptions {
   /** The scrolling element around the diff. */
@@ -43,7 +44,8 @@ interface CodeFindOptions {
 /** What `CodeFindBar` shows and does. */
 export interface CodeFindBarModel {
   inputRef: RefObject<HTMLInputElement | null>;
-  placeholder: string;
+  /** Pixels from the right of the diff's frame, at the top right of the side searched (`findBarRight`); null at the diff's. */
+  right: number | null;
   query: string;
   setQuery: (query: string) => void;
   options: FindOptions;
@@ -69,7 +71,8 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
   const [open, setOpen] = useState(false);
   const [side, setSide] = useState<DiffSide>(sideToFind(onlySide, null));
   const [query, setQuery] = useState('');
-  const [options, setOptions] = useState<FindOptions>({ matchCase: false, wholeWord: false });
+  const [options, setOptions] = useState<FindOptions>({ matchCase: false, wholeWord: false, regex: false });
+  const [right, setRight] = useState<number | null>(null);
   // Where the search goes from: the line pressed as it opened, then the match stepped to.
   const [from, setFrom] = useState<TextPlace | null>(null);
   // The line pressed as it opened: past `MAX_MATCHES`, the matches kept are those around it.
@@ -95,6 +98,26 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
   useWordMarks(containerRef, root, allMarks, OTHER_MATCHES, sideLineRowSelector);
   useWordMarks(containerRef, root, shownMarks, SHOWN_MATCH, sideLineRowSelector);
 
+  // While the bar is open: it stands over its side's pane as the diff is laid out anew (split or unified, a resize),
+  // and it closes when Pierre's search panel opens in the text typed into (⌘F there), so the diff shows one search.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!open || !container || !root) return;
+    const follow = (): void => {
+      if (pierreSearchPanelIn(container)) return setOpen(false);
+      setRight(barRight(container, root, shownSide));
+    };
+    follow();
+    const mutations = new MutationObserver(follow);
+    mutations.observe(root, { childList: true, subtree: true });
+    const resizes = new ResizeObserver(follow);
+    resizes.observe(container);
+    return () => {
+      mutations.disconnect();
+      resizes.disconnect();
+    };
+  }, [open, root, shownSide]);
+
   const matchKey = shownMatch && `${shownSide}:${shownMatch.line}:${shownMatch.start}:${shownMatch.end}`;
   useEffect(() => {
     const container = containerRef.current;
@@ -106,7 +129,11 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
   /** Opens Find on `on` (a side right-clicked), else the side last pressed: the bar, or the editor's panel (`findOpening`). */
   const openFind = (on?: DiffSide): void => {
     const opening = findOpening(onlySide, typedInto, pressed.current, on);
-    if (opening.kind === 'editor') return latest.current.openEditorSearch();
+    if (opening.kind === 'editor') {
+      setOpen(false);
+      return latest.current.openEditorSearch();
+    }
+    closePierreSearchPanel(containerRef.current);
     setSide(opening.side);
     setFrom(opening.from);
     setStartLine(opening.from?.line ?? 1);
@@ -148,7 +175,7 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
   const bar: CodeFindBarModel | null = open
     ? {
         inputRef,
-        placeholder: findPlaceholder(shownSide, onlySide),
+        right,
         query,
         setQuery,
         options,
@@ -161,6 +188,14 @@ export function useCodeFind({ containerRef, textOf, onlySide, typedInto, openEdi
     : null;
 
   return { bar, openFind, onKeyDown, onPointerDownCapture };
+}
+
+/** Where the bar stands over the pane of `side` (`findBarRight`), measured in the diff as it's laid out now. */
+function barRight(container: HTMLElement, root: ShadowRoot, side: DiffSide): number | null {
+  const pane = root.querySelector(side === 'deletions' ? '[data-deletions]' : '[data-additions]');
+  const frame = (container.parentElement ?? container).getBoundingClientRect();
+  const paneBox = pane && paneRect(pane);
+  return findBarRight(paneBox ? { start: paneBox.left, end: paneBox.right } : null, { start: frame.left, end: frame.right });
 }
 
 /**
