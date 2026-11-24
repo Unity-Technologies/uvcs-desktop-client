@@ -267,6 +267,22 @@ describe('CmShellPool', () => {
     await expect(waiting).resolves.toMatchObject({ output: 'find branch' });
   });
 
+  it('ends every session at once while keeping the shown directories, whose sessions start again when asked', async () => {
+    pool.show('/wk');
+    pool.warmUp('/home');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    await settle();
+    const before = [...FakeSession.created];
+
+    pool.endSessions();
+    expect(before.every((session) => session.disposed)).toBe(true);
+    expect(pool.shownDirectory()).toBe('/wk');
+
+    pool.warmUpShown();
+    const fresh = FakeSession.created.filter((session) => !before.includes(session));
+    expect(fresh.map((session) => session.cwd)).toEqual(['/wk', '/wk']);
+  });
+
   it("keeps a released workspace's sessions when a command comes before they are done", async () => {
     void pool.run('/wk', ['status']);
     const [session] = FakeSession.created;
