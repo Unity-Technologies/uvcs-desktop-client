@@ -23,8 +23,8 @@ interface CmRuntimeWiring {
   settings: Pick<SettingsStore, 'get' | 'update'>;
   /** Packaged builds delete the versions no longer kept; development builds, sharing the store, never do. */
   prunes: boolean;
-  /** `CmClient.relocate`: the `cm` to run changed. */
-  relocated: () => void;
+  /** `CmClient.relocate`: the `cm` to run changed, or was replaced at the same path (`replaced`). */
+  relocated: (change: { replaced: boolean }) => void;
   /** `CmClient.logEntry`: the command log shows the `cm version` checks run apart from it. */
   logCommand: (entry: Omit<CommandLogEntry, 'id'>) => void;
   statusChanged: (status: CmRuntimeStatus) => void;

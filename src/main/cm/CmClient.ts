@@ -141,10 +141,17 @@ export class CmClient {
     return this.cmPath;
   }
 
-  /** Looks for `cm` again, e.g. after the user installed it while the app was running. */
-  relocate(): void {
+  /**
+   * Looks for `cm` again, e.g. after the user installed it while the app was running. `replaced`: the `cm` at the same
+   * path was replaced by a newer one (updated outside the app): its sessions, which still run the one it replaced, start
+   * again as they finish their commands (`restartShells`).
+   */
+  relocate({ replaced = false }: { replaced?: boolean } = {}): void {
     const cmPath = this.locate();
-    if (cmPath === this.cmPath) return;
+    if (cmPath === this.cmPath) {
+      if (replaced) this.shellPool.restartSessions();
+      return;
+    }
     this.shellPool.disposeAll();
     this.cmPath = cmPath;
     this.shellPool = this.runners.createShellPool(cmPath);

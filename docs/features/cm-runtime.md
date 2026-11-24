@@ -185,7 +185,8 @@ is false), and the windows wait as they do for a setup.
 - **Linux** has no installer: the screen shows the command that updates it, with Copy, Check Again
   (`cmRuntime.checkInstalledAgain`: one `cm version`, logged) and "Use the Included Version for Now".
 - **Checked again as a window gains focus** (the user may come back from updating it another way), quietly, never on a
-  timer: new enough, it runs, its shells started again; none found any more, the app's own runs.
+  timer: new enough, it runs, its shells started again as they finish their commands, even at the same path, which now
+  holds the newer one (`CmClient.relocate` with `replaced`); none found any more, the app's own runs.
 
 To see it in a development build: the smoke test's fake `cm` (`scripts/e2e/fakeCm`) on a temp PATH as `cm`, with
 `UVCS_FAKE_CM_VERSION_FILE` naming a file that holds an older version, and no `UVCS_CM_PATH` (scripts/e2e/README.md).

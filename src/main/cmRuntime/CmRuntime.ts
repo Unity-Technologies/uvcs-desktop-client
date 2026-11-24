@@ -60,8 +60,11 @@ export interface CmRuntimeOptions {
   findInstalled: () => string | null;
   /** What `cm version` prints for the `cm` at a path. */
   versionOf: (cmPath: string) => Promise<string>;
-  /** The `cm` to run changed: `CmClient` starts its shells again with it (`relocate`). */
-  relocated: () => void;
+  /**
+   * The `cm` to run changed: `CmClient` starts its shells again with it (`relocate`); `replaced` when it's the installed
+   * one at the same path, replaced by a newer one outside the app (Check Again), whose shells still run the older one.
+   */
+  relocated: (change: { replaced: boolean }) => void;
   statusChanged: (status: CmRuntimeStatus) => void;
   /**
    * Once a `cm` runs, the store keeps the pinned version and the newest above it, an update's, or nothing when the
@@ -267,6 +270,7 @@ export class CmRuntime {
     this.switchingToOwn = null;
     if (this.options.choice() === 'managed') this.options.saveChoice('automatic');
     this.options.saveDeclinedUpdate(null);
+    // Its shells ended while the installer ran (`CmClient.hold`) and started on the new one as they resumed.
     this.switchTo(this.choose(), { relocate: true });
   }
 
@@ -298,7 +302,7 @@ export class CmRuntime {
     this.updateNeeded = null;
     this.installedReplaced++;
     // Its shells, started before its version answered, run the executable the update replaced: started again.
-    this.switchTo(this.choose(), { relocate: true });
+    this.switchTo(this.choose(), { relocate: true, replaced: true });
   }
 
   /**
@@ -344,10 +348,10 @@ export class CmRuntime {
     this.announce();
   }
 
-  private switchTo(chosen: ChosenCm, { relocate = false } = {}): void {
+  private switchTo(chosen: ChosenCm, { relocate = false, replaced = false } = {}): void {
     if (relocate || chosen.path !== this.chosen.path || chosen.source !== this.chosen.source) {
       this.chosen = chosen;
-      this.options.relocated();
+      this.options.relocated({ replaced });
     }
     this.cancelRetry();
     this.progress = null;
@@ -504,7 +508,7 @@ export class CmRuntime {
       this.progress = null;
       // A choice made while it downloaded may have left the app's own behind: the installed one runs, as announced.
       if (this.chosen.source !== 'managed') return;
-      this.options.relocated();
+      this.options.relocated({ replaced: false });
       this.announce();
     } catch (error) {
       await this.failed(error);

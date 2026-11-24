@@ -63,10 +63,10 @@ const settings = openSettings(userData);
 const cmRuntime = createCmRuntime({
   settings,
   prunes: app.isPackaged,
-  relocated: () => {
+  relocated: (change) => {
     // What the first window was read ahead from is the `cm` before.
     early.dropAll();
-    cm.relocate();
+    cm.relocate(change);
   },
   holdCm: () => cm.hold(),
   logCommand: (entry) => cm.logEntry(entry),
