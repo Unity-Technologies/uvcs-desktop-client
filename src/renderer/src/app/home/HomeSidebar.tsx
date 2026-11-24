@@ -1,10 +1,8 @@
 import { House, Layers, Settings } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { isFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import type { ServerProfile } from '@shared/domain/repository';
 import { ServerIcon } from '../../components/ServerIcon';
 import { describeServer } from '../../lib/servers';
-import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { NavFooter, NavGroups, NavItem, Sidebar, type NavSection, type NavSectionItem } from '../../ui/nav/SidebarNav';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { useCommands } from '../commands/commandStore';
@@ -16,8 +14,8 @@ import { AccountSwitcher } from './AccountSwitcher';
 import { accountSwitchCommands } from './accountSwitcherMenu';
 import { homeServersOf } from './homeAccount';
 import { showHomeAccount } from './homeAccountStore';
-import { organizationMenu } from './homeMenus';
 import { isSameSection, WELCOME, type HomeSection } from './homeSection';
+import { OrganizationEntry } from './OrganizationEntry';
 import { OrganizationFilter } from './OrganizationFilter';
 import { canBeFavorite, serverEntryDetail, serverGroups, showsOrganizationFilter } from './serverGroups';
 import { useHomeAccount } from './useHomeAccount';
@@ -55,8 +53,7 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
     const railLabel = server === 'local' ? 'Local' : undefined;
     const entry = item({ kind: 'server', server }, icon, label, { railLabel, detail: serverEntryDetail(profile, rail) });
     if (!canBeFavorite(server)) return entry;
-    const favorite = isFavoriteOrganization(favoriteOrganizations, server);
-    return { ...entry, element: <ActionContextMenu entries={() => organizationMenu(server, favorite)}>{entry.element}</ActionContextMenu> };
+    return { ...entry, element: <OrganizationEntry server={server}>{entry.element}</OrganizationEntry> };
   };
   const servers = homeServersOf(accounts, shown);
   // Folded, the rail shows no filter, so none applies.

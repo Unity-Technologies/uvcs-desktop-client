@@ -1,0 +1,19 @@
+/* An organization's sidebar row, with its star laid over the row's right end: shown while the pointer or focus is on
+   the row, kept in its place while hidden (`opacity`), so the row never changes size. */
+.entry {
+  position: relative;
+}
+
+.star {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  opacity: 0;
+}
+
+.entry:hover .star,
+.star:focus-visible {
+  opacity: 1;
+}
