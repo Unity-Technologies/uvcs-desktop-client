@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countedArray } from '@shared/testing/countedReads';
-import { itemRulePatterns, rulesFromText, sharedExtension, sharedName } from './filterRulePatterns';
+import { addRulesLabel, itemRulePatterns, rulesFieldRows, rulesFromText, sharedExtension, sharedName } from './filterRulePatterns';
 
 describe('itemRulePatterns', () => {
   it('gives each item a rule from the workspace root', () => {
@@ -77,5 +77,17 @@ describe('rulesFromText', () => {
 
   it('is empty when nothing is written', () => {
     expect(rulesFromText('  \n\n')).toEqual([]);
+  });
+});
+
+describe('addRulesLabel', () => {
+  it('counts the rules it adds', () => {
+    expect([0, 1, 2, 1200].map(addRulesLabel)).toEqual(['Add rules', 'Add rule', 'Add 2 rules', 'Add 1,200 rules']);
+  });
+});
+
+describe('rulesFieldRows', () => {
+  it('fits the suggested rules and a line more, between 3 and 10 rows', () => {
+    expect([1, 3, 9, 500].map(rulesFieldRows)).toEqual([3, 4, 10, 10]);
   });
 });
