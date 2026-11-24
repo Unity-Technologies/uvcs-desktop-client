@@ -68,6 +68,8 @@ const window = await app.firstWindow();
 window.setDefaultTimeout(TIMEOUT_MS);
 window.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 window.on('console', (message) => message.type() === 'error' && errors.push(`console.error: ${message.text()}`));
+// TEMPORARY diagnostics for PR #359's Windows duplicate: the page's [diag] lines, in the fake cm's log between its commands.
+window.on('console', (message) => message.text().startsWith('[diag]') && appendFileSync(cmLog, `${JSON.stringify({ diag: message.text() })}\n`));
 const browserWindow = await app.browserWindow(window);
 // The window's real size as well as the page's: a screenshot copies the real view (`capture`), which a frame's borders
 // (Windows, a Linux desktop) or a small screen would otherwise leave smaller than the page laid out.
@@ -557,7 +559,13 @@ errors.push(...unknownCommands.map(({ args }) => `the fake cm failed: ${readable
 // A server command sent twice within a step, unless a known duplicate (`KNOWN_DUPLICATES`). Only after a clean run: a
 // step that failed may have left its reads half done.
 if (errors.length === 0) {
-  const { failures, unused } = duplicateReport(commandsByStep(log), KNOWN_DUPLICATES);
+  const { failures, unused } = duplicateReport(commandsByStep(log.filter((line) => !line.diag)), KNOWN_DUPLICATES);
+  // TEMPORARY diagnostics for PR #359: each failing step's log, [diag] lines included.
+  for (const step of new Set([...failures.map((failure) => failure.step), 'A revision read from the disk'])) {
+    const start = log.findIndex((line) => line.step === step);
+    const end = log.findIndex((line, index) => index > start && line.step);
+    console.log(`DIAG log of "${step}":\n${log.slice(start, end === -1 ? undefined : end).map((line) => line.diag ?? (line.args ? readableCommandLine(line.args.join(' ')).slice(0, 160) : `== ${line.step}`)).join('\n')}`);
+  }
   errors.push(...failures.map(({ step, commandLine, cwd, times }) => `"${step}" sent the same server command ${times} times: ${readableCommandLine(commandLine)} (in ${cwd}; scripts/e2e/README.md "Duplicate server commands")`));
   for (const { command, why } of unused) console.warn(`warning: the known duplicate ${readableCommandLine(command)} didn't happen; remove it from KNOWN_DUPLICATES (${why})`);
 }
