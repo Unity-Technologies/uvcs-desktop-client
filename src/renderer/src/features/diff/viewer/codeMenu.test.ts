@@ -4,8 +4,8 @@ import { SEPARATOR, type Action, type MenuEntry } from '../../../lib/actions';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { codeMenu, type CodeMenuActions, type CodeMenuState } from './codeMenu';
 
-const EDITABLE: CodeMenuState = { editable: true, selectedText: true, selectedCode: true, canUndo: true, canRedo: true, canSelectAll: true };
-const READ_ONLY: CodeMenuState = { editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true };
+const EDITABLE: CodeMenuState = { editable: true, selectedText: true, selectedCode: true, canUndo: true, canRedo: true, canSelectAll: true, canFind: true };
+const READ_ONLY: CodeMenuState = { editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true, canFind: false };
 
 const actions = (): CodeMenuActions => ({
   undo: vi.fn(),
@@ -30,8 +30,13 @@ describe('codeMenu', () => {
     expect(reading(codeMenu(EDITABLE, actions()))).toEqual(['Undo', 'Redo', '—', 'Find', 'Replace', 'Go to line…', 'Compare with clipboard', '—', 'Cut', 'Copy', 'Paste', '—', 'Delete', 'Select all']);
   });
 
-  it('offers only what reads the text where it is read-only: no history, Cut, Paste, Delete, nor Find and Replace, which only the editor has', () => {
+  it('offers only what reads the text where it is read-only: no history, Cut, Paste, Delete, nor Replace, which only the editor has', () => {
     expect(reading(codeMenu(READ_ONLY, actions()))).toEqual(['Go to line…', 'Compare with clipboard', '—', 'Copy', '—', 'Select all']);
+  });
+
+  it('offers Find on a read-only side whose place has a find bar of its own, never Replace', () => {
+    expect(reading(codeMenu({ ...READ_ONLY, canFind: true }, actions()))).toEqual(['Find', 'Go to line…', 'Compare with clipboard', '—', 'Copy', '—', 'Select all']);
+    expect(entry(codeMenu({ ...READ_ONLY, canFind: true }, actions()), 'Find').shortcut).toBe(hotkey('textFind'));
   });
 
   it("leaves Select all out of a read-only side whose lines can't be picked", () => {

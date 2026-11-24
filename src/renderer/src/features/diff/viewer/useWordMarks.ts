@@ -1,5 +1,5 @@
 import { useEffect, useId, type RefObject } from 'react';
-import type { DiffSide } from './changeBlocks';
+import type { ChangedLine, DiffSide } from './changeBlocks';
 import { lineRowSelector, rowTextRange } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
 import type { WordMarksByLine } from './wordMarkRows';
@@ -21,8 +21,16 @@ export const MOVED_WORD_COLORS: WordMarkColors = { deletions: 'var(--diff-moved-
  * the marks are drawn again each time (a `MutationObserver`).
  * Marking Pierre's own rows instead (`refreshWordMarks`) was rejected: every render of Pierre's (its worker's colors,
  * a keystroke) would draw its own marks back over them.
+ * Marks are on changed lines (`lineRowSelector`) unless `rowSelector` finds others too (a search's matches,
+ * `sideLineRowSelector`).
  */
-export function useWordMarks(containerRef: RefObject<HTMLElement | null>, root: ShadowRoot | null, marks: WordMarksByLine, colors: WordMarkColors): void {
+export function useWordMarks(
+  containerRef: RefObject<HTMLElement | null>,
+  root: ShadowRoot | null,
+  marks: WordMarksByLine,
+  colors: WordMarkColors,
+  rowSelector: (line: ChangedLine) => string = lineRowSelector,
+): void {
   const name = highlightName(useId());
   useShadowStyle(containerRef, `::highlight(${name}-deletions){background-color:${colors.deletions}}::highlight(${name}-additions){background-color:${colors.additions}}`);
 
@@ -35,8 +43,8 @@ export function useWordMarks(containerRef: RefObject<HTMLElement | null>, root: 
     let frame = 0;
     const draw = (): void => {
       frame = 0;
-      CSS.highlights.set(`${name}-deletions`, new Highlight(...markedRanges(root, 'deletions', marks.deletions)));
-      CSS.highlights.set(`${name}-additions`, new Highlight(...markedRanges(root, 'additions', marks.additions)));
+      CSS.highlights.set(`${name}-deletions`, new Highlight(...markedRanges(root, rowSelector, 'deletions', marks.deletions)));
+      CSS.highlights.set(`${name}-additions`, new Highlight(...markedRanges(root, rowSelector, 'additions', marks.additions)));
     };
     const schedule = (): void => {
       frame ||= requestAnimationFrame(draw);
@@ -49,14 +57,14 @@ export function useWordMarks(containerRef: RefObject<HTMLElement | null>, root: 
       mutations.disconnect();
       clear();
     };
-  }, [root, marks, name]);
+  }, [root, marks, name, rowSelector]);
 }
 
 /** The ranges of the marked characters in the rows of one side that are rendered. */
-function markedRanges(root: ShadowRoot, side: DiffSide, marks: WordMarksByLine[DiffSide]): Range[] {
+function markedRanges(root: ShadowRoot, rowSelector: (line: ChangedLine) => string, side: DiffSide, marks: WordMarksByLine[DiffSide]): Range[] {
   const ranges: Range[] = [];
   for (const [lineNumber, lineMarks] of marks) {
-    const row = root.querySelector(lineRowSelector({ side, lineNumber }));
+    const row = root.querySelector(rowSelector({ side, lineNumber }));
     if (!row) continue;
     for (const { start, end } of lineMarks) {
       const range = rowTextRange(row, start, end);

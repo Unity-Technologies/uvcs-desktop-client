@@ -316,10 +316,10 @@ const LINE_MENUS: Record<string, () => MenuEntry[]> = {
 const textActions = Object.fromEntries(['undo', 'redo', 'cut', 'copy', 'paste', 'delete', 'selectAll', 'goToLine', 'find', 'replace', 'compareWithClipboard'].map((name) => [name, () => {}])) as unknown as CodeMenuActions;
 /** Menus of code, the text typed into or read (`codeMenu`): their Copy copies the text selected, not an object's names. */
 const TEXT_MENUS: Record<string, () => MenuEntry[]> = {
-  typedText: () => codeMenu({ editable: true, selectedText: true, selectedCode: true, canUndo: true, canRedo: true, canSelectAll: true }, textActions),
-  readText: () => codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: false }, textActions),
+  typedText: () => codeMenu({ editable: true, selectedText: true, selectedCode: true, canUndo: true, canRedo: true, canSelectAll: true, canFind: true }, textActions),
+  readText: () => codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: false, canFind: true }, textActions),
   committedDiffText: () =>
-    codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true }, textActions, lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
+    codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true, canFind: true }, textActions, lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
 };
 /** A review comment's menu (`commentMenu`), its author's: every entry it offers, its Copy submenu as every object's. */
 const reviewComment = { id: 1, guid: 'g1', author: 'jane@example.com', date: '', text: 'Nice', kind: 'general', anchor: { kind: 'review' } } as const;
@@ -510,6 +510,7 @@ describe('text', () => {
 
   it("reads, in a committed diff, as the code's menu with the lines' entries at the end of their groups", () => {
     expect(topEntries(TEXT_MENUS.committedDiffText!()).map((entry) => entry.label)).toEqual([
+      'Find',
       'Go to line…',
       'Compare with clipboard',
       'Annotate at these lines',

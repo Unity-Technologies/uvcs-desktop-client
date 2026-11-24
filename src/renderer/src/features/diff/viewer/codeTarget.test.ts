@@ -154,15 +154,21 @@ describe('hasCode', () => {
 
 describe('codeMenuState', () => {
   it("offers the editor's history and every entry where the code is typed into", () => {
-    expect(codeMenuState(typedOn([span(1, 3, 1, 3)]), HISTORY, false)).toEqual({ editable: true, selectedText: false, selectedCode: false, canUndo: true, canRedo: false, canSelectAll: true });
-    expect(codeMenuState(typedOn([span(1, 0, 1, 3)]), HISTORY, false)).toMatchObject({ selectedText: true, selectedCode: true });
+    expect(codeMenuState(typedOn([span(1, 3, 1, 3)]), HISTORY, { linesSelectable: false, findBar: false })).toEqual({ editable: true, selectedText: false, selectedCode: false, canUndo: true, canRedo: false, canSelectAll: true, canFind: true });
+    expect(codeMenuState(typedOn([span(1, 0, 1, 3)]), HISTORY, { linesSelectable: false, findBar: false })).toMatchObject({ selectedText: true, selectedCode: true });
   });
 
   it("reads a side as read-only without the editor: its Copy needs text in the page, its Select all lines to pick", () => {
-    expect(codeMenuState(typedOn([span(1, 0, 1, 3)]), null, false)).toMatchObject({ editable: false, canUndo: false });
+    expect(codeMenuState(typedOn([span(1, 0, 1, 3)]), null, { linesSelectable: false, findBar: false })).toMatchObject({ editable: false, canUndo: false });
     const lines = readOnlyOn({ page: null, lines: { side: 'deletions', first: 1, last: 1 } });
-    expect(codeMenuState(lines, null, true)).toEqual({ editable: false, selectedText: false, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true });
-    expect(codeMenuState(readOnlyOn({ page: { text: 'two', place: null }, lines: null }), null, false)).toMatchObject({ selectedText: true, canSelectAll: false });
+    expect(codeMenuState(lines, null, { linesSelectable: true, findBar: false })).toEqual({ editable: false, selectedText: false, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true, canFind: false });
+    expect(codeMenuState(readOnlyOn({ page: { text: 'two', place: null }, lines: null }), null, { linesSelectable: false, findBar: false })).toMatchObject({ selectedText: true, canSelectAll: false });
+  });
+
+  it("offers Find on a read-only side only where the place has a find bar of its own (a text diff's)", () => {
+    const readOnly = readOnlyOn({ page: null, lines: null });
+    expect(codeMenuState(readOnly, null, { linesSelectable: false, findBar: true }).canFind).toBe(true);
+    expect(codeMenuState(readOnly, null, { linesSelectable: false, findBar: false }).canFind).toBe(false);
   });
 });
 

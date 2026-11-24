@@ -767,7 +767,8 @@ side right-clicked (`codeMenuTarget`):
 - **Read-only** (every other side): only what reads it. Copy copies the text selected in the page, read from its rows
   (`pageTextSelection`, `copiedPageText`); lines picked by their numbers have "Copy lines" instead. Select all selects
   every line of the side, as Shift+click would, where lines are selected for links. Undo, Redo, Cut, Paste and Delete
-  aren't offered, nor Find and Replace: Pierre's search panel is its editor's, and a read-only side has none.
+  aren't offered, nor Replace: there's nothing to replace in. Find opens the search ("Find in the code", below), where a
+  place has one; Annotate and a merge's conflicts have none.
 - Entries that need a selection are off without one, their tooltip saying so (Delete, Compare with clipboard, a
   read-only side's Copy; `codeMenuState`); Paste never waits on the clipboard.
 
@@ -775,17 +776,53 @@ As the official client's menu did, but in the app's grammar and words. Its Delet
 it's off then; its Replace was ⌘H, which hides the app on macOS.
 
 **Keys.** The menu shows the keys the editor takes on each OS, from the registry's "Text" area (`textUndo`...
-`goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Pierre's Ctrl+Alt+F is AltGr+F on European
-layouts: `pierreEditorKeymap` gives the editor the registry's key, and Pierre's own still works. Go to line is ⌃G on
-macOS (⌘G is Find next there) and Ctrl+G elsewhere, from anywhere in the code, Pierre's search box included
-(`editorHasFocusIn`); with Pierre's search panel open, Ctrl+G off macOS is its Find next. Ctrl+H typed in Pierre's
-search box doesn't switch it to Replace on Windows and Linux: the box takes its own keys, and only Pierre's ⌥⌘F
-(Ctrl+Alt+F), or the arrow at the panel's left, does there. That arrow shows and hides the Replace row on every OS.
+`goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Ctrl+Alt+F is AltGr+F on European layouts
+(`pierreEditorKeymap` gives the editor the registry's key beside Pierre's own). Go to line is ⌃G on macOS (⌘G is Find
+next there) and Ctrl+G elsewhere (where F3 is Find next), from anywhere in the code (`editorHasFocusIn`).
 
-**Find and Replace** open Pierre's search panel, which `Editor` has no public way to open (`openPierreSearchPanel`, see
-Pierre workarounds): the menu presses the key that opens it on the editor's content element, its modifier held as Pierre
-reads the platform (`pierreReadsMac`), so Replace opens from the menu on a Mac previewing another OS
-(`UVCS_RENDERER_PLATFORM`) too.
+**Find in the code.** ⌘F (Ctrl+F) in a text diff, or in a merge's hand-editing, finds text in one of its sides; ⌥⌘F
+(Ctrl+H) finds and replaces in the text typed into. Every side has the same search, the app's own (`useCodeFind`,
+`CodeFindBar`, every decision in `codeFind`). A click in the code and ⌘F search the side clicked, from the line clicked
+(`findOpening`, `firstMatchFrom`); a diff of one side searches it. ⌘F there never reaches the view's filter of files.
+Find and Replace in the code's menu open it on the side right-clicked.
+
+- **One search.** Pierre's editor has a search panel of its own, over the text typed into only, opened by its keymap.
+  The code takes the keys that would open it on their way down, before the editor sees them (`searchKeyMode`, which
+  reads them with Pierre's own `resolveEditorCommandFromKeyboardEvent` and the app's keymap: the registry's keys and
+  Pierre's Ctrl+Alt+F), and opens the app's search instead, so every side looks and works alike. Two kinds of key are
+  left alone: AltGr typing a character (`[` is AltGr+F on a Czech or Hungarian layout, which Pierre would read as its
+  Ctrl+Alt+F) is kept from the editor's keymap and typed (`typesCharacter`), and a key in a field of the app's over the
+  code, a review comment written by a line, stays that field's (`typedOutsideCode`).
+- **Where it stands.** 16 pixels in from the top right of the side it searches (`findBarRight`), as each side of a diff
+  had its own search box in the desktop client; a unified diff, one side shown alone, and a merge's hand-editing have it
+  at their top right. In the app's look: the gray of a panel, the app's fields, the options drawn as the letters they
+  stand for (Aa, ab, .*), "No results" until something matches, a round close button on its corner. Tab goes from the
+  text searched for to its replacement, then to the buttons.
+- **Matching.** The text literally, or a regular expression with "Use regular expression", one that doesn't compile yet
+  finding nothing; case ignored unless "Match case" is on; whole words only with "Match whole words" (`findInText`). It
+  keeps at most `MAX_MATCHES` matches ("1 of 10,000+"), those from the line clicked on, going round from the top.
+- **Replacing** (the text typed into only: `canReplace`). The chevron at the bar's left, or ⌥⌘F (Ctrl+H), shows the
+  replace field. Replace, or Enter in that field, replaces the match shown and goes on to the next, past the text put
+  in (`placeAfterReplace`); Replace all replaces every match, past `MAX_MATCHES` too. A regular expression's `$1`, `$&`
+  and `$<name>` put in what the match captured, each match read where it stands in its line (`replaceEdits`); any other
+  replacement is put in as typed. Each goes into the editor as one change (`Editor.applyEdits`), which Undo takes back.
+- **Keys.** Enter and Shift+Enter in its fields step through the matches, going round at either end, as ⌘G and ⇧⌘G
+  (F3 and Shift+F3 off macOS) do from anywhere in the bar or the code (`findAgainKey`). Esc closes the bar, the focus
+  going back to the text typed into, or to the diff. The bar takes every key pressed in it, its buttons' too, so none
+  reaches the window's shortcuts; a button keeps Enter for itself (`findBarKeyAction`). An IME's composing keys stay
+  the IME's.
+- **Marks and scrolling.** Every match on screen is marked in `--bg-match`, the one shown in `--bg-match-current`, with
+  the browser's highlights over Pierre's rows (`useWordMarks`, finding unchanged lines' rows too: `sideLineRowSelector`,
+  which reads a unified diff's unchanged line by its older number, `data-alt-line`, and a whole file's, `data-file`). The
+  match shown is scrolled to when the search moves to another (a step, the text searched for, an option, a
+  replacement), never because typing moved it, and only when it isn't in view (`rowNeedsScroll`), unfolding the
+  collapsed lines that hold it; a long line scrolls sideways to it (`sidewaysScrollBy`). The text typed into is searched
+  again in a render after each keystroke shows, which further typing can skip (`useDeferredValue`), so a big file's
+  search never holds up the text typed.
+
+Pierre's search panel (`SearchPanelWidget`) wasn't reused: it isn't exported, runs on its editor's text document, which
+a read-only side doesn't have, and its look is its own. Copying its styles and icons was tried and dropped: they'd have
+to follow every Pierre release, and they don't match the app.
 
 **Go to line…** asks for a line of the side it's on (`goToLine`: "Line number (1–240)", the caret's or the line
 right-clicked already in the field), takes only a line that side has and says which it has otherwise. The line scrolls a
@@ -1128,10 +1165,10 @@ release that installs.
 - `pierreWordMarks`: a diff typed into marks the changed words once typing pauses, in the rows Pierre keeps (see
   Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
-- `pierreSearchPanel`: the code's menu opens Pierre's search panel, which 1.6.2's `Editor` opens only from its keymap
-  (`openSearchPanel`, `openSearchReplacePanel`, reaching the private `#openSearchPanel(mode)`), by pressing the key
-  that opens it on the editor's content element; `pierreSearchPanel.test.ts` checks through Pierre's own
-  `resolveEditorCommandFromKeyboardEvent` that the key reaches the command on every OS. The keymap it gives the editors
+- `pierreSearchKeys`: Pierre's editor would open its own search panel from its keymap (`openSearchPanel`,
+  `openSearchReplacePanel`), with no option to turn it off; the code takes those keys first and opens the app's search
+  (`searchKeyMode`, see Find in the code). `pierreSearchKeys.test.ts` checks through Pierre's own
+  `resolveEditorCommandFromKeyboardEvent` which keys it reads as a search on every OS. The keymap it gives the editors
   (`pierreEditorKeymap`) puts Replace on the registry's key (see The code's menu).
 - `editorClipboard`: the code's menu runs Pierre's own `copy`, `cut` and `paste` listeners (`runEditorClipboard`).
   It relies on `Editor.focus()` (`#focus`) putting the window's selection inside the content element at once

@@ -31,6 +31,8 @@ import { useLineTools } from './useLineTools';
 import { useLineActionButton } from './LineActionButton';
 import { releasingSelection } from './lineMenu';
 import { useCodeMenu } from './useCodeMenu';
+import { CodeFindBar } from './CodeFindBar';
+import { useCodeFind } from './useCodeFind';
 import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
@@ -250,16 +252,27 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   });
   // What the place does with a line (a review's comment on it), a button by the line under the pointer.
   const lineAction = useLineActionButton(placeLineAction, lineLinks.options, container, layout, selectedForAction);
+  const codeSides = textDiffSides({ wholeFile, sides, editable, editorAttached: edit });
+  // ⌘F and Find in the menu, on either side; ⌥⌘F (Ctrl+H) and Replace in the text typed into.
+  const codeFind = useCodeFind({
+    containerRef: container,
+    textOf: (side) => (side === 'deletions' ? original : current),
+    onlySide: codeSides.onlySide,
+    typedInto: codeSides.typedInto,
+    editor,
+    scrollTo: scrollToShownLine,
+  });
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,
     scrollTo: scrollToShownLine,
     fileName,
     textOf: (side) => (side === 'deletions' ? original : current),
-    sides: textDiffSides({ wholeFile, sides, editable, editorAttached: edit }),
+    sides: codeSides,
     editor,
     lines: menuLinesOf(lineLinks),
     lineMenu: lineMenuOf(lineTools.menu),
+    findOn: codeFind.openFind,
   });
   const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, fileName, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
@@ -299,6 +312,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const expandedFocus = useExpandedDiffFocus();
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
+    codeFind.onKeyDownCapture(event);
+    if (event.isPropagationStopped()) return;
     const typesText = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
     if (typesText && typeWhileAttaching(event.key)) return event.preventDefault();
     if (!isTyping() || !matchesShortcut(event.nativeEvent, hotkey('leaveEditor'))) return;
@@ -338,6 +353,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           onPointerDown={discard.onPointerDown}
           onPointerDownCapture={(event) => {
             pointerFocus.onPointerDownCapture(event);
+            codeFind.onPointerDownCapture(event);
             if (!editable || edit || wholeFile) return;
             const place = modifiedTextPositionAt(container.current, { x: event.clientX, y: event.clientY });
             if (place) focusAt(place);
@@ -387,6 +403,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           {lineAction.overlay}
         </div>
       </ActionContextMenu>
+      {codeFind.bar && <CodeFindBar bar={codeFind.bar} />}
     </div>
   );
 }

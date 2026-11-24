@@ -63,7 +63,7 @@ export interface OpenedCode {
   readOnly: ReadOnlySelection;
 }
 
-/** The selection holding text the editor treats as its own (its last, as Pierre's search panel does); none for carets alone. */
+/** The selection holding text the editor treats as its own (its last, as Pierre's editor reads it); none for carets alone. */
 export function primarySelection(selections: readonly TextSpan[]): TextSpan | null {
   return selections.findLast((span) => !isEmptySpan(span)) ?? null;
 }
@@ -84,11 +84,18 @@ export interface EditorHistory {
   canRedo: boolean;
 }
 
+/** What the place offers its read-only sides: lines picked by their numbers, a find bar of its own (a text diff's). */
+export interface ReadOnlyTools {
+  linesSelectable: boolean;
+  findBar: boolean;
+}
+
 /**
  * What the menu shows for the code it opened on (`codeMenu`): typed into, the editor's history and every entry; a
- * read-only side's Copy needs text selected in the page, and its Select all lines that can be picked by their numbers.
+ * read-only side's Copy needs text selected in the page, its Select all lines that can be picked by their numbers, and
+ * its Find a find bar of the place's.
  */
-export function codeMenuState(opened: OpenedCode, history: EditorHistory | null, linesSelectable: boolean): CodeMenuState {
+export function codeMenuState(opened: OpenedCode, history: EditorHistory | null, { linesSelectable, findBar }: ReadOnlyTools): CodeMenuState {
   const typed = opened.target.typedInto && history !== null;
   return {
     editable: typed,
@@ -97,6 +104,7 @@ export function codeMenuState(opened: OpenedCode, history: EditorHistory | null,
     canUndo: typed && history.canUndo,
     canRedo: typed && history.canRedo,
     canSelectAll: typed || linesSelectable,
+    canFind: typed || findBar,
   };
 }
 
