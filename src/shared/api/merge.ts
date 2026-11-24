@@ -1,5 +1,4 @@
 import type { BranchAtChangeset, IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
-import type { PendingChange } from '../domain/pendingChanges';
 import type { DecidedMerge, DirectoryDecision, MergeConflictCounts, MergeOperation, MergePlan, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
@@ -45,11 +44,6 @@ export interface MergeApi {
    * collides locally; in a partial workspace, its items the head changes (`PartialIncomingChanges`).
    */
   incomingChanges(workspacePath: string): Promise<IncomingChanges>;
-  /**
-   * The local changes an update can collide with: what is checked out or changed (a local `cm status`, which asks the
-   * server nothing). The renderer checks the incoming changes read for one head against them as they move.
-   */
-  localChangesForUpdate(workspacePath: string): Promise<PendingChange[]>;
   /** One page of the incoming changesets: the incoming card's newest few, or Incoming's older ones. */
   incomingChangesets(workspacePath: string, request: IncomingChangesetsRequest): Promise<IncomingChangesetPage>;
   /** Updates the workspace, merging locally changed files that also changed on the branch. */

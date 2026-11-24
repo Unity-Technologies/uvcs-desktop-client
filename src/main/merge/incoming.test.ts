@@ -12,7 +12,6 @@ import {
   readIncomingChanges,
   readIncomingChangesetPage,
   readIncomingSummary,
-  readLocalChangesForUpdate,
   summarizeIncoming,
 } from './incoming';
 
@@ -190,24 +189,6 @@ describe('readIncomingChanges', () => {
 
     expect(changes).toMatchObject({ branch: '/main', headChangeset: 43, conflicts: [{ path: 'src/a.txt' }] });
     expect(lines().map((line) => line.split(' ').slice(0, 2).join(' '))).toEqual(['find changeset', 'diff cs:41', 'status --controlledchanged']);
-  });
-});
-
-describe('readLocalChangesForUpdate', () => {
-  it('is what is checked out or changed, read with one local status that asks the server nothing', async () => {
-    const { cm, lines, commands } = fakeCmClient({
-      'status --controlledchanged --changed': pendingStatus('/work', change('CH', 'src/a.txt'), change('CO', 'src/b.txt')),
-    });
-
-    const local = await readLocalChangesForUpdate(cm, '/work');
-
-    expect(local.map((change) => [change.path, change.kinds])).toEqual([
-      ['src/a.txt', ['changed']],
-      ['src/b.txt', ['checkedOut']],
-    ]);
-    expect(lines()).toHaveLength(1);
-    expect(lines()[0]).toContain('--compact');
-    expect(commands[0]?.readsRecords).toBe(true);
   });
 });
 

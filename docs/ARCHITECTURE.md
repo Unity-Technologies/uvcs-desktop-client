@@ -209,9 +209,10 @@ and many people use the same server. Every `cm` command other than local reads (
   (`incomingChangesFor`, `incomingChangesQuery`): never stale, so focus and mounting never read it again, a new head is
   a new key (new changesets leave it alone, `isAffectedByNewChangesets`), and only an operation or Refresh reads it again
   under the same head. It waits for the check rather than run before it. Where the workspace stands comes from the
-  `cm status --header` the workspace info shares (`WorkspaceHeaders.status`). What collides locally follows the local
-  changes as Changes' do: a local `cm status` alone (`localChangesForUpdate`, keyed under `pendingChanges`), the
-  conflicts worked out again in the renderer from the diff already read (`withLocalCollisions`, `findUpdateConflicts`). At "100+" a hover reads nothing heavy:
+  `cm status --header` the workspace info shares (`WorkspaceHeaders.status`). What collides locally follows Changes' pending changes as they are read, never reading them itself
+  (`useReadPendingChanges`): out of them, what `cm status --controlledchanged --changed` would print
+  (`localChangesForUpdateOf`), the conflicts worked out again from the diff already read (`withLocalCollisions`,
+  `findUpdateConflicts`), the same object while they come out the same. At "100+" a hover reads nothing heavy:
   the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
   says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
   card (that click), opening Incoming or Update reads the diff, Update again right before updating
@@ -526,7 +527,8 @@ by name, and never passes it to `cm`.
     `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
     asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
-    (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
+    (`WorkspaceHeaders`). Reads that need only what is loaded take
+    `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
     read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace
     (`readWorkspaceGlance`) reads only its branch and pending changes: its row already shows the repository.

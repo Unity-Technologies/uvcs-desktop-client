@@ -1,12 +1,12 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { focusManager, QueryObserver, type QueryClient } from '@tanstack/react-query';
+import { showOnce } from '../../testing/queryProbes';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '../../app/queryClient';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncoming, BranchIncomingChanges, IncomingChanges, IncomingSummary, NothingIncoming, PartialIncomingChanges } from '@shared/domain/incoming';
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import {
-  checksLocalCollisions,
   incomingChangesFor,
   incomingChangesKey,
   incomingChangesQuery,
@@ -25,6 +25,11 @@ function file(path: string, status: DiffEntry['status'], extra: Partial<DiffEntr
 
 function local(path: string, kinds: PendingChange['kinds']): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '' };
+}
+
+/** Changes' pending changes, as their query holds them. */
+function pending(...changes: PendingChange[]): PendingChangesSnapshot {
+  return { changes, changelists: [], mergeLinks: [] };
 }
 
 const read: BranchIncomingChanges = {
@@ -86,26 +91,36 @@ describe('reading once per head', () => {
 });
 
 describe('what collides with the local changes', () => {
-  it('is checked only when something comes in that changes files', () => {
-    expect(checksLocalCollisions(read)).toBe(true);
-    expect(checksLocalCollisions({ ...read, files: [] })).toBe(false);
-    expect(checksLocalCollisions(undefined)).toBe(false);
-    expect(checksLocalCollisions({ branch: '/main', partial: true, headChangeset: 7, items: [] })).toBe(false);
-  });
-
-  it('follows the local changes read after the incoming ones: a file changed since collides, one undone no longer does', () => {
-    const changes = withLocalCollisions({ data: read, readAt: 100 }, { data: [local('src/b.txt', ['changed']), local('src/gone.txt', ['checkedOut'])], readAt: 200 });
+  it("follows Changes' pending changes read after the incoming ones: a file changed since collides, one undone no longer does", () => {
+    const changes = withLocalCollisions({ data: read, readAt: 100 }, { data: pending(local('src/b.txt', ['changed']), local('src/gone.txt', ['checkedOut'])), readAt: 200 });
 
     expect(changes).toMatchObject({ conflicts: [{ path: 'src/b.txt', baseRevisionId: 10, incomingRevisionId: 20 }], blockedPaths: ['src/gone.txt'] });
   });
 
-  it('keeps what the incoming changes found when the local changes were read before them', () => {
-    expect(withLocalCollisions({ data: read, readAt: 200 }, { data: [], readAt: 100 })).toBe(read);
+  it('leaves out what the update never collides with: a file private, or deleted on disk only', () => {
+    const changes = withLocalCollisions({ data: read, readAt: 100 }, { data: pending(local('src/gone.txt', ['locallyDeleted']), local('src/b.txt', ['private'])), readAt: 200 });
+
+    expect(changes).toMatchObject({ conflicts: [], blockedPaths: [] });
   });
 
-  it('keeps what the incoming changes found until the local changes are read', () => {
+  it('is the same object while the conflicts and blocked files come out the same, so what shows them keeps its place', () => {
+    const changes = withLocalCollisions({ data: read, readAt: 100 }, { data: pending(local('src/a.txt', ['checkedOut', 'changed']), local('notes.txt', ['changed'])), readAt: 200 });
+
+    expect(changes).toBe(read);
+  });
+
+  it('keeps what the incoming changes found when the pending changes were read before them', () => {
+    expect(withLocalCollisions({ data: read, readAt: 200 }, { data: pending(), readAt: 100 })).toBe(read);
+  });
+
+  it('keeps what the incoming changes found until the pending changes are read', () => {
     expect(withLocalCollisions({ data: read, readAt: 100 }, undefined)).toBe(read);
-    expect(withLocalCollisions(undefined, { data: [], readAt: 100 })).toBeUndefined();
+    expect(withLocalCollisions(undefined, { data: pending(), readAt: 100 })).toBeUndefined();
+  });
+
+  it('works nothing out when nothing comes in that changes files', () => {
+    const nothing = { ...read, files: [] };
+    expect(withLocalCollisions({ data: nothing, readAt: 100 }, { data: pending(local('src/a.txt', ['changed'])), readAt: 200 })).toBe(nothing);
   });
 
   it("leaves a partial workspace's items as compared: each says itself whether it conflicts", () => {
@@ -115,7 +130,7 @@ describe('what collides with the local changes', () => {
       headChangeset: 7,
       items: [{ kind: 'changed', path: 'a.txt', isDirectory: false, conflict: true, loadedRevisionId: 1, headRevisionId: 2 }],
     };
-    expect(withLocalCollisions({ data: partial, readAt: 100 }, { data: [], readAt: 200 })).toBe(partial);
+    expect(withLocalCollisions({ data: partial, readAt: 100 }, { data: pending(), readAt: 200 })).toBe(partial);
   });
 });
 
@@ -125,6 +140,7 @@ describe('the incoming changes on screen at a head', () => {
     client = createQueryClient();
     client.mount();
     vi.useFakeTimers({ toFake: ['Date'] });
+    fakeApi.answer('merge.incomingChanges', () => read);
   });
   afterEach(() => {
     client.unmount();
@@ -133,46 +149,39 @@ describe('the incoming changes on screen at a head', () => {
     vi.useRealTimers();
   });
 
-  /** Lets the client handle what just happened (a focus, a key changing) and run the reads it starts. */
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const query = (summary: BranchIncoming) => incomingChangesQuery('/w', incomingChangesFor(summary, false));
+  /** The read the query has under way, or the last one done: awaited, whatever a focus or a refresh started. */
+  const readOf = (summary: BranchIncoming) => client.getQueryCache().find({ queryKey: query(summary).queryKey, exact: true })?.promise;
 
-  function show(summary: BranchIncoming): QueryObserver<IncomingChanges> {
-    const observer = new QueryObserver(client, incomingChangesQuery('/w', incomingChangesFor(summary, false)!));
-    observer.subscribe(() => {});
-    return observer;
-  }
-
-  it('are never read again on a window focus, however long the head stays', async () => {
-    fakeApi.answer('merge.incomingChanges', () => read);
-    show(checked);
-    await settle();
+  it('are never read again on a window focus or as a view shows them, however long the head stays', async () => {
+    const view = new QueryObserver(client, query(checked));
+    view.subscribe(() => {});
+    await readOf(checked);
 
     vi.advanceTimersByTime(60 * 60_000);
     focusManager.setFocused(false);
     focusManager.setFocused(true);
-    await settle();
+    await readOf(checked);
+    await showOnce(client, query(checked));
 
     expect(fakeApi.argsOf('merge.incomingChanges')).toHaveLength(1);
   });
 
   it('are read once more for a new head, as a new key', async () => {
-    fakeApi.answer('merge.incomingChanges', () => read);
-    const observer = show(checked);
-    await settle();
+    await showOnce(client, query(checked));
 
-    observer.setOptions(incomingChangesQuery('/w', incomingChangesFor({ ...checked, headChangeset: 44 }, false)!));
-    await settle();
+    await showOnce(client, query({ ...checked, headChangeset: 44 }));
 
     expect(fakeApi.argsOf('merge.incomingChanges')).toHaveLength(2);
   });
 
   it('are read again when an operation refreshes them under the same head', async () => {
-    fakeApi.answer('merge.incomingChanges', () => read);
-    show(checked);
-    await settle();
+    const view = new QueryObserver(client, query(checked));
+    view.subscribe(() => {});
+    await readOf(checked);
 
     // What `refreshQueries` does with the refreshes an operation declares (`isAffectedByCheckinOrUpdate`).
-    await client.invalidateQueries({ queryKey: incomingChangesKey('/w', incomingChangesFor(checked, false)!) });
+    await client.invalidateQueries({ queryKey: query(checked).queryKey });
 
     expect(fakeApi.argsOf('merge.incomingChanges')).toHaveLength(2);
   });

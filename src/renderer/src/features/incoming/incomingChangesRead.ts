@@ -1,6 +1,6 @@
-import type { IncomingChanges, IncomingSummary, PartialBranch } from '@shared/domain/incoming';
-import type { PendingChange } from '@shared/domain/pendingChanges';
-import { findUpdateBlockers, findUpdateConflicts } from '@shared/updateCollisions';
+import type { IncomingChanges, IncomingSummary, PartialBranch, UpdateConflict } from '@shared/domain/incoming';
+import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import { findUpdateBlockers, findUpdateConflicts, localChangesForUpdateOf } from '@shared/updateCollisions';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { keyedByWorkspaceInfo } from '../../app/queryClient';
@@ -19,7 +19,8 @@ export interface BranchAtHead {
  */
 export type IncomingChangesFor = BranchAtHead | PartialBranch | 'offBranch' | 'unchecked';
 
-export function incomingChangesKey(workspacePath: string, readFor: IncomingChangesFor): readonly unknown[] {
+/** Undefined while the check hasn't answered: a key of its own, read by nothing, so no earlier read shows meanwhile. */
+export function incomingChangesKey(workspacePath: string, readFor: IncomingChangesFor | undefined): readonly unknown[] {
   return queryKeys.inWorkspace(workspacePath, 'incoming', 'changes', readFor);
 }
 
@@ -59,25 +60,18 @@ export function readsOncePerHead(readFor: IncomingChangesFor | undefined): boole
  * loaded changeset too: an update or a checkin gives it a new key, read as it shows rather than once more under the old
  * one. The other reads keep the default refreshes.
  */
-export function incomingChangesQuery(workspacePath: string, readFor: IncomingChangesFor) {
+export function incomingChangesQuery(workspacePath: string, readFor: IncomingChangesFor | undefined) {
+  const at = readsOncePerHead(readFor);
   return {
     queryKey: incomingChangesKey(workspacePath, readFor),
     queryFn: () => api.merge.incomingChanges(workspacePath),
     // Left out otherwise: an undefined staleTime would replace the default rather than keep it.
-    ...(readsOncePerHead(readFor) && { staleTime: Infinity, meta: keyedByWorkspaceInfo('loadedChangeset') }),
-  };
-}
-
-/** The local changes an update collides with, kept fresh as Changes' are (`isAffectedByFileChanges`, a local read). */
-export function localChangesForUpdateQuery(workspacePath: string) {
-  return {
-    queryKey: queryKeys.inWorkspace(workspacePath, 'pendingChanges', 'forUpdate'),
-    queryFn: () => api.merge.localChangesForUpdate(workspacePath),
+    ...(at && { staleTime: Infinity, meta: keyedByWorkspaceInfo('loadedChangeset') }),
   };
 }
 
 /** Whether what collides locally is worth checking: something comes in, at a changeset, that changes files. */
-export function checksLocalCollisions(changes: IncomingChanges | undefined): boolean {
+function checksLocalCollisions(changes: IncomingChanges | undefined): boolean {
   return Boolean(changes?.branch && !('partial' in changes) && changes.files.length > 0);
 }
 
@@ -88,12 +82,37 @@ interface Read<T> {
 }
 
 /**
- * The incoming changes with what they collide with worked out again from the local changes, when those were read after
- * them: the incoming changes are read once per head, the local changes each time Changes' are. A partial workspace's
- * items say themselves what collides, compared with the head as they were read.
+ * The incoming changes with what they collide with worked out again from Changes' pending changes, when those were
+ * read after them: the incoming changes are read once per head, Changes' as the workspace changes. The same object
+ * while nothing collides otherwise, so what shows the conflicts doesn't start over. A partial workspace's items say
+ * themselves what collides, compared with the head as they were read.
  */
-export function withLocalCollisions(incoming: Read<IncomingChanges> | undefined, local: Read<PendingChange[]> | undefined): IncomingChanges | undefined {
+export function withLocalCollisions(incoming: Read<IncomingChanges> | undefined, local: Read<PendingChangesSnapshot> | undefined): IncomingChanges | undefined {
   const changes = incoming?.data;
   if (!changes || !local || local.readAt < incoming.readAt || !checksLocalCollisions(changes) || 'partial' in changes) return changes;
-  return { ...changes, conflicts: findUpdateConflicts(changes.files, local.data), blockedPaths: findUpdateBlockers(changes.files, local.data) };
+  const localChanges = localChangesForUpdateOf(local.data);
+  const conflicts = findUpdateConflicts(changes.files, localChanges);
+  const blockedPaths = findUpdateBlockers(changes.files, localChanges);
+  if (sameConflicts(conflicts, changes.conflicts) && sameItems(blockedPaths, changes.blockedPaths)) return changes;
+  return { ...changes, conflicts, blockedPaths };
+}
+
+function sameConflicts(a: UpdateConflict[], b: UpdateConflict[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((conflict, index) => {
+      const other = b[index]!;
+      return (
+        conflict.path === other.path &&
+        conflict.isBinary === other.isBinary &&
+        conflict.baseRevisionId === other.baseRevisionId &&
+        conflict.incomingRevisionId === other.incomingRevisionId &&
+        conflict.repository === other.repository
+      );
+    })
+  );
+}
+
+function sameItems(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((item, index) => item === b[index]);
 }
