@@ -26,7 +26,9 @@ export type OfficialUpdateFailure =
    * macOS: Installer.app closed and the installed version is still too old. It ends the same whether it was cancelled
    * or finished, so the user most likely closed it before its last step.
    */
-  | 'notFinished';
+  | 'notFinished'
+  /** An operation ran in the app's `cm` (an update, a checkin…): the installer wasn't started, so nothing waits behind it. */
+  | 'operationRunning';
 
 export type OfficialUpdate =
   /** Asking the download site for the latest version of the installed edition. */

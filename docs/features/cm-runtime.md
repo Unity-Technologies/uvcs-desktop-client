@@ -236,9 +236,10 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
    installers. Any other answer deletes the download (`notSigned`).
 6. **Run** (`installerCommands.ts`) with `CmClient` held (`CmClient.hold`): from the click on, no command starts a
    process or a shell until the installer ended and the version was read again. The commands already running end
-   first, in a shell or a process of their own (an operation too: the installer starts once it's done), along with
-   those queued for a shell; then the shells end, as they hold `cm`'s files and the Windows installer stops while
-   `cm` runs, and the installer starts once their processes exited (one that hasn't within `SHELL_EXIT_TIMEOUT_MS` is
+   first, along with those queued for a shell (each has a timeout). An operation running in a process of its own
+   (`execute`: an update, a checkin) may run for minutes or be stuck, so none is waited for: the update fails at once
+   (`operationRunning`: "Finish or cancel what's running in Unity Version Control, then try again."). Then the shells
+   end, as they hold `cm`'s files and the Windows installer stops while `cm` runs, and the installer starts once their processes exited (one that hasn't within `SHELL_EXIT_TIMEOUT_MS` is
    killed). A command asked meanwhile (from Settings, a view refreshing) waits, then runs on the `cm` the installer
    left, and the shells of the workspaces the windows show start again (`CmShellPool.warmUpShown`); one its caller
    cancels while it waits never runs. Then: Windows starts the installer elevated, so Windows asks for

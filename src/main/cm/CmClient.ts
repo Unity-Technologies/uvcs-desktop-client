@@ -58,6 +58,8 @@ export interface CmRunOptions {
 interface Placed {
   cwd: string;
   givenCwd: string | undefined;
+  /** Asked with `execute` or `executeRecords`: an operation, long or cancellable, that a hold won't wait for (`hold`). */
+  operation?: boolean;
 }
 
 /** How a command whose list is streamed runs: as any other, but with no output lines to report. */
@@ -123,6 +125,8 @@ export class CmClient {
   private held: { holds: number; resumed: Promise<void>; resume: () => void; deferred: (() => void)[] } | null = null;
   /** The commands running, in a shell or a process, until each ends: what a hold lets end first (`hold`). */
   private readonly running = new Set<Promise<unknown>>();
+  /** The operations among them (`execute`, `executeRecords`), which may run for minutes, or never end: no hold waits for one. */
+  private readonly runningOperations = new Set<Promise<unknown>>();
 
   /**
    * `locate` finds the `cm` executable; it runs again on `relocate()`. `outsideWorkspaces` is an empty folder of the
@@ -207,7 +211,7 @@ export class CmClient {
 
   /** Runs a long or cancellable command in its own process, streaming its output lines; its text as `query`'s. */
   execute(args: string[], options: CmRunOptions = {}): Promise<string> {
-    return this.runText(args, this.placed(options), () => false);
+    return this.runText(args, { ...this.placed(options), operation: true }, () => false);
   }
 
   /**
@@ -223,7 +227,7 @@ export class CmClient {
 
   /** Runs a long or cancellable command that prints `--format` records in its own process, reading them as `queryRecords` does. */
   executeRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
-    return this.runStreamed(args, new RecordReader(readRecord), this.placed(options), () => false);
+    return this.runStreamed(args, new RecordReader(readRecord), { ...this.placed(options), operation: true }, () => false);
   }
 
   /**
@@ -286,8 +290,12 @@ export class CmClient {
    * and the Windows installer stops while `cm` runs. Settles once their processes exited, with the function that resumes commands: what was
    * asked meanwhile runs on the `cm` the update left, and the shells of the directories windows show start again. A
    * command its caller cancels while it waits never runs. Holds add up: commands run once every one is resumed.
+   *
+   * While an operation runs (`execute`), it holds nothing and settles with null at once: an operation may run for
+   * minutes, or be stuck, and the update would freeze behind it. Shell commands are waited for: each has a timeout.
    */
-  async hold(): Promise<() => void> {
+  async hold(): Promise<(() => void) | null> {
+    if (this.runningOperations.size > 0) return null;
     if (!this.held) {
       let resume = (): void => undefined;
       const resumed = new Promise<void>((resolve) => (resume = resolve));
@@ -315,10 +323,14 @@ export class CmClient {
     while (this.running.size > 0) await Promise.allSettled([...this.running]);
   }
 
-  /** Counts a command as running until it ends (`commandsEnded`). */
-  private track(finished: Promise<unknown>): void {
+  /** Counts a command as running until it ends (`commandsEnded`), and an operation among the operations (`hold`). */
+  private track(finished: Promise<unknown>, operation: boolean): void {
     this.running.add(finished);
-    const ended = (): void => void this.running.delete(finished);
+    if (operation) this.runningOperations.add(finished);
+    const ended = (): void => {
+      this.running.delete(finished);
+      this.runningOperations.delete(finished);
+    };
     finished.then(ended, ended);
   }
 
@@ -428,7 +440,7 @@ export class CmClient {
       return this.signInFailure(gate, server ?? learned, startedAt, useShell, entry);
     };
     const finished = useShell ? this.shellPool.run(cwd, args, reading) : this.runProcess(args, cwd, options, reading);
-    this.track(finished);
+    this.track(finished, options.operation === true);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
     const result = await finished.catch(async (error: unknown) => {

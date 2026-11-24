@@ -43,9 +43,9 @@ export interface OfficialClientUpdateOptions {
   /**
    * Holds `CmClient` while the installer runs (`CmClient.hold`): settles once the commands running ended and its shells
    * with them, as the installer replaces the files they hold open and on Windows stops while one runs; no command starts
-   * until the function it settles with resumes it.
+   * until the function it settles with resumes it. Null, holding nothing, while an operation runs in a process of its own.
    */
-  holdCm: () => Promise<() => void>;
+  holdCm: () => Promise<(() => void) | null>;
   /** The installed `cm` and its version, read again once the installer ended (`CmRuntime.installedCm`). */
   installedAgain: () => Promise<InstalledCm | null>;
   /** Where it stands changed (`state`). */
@@ -218,6 +218,7 @@ export class OfficialClientUpdate {
    */
   private async runHoldingCm(installer: DownloadedInstaller, floor: string): Promise<void> {
     const resumeCm = await this.options.holdCm();
+    if (!resumeCm) throw new OfficialUpdateError('operationRunning', 'An operation of Unity Version Control was running: the installer was not started.');
     try {
       const outcome = await this.options.tools.run(installer);
       if (outcome.kind === 'declined') throw new OfficialUpdateError('declined', 'The permission to install was not given.');

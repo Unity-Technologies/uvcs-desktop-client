@@ -31,7 +31,7 @@ interface CmRuntimeWiring {
    * `CmClient.hold`: lets the commands running end, then ends its shells and starts no command while the installed one
    * is updated, as they hold its files open.
    */
-  holdCm: () => Promise<() => void>;
+  holdCm: () => Promise<(() => void) | null>;
 }
 
 /** A path with its links resolved (macOS's /usr/local/bin/cm leads into PlasticSCM.app); as it is when it can't be. */

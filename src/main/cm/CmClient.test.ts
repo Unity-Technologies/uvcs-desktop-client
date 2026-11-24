@@ -843,7 +843,7 @@ describe('CmClient held while Unity Version Control updates', () => {
     await expect(queued).resolves.toBe('done\n');
     const resume = await held;
     expect(pools[0]!.ended).toBe(1);
-    resume();
+    resume!();
   });
 
   it('holds nothing while an operation runs in a process of its own, which may never end: it says so at once', async () => {
