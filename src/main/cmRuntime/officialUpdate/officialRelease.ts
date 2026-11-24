@@ -1,0 +1,71 @@
+import type { OfficialEdition } from './officialEdition';
+
+/** The site the official client asks for its updates, and downloads them from. */
+export const OFFICIAL_SITE = 'https://www.plasticscm.com';
+
+/** The platforms the download site names: the Mac's by its own architecture. */
+export type OfficialPlatform = 'windows' | 'macos' | 'macos-arm64' | 'linux';
+
+/** The latest version of an edition, and where its installer downloads from (it redirects to the file). */
+export interface OfficialRelease {
+  version: string;
+  installerUrl: string;
+}
+
+/**
+ * The platform the download site names for this computer; null for an OS it has no installer for. The Mac's is its
+ * own architecture, not the app's: an app running under Rosetta on Apple silicon still gets the Apple silicon
+ * installer (`runsTranslated`, Electron's `app.runningUnderARM64Translation`), as the official client does. Windows has
+ * one installer for x64 and Arm.
+ */
+export function officialPlatformOf(platform: NodeJS.Platform, arch: string, runsTranslated: boolean): OfficialPlatform | null {
+  if (platform === 'win32') return 'windows';
+  if (platform === 'darwin') return arch === 'arm64' || runsTranslated ? 'macos-arm64' : 'macos';
+  if (platform === 'linux') return 'linux';
+  return null;
+}
+
+/** The question the official client asks: the latest version after the installed one, of its edition and platform. */
+export function lastVersionUrl(site: string, installedVersion: string, edition: OfficialEdition, platform: OfficialPlatform): string {
+  const path = ['api', 'lastversion', 'after', installedVersion, 'for', edition, platform].map(encodeURIComponent).join('/');
+  return `${site.replace(/\/+$/, '')}/${path}`;
+}
+
+function textOf(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
+/**
+ * The latest version from the download site's answer (`lastVersionUrl`); null when there's nothing newer (it answers
+ * `null`) or nothing usable. The installer's address is `installerUri`; an answer without it has the download page,
+ * `…/download/<version>/…`, whose installer is `…/download/downloadinstaller/<version>/…`.
+ */
+export function parseLastVersion(body: string): OfficialRelease | null {
+  let answer: unknown;
+  try {
+    answer = JSON.parse(body);
+  } catch {
+    return null;
+  }
+  if (typeof answer !== 'object' || answer === null) return null;
+  const { version, installerUri, downloadLink } = answer as Record<string, unknown>;
+  const readableVersion = textOf(version);
+  if (!readableVersion || !/^\d+(\.\d+)+$/.test(readableVersion)) return null;
+  const installerUrl = textOf(installerUri) ?? textOf(downloadLink)?.replace('/download/', '/download/downloadinstaller/') ?? null;
+  return installerUrl ? { version: readableVersion, installerUrl } : null;
+}
+
+/**
+ * The installer's file name, the last part of the address its download ended up at (`unity-vcs-11.0.16.10694-win.exe`,
+ * `unity-vcs-on-prem-client-11.0.16.10694-mac-arm.pkg.zip`); null for anything but an installer's plain name, so no
+ * address can name a file outside the folder it downloads into.
+ */
+export function installerFileName(finalUrl: string): string | null {
+  let name: string;
+  try {
+    name = decodeURIComponent(new URL(finalUrl).pathname.split('/').pop() ?? '');
+  } catch {
+    return null;
+  }
+  return /^[\w.-]+\.(exe|pkg\.zip)$/.test(name) && !name.startsWith('.') ? name : null;
+}
