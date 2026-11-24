@@ -261,6 +261,29 @@ describe('OfficialClientUpdate', () => {
       expect(existsSync(folder)).toBe(false);
     });
 
+    it('keeps the installer an app update asks for while the drop waits for the background download to stop', async () => {
+      const site = fakeSite();
+      let installerAsked = (): void => undefined;
+      const asked = new Promise<void>((resolve) => (installerAsked = resolve));
+      let hanging = true;
+      // The first ask for the installer never answers: only the drop ends it. The app update's is answered.
+      const fetch: Fetch = (url, init) => {
+        if (url !== INSTALLER_PAGE || !hanging) return site.fetch(url, init);
+        hanging = false;
+        installerAsked();
+        return new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)));
+      };
+      const { update, folder } = await setup({ site: { fetch, requests: [] } });
+      const background = update.prepare(INSTALLED, FLOOR);
+      await asked;
+
+      const dropped = update.discard();
+      const ahead = update.downloadAhead(INSTALLED, FLOOR, () => undefined);
+      await Promise.all([dropped, ahead, background]);
+      expect(await readdir(folder)).toEqual([FILE]);
+      expect(update.state()).toEqual({ kind: 'downloaded', version: '11.0.16.10694' });
+    });
+
     it('deletes an installer an earlier launch left behind', async () => {
       const { update, folder } = await setup();
       await mkdir(folder, { recursive: true });
