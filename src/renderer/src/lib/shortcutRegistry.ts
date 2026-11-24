@@ -124,7 +124,11 @@ export const SHORTCUTS = {
   textCopy: { area: 'Text', label: 'Copy', keys: ['mod+c'] },
   textPaste: { area: 'Text', label: 'Paste', keys: ['mod+v'] },
   textSelectAll: { area: 'Text', label: 'Select all', keys: ['mod+a'] },
-  textFind: { area: 'Text', label: 'Find in the text being typed', keys: ['mod+f'] },
+  // Find is Pierre's search panel in the text typed into, the app's own find bar on a read-only side (`CodeFindBar`).
+  textFind: { area: 'Text', label: 'Find in the code', keys: ['mod+f'] },
+  textFindNext: { area: 'Text', label: 'Next match, from the search box', keys: ['enter'] },
+  textFindPrevious: { area: 'Text', label: 'Previous match, from the search box', keys: ['shift+enter'] },
+  textCloseFind: { area: 'Text', label: 'Close the search box', keys: ['escape'] },
   textReplace: { area: 'Text', label: 'Find and replace in the text being typed', keys: ['mod+alt+f'], keysOffMac: ['mod+h'] },
   // ⌃G on macOS, as in other editors there: ⌘G is Find next.
   goToLine: { area: 'Text', label: 'Go to line', keys: ['ctrl+g'], keysOffMac: ['mod+g'] },
