@@ -92,8 +92,8 @@ describe('addRulesLabel', () => {
 });
 
 describe('rulesFieldRows', () => {
-  it('fits the suggested rules and a line more, between 3 and 10 rows', () => {
-    expect([1, 3, 9, 500].map(rulesFieldRows)).toEqual([3, 4, 10, 10]);
+  it('fits the suggested rules and a line more, between 6 and 12 rows', () => {
+    expect([1, 5, 8, 11, 500].map(rulesFieldRows)).toEqual([6, 6, 9, 12, 12]);
   });
 });
 

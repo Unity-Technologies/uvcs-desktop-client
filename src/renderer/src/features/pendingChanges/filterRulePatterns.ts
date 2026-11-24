@@ -43,9 +43,12 @@ export function addRulesLabel(count: number): string {
   return count === 1 ? 'Add rule' : `Add ${pluralize(count, 'rule')}`;
 }
 
-/** The rows the rules field opens with: the rules suggested and a line to add one, at least 3 and at most 10, past which it scrolls. */
+/**
+ * The rows the rules field opens with: the rules suggested and a line to add one, at least 6, so there's room to
+ * write more, and at most 12, past which it scrolls.
+ */
 export function rulesFieldRows(suggested: number): number {
-  return Math.min(Math.max(suggested + 1, 3), 10);
+  return Math.min(Math.max(suggested + 1, 6), 12);
 }
 
 /** Whether a folder above `path` is in `selected`: workspace paths use forward slashes on every OS (`PendingChange.path`). */
