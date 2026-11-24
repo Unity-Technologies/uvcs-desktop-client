@@ -11,3 +11,9 @@
   width: 100%;
   text-align: left;
 }
+
+/* Centered under the centered words and buttons of the screens that show it. */
+.folded > button {
+  align-self: center;
+  margin-left: 0;
+}
