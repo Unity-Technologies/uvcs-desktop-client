@@ -423,7 +423,9 @@ and many people use the same server. Every `cm` command other than local reads (
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
-  it, `changesetsService`); merges and labels come either way.
+  it, `changesetsService`); merges and labels come either way. No one `cm find branch` reads both: a `hidden`
+  condition keeps only the hidden ones or leaves them out. So a list wanting both runs two finds, and one branch
+  looked up by name (`branchesService.get`) asks for the hidden ones only when no visible branch has its name.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments (`canRunInShell`).
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
