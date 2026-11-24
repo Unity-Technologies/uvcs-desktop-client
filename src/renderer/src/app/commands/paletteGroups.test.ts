@@ -341,7 +341,8 @@ describe('paletteGroups finding branches and labels by their description', () =>
 
   it('ranks a command named as typed, in several words, before branches whose description holds them', () => {
     const term = 'open link';
-    const openLink = { section: 'commands' as const, heading: 'Commands', results: [commandResult({ id: 'app.openLink', group: 'App', label: 'Open link…', run: () => {} }, term)] };
+    const command = { id: 'app.openLink', group: 'App', label: 'Open link…', run: () => {} };
+    const openLink = { section: 'commands' as const, heading: 'Commands', results: [commandResult(command, term)] };
     const branchGroups = groupsFor({ term, lists: { branches: branches(withComment(1, '/main/scm1005', 'Support open link for a missing workspace')) } });
 
     expect(sections(rankGroups([...branchGroups, openLink])).slice(0, 2)).toEqual(['commands', 'branches']);
