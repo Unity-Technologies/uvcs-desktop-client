@@ -61,8 +61,9 @@ docs/features/issue-trackers.md "Seams the tests replace"); the smoke test doesn
 ## Duplicate server commands
 
 The rule: the same command line, sent twice from the same folder, within one step, fails the run. Local commands are
-left out (`needsServer`, held to the app's `needsSignIn` by its tests), and so is the incoming check (`isIncomingCheck`),
-the one read on a timer: its poll and its check as the window gains focus may run in any step, twice in one. The
+left out (`needsServer`, held to the app's `needsSignIn` by its tests). The incoming check (`isIncomingCheck`) is the
+one read on a timer, whose poll or check as the window gains focus may send it once more in any step: it may be sent
+at most twice (`timesAllowed`), and a third time fails. The
 logic is a module with its own tests (`duplicateReport`, `scripts/build/duplicateServerCommands.mts`); the smoke test
 only writes each step's start into the fake's log, collects it, and reports, naming the step and the command.
 

@@ -85,8 +85,8 @@ const LOCAL_COMMANDS = new Set(['getworkspacefrompath', 'gwp', 'wi', 'workspacei
 
 /**
  * The incoming check's `cm find` (`incomingChangesetsArgs`, or `branchHeadArgs` for a partial workspace): the one read
- * on a timer (a poll every minute, and again as the window gains focus once 20 s old), so it may run in any step, even
- * twice in one. The comparison leaves it out; its tests hold it to the commands the app builds.
+ * on a timer (a poll every minute, and again as the window gains focus once 20 s old), so its timer may send it once
+ * more in any step (`timesAllowed`). Its tests hold it to the commands the app builds.
  */
 export function isIncomingCheck(args: readonly string[]): boolean {
   const [command, object, query = '', format] = args;
@@ -102,18 +102,23 @@ export function isIncomingCheck(args: readonly string[]): boolean {
 const FIELD = '\u001f';
 const RECORD = '\u001e';
 
-/** Each server command sent more than once in the step from the same folder, in the order first sent. */
+/** How often a command may be sent in one step from one folder: once, or twice for the incoming check. */
+export function timesAllowed(args: readonly string[]): number {
+  return isIncomingCheck(args) ? 2 : 1;
+}
+
+/** Each server command sent more often than `timesAllowed` in the step from the same folder, in the order first sent. */
 export function duplicatesIn(step: LoggedStep): DuplicateCommand[] {
-  const times = new Map<string, DuplicateCommand>();
+  const times = new Map<string, DuplicateCommand & { allowed: number }>();
   for (const { args, cwd } of step.commands) {
-    if (!needsServer(args) || isIncomingCheck(args)) continue;
+    if (!needsServer(args)) continue;
     const commandLine = args.join(' ');
     const key = `${cwd}\n${commandLine}`;
-    const seen = times.get(key) ?? { step: step.step, commandLine, cwd, times: 0 };
+    const seen = times.get(key) ?? { step: step.step, commandLine, cwd, times: 0, allowed: timesAllowed(args) };
     seen.times += 1;
     times.set(key, seen);
   }
-  return [...times.values()].filter((command) => command.times > 1);
+  return [...times.values()].filter(({ times, allowed }) => times > allowed).map(({ step, commandLine, cwd, times }) => ({ step, commandLine, cwd, times }));
 }
 
 /** The duplicates of every step that doesn't say what reads again, less those `allowed`, and the entries never used. */
