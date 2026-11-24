@@ -1,3 +1,5 @@
+import { toPhrase } from '@shared/fuzzyScore';
+
 /** The words of a filter's query, lower case, in the order typed: what a row must hold and `Highlight` marks. */
 export function queryWords(query: string): string[] {
   return query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -33,7 +35,7 @@ export function matchesWordFilter(texts: readonly string[], query: string): bool
 export function wordMatchQuality(text: string, query: string): number {
   if (!matchesAllWords(text, query)) return 0;
   const haystack = text.toLowerCase();
-  const needle = query.trim().toLowerCase();
+  const needle = toPhrase(query);
   if (haystack === needle) return 1;
   if (haystack.startsWith(needle)) return 0.9;
   return haystack.includes(needle) ? 0.8 : 0.6;

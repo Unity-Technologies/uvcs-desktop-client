@@ -1,4 +1,4 @@
-import { ranksBefore, scoreFrom, scoreText, toNeedle, WORD_SEPARATORS } from '@shared/fuzzyScore';
+import { ranksBefore, scoreFrom, scoreText, toNeedle, toPhrase, WORD_SEPARATORS } from '@shared/fuzzyScore';
 
 export interface FuzzyIndex {
   /** Indexes of the best matches, best first. An empty query returns the first `limit` texts. */
@@ -95,8 +95,7 @@ export function fuzzyMatchQuality(text: string, query: string): number {
   if (!needle) return 0;
 
   const haystack = text.toLowerCase();
-  const asTyped = query.trim().toLowerCase().replace(/\s+/g, ' ');
-  const whole = Math.max(wholeMatchQuality(haystack, needle), wholeMatchQuality(haystack, asTyped));
+  const whole = Math.max(wholeMatchQuality(haystack, needle), wholeMatchQuality(haystack, toPhrase(query)));
   if (whole > 0) return whole;
 
   const positions = fuzzyMatchPositions(text, query);
