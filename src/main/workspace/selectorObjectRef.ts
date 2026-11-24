@@ -1,3 +1,4 @@
+import type { KnownBranch } from '@shared/domain/branch';
 import { shortBranchName } from '@shared/domain/specs';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from '../cm/CmClient';
@@ -7,13 +8,16 @@ import { layoutReader } from '../cm/formatRecords';
 
 /**
  * The reference the official client puts in automatic shelve comments for a selector: `br:<branch id>`,
- * `cs:<changeset number>` or `lb:<label id>`. Shelves have none: changes can't be left on a shelve.
+ * `cs:<changeset number>` or `lb:<label id>`. Shelves have none: changes can't be left on a shelve. A branch already
+ * read (`known`) names its id without asking the server, when it is the selector's: the name tells, as the workspace
+ * may have moved since it was read.
  */
-export async function selectorObjectRef(cm: CmClient, workspacePath: string, selector: WorkspaceSelector): Promise<string | null> {
+export async function selectorObjectRef(cm: CmClient, workspacePath: string, selector: WorkspaceSelector, known?: KnownBranch): Promise<string | null> {
   switch (selector.kind) {
     case 'changeset':
       return `cs:${selector.name}`;
     case 'branch': {
+      if (known?.name === selector.name) return `br:${known.id}`;
       // `cm find` matches branches by their last name part only.
       const where = `where ${equalsCondition('name', shortBranchName(selector.name))}`;
       const branches = await cm.queryRecords(findQueryArgs(FOUND_BRANCHES, where), layoutReader(FOUND_BRANCHES), { cwd: workspacePath });
