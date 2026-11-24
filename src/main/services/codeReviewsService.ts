@@ -46,8 +46,8 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   }
 
   /**
-   * `cm` reports branch targets only by object id; the names come from the branch lists already read, or from the
-   * names of every branch, read once in a while (`BranchNamesCache`).
+   * `cm` reports branch targets only by object id; the names come from the branch lists already read, else one id
+   * alone is read by itself and two or more from the names of every branch, read once in a while (`BranchNamesCache`).
    */
   async function branchNamesOf(place: Place, branchIds: number[]): Promise<Record<number, string>> {
     if (branchIds.length === 0) return {};

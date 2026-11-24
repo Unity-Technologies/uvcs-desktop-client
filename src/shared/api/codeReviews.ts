@@ -9,8 +9,9 @@ export interface CodeReviewsApi {
    */
   listSummaries(place: Place, filter: CodeReviewFilter): Promise<CodeReviewSummary[]>;
   /**
-   * The names of the branches reviews target, by object id (`branchTargetIdsOf`): from the branch lists already read,
-   * or else from the names of every branch, read once in a while (`BranchNamesCache`). A branch deleted since has none.
+   * The names of the branches reviews target, by object id (`branchTargetIdsOf`): from the branch lists already read;
+   * else one id alone is read by itself (`readBranchName`), and two or more from the names of every branch, read once
+   * in a while (`BranchNamesCache`). A branch deleted since has none.
    */
   branchNames(place: Place, branchIds: number[]): Promise<Record<number, string>>;
   /** One review, its target named. */

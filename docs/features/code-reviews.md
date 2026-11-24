@@ -128,8 +128,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   The sidebar counts the same reviews on **Merge requests** (`useWaitingForMeBadge`, `waitingBadge`), from the list the
   view reads (`useCodeReviewsListFilter`: one `cm find review` in the time range, `reviewListSummariesQuery`), so the
   count shows as the window opens. The count needs no branch name and reads none: only the view names the branches,
-  from that same read (`namedReviewListQuery`, `CodeReviewsApi.branchNames`), which may read every branch's name. It reads that list once the first screen is in (the pending changes read, or failed; at once on a
-  repository, which reads none: `badgeReadsReviews`), so it never competes with the window's first reads, and rarely
+  from that same read (`namedReviewListQuery`, `CodeReviewsApi.branchNames`), which may read every branch's name. It
+  reads that list once the first screen is in (the pending changes read, or failed; at once on a repository, which
+  reads none: `badgeReadsReviews`), so it never competes with the window's first reads, and rarely
   (`SLOW_CHANGING_QUERY`): a focus reads it again only while the view shows it; a write on a review and the Refresh
   button do. Opening the view within its own staleness (thirty seconds) names that list without reading it again; a
   refresh with both on screen reads it once, the view's read joining the count's. The

@@ -182,10 +182,12 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
 - **The merged changeset** is in no `cm find` field: only the move to Merged names it, so the page takes it from the
   conversation it reads anyway (`mergedChangesetOf`: the newest move to Merged, unless a later move took it out).
 - **The cost**: opening a merge request's page runs what a review's runs (its reviewers, its email subscription, its
-  branch's changesets, its conversation). Notes that name branches need their names: from what the window already
-  read, at no command (the list named its rows' branches); cold (a link opened first thing, a repository's window)
-  the cache reads every branch's name once, two light `cm find branch`, and keeps them ten minutes
-  (`BranchNamesCache`). Should that read fail, the conversation still shows, its branches unnamed. A merged one's page also reads its branch (`branchQuery`, two light `cm find
+  branch's changesets, its conversation), and the review itself, whose branch is named by its id. Branch names come
+  from what the window already read, at no command (the list named its rows' branches); cold (a link opened first
+  thing, a repository's window) one branch alone, the review's own or a note's, is read by its id (`readBranchName`:
+  `cm find branch where id = N`, then among the hidden ones only when that finds none), and two or more read every
+  branch's name once, two light `cm find branch`, kept ten minutes (`BranchNamesCache`). Should that read fail, the
+  conversation still shows, its branches unnamed. A merged one's page also reads its branch (`branchQuery`, two light `cm find
   branch` by name, visible and hidden), to offer Hide or Unhide: no read the page makes says whether a branch is
   hidden. Nothing polls.
 
