@@ -22,8 +22,14 @@ function powerShellPath(env: NodeJS.ProcessEnv): string {
   return win32.join(env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 }
 
+/**
+ * PowerShell running `script`, passed with `-EncodedCommand` (base64 of its UTF-16LE text, as PowerShell reads it): the
+ * script's double quotes and line breaks never go through Windows' command-line quoting, which `-Command` would need
+ * them escaped for.
+ */
 function powerShell(script: string, installer: string, env: NodeJS.ProcessEnv): ToolCommand {
-  return { command: powerShellPath(env), args: ['-NoProfile', '-NonInteractive', '-Command', script], env: { [INSTALLER_PATH_VARIABLE]: installer } };
+  const encoded = Buffer.from(script, 'utf16le').toString('base64');
+  return { command: powerShellPath(env), args: ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], env: { [INSTALLER_PATH_VARIABLE]: installer } };
 }
 
 /** Prints the installer's Authenticode signature as `authenticodeVerdict` reads it: its status, and its signer's subject. */

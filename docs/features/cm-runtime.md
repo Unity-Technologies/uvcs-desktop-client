@@ -220,7 +220,8 @@ Settings' Update link or an app update that needs a newer one ("Updates bring th
    one an app update downloaded for Restart & Install stays. The Windows uninstaller removes it with the store, but not
    on an update (`installer.nsh`). macOS's zip is unpacked with the system's `tar` (`unpackBundle`) to its one `.pkg`.
 5. **Signature**, checked on the click, right before it runs (no checksum is published; `installerSignature.ts`):
-   Windows, `Get-AuthenticodeSignature` through System32's PowerShell (`authenticodeCheck`) must say `Valid` and name
+   Windows, `Get-AuthenticodeSignature` through System32's PowerShell (`authenticodeCheck`; its scripts go with
+   `-EncodedCommand`, so no quote or line break meets Windows' command-line quoting) must say `Valid` and name
    `WINDOWS_INSTALLER_SIGNERS` (CN and O `Unity Technologies SF`); macOS, `pkgutil --check-signature`
    (`pkgutilCheck`) must say it's signed for distribution by a certificate Apple issued, notarized, and by a Developer
    ID Installer of `MAC_INSTALLER_TEAMS` (`Codice Software (BQ7R3Y4J72)`). Those are the signers of 11.0.16.10694's
