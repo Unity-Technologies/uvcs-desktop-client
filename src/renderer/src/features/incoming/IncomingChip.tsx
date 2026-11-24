@@ -27,7 +27,8 @@ import {
 import { PartialIncomingCard } from './PartialIncomingCard';
 import { canUpdatePartial } from './partialIncomingItems';
 import { updatePartialToIncoming, updateToIncoming } from './updateOperations';
-import { incomingChangesKey, useIncomingChanges } from './useIncomingChanges';
+import { incomingChangesKey, incomingChangesReadFor } from './incomingChangesRead';
+import { useIncomingChanges } from './useIncomingChanges';
 import { useNewestIncomingChangesets } from './useIncomingChangesets';
 import { useKnownIncomingSummary } from './useKnownIncomingSummary';
 import { useIncomingSummary } from './useIncomingSummary';
@@ -70,7 +71,7 @@ export function IncomingChip() {
     setVerifying(true);
     try {
       const fresh = await api.merge.incomingChanges(workspacePath);
-      queryClient.setQueryData(incomingChangesKey(workspacePath), fresh);
+      queryClient.setQueryData(incomingChangesKey(workspacePath, incomingChangesReadFor(fresh)), fresh);
       if (!fresh.branch || 'partial' in fresh) return;
       if (fresh.conflicts.length + fresh.blockedPaths.length > 0) navigation.goToView('incoming');
       else void updateToIncoming(workspacePath, fresh);
