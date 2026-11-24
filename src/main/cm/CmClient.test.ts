@@ -872,6 +872,21 @@ describe('CmClient held while Unity Version Control updates', () => {
     (await held)!();
   });
 
+  it('fails a held command whose time ran out as a running one does: an error of its own, logged', async () => {
+    const { cm, logged } = fakeClient();
+    const resume = (await cm.hold())!;
+    const timer = new AbortController();
+    const query = cm.query(['status', '--header'], { cwd: WORKSPACE, signal: timer.signal });
+
+    timer.abort(new DOMException('No answer in time', 'TimeoutError'));
+    const error = await query.then(() => undefined, (caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(DOMException);
+    expect((error as Error).message).toBe('The cm command took too long and was stopped.');
+    expect(logged).toMatchObject([{ commandLine: 'cm status --header', exitCode: -1 }]);
+    resume();
+  });
+
   it('stays held until every hold is resumed, each resume counting once', async () => {
     const { cm, shellCommands } = fakeClient();
     const first = (await cm.hold())!;
