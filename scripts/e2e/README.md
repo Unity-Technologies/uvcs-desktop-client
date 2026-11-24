@@ -8,13 +8,18 @@ e2e:development` and `npm run e2e:production` run one each, as CI's smoke jobs d
 is what catches a bug only `npm run dev` shows: StrictMode mounts every component, unmounts it and mounts it again,
 so an effect whose cleanup leaves something its second run can't use (a WebGL canvas whose context was lost) fails
 there, while the production build, which ships, runs each effect once. Each run builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
-`--user-data-dir`, switches the home screen between two Unity accounts (each lists only its organizations), opens a workspace, answers the question about profile pictures, clicks a changeset's comment's chips (a changeset, and a change request no review read yet, which must open at its thread, in view), visits every sidebar view, the larger comment editor opened over a merge request's conversation (the panel, not its backdrop, under a press at its middle), a diff, a file's last change read from the disk (the fake's revision is another file's), against its parent revision too, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette (a prefix narrowing it to people, and a link pasted in it), the repository explored without a workspace
-(from the home screen: its views, a file found by name and a changeset's diff) and Settings, and switches
-to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
-`Loading` (what shows only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton
-until it shows again), any `cm` command the fake couldn't answer, and an answer to the profile pictures question that wasn't
-saved. Beyond that answer and the larger editor being on top, it asserts only that things appear, never pixels or copy.
-About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
+`--user-data-dir`, opens a Unity organization's page and a workspace, answers the question about profile pictures,
+visits every sidebar view, a merge request's conversation with the larger comment editor opened over it (the panel,
+not its backdrop, under a press at its middle) and the merge page its server's rules refuse, the Branch Explorer's
+timeline, a diff, a model diff (a 3D model's, in its worker), a diff in a new window, a branch's permissions, the
+command palette and a link pasted in it, a session that ends and comes back, the repository explored without a
+workspace (from the home screen: its views and a changeset's diff) and Settings, and switches to the dark theme. It
+fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays `Loading` (what shows
+only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton until it shows again),
+any `cm` command the fake couldn't answer, a server command while the sign-in screen covers the window, and an answer
+to the profile pictures question that wasn't saved. Beyond those and the larger editor being on top, it asserts only
+that things appear, never pixels or copy.
+About 15 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
 runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
 in `UVCS_E2E_SHOTS` when set. A run empties its own folder as it starts, never the one around it. A failed step also
 prints Playwright's call log, what it was waiting for when it gave up, and a view that never settles names each
@@ -29,9 +34,19 @@ update screen: with the default choice and the fake reporting an older version, 
 shows, and checking again (Check Again on Linux, the window gaining focus elsewhere), once the fake reports the pinned
 version, brings the app to Home. Updating the installed one: with a fake of Unity's download site
 (`fakeOfficialSite.mjs`, `UVCS_OFFICIAL_UPDATES_URL`) and the development build's fake installer
-(`UVCS_FAKE_OFFICIAL_UPDATE`), it fails unless the update downloads in the background, Update brings the app to Home,
-and a declined permission says it couldn't update; on Linux, unless the screen shows the command. No installer runs.
-The pinned bundles can't be served, so their download is left to the unit tests.
+(`UVCS_FAKE_OFFICIAL_UPDATE`), it fails unless the update downloads in the background and Update brings the app to Home;
+on Linux, unless the screen shows the command. No installer runs. The pinned bundles can't be served, so their
+download is left to the unit tests, as is a declined permission (`OfficialClientUpdate`, `cmUpdateView`).
+
+## What belongs here
+
+The smoke test is a pass through the views that checks nothing explodes, plus what only the real app can show: the
+wiring between main, preload and renderer, a second window, a worker, a canvas, real layout (what lies on top), a
+session that ends across every layer. It runs on every pull request, on each OS and for both builds, so every step
+costs that many times over. What a pure module decides (which items, labels, counts, keys, menus, ranking, what
+reads the disk) is pinned by a unit test next to that module (CLAUDE.md "Tests are the quality gate"), not by a step
+here: a step only opens what a new view or page adds and waits for it to settle. A new step says what in it a unit
+test couldn't reach.
 
 A step waits for what it is about to use before it types or presses a key, as a person would: the dialog open, the
 result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (Go to file's paths) can take
