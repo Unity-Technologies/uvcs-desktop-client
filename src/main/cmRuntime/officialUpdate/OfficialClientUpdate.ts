@@ -109,6 +109,8 @@ export class OfficialClientUpdate {
   private keptForAppUpdate = false;
   /** Stops the download running (`download`), when nothing needs it any more (`discard`). */
   private stopDownload: AbortController | null = null;
+  /** A drop deleting the folder (`discard`): a download asked meanwhile starts once it's done. */
+  private discarding: Promise<void> | null = null;
 
   constructor(private readonly options: OfficialClientUpdateOptions) {}
 
@@ -167,9 +169,25 @@ export class OfficialClientUpdate {
    * left there. An update the user asked to install, or one an app update downloaded for Restart & Install, stays.
    */
   async discard(): Promise<void> {
-    if (this.installRequested || this.installing || this.keptForAppUpdate) return;
+    if (this.isWanted()) return;
+    const stopping = this.preparing;
     this.stopDownload?.abort();
-    await this.preparing?.catch(() => undefined);
+    // A download asked from now on is a new one, which waits for the drop (`download`).
+    this.preparing = null;
+    this.discarding ??= this.dropAfter(stopping).finally(() => (this.discarding = null));
+    await this.discarding;
+  }
+
+  /** The update is wanted: the user asked to install it, it installs, or an app update keeps it for Restart & Install. */
+  private isWanted(): boolean {
+    return this.installRequested || this.installing !== null || this.keptForAppUpdate;
+  }
+
+  /** Deletes the folder once `stopping` stopped, unless the update was asked for again meanwhile. */
+  private async dropAfter(stopping: Promise<DownloadedInstaller> | null): Promise<void> {
+    await stopping?.catch(() => undefined);
+    // Asked for again while it stopped: a download started since (`preparing`) waits for this drop, then keeps its file.
+    if (this.isWanted() || this.preparing !== null) return;
     this.ready = null;
     await rm(this.options.folder, { recursive: true, force: true }).catch(() => undefined);
     if (this.current && this.current.kind !== 'byCommand') this.set(null);
@@ -251,15 +269,19 @@ export class OfficialClientUpdate {
     if (!this.preparing) {
       const stop = new AbortController();
       this.stopDownload = stop;
-      this.preparing = this.download(installed, floor, stop.signal).finally(() => {
-        this.preparing = null;
+      const preparing: Promise<DownloadedInstaller> = this.download(installed, floor, stop.signal).finally(() => {
+        // A drop may have let this one go and another started since (`discard`).
+        if (this.preparing === preparing) this.preparing = null;
         if (this.stopDownload === stop) this.stopDownload = null;
       });
+      this.preparing = preparing;
     }
     return this.preparing;
   }
 
   private async download(installed: InstalledCm, floor: string, signal: AbortSignal): Promise<DownloadedInstaller> {
+    // A drop deleting the folder finishes first: it would delete what this downloads.
+    await this.discarding;
     if (!this.installRequested) this.set({ kind: 'lookingUp', installRequested: false });
     const { fetch, folder, platform } = this.options;
     const edition = this.options.editionOf(installed.path);
