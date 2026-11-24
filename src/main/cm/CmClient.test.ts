@@ -806,7 +806,7 @@ describe('CmClient held while Unity Version Control updates', () => {
 
   it('ends its shells, starts nothing while held, and runs what waited once resumed, starting the shown shells again', async () => {
     const { cm, pools, processes, shellCommands } = fakeClient();
-    const resume = await cm.hold();
+    const resume = (await cm.hold())!;
     expect(pools[0]).toMatchObject({ ended: 1, disposed: false });
 
     const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
@@ -827,11 +827,10 @@ describe('CmClient held while Unity Version Control updates', () => {
     expect(pools[0]).toMatchObject({ shown: [WORKSPACE], shownWarmedAgain: 1 });
   });
 
-  it('lets the commands already running end first, a process and queued shell commands alike, and only then ends the shells', async () => {
+  it('lets the commands already running end first, queued shell commands too, and only then ends the shells', async () => {
     const { cm, pools, answerRunning } = fakeClient({ answerLater: true });
     const inFlight = cm.query(['status', '--header'], { cwd: WORKSPACE });
     const queued = cm.query(['whoami'], { cwd: WORKSPACE });
-    const operation = cm.execute(['update'], { cwd: WORKSPACE });
     await settle();
 
     let holding = false;
@@ -842,10 +841,22 @@ describe('CmClient held while Unity Version Control updates', () => {
     answerRunning();
     await expect(inFlight).resolves.toBe('done\n');
     await expect(queued).resolves.toBe('done\n');
-    await expect(operation).resolves.toBe('done\n');
     const resume = await held;
     expect(pools[0]!.ended).toBe(1);
     resume();
+  });
+
+  it('holds nothing while an operation runs in a process of its own, which may never end: it says so at once', async () => {
+    const { cm, pools, shellCommands } = fakeClient({ answerLater: true });
+    // Never answered: an operation stuck on the server.
+    void cm.execute(['update'], { cwd: WORKSPACE });
+    await settle();
+
+    await expect(cm.hold()).resolves.toBeNull();
+    expect(pools[0]!.ended).toBe(0);
+    void cm.query(['status', '--header'], { cwd: WORKSPACE });
+    await settle();
+    expect(shellCommands).toHaveLength(1);
   });
 
   it('settles only once its shells’ processes ended, as they hold the files the installer replaces', async () => {
@@ -858,13 +869,13 @@ describe('CmClient held while Unity Version Control updates', () => {
     expect({ holding, ended: pools[0]!.ended }).toEqual({ holding: false, ended: 1 });
 
     closed();
-    (await held)();
+    (await held)!();
   });
 
   it('stays held until every hold is resumed, each resume counting once', async () => {
     const { cm, shellCommands } = fakeClient();
-    const first = await cm.hold();
-    const second = await cm.hold();
+    const first = (await cm.hold())!;
+    const second = (await cm.hold())!;
     const query = cm.query(['status', '--header'], { cwd: WORKSPACE });
 
     first();
@@ -879,7 +890,7 @@ describe('CmClient held while Unity Version Control updates', () => {
 
   it('gives up a held command its caller cancels, which never runs', async () => {
     const { cm, processes } = fakeClient();
-    const resume = await cm.hold();
+    const resume = (await cm.hold())!;
     const cancel = new AbortController();
     const operation = cm.execute(['update'], { cwd: WORKSPACE, signal: cancel.signal });
 

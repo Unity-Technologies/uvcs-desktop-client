@@ -52,9 +52,11 @@ interface Setup {
   outcome?: InstallerOutcome;
   /** The installed one's version once the installer ended. */
   versionAfter?: string;
+  /** An operation runs in Unity Version Control: `CmClient` holds nothing (`holdCm` settles with null). */
+  operationRuns?: boolean;
 }
 
-async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694' }: Setup = {}) {
+async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694', operationRuns = false }: Setup = {}) {
   const folder = join(await mkdtemp(join(tmpdir(), 'official-update-')), 'update');
   const calls: string[] = [];
   const states: (OfficialUpdate | null)[] = [];
@@ -75,6 +77,7 @@ async function setup({ site = fakeSite(), platform = 'windows', verdict = { trus
     editionOf: () => 'cloud',
     tools,
     holdCm: async () => {
+      if (operationRuns) return null;
       calls.push('hold cm');
       return () => calls.push('resume cm');
     },
@@ -185,6 +188,13 @@ describe('OfficialClientUpdate', () => {
       expect(update.state()).toMatchObject({ kind: 'failed', failure: 'notSigned', version: '11.0.16.10694' });
       expect(calls.some((call) => call.startsWith('run') || call === 'hold cm')).toBe(false);
       expect(existsSync(folder)).toBe(false);
+    });
+
+    it('at once, running nothing, when an operation runs in Unity Version Control', async () => {
+      const { update, calls } = await setup({ operationRuns: true });
+      expect(await update.install(INSTALLED, FLOOR)).toBe(false);
+      expect(update.state()).toMatchObject({ kind: 'failed', failure: 'operationRunning', version: '11.0.16.10694' });
+      expect(calls.some((call) => call.startsWith('run'))).toBe(false);
     });
 
     it("when the user didn't give the installer permission, resuming cm", async () => {

@@ -93,6 +93,7 @@ describe('cmUpdateViewOf', () => {
       expect(failed('unreachable').body).toBe('The update couldn’t be downloaded. Check your connection, then try again.');
       expect(failed('notSigned').body).toBe('The download isn’t signed by Unity, so it wasn’t installed. Try again to download a new copy.');
       // macOS: Installer.app closed before it was done, most often cancelled.
+      expect(failed('operationRunning').body).toBe('Finish or cancel what’s running in Unity Version Control, then try again.');
       expect(failed('notFinished').body).toBe('The update wasn’t installed. Try again, and finish every step it asks for.');
     });
   });
@@ -131,7 +132,7 @@ describe('cmUpdateViewOf', () => {
       cmUpdateViewOf(withUpdate(downloading(false)), 'none'),
       cmUpdateViewOf(withUpdate(downloading(true)), 'none'),
       cmUpdateViewOf(withUpdate({ kind: 'installing', version: NEW }), 'none'),
-      ...(['noUpdate', 'unreachable', 'notSigned', 'declined', 'notUpdated', 'notFinished'] as const).map((failure) =>
+      ...(['noUpdate', 'unreachable', 'notSigned', 'declined', 'notUpdated', 'notFinished', 'operationRunning'] as const).map((failure) =>
         cmUpdateViewOf(withUpdate({ kind: 'failed', failure, version: NEW, detail: '' }), 'none'),
       ),
       cmUpdateViewOf(byCommand(TOO_OLD), 'stillTooOld'),
