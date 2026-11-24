@@ -6,7 +6,7 @@ import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { queryKeys } from '../../api/queryKeys';
 import { branchReviewsQuery } from '../../features/codeReviews/changeRequests/useChangeRequests';
 import { showQuery, type QueryProbe } from '../../testing/queryProbes';
-import { IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
+import { createQueryClient, IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
 import { affectedByChange, HeldChanges, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
 
 const ws = '/ws';
@@ -189,8 +189,15 @@ describe('localQueryDefaults', () => {
 
   it('keeps the workspace info fresh for good while the watcher sees every .plastic rewrite', () => {
     expect(localQueryDefaults('info', false, 'full').staleTime).toBe(Infinity);
-    expect(localQueryDefaults('info', true, 'partial').staleTime).toBeUndefined();
-    expect(localQueryDefaults('pendingChanges', true, 'full').staleTime).toBeUndefined();
+  });
+
+  it("leaves every other local view the app's staleness: a Files listing shown again, or by a second view, isn't read again at once", () => {
+    const client = createQueryClient();
+    const appStaleTime = client.getDefaultOptions().queries?.staleTime;
+    for (const [area, coverage] of [['explorer', 'full'], ['pendingChanges', 'full'], ['info', 'partial']] as const) {
+      client.setQueryDefaults(queryKeys.inWorkspace(ws, area), localQueryDefaults(area, true, coverage));
+      expect([area, client.defaultQueryOptions({ queryKey: queryKeys.inWorkspace(ws, area, 'directory', '') }).staleTime]).toEqual([area, appStaleTime]);
+    }
   });
 });
 
