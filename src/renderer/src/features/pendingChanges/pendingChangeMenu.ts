@@ -20,7 +20,7 @@ import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
 import { matchSideOf } from './moveMatches';
-import { itemRulePatterns, sharedExtension } from './filterRulePatterns';
+import { itemRulePatterns, sharedExtension, sharedName } from './filterRulePatterns';
 import { showInLocks } from '../locks/showInLocks';
 import type { PendingLocks } from './locks/pendingLocks';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
@@ -135,15 +135,20 @@ export function itemCopySubmenu(workspacePath: string, paths: string[], link?: C
   return copySubmenu('', { path: async () => relative(), fullPath: async () => full() }, { count: paths.length });
 }
 
-/** Adds the selected items, or all files with the extension they share, to the ignore, cloaked or hidden-changes rules. */
+/**
+ * Adds the selected items, all items with the name they share, or all files with the extension they share, to the
+ * ignore, cloaked or hidden-changes rules. Each entry suggests its rules in a dialog where the user can change them.
+ */
 export function filterRulesSubmenu(workspacePath: string, paths: string[]): GroupedEntry {
   const itemPatterns = itemRulePatterns(paths);
+  const name = sharedName(paths);
   const extension = sharedExtension(paths);
-  const itemsLabel = itemPatterns.length === 1 ? `This item (${itemPatterns[0]})` : `These ${formatCount(itemPatterns.length)} items`;
+  const itemsLabel = itemPatterns.length === 1 ? `This item (${itemPatterns[0]})…` : `These ${formatCount(itemPatterns.length)} items…`;
   const patternsFor = (list: FilterRuleList): MenuEntry[] =>
     tidyMenu([
       { id: `${list}.path`, label: itemsLabel, run: () => void addFilterRules(workspacePath, list, itemPatterns) },
-      extension !== null && { id: `${list}.extension`, label: `All ${extension} files`, run: () => void addFilterRules(workspacePath, list, [`*${extension}`]) },
+      name !== null && { id: `${list}.name`, label: `All items named ${name}…`, run: () => void addFilterRules(workspacePath, list, [name]) },
+      extension !== null && { id: `${list}.extension`, label: `All ${extension} files…`, run: () => void addFilterRules(workspacePath, list, [`*${extension}`]) },
     ]);
 
   return menuSubmenu('filterRules', [
