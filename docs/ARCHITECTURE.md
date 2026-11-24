@@ -1569,10 +1569,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     the others their places by a binary search (`rankList`): a million changes with one edited, 0.3 s. No direction:
     nobody reads a list of files backwards, except by date, newest first, the files without a date last
     (`FileListFacts.dateOf`). The dates cost nothing more: a change's is its file's on disk (`PendingChange.lastModified`,
-    which `DiskDetails` already reads; a deleted file or a folder has none), and a diff's file's is its revision's,
-    which the same `cm diff` prints (`{date}` in `DIFF_FORMAT`, `DiffEntry.date`; a deleted file's last revision's).
-    The merge page and a partial workspace's Incoming have no dates: their menus offer no Date (`FileListViewOffer.dates`)
-    and show their files by path while it is the sort chosen.
+    which `DiskDetails` already reads; a deleted file or a folder has none), and a diff's file's is its new revision's,
+    which the same `cm diff` prints (docs/features/diff.md, "Dates"). The merge page and a partial workspace's Incoming
+    have no dates: a menu offers Date only where the list's facts have dates (`viewOfferFor`), and shows the files by
+    path while it is the sort chosen.
   - **One view, chosen in a menu**: the layout, List or Tree, the sort, and grouping by status, for every list at once
     and across sessions (`useFileListViewStore`, kept under the key `file-list-layout` it had when it held the layout
     alone, which took the one Changes kept first). Its menu (`FileListViewMenu`, decided by `fileListViewMenu` in

@@ -216,6 +216,17 @@ replaced by a file, or anything by an xlink, reads as the added item alone. A re
 before this change…" (`canRevertFromDiff`): its older side is another item. Such a fix usually keeps the contents, so the diff reads "No content changes"; a review's
 "How it was applied" shows it as the move it made instead (docs/features/code-reviews.md, "Comments in the code", See in context).
 
+## Dates
+
+A diff's list sorts by date (docs/ARCHITECTURE.md, "One sort, chosen") from `{date}` in `DIFF_FORMAT`, read with the
+rest of `cm diff` (`diffCommand`, `--dateformat=o`, the round-trip format `cm find` uses too): no other command, no
+extra cost on the server. `{date}` is when the revision `{revid}` names was made, so only an item the change gave a new
+revision is dated by it (`madeARevision`, `DiffEntry.date`): an added file, a content change, a moved file that changed
+(its content change's), a path replaced (the new item's). A deleted file's revision is its last one, and a pure move's
+or a change of permissions alone's is the one it had: all from before the change, so they get no date and go last, as a
+deleted file does in Changes. `cm` prints `0001-01-01T00:00:00.0000000` for a revision it has no details of, read as no
+date too (`revisionDate`).
+
 ## Only the permissions changed
 
 A file whose file permissions changed and whose content didn't (`chmod +x`, or permissions first set on a file checked
