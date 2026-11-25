@@ -27,7 +27,7 @@ const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync']
  */
 const KNOWN_DUPLICATES = [];
 /**
- * What may end below the box holding it, where nothing scrolls (`findCutOffContent`), each with why:
+ * What may end below the nearest box clipping it, where that box doesn't scroll (`findCutOffContent`), each with why:
  * `{ selector: '[aria-label="Timeline"]', why: 'what makes it right' }`. None today.
  */
 const CUT_OFF_ALLOWED = [];

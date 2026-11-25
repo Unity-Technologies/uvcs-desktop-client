@@ -30,10 +30,15 @@ export async function findCutOffContent({ allowed, loading, tolerance }) {
     const firstClass = (element.getAttribute('class') ?? '').split(' ')[0];
     return `<${element.tagName.toLowerCase()}${firstClass ? ` .${firstClass}` : ''}${label ? ` "${label}"` : ''}>`;
   };
-  /** The nearest ancestor clipping the element downwards (its `overflow-y` isn't `visible`), or none: the window clips it. */
+  /**
+   * The nearest ancestor clipping the element downwards (its `overflow-y` isn't `visible`), or none: the window clips
+   * it. A fixed box escapes its ancestors' overflow, so what it holds is clipped by it or by the window, never above.
+   */
   const clipperOf = (element) => {
     for (let ancestor = element.parentElement; ancestor && ancestor !== document.documentElement; ancestor = ancestor.parentElement) {
-      if (getComputedStyle(ancestor).overflowY !== 'visible') return ancestor;
+      const style = getComputedStyle(ancestor);
+      if (style.overflowY !== 'visible') return ancestor;
+      if (style.position === 'fixed') return null;
     }
     return null;
   };
