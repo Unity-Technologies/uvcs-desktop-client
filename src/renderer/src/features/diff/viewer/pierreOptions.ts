@@ -10,9 +10,12 @@ import { pierreTint } from './pierreTint';
  * Code takes the app's code font, whose stack has each OS's (Pierre's own knows neither Cascadia nor DejaVu), at
  * 12px rather than Pierre's 13px: the size the classic desktop client shows code at. Only the font shrinks: lines
  * stay 20px tall, the height Pierre's virtualizer and Annotate's `ANNOTATION_LINE_HEIGHT` count on.
+ * The editor's caret takes the text color, as code editors draw it: Pierre's own takes the code theme's cursor color,
+ * a blue that reads as a selection more than a caret (`--diffs-bg-caret-override` wins over the theme's).
  */
 export const PIERRE_SURFACE_CSS =
-  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px}';
+  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px;' +
+  '--diffs-bg-caret-override:var(--text-primary)}';
 
 /**
  * How a diff marks the words two lines change: word by word, nothing on lines past 1,000 characters (Pierre's own
