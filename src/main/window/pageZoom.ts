@@ -10,19 +10,23 @@ export type PageZoomChange = 'reset' | 'in' | 'out';
 /** Half a zoom level a step (about 10%), as Electron's own zoom roles take. */
 const ZOOM_LEVEL_STEP = 0.5;
 
+/** The zoom factors Chromium can show, 25% to 500%: a zoom edited by hand in the settings is kept within them. */
+const ZOOM_FACTOR_RANGE = { min: 0.25, max: 5 };
+
 /**
- * How each window keeps its zoom: as its own, through every page it loads. Chromium's default zoom is kept by the
- * page's address, and for a `file://` page that's the whole address, query and all: a window's zoom changed under it
- * when its page dropped its query (`openPlaceFromAddress`), the traffic lights and the page left at the old one, and a
- * zoom came back at a launch only to a window opening at the very same address. The app keeps one zoom instead
- * (`zoomLevel`), which every window opens at (`savedZoomFactor`) and `zoomPage` sets on them all.
+ * How each window keeps its zoom: as its own, through every page it loads. The app keeps one zoom (`zoomLevel`), which
+ * every window opens at (`savedZoomFactor`) and `zoomPage` sets on them all. Not Chromium's default mode, which keys a
+ * zoom by the page's whole `file://` address, query included: dropping the query (`openPlaceFromAddress`) would change
+ * a window's zoom without telling anyone, leaving the traffic lights and the page at the old one, and a zoom would
+ * come back at a launch only to a window opening at the same address.
  */
 export const WINDOW_ZOOM_MODE = 'isolated';
 
 /** The zoom factor (1 at 100%) the windows open at: the saved zoom level, 100% when there is none. */
 export function savedZoomFactor(settings: Pick<SettingsStore, 'get'>): number {
   const { zoomLevel } = settings.get();
-  return Number.isFinite(zoomLevel) ? 1.2 ** zoomLevel : 1;
+  if (!Number.isFinite(zoomLevel)) return 1;
+  return Math.min(ZOOM_FACTOR_RANGE.max, Math.max(ZOOM_FACTOR_RANGE.min, 1.2 ** zoomLevel));
 }
 
 /**
