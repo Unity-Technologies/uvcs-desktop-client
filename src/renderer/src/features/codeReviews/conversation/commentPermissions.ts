@@ -1,5 +1,5 @@
 import type { ReviewComment, ReviewEvent } from '@shared/domain/reviewConversation';
-import { hasReplies, type ReviewThread } from './reviewThreads';
+import type { ReviewThread } from './reviewThreads';
 import { sameUser } from '../../../lib/userName';
 
 // What a user may do to a comment, as the official client allows it. The server checks only the permission on what
@@ -18,12 +18,9 @@ export function canEditStatusComment(event: ReviewEvent, user: string | undefine
   return event.kind === 'statusChanged' && isAuthor(event, user);
 }
 
-/**
- * Only its author deletes a comment, and only while nobody replied to it: `cm` deletes a comment alone, and its
- * replies would be left answering nothing.
- */
-export function canDeleteComment(comment: ReviewComment, thread: ReviewThread, user: string | undefined): boolean {
-  return isAuthor(comment, user) && !hasReplies(comment, thread);
+/** Only its author deletes a comment; the replies under it, anyone's, go with it (`commentsDeletedWith`). */
+export function canDeleteComment(comment: ReviewComment, user: string | undefined): boolean {
+  return isAuthor(comment, user);
 }
 
 /** A change request still open can be discarded, saying why, by anyone but who asked for it. */

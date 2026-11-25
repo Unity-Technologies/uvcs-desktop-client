@@ -34,6 +34,6 @@ export function commentMenu(comment: ReviewComment, thread: ReviewThread, user: 
     isRoot && actions.showInConversation && menuAction('showInConversation', actions.showInConversation),
     canEditComment(comment, user) && menuAction('editComment', actions.edit),
     copySubmenu('Comment', actions.copyTexts),
-    canDeleteComment(comment, thread, user) && menuAction('delete', actions.remove),
+    canDeleteComment(comment, user) && menuAction('delete', actions.remove),
   ]);
 }
