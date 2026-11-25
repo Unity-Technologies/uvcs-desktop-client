@@ -5,7 +5,7 @@ import { copyLinkLabel } from '../../../app/links/shownLink';
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { copyToClipboard } from '../../../ui/copyToClipboard';
-import { contextMenuSelection, copiedLinesWord, lineChipAnchor, linesText, lineUnderPointer, type CodeLayout } from './lineActions';
+import { contextMenuLines, copiedLinesWord, lineChipAnchor, linesText, lineUnderPointer, type CodeLayout } from './lineActions';
 import { LineLinkChip } from './LineLinkChip';
 import { LineLinksContext } from './lineLinks';
 import { linkedLinesOf } from './linkedLines';
@@ -51,7 +51,7 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
   const pickLines = (event: MouseEvent): FocusedLines | null => {
     const row = rowUnderPointer(event.nativeEvent.composedPath());
     const clicked = row && lineUnderPointer(row);
-    const selection = contextMenuSelection(range, clicked);
+    const selection = contextMenuLines(range, clicked);
     menuLines.current = linkedLinesOf(selection);
     if (selection && selection !== range) select(selection);
     return menuLines.current;
