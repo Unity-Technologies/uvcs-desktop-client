@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeDetailOf } from './mergeDetail';
+import { mergeDetailOf } from './mergeDetailKind';
 
 const none = { hidesAll: false, shown: false, start: undefined, selectedGroup: false };
 
