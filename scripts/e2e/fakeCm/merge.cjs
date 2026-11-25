@@ -100,7 +100,7 @@ function childrenAt(folder, at) {
 const COMMON = { date: '2026-09-20T12:00:00.0000000+02:00', checkout: '', owner: OWNER, repspec: `rep:${REPOSITORY_SPEC}`, symlinktarget: '' };
 
 function folderRecord(path, name) {
-  return { ...COMMON, name, wkpath: `/${path}`, path: `/${path}`, type: 'dir', size: 0, changeset: BASE.changeset, branch: BASE.branch, revid: 900, parentrevid: -1, itemid: 499, hash: '' };
+  return { ...COMMON, name, wkpath: `/${path}`, path: `/${path}`, type: 'dir', size: 0, changeset: BASE.changeset, branch: BASE.branch, revid: 900 + FOLDERS.indexOf(path), parentrevid: -1, itemid: 498 - FOLDERS.indexOf(path), hash: '' };
 }
 
 /** A file at a version: the revision of the changeset that last changed it there (the destination's kept the base's). */
