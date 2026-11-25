@@ -32,11 +32,11 @@ describe('pageLinesTarget: the link the lines menu copies, a right-click selecti
     expect(pageLinesTarget(DIFF, 'src/Player.cs', RIGHT_CLICKED)?.lines).toEqual(RIGHT_CLICKED);
   });
 
-  it("follows the page's own rules: a browsed file's older side has no lines in a link", () => {
+  it("offers none where the page's link can't name the lines: a browsed file's older side", () => {
     useShownBrowseItem.setState({ shown: { changesetId: 7, path: 'src/Player.cs' } });
     const browse = { kind: 'browseRepository', changesetId: 7 } as const;
 
-    expect(pageLinesTarget(browse, 'src/Player.cs', { side: 'old', first: 3, last: 3 })?.lines).toBeUndefined();
+    expect(pageLinesTarget(browse, 'src/Player.cs', { side: 'old', first: 3, last: 3 })).toBeNull();
     expect(pageLinesTarget(browse, 'src/Player.cs', RIGHT_CLICKED)?.lines).toEqual(RIGHT_CLICKED);
   });
 });

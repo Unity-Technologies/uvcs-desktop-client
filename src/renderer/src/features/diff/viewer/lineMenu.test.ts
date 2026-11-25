@@ -19,9 +19,14 @@ describe('lineMenuEntries', () => {
     expect(labels(linesMenu({ lines: RANGE, copyLink: vi.fn(), copyLines: vi.fn(), annotate: vi.fn() }))).toEqual(['Annotate at lines 40–52', '—', 'Copy link to lines 40–52', 'Copy lines 40–52']);
   });
 
-  it('shows the shortcut that copies the link', () => {
-    const link = linesMenu({ lines: LINE, copyLink: vi.fn(), copyLines: vi.fn() }).find((entry) => entry !== SEPARATOR && (entry as Action).id === 'copyLineLink') as Action;
-    expect(link.shortcut).toBe(hotkey('copyLink'));
+  const linkEntry = (menu: MenuEntry[]) => menu.find((entry) => entry !== SEPARATOR && (entry as Action).id === 'copyLineLink') as Action;
+
+  it('shows the shortcut that copies the link when its lines are the ones selected, which the shortcut copies', () => {
+    expect(linkEntry(linesMenu({ lines: LINE, linesSelected: true, copyLink: vi.fn(), copyLines: vi.fn() })).shortcut).toBe(hotkey('copyLink'));
+  });
+
+  it('shows no shortcut for lines right-clicked but not selected: the shortcut copies the selection, or the file', () => {
+    expect(linkEntry(linesMenu({ lines: LINE, linesSelected: false, copyLink: vi.fn(), copyLines: vi.fn() })).shortcut).toBeUndefined();
   });
 
   it("annotates no older side's lines, nor where nothing can be annotated (an annotation itself)", () => {
