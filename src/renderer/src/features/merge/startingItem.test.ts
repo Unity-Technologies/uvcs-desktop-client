@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, MergePlan } from '@shared/domain/merge';
 import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
-import { buildMergeItems, mergeProgress } from './mergeItems';
+import { buildMergeItems, inListOrder, mergeProgress } from './mergeItems';
 import { pairMergeMetas } from './mergeMetaPairs';
 import { upFrontReads, versionsOf } from './resolve/conflictVersionReads';
 import { buildStates } from './resolve/fileConflictStates';
@@ -33,11 +33,14 @@ const plan = (directoryConflicts: DirectoryConflict[] = [], changes: MergePlan['
   warnings: [],
 });
 
+/** The merge's items in the order the list shows them, as the page passes them. */
+const listedOf = (...args: Parameters<typeof buildMergeItems>) => inListOrder(buildMergeItems(...args));
+
 /** The path of the item the page starts on, or why it starts on none. */
 const pathOf = (start: ReturnType<typeof startingItem>): string | undefined => (start === 'loading' ? start : start?.path);
 
 describe('startingItem', () => {
-  const items = buildMergeItems(plan(), [], [sun, clouds, sky]);
+  const items = listedOf(plan(), [], [sun, clouds, sky]);
 
   it('starts on the first conflict that needs the user, past those before it that merge by themselves', () => {
     const progress = mergeProgress([manual(sun), automatic(clouds), automatic(sky)], resolutionsByConflict([]));
@@ -75,7 +78,7 @@ describe('startingItem', () => {
       new Map(),
     );
     const progress = mergeProgress(states, resolutionsByConflict([]));
-    expect(pathOf(startingItem(null, buildMergeItems(plan(), [], files), progress))).toBe('Lighting/Clouds.png');
+    expect(pathOf(startingItem(null, listedOf(plan(), [], files), progress))).toBe('Lighting/Clouds.png');
   });
 
   it('starts on the first row when every conflict merges by itself', () => {
@@ -84,13 +87,13 @@ describe('startingItem', () => {
   });
 
   it('starts on a directory conflict first, without waiting for any file to load', () => {
-    const withTwin = buildMergeItems(plan([twin]), [], [sun, clouds]);
+    const withTwin = listedOf(plan([twin]), [], [sun, clouds]);
     const progress = mergeProgress([loading(sun), loading(clouds)], resolutionsByConflict([]));
     expect(pathOf(startingItem(null, withTwin, progress))).toBe('twin.txt');
   });
 
   it('starts on the first file that needs the user once the directory conflicts are decided', () => {
-    const withTwin = buildMergeItems(plan(), [{ conflict: twin, resolution: { choice: 'source' } }], [sun, clouds]);
+    const withTwin = listedOf(plan(), [{ conflict: twin, resolution: { choice: 'source' } }], [sun, clouds]);
     const progress = mergeProgress([manual(sun), automatic(clouds)], resolutionsByConflict([{ conflict: twin, resolution: { choice: 'source' } }]));
     expect(pathOf(startingItem(null, withTwin, progress))).toBe('Lighting/Sun.cs');
   });
@@ -103,7 +106,7 @@ describe('startingItem', () => {
   it("starts on a conflicting Unity .meta that needs the user: it keeps its own row, never joined to its asset's", () => {
     const asset = conflicted('Assets/Hero.prefab');
     const meta = conflicted('Assets/Hero.prefab.meta');
-    const shown = pairMergeMetas(buildMergeItems(plan(), [], [asset, meta])).shown;
+    const shown = inListOrder(pairMergeMetas(buildMergeItems(plan(), [], [asset, meta])).shown);
     const progress = mergeProgress([automatic(asset), manual(meta)], resolutionsByConflict([]));
     expect(pathOf(startingItem(null, shown, progress))).toBe('Assets/Hero.prefab.meta');
   });
@@ -113,7 +116,7 @@ describe('startingItem', () => {
       { kind: 'changed', path: '/Lighting/Probes/Probe2.cs' },
       { kind: 'added', path: '/Lighting/Probes/Probe1.cs' },
     ];
-    const clean = buildMergeItems(plan([], changes), [], []);
+    const clean = listedOf(plan([], changes), [], []);
     expect(pathOf(startingItem(null, clean, mergeProgress([], resolutionsByConflict([]))))).toBe('Lighting/Probes/Probe1.cs');
   });
 
