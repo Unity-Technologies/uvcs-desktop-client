@@ -2,7 +2,7 @@ import { Eye, Flag, ThumbsUp } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import type { CodeReviewer } from '@shared/domain/codeReview';
 import { NO_GROUPS, reviewerGroups } from './reviewerGroups';
-import { canReRequest, changesOwnStatus, isAuthor, isReviewer, offeredReviewers, ownStatus, reviewerBadge, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
+import { canReRequest, changesOwnStatus, isAuthor, isReviewer, offeredReviewers, ownStatus, reviewerActionLabels, reviewerBadge, reviewersText, reviewerText, shownReviewers, stackedReviewers } from './reviewers';
 
 const ANA: CodeReviewer = { name: 'ana@acme.com', status: 'Reviewed' };
 const BOB: CodeReviewer = { name: 'bob@acme.com', status: 'Under review' };
@@ -133,6 +133,19 @@ describe('offeredReviewers', () => {
 
   it('offers a name once, as the group, where a user and a group share it', () => {
     expect(offeredReviewers({ users: ['builders', 'carl@acme.com'], groups: ['Builders'] }, [])).toEqual(['Builders', 'carl@acme.com']);
+  });
+});
+
+describe('reviewerActionLabels', () => {
+  it('names the reviewer each button acts on, as their row shows them', () => {
+    expect(reviewerActionLabels(ANA, GROUPS)).toEqual({ askAgain: 'Ask Ana to review again', remove: 'Remove Ana from the reviewers' });
+  });
+
+  it('says a group is one', () => {
+    const labels = { askAgain: 'Ask the qa-team group to review again', remove: 'Remove the qa-team group from the reviewers' };
+    expect(reviewerActionLabels(QA, GROUPS)).toEqual(labels);
+    // A server that lists no groups: `cm` types the reviewer as one.
+    expect(reviewerActionLabels({ name: 'qa-team', status: 'Reviewed', kind: 'group' }, NO_GROUPS)).toEqual(labels);
   });
 });
 

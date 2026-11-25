@@ -56,9 +56,11 @@ know (`cm codereview subscription`) would be read as a review to create.
   (`cm listusers --onlyusers` and `--onlygroups`, each read once and kept, `useMemberNames`): the reviewers checked
   first, then the groups, then the users, each by name (`offeredReviewers`), as the official client lists them. What
   changed applies as it closes (`pickChanges`, `changeReviewers`): one `cm codereview reviewer add <id> --users=a,b
-  --groups=g`, one `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or,
-  once they gave a status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review <id>
-  --re-request --users=a` or `--groups=g`, which puts them back to "Under review"). What the picker changes is worked
+  --groups=g`, one `cm codereview reviewer remove <id> --users=c`. Each reviewer's row always shows a quiet × to remove
+  them and, once they gave a status, a button to ask them to review again (`canReRequest`, never the
+  user themselves; `cm codereview review <id> --re-request --users=a` or `--groups=g`, which puts them back to "Under
+  review"); both name who they act on in their tooltips (`reviewerActionLabels`). Neither waits for the pointer: users
+  didn't find them when they did. What the picker changes is worked
   out against the reviewers as it opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile
   isn't removed; the reviewers it opened with are a group or a user as "Groups" says (their type from `cm` where it
   was read, else the server's groups as it applies), and someone checked keeps the kind they were listed with
