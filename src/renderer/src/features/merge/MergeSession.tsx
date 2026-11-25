@@ -13,6 +13,7 @@ import { pluralize } from '../../lib/text';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EmptyState } from '../../ui/EmptyState';
+import { CenteredSpinner } from '../../ui/Spinner';
 import { NoMatches } from '../../ui/NoMatches';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
 import { FileStepsContext, selectNow, useFileSteps } from '../diff/viewer/fileSteps';
@@ -145,10 +146,10 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const run = useResolveRun({ states: fileStates, mergerFor, resolveInTool, onOpen: followRun, onEnd: afterRun });
   const runPlans = useRunOffer(fileStates, run);
 
-  // Where the page opens (`startingItem`), selected once.
+  // Where the page opens (`startingItem`), selected once; a spinner until it can tell.
   const start = startingItem(selectedKey, pairs.shown, progress);
   useEffect(() => {
-    if (start) setSelection(singleSelection(rowKeyOf(start.key)));
+    if (start && start !== 'loading') setSelection(singleSelection(rowKeyOf(start.key)));
   }, [start, rowKeyOf]);
 
   // A conflicting file's arrows go on past its first or last conflict to the files around it that wait for the user.
@@ -268,6 +269,8 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               onResolveDirectory={(conflict, resolution, next) => void directory.decide(conflict, resolution, next)}
             />
           </FileStepsContext.Provider>
+        ) : start === 'loading' ? (
+          <CenteredSpinner />
         ) : selectedGroup ? (
           <EmptyState
             icon={<Folder size={24} />}
