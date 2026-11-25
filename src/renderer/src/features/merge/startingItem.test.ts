@@ -3,6 +3,8 @@ import type { DirectoryConflict, MergePlan } from '@shared/domain/merge';
 import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
 import { buildMergeItems, mergeProgress } from './mergeItems';
 import { pairMergeMetas } from './mergeMetaPairs';
+import { upFrontReads, versionsOf } from './resolve/conflictVersionReads';
+import { buildStates } from './resolve/fileConflictStates';
 import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 import { startingItem } from './startingItem';
 
@@ -60,6 +62,20 @@ describe('startingItem', () => {
   it('starts on a conflict whose versions could not be read: the user decides it', () => {
     const progress = mergeProgress([manual(sun), unreadable(clouds), automatic(sky)], resolutionsByConflict([]));
     expect(pathOf(startingItem(null, items, progress))).toBe('Lighting/Clouds.cs');
+  });
+
+  it('starts at once on a known binary listed first: it needs a decision before any of its versions is read', () => {
+    const texture: ConflictedFile = { ...conflicted('Lighting/Clouds.png'), isKnownBinary: true };
+    const files = [texture, sun];
+    // Nothing read yet and no file opened: the binary's state is built as the page builds it.
+    const upFront = upFrontReads(files);
+    const { states } = buildStates(
+      files.map((file) => ({ file, versions: versionsOf(file, upFront, [], undefined), decision: undefined, openTool: undefined })),
+      { source: '/main/feature', destination: '/main' },
+      new Map(),
+    );
+    const progress = mergeProgress(states, resolutionsByConflict([]));
+    expect(pathOf(startingItem(null, buildMergeItems(plan(), [], files), progress))).toBe('Lighting/Clouds.png');
   });
 
   it('starts on the first row when every conflict merges by itself', () => {
