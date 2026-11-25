@@ -756,8 +756,7 @@ Where a diff selects lines for links (a committed diff, Annotate), the lines' ow
 groups ("Annotate at line 42", "Copy link to line 42", "Copy line 42": `lineMenuEntries`), naming the lines they act on,
 as the right-click selects nothing. While it's open on text typed into, the caret stays drawn where it was
 (`CARET_HELD_ATTRIBUTE`): Pierre draws it only while the text has the focus, which the menu takes. What it holds
-depends on the
-side right-clicked (`codeMenuTarget`):
+depends on the side right-clicked (`codeMenuTarget`):
 
 - **Typed into** (the newer side of a workspace file's diff once its editor is attached, the whole-file editor, a
   merge's hand-editing): everything, through Pierre's editor. Undo and Redo are its history (`canUndo`, `canRedo`). Cut,
