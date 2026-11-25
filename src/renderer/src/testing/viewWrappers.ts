@@ -14,7 +14,8 @@ export interface ViewWrapperFile {
 /**
  * The boxes every view and page sits in, from the window's screen down to a page's content (`PlaceLayout`,
  * `SignInCover`, `KeptView`, `PageFrame`, `SplitPane`, `Stowable`, a page window's `PageWindowScreen`), by their
- * classes. The rules on them hold for every view and page at once (`viewWrappersMakeNoStackingContext.test.ts`).
+ * classes. The rules on them hold for every view and page at once (`viewWrappersMakeNoStackingContext.test.ts`,
+ * `viewWrappersFitTheWindow.test.ts`).
  */
 export const VIEW_WRAPPERS: ViewWrapperFile[] = [
   { file: 'app/shell/PlaceLayout.module.css', classes: ['screen', 'body', 'main', 'content', 'layer'] },
