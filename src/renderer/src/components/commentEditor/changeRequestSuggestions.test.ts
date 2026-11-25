@@ -22,9 +22,16 @@ const REQUESTS = [request(1, 'Undo before shelving fails: **shelve** first.'), r
 describe('changeRequestSuggestions', () => {
   it("offers each request by its first line, where it was written and its review, who asked, and writes cm's reference", () => {
     expect(changeRequestSuggestions(changeRequestIndex(REQUESTS), '')).toEqual([
-      { key: 'apply:c0d1ce01-b457-4424-99ff-a3f1c0fa2582', kind: 'changeRequest', label: 'Undo before shelving fails: shelve first.', detail: 'SwitchFlow.cs:11 · cr:43', owner: 'ana', insert: '[apply-change:c0d1ce01]' },
-      { key: 'apply:c0d1ce02-b457-4424-99ff-a3f1c0fa2582', kind: 'changeRequest', label: 'Log the shelve number here.', detail: 'cr:44', owner: 'bob', insert: '[apply-change:c0d1ce02]' },
+      { key: 'apply:c0d1ce01-b457-4424-99ff-a3f1c0fa2582', kind: 'changeRequest', label: 'Undo before shelving fails: shelve first.', detail: 'SwitchFlow.cs:11 · cr:43', owner: 'ana', insert: '[apply-change:c0d1ce01]', tip: { text: 'Change request c0d1ce01', sub: 'Undo before shelving fails: shelve first.' } },
+      { key: 'apply:c0d1ce02-b457-4424-99ff-a3f1c0fa2582', kind: 'changeRequest', label: 'Log the shelve number here.', detail: 'cr:44', owner: 'bob', insert: '[apply-change:c0d1ce02]', tip: { text: 'Change request c0d1ce02', sub: 'Log the shelve number here.' } },
     ]);
+  });
+
+  it('names a request in its tooltip by the number a check-in comment applies it by, over its whole first line, which the row cuts', () => {
+    const long = request(5, `${'Move the camera behind the player when the level starts, '.repeat(2)}not above.\n\nThe intro looks odd.`);
+    const [suggestion] = changeRequestSuggestions(changeRequestIndex([long]), '');
+    expect(suggestion?.label.endsWith('…')).toBe(true);
+    expect(suggestion?.tip).toEqual({ text: 'Change request c0d1ce05', sub: `${'Move the camera behind the player when the level starts, '.repeat(2)}not above.` });
   });
 
   it('names a request on a range of lines by its first and last line', () => {
