@@ -7,5 +7,6 @@ describe('windowsShowAnyOf', () => {
     expect(windowsShowAnyOf({ theme: 'dark', windowBounds: null })).toBe(true);
     expect(windowsShowAnyOf({ windowBounds: null })).toBe(false);
     expect(windowsShowAnyOf({ pageWindowBounds: null })).toBe(false);
+    expect(windowsShowAnyOf({ zoomLevel: 1 })).toBe(false);
   });
 });

@@ -102,6 +102,11 @@ describe('savedZoomFactor', () => {
     expect(savedZoomFactor(memorySettings())).toBe(1);
     expect(savedZoomFactor(memorySettings({ zoomLevel: Number.NaN }))).toBe(1);
   });
+
+  it('keeps a zoom edited by hand within what Chromium shows, 25% to 500%', () => {
+    expect(savedZoomFactor(memorySettings({ zoomLevel: 50 }))).toBe(5);
+    expect(savedZoomFactor(memorySettings({ zoomLevel: -50 }))).toBe(0.25);
+  });
 });
 
 describe('followPageZoom', () => {
