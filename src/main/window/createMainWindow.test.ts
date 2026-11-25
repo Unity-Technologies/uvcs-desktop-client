@@ -96,7 +96,11 @@ describe('createMainWindow', () => {
     createMainWindow(memorySettings(), { place: repositoryPlace('game@local') });
     createMainWindow(memorySettings());
 
-    expect(fakeElectron.windows().map((window) => window.loadedQuery)).toEqual([{ workspace: '/work/game' }, { repository: 'game@local' }, {}]);
+    expect(fakeElectron.windows().map((window) => window.loadedQuery)).toEqual([
+      { workspace: '/work/game', zoom: '1' },
+      { repository: 'game@local', zoom: '1' },
+      { zoom: '1' },
+    ]);
   });
 
   it("starts a page window's page on the page it shows, where the last page window was left", () => {
@@ -104,7 +108,7 @@ describe('createMainWindow', () => {
     vi.mocked(loadWindowBounds).mockClear();
     createMainWindow(memorySettings(), { place: workspacePlace('/work/game'), page });
 
-    expect(fakeElectron.windows().at(-1)!.loadedQuery).toEqual({ workspace: '/work/game', page: JSON.stringify(page) });
+    expect(fakeElectron.windows().at(-1)!.loadedQuery).toEqual({ workspace: '/work/game', page: JSON.stringify(page), zoom: '1' });
     expect(vi.mocked(loadWindowBounds).mock.calls[0]?.[1]).toBe('pageWindowBounds');
   });
 

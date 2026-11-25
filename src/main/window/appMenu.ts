@@ -9,6 +9,7 @@ import { BUG_REPORT_URL, DOCUMENTATION_URL, FEATURE_REQUEST_URL } from './appInf
 import { appMenuTemplate } from './appMenuTemplate';
 import { zoomPage } from './pageZoom';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
+import type { SettingsStore } from '../settings/SettingsStore';
 import type { AppUpdates } from '../update/AppUpdates';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
 
@@ -51,14 +52,14 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
 /**
  * The menu bar's installer: it lists the windows, so it installs it again when they open, close, get focus or change
  * title, once for each burst of such changes (opening a window focuses it and sets its title: a build takes 3-5 ms).
- * The first window opening installs it first.
+ * The first window opening installs it first. `settings` keeps the zoom its View menu sets (`zoomPage`).
  */
-export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>): () => void {
-  return coalesced(() => installAppMenu(windows, updates, logFile, cmRuntime));
+export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: SettingsStore): () => void {
+  return coalesced(() => installAppMenu(windows, updates, logFile, cmRuntime, settings));
 }
 
 /** `logFile` is the log file Help ▸ Show Log Files shows (`appLog`); `cmRuntime` the `cm` Show Command Line Client shows. */
-function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>): void {
+function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: SettingsStore): void {
   const template = appMenuTemplate({
     platform: process.platform,
     isPackaged: app.isPackaged,
@@ -72,7 +73,7 @@ function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile:
     requestFeature: () => void shell.openExternal(FEATURE_REQUEST_URL),
     showAboutPanel: () => app.showAboutPanel(),
     checkForUpdates: () => void updates.check(),
-    zoomPage: (window, change) => zoomPage(window, change, windowChrome(process.platform)),
+    zoomPage: (window, change) => zoomPage(window, change, windowChrome(process.platform), settings),
   });
 
   const menu = Menu.buildFromTemplate(template);

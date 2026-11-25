@@ -114,6 +114,11 @@ export interface AppSettings {
   customEditors: CustomEditor[];
   /** Programs the user runs on what they selected, from its menu's "Tools ▸" (Settings › Tools). */
   tools: Tool[];
+  /**
+   * The zoom of every window (View > Zoom In, Zoom Out: `zoomPage`), as a Chromium zoom level: 0 at 100%, each step of
+   * 1 about 20% larger (`1.2 ** level`). Saved by the app, not left to Chromium, which keys a zoom by the page's address.
+   */
+  zoomLevel: number;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
   /** Where the last page window (a diff in a window of its own) was left; null until one is moved or resized. */
@@ -169,6 +174,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   terminal: AUTO_APP,
   customEditors: [],
   tools: [],
+  zoomLevel: 0,
   windowBounds: null,
   pageWindowBounds: null,
   openWindows: [],
