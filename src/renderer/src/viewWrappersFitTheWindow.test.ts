@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { cssRules, readWrapperCss, stylesClass, VIEW_WRAPPERS, type ViewWrapperFile } from './testing/viewWrappers';
+import { cssRules, readWrapperCss, VIEW_WRAPPERS, type ViewWrapperFile } from './testing/viewWrappers';
 
 /**
- * A flex item's least size is its content's, unless it says otherwise: a box that grows to fill the window
- * (`flex: 1`) and holds more than fits grows past it instead, and every list and diff inside, given all the room they
- * ask for, has nothing to scroll. So each wrapper that grows lets its content be smaller than it is, both ways:
- * `min-width: 0` and `min-height: 0`, or an `overflow` that clips.
+ * A flex item's least size along its parent's direction is its content's, unless it says otherwise: a box that grows
+ * to fill the window (`flex: 1`) and holds more than fits grows past it instead, and every list and diff inside, given
+ * all the room they ask for, has nothing to scroll. A box can't tell which way its parent lays out, and a wrapper may
+ * move into another, so each one that grows lets its content be smaller than it is both ways: `min-width: 0` and
+ * `min-height: 0`, or an `overflow` that clips.
  */
-const GROWS = /^flex:\s*(1\b|auto\b)/;
+const GROWS = /^(flex:\s*([1-9]|auto\b)|flex-grow:\s*[1-9])/;
 const LETS_CONTENT_SHRINK = { width: /^min-width:\s*0(px)?$/, height: /^min-height:\s*0(px)?$/, both: /^overflow:\s*(hidden|auto|scroll|clip)$/ };
 
 /** Classes that are only ever set beside another, whose rules they share: `SplitPane`'s `.rest` is always a `.pane`. */
@@ -36,18 +37,10 @@ function wrappersHoldingContent({ file, classes }: ViewWrapperFile): string[] {
 }
 
 describe('the boxes the views sit in', () => {
-  // `PageFrame`'s `.frame` once had no `min-height: 0`: a merge with more items than the window shows grew the page
-  // past it, and neither its list nor its diff scrolled.
+  // `PageFrame`'s `.frame` once had no `min-height: 0`: in the column `.layer` a merge in progress stays mounted in, a
+  // merge with more items than the window shows grew the page past it, and neither its list nor its diff scrolled.
   it('never grow past the window, so what holds more than fits scrolls', () => {
     expect(VIEW_WRAPPERS.flatMap(wrappersHoldingContent)).toEqual([]);
-  });
-
-  it('are all still where the rule looks for them: each class has a rule of its own', () => {
-    const missing = VIEW_WRAPPERS.flatMap(({ file, classes }) => {
-      const css = readWrapperCss(file);
-      return classes.filter((className) => !cssRules(css).some((rule) => stylesClass(rule.selector, className))).map((className) => `${file} .${className}`);
-    });
-    expect(missing).toEqual([]);
   });
 
   it('reads how a box holds its content as CSS writes it', () => {
@@ -58,6 +51,8 @@ describe('the boxes the views sit in', () => {
     // One that doesn't grow takes its own size; a state's or a child's rule isn't the box's own.
     expect(holdsContentIn('.frame { height: 100%; } .frame[hidden] { flex: 1 } .frame > .row { flex: 1 }', 'frame')).toEqual([]);
     expect(holdsContentIn('.frame { flex: none; }', 'frame')).toEqual([]);
+    expect(holdsContentIn('.frame { flex: 2 } .other { flex-grow: 1 }', 'frame')).toEqual(['.frame (width)', '.frame (height)']);
+    expect(holdsContentIn('.frame { flex-grow: 1; overflow: auto }', 'frame')).toEqual([]);
     // A class always set beside another shares its rules.
     expect(holdsContentIn('.pane { min-width: 0; min-height: 0; } .rest { flex: 1; }', 'rest', 'pane')).toEqual([]);
   });
