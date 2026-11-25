@@ -7,6 +7,7 @@ const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
 const { signInFailure } = require('./signIn.cjs');
 const { matching } = require('./where.cjs');
+const { REVISIONS_FOUND, historyOutput } = require('./history.cjs');
 const { isFakeMerge, listsMergeFiles, mergeListing, mergePreview, mergeVersion } = require('./merge.cjs');
 const { version: PINNED_CM_VERSION } = require('../../../cm-version.json');
 
@@ -23,6 +24,7 @@ const FINDABLE = {
   label: repository.LABELS,
   merge: repository.MERGES,
   review: repository.REVIEWS,
+  revision: REVISIONS_FOUND,
   shelve: repository.SHELVES,
 };
 
@@ -78,6 +80,7 @@ const COMMANDS = {
   diff: (args) => formatted(args, DIFFERENCES),
   cat: cat,
   ls: (args) => (listsMergeFiles(args) ? mergeListing(args) : lsOutput(args)),
+  history: historyOutput,
   'lock list': lockList,
   'repository list': repositoryList,
   showacl: showAcl,
