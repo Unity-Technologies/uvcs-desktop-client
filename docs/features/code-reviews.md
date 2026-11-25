@@ -273,8 +273,10 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   outdated.
   The pill leads with the kind's icon (`THREAD_KIND_ICONS`, change request, question or comment), and its words say
   only where it stands (`threadBadges`), as the server counts open ones. The icon's own tooltip names the kind where the
-  words don't (`HeaderPill`'s `kindTip`): hovering the icon shows "Change request" or "Question", even on a pill that is
-  a link, whose tooltip, over the rest of it, says what a click shows. Beside "Comment" the icon is only drawn, with no
+  words don't (`HeaderPill`'s `kindTip`): hovering the icon shows "Change request 2c17a694" or "Question", even on a pill
+  that is a link, whose tooltip, over the rest of it, says what a click shows. A change request's adds its number, the
+  first eight digits of its GUID that `[apply-change:2c17a694]` names it by ("Applying change requests"), for whoever
+  applies it from a client that doesn't offer it; its menu copies it (Copy ▸ GUID). Beside "Comment" the icon is only drawn, with no
   tooltip and hidden from a screen reader, so the kind isn't said twice. Open and Comment pills have no tooltip of their
   own. Where it stands:
   a change request is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its
@@ -338,7 +340,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   on what the review targets): only its author edits a comment; only its author deletes a comment, and every reply
   under it goes too, whoever wrote it (`canDeleteComment`, `commentsDeletedWith`); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text and
-  link to copy (Copy ▸ Comment, Link; see "Links to comments").
+  link to copy (Copy ▸ Comment, Link; see "Links to comments"); a change request's also its number, its GUID's first
+  eight digits as a check-in comment names it (Copy ▸ GUID, `reviewCommentCopyTexts`), never the whole GUID, which
+  nothing a person types takes.
 - **What a reviewer said with their status** is edited by that reviewer, in place in the timeline
   (`canEditStatusComment`, `statusCommentMenu`, `TimelineEventRow`), even when they said nothing; nobody deletes it,
   as the status would go with it. `cm codereview comment edit` writes the text as given and puts back only a
@@ -395,7 +399,9 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
   syntax, `changeRequestQueryAt`) opens **Change requests to apply**: the open ones of the reviews of the workspace's
   branch that the comment doesn't name yet (`notYetNamed`), the newest first; what's typed after `[apply-change:`
   filters them by their words, file, review, author or number, and a pick writes the whole `[apply-change:c0d1ce00]`
-  (`changeRequestSuggestions`). `cr:` stays a review's spec only: a request isn't a review, and mixing them under one
+  (`changeRequestSuggestions`). A row shows no number, which a pick writes for the user; its tooltip names it
+  ("Change request c0d1ce00") over the request's whole first line, which the row cuts. The official client led every
+  row with it, which buried the words people pick by. `cr:` stays a review's spec only: a request isn't a review, and mixing them under one
   prefix read as one. The discoverable door is the description's footer (docs/features/changes.md "The check-in's
   comment"): a quiet button with their count, there only while some are offered, which opens the same list at the
   description's caret, or at its end, and teaches `[apply` at the list's foot (`suggestionListHint`). It always opens:

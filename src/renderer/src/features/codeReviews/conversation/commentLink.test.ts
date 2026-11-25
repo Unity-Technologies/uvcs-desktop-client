@@ -82,4 +82,15 @@ describe('reviewCommentCopyTexts', () => {
       link: 'uvcs://acme.unity/repos/game/code-reviews/41/-/comments/7',
     });
   });
+
+  it('copies a change request\'s GUID as a check-in comment names it, its first eight digits', () => {
+    const request = comment(7, { kind: 'changeRequest', text: 'Rename it', guid: '2c17a694-5b1e-4c3a-9f0d-1a2b3c4d5e6f' });
+    expect(reviewCommentCopyTexts(repositoryPlace('game@acme@unity'), 41, request).guid).toBe('2c17a694');
+  });
+
+  it('copies no GUID of a comment no check-in applies: a question, a plain comment, a reply', () => {
+    for (const kind of ['question', 'comment', 'general', 'discard'] as const) {
+      expect(reviewCommentCopyTexts(repositoryPlace('game@acme@unity'), 41, comment(7, { kind })).guid).toBeUndefined();
+    }
+  });
 });

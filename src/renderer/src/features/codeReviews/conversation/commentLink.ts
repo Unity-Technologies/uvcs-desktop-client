@@ -3,6 +3,7 @@ import type { ReviewComment, ReviewConversation } from '@shared/domain/reviewCon
 import { linkCopyText } from '../../../app/links/linkTo';
 import type { PageOf } from '../../../app/navigation/pages';
 import type { CopyTexts } from '../../../components/copyMenu';
+import { shortGuid } from '../../../lib/comments/commentReferences';
 import { isFileThread } from '../inline/fileThreads';
 import { threadsOf } from './reviewThreads';
 import { commentLocationPage } from './threadBadges';
@@ -30,7 +31,15 @@ export function commentLinkPage(reviewId: number, commentId: number, conversatio
   return { page: { ...review, tab: 'conversation', focusThread: thread.root.id, ...reply }, found: true };
 }
 
-/** What a review's comment is copied as (its menu's Copy): its text, then its link. */
-export function reviewCommentCopyTexts(place: Place, reviewId: number, comment: Pick<ReviewComment, 'id' | 'text'>): CopyTexts {
-  return { comment: comment.text, link: linkCopyText(place, undefined, { object: { kind: 'codeReview', id: reviewId }, page: { kind: 'reviewComment', commentId: comment.id } }) };
+/**
+ * What a review's comment is copied as (its menu's Copy): its text, then its link. A change request also copies its
+ * GUID as a check-in comment names it, the first eight digits of `[apply-change:2c17a694]`, for whoever applies it from
+ * a client that doesn't offer it (the CLI); the whole GUID names it nowhere a person types.
+ */
+export function reviewCommentCopyTexts(place: Place, reviewId: number, comment: Pick<ReviewComment, 'id' | 'text' | 'kind' | 'guid'>): CopyTexts {
+  return {
+    comment: comment.text,
+    link: linkCopyText(place, undefined, { object: { kind: 'codeReview', id: reviewId }, page: { kind: 'reviewComment', commentId: comment.id } }),
+    guid: comment.kind === 'changeRequest' ? shortGuid(comment.guid) : undefined,
+  };
 }

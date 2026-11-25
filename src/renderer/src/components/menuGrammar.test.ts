@@ -700,9 +700,14 @@ describe('Copy', () => {
     expect(await copiedBy(labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
   });
 
-  it.each(['reviewComment', 'openChangeRequest', 'appliedChangeRequest'])("copies a review's comment as its text and its link, which opens the review at it: %s", async (menu) => {
+  it("copies a review's comment as its text and its link, which opens the review at it", async () => {
     fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
-    expect(await copiedBy(COMMENT_MENUS[menu]!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
+    expect(await copiedBy(COMMENT_MENUS.reviewComment!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
+  });
+
+  it.each(['openChangeRequest', 'appliedChangeRequest'])('copies a change request as its text, its link and the GUID a check-in comment names it by: %s', async (menu) => {
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
+    expect(await copiedBy(COMMENT_MENUS[menu]!())).toEqual(['Comment: Nice', 'Comment GUID: g1', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
   });
 
   it('copies a deleted repository as its name alone: its spec names it by an id no link opens', async () => {

@@ -1,3 +1,5 @@
+import type { ReviewComment } from '@shared/domain/reviewConversation';
+import { shortGuid } from '../../../lib/comments/commentReferences';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceNamesPart, writtenPlaceText, writtenPlaceTip, type ThreadBadges, type ThreadKindName } from './threadBadges';
 
@@ -57,10 +59,11 @@ export interface HeaderLocation {
 export type HeaderPill = {
   kind: ThreadKindName;
   /**
-   * The kind's name, the icon's tooltip and what a screen reader says of it; null where the label names the kind
-   * already ("Comment"), so it isn't said twice: the icon is then only drawn.
+   * The kind's name, the icon's tooltip and what a screen reader says of it (`kindTipOf`): a change request's with the
+   * number a check-in comment applies it by, "Change request 2c17a694". Null where the label names the kind already
+   * ("Comment"), so it isn't said twice: the icon is then only drawn.
    */
-  kindTip: ThreadKindName | null;
+  kindTip: string | null;
   label: string;
   tone: PillTone;
 } &
@@ -136,7 +139,15 @@ function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation 
 function pillLook(thread: ReviewThread, badges: ThreadBadges): Pick<HeaderPill, 'kind' | 'kindTip' | 'label' | 'tone'> | null {
   const kind = threadKindName(thread.root);
   if (!badges.state) return hasThreadHeader(thread) ? { kind, kindTip: null, label: kind, tone: 'comment' } : null;
-  return { kind, kindTip: kind, ...badges.state };
+  return { kind, kindTip: kindTipOf(thread.root, kind), ...badges.state };
+}
+
+/**
+ * The kind as its icon's tooltip names it. A change request's adds its number, its guid's first eight digits, the one
+ * `[apply-change:2c17a694]` names it by, for whoever applies it from a client that doesn't offer it (the CLI).
+ */
+function kindTipOf(root: ReviewComment, kind: ThreadKindName): string {
+  return root.kind === 'changeRequest' ? `${kind} ${shortGuid(root.guid)}` : kind;
 }
 
 function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: boolean, showsAnswer: boolean, inContext: boolean): HeaderPill | null {
