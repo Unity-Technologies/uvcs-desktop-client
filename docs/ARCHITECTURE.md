@@ -1347,9 +1347,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`) and the page's
   zoom (View > Zoom In, Zoom Out). The app keeps one zoom, saved (`zoomLevel`): every window opens at it and keeps it
   as its own (`WINDOW_ZOOM_MODE`, `isolated`), and the menu's own items (`zoomPage`, not Electron's zoom roles, which
-  tell nobody) set it on every window. Chromium's default keys a zoom by the page's whole `file://` address, query
-  included: a window's zoom changed under it when its page dropped its query (`openPlaceFromAddress`), and came back
-  at a launch only at the very same address. The menu's items, each page load (`followPageZoom`) and showing a window
+  tell nobody) set it on every window. Not Chromium's default mode, which keys a zoom by the page's whole `file://`
+  address, query included: dropping the query (`openPlaceFromAddress`) would change a window's zoom without telling
+  anyone, and a zoom would come back at a launch only at the same address. The menu's items, each page load (`followPageZoom`) and showing a window
   (`fitWindowControls`, before `show()`) center the traffic lights in the scaled top bar (`trafficLightsAt`) and make
   the caption buttons as tall as it (`fitCaptionButtons`). The page starts at the zoom its address names
   (`startingZoomIn`; the preload's `webFrame.getZoomFactor` may not have it yet as the page loads) and hears it again

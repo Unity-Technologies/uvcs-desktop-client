@@ -54,12 +54,12 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
  * title, once for each burst of such changes (opening a window focuses it and sets its title: a build takes 3-5 ms).
  * The first window opening installs it first. `settings` keeps the zoom its View menu sets (`zoomPage`).
  */
-export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: SettingsStore): () => void {
+export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: Pick<SettingsStore, 'update'>): () => void {
   return coalesced(() => installAppMenu(windows, updates, logFile, cmRuntime, settings));
 }
 
 /** `logFile` is the log file Help ▸ Show Log Files shows (`appLog`); `cmRuntime` the `cm` Show Command Line Client shows. */
-function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: SettingsStore): void {
+function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: Pick<SettingsStore, 'update'>): void {
   const template = appMenuTemplate({
     platform: process.platform,
     isPackaged: app.isPackaged,

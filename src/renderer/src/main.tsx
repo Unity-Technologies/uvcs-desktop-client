@@ -30,6 +30,7 @@ setTimeout(() => {
 setTimeout(preloadCommentEditor, 2500);
 
 document.documentElement.dataset.chrome = WINDOW_CHROME;
+// Before `openPlaceFromAddress`, which drops the address's query, the zoom the window opened at with it.
 exposePageZoom();
 markReadsInFlight(queryClient);
 guardUnloading();
