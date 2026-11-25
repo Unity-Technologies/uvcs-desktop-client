@@ -1,24 +1,5 @@
-/// <reference types="node" />
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-
-const RENDERER = __dirname;
-
-/**
- * The boxes every view and page sits in, from the window's screen down to a page's content (`PlaceLayout`,
- * `SignInCover`, `KeptView`, `PageFrame`, `SplitPane`, `Stowable`, a page window's `PageWindowScreen`), by their
- * classes. A view's overlay drawn in the page (a comment's larger editor, `CommentFocusGroup`) lies over the window
- * only while none of them makes a stacking context or holds fixed boxes as their frame.
- */
-const VIEW_WRAPPERS: { file: string; classes: string[] }[] = [
-  { file: 'app/shell/PlaceLayout.module.css', classes: ['screen', 'body', 'main', 'content', 'layer'] },
-  { file: 'app/signIn/SignInCover.module.css', classes: ['cover', 'covered'] },
-  { file: 'app/shell/PageFrame.module.css', classes: ['frame', 'content'] },
-  { file: 'ui/SplitPane.module.css', classes: ['split', 'pane', 'rest'] },
-  { file: 'ui/Stowable.module.css', classes: ['stowable'] },
-  { file: 'app/pageWindow/PageWindowScreen.module.css', classes: ['screen', 'content'] },
-];
+import { cssRules, readWrapperCss, stylesClass, VIEW_WRAPPERS, type ViewWrapperFile } from './testing/viewWrappers';
 
 /**
  * What makes a stacking context, which keeps a fixed overlay inside it under what the page's body draws, or a frame
@@ -42,20 +23,6 @@ const TRAPS: RegExp[] = [
  */
 const ALLOWED: { file: string; selector: string }[] = [{ file: 'app/signIn/SignInCover.module.css', selector: '.covered[inert]' }];
 
-/** A CSS file's rules as selector and declarations, `@media` blocks' included, comments left out. */
-function cssRules(text: string): { selector: string; declarations: string[] }[] {
-  const css = text.replace(/\/\*[\s\S]*?\*\//g, '');
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body]) => ({
-    selector: selector.trim(),
-    declarations: body.split(';').map((declaration) => declaration.trim()).filter(Boolean),
-  }));
-}
-
-/** Whether a selector styles the class itself (in any of its comma-separated parts), not a child or a pseudo-element. */
-function stylesClass(selector: string, className: string): boolean {
-  return selector.split(',').some((part) => new RegExp(`\\.${className}(?![\\w-])[^\\s>+~]*$`).test(part.trim()) && !part.includes('::'));
-}
-
 /** What in a CSS file's rules for the wrapper classes makes a stacking context, as `selector { declaration }`. */
 function trapsInCss(css: string, classes: string[], allowedSelectors: string[] = []): string[] {
   return cssRules(css)
@@ -64,9 +31,9 @@ function trapsInCss(css: string, classes: string[], allowedSelectors: string[] =
     .flatMap((rule) => rule.declarations.filter((declaration) => TRAPS.some((trap) => trap.test(declaration))).map((declaration) => `${rule.selector} { ${declaration} }`));
 }
 
-function trapsIn({ file, classes }: { file: string; classes: string[] }): string[] {
+function trapsIn({ file, classes }: ViewWrapperFile): string[] {
   const allowed = ALLOWED.filter((rule) => rule.file === file).map((rule) => rule.selector);
-  return trapsInCss(readFileSync(join(RENDERER, file), 'utf8'), classes, allowed).map((trap) => `${file} ${trap}`);
+  return trapsInCss(readWrapperCss(file), classes, allowed).map((trap) => `${file} ${trap}`);
 }
 
 describe('the boxes the views sit in', () => {
@@ -78,7 +45,7 @@ describe('the boxes the views sit in', () => {
 
   it('are all still where the rule looks for them: each class is styled in its file', () => {
     const missing = VIEW_WRAPPERS.flatMap(({ file, classes }) => {
-      const rules = cssRules(readFileSync(join(RENDERER, file), 'utf8'));
+      const rules = cssRules(readWrapperCss(file));
       return classes.filter((className) => !rules.some((rule) => stylesClass(rule.selector, className))).map((className) => `${file} .${className}`);
     });
     expect(missing).toEqual([]);
