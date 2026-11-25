@@ -27,10 +27,12 @@ included.
 `mergeRequestForm`, in `mergeRequestDraft.ts`) is offered by the Merge requests view's header and its empty state, the
 palette in every workspace and repository window (`codeReviews.newMergeRequest`, `useMergeRequestCommands`; while the
 view shows, its own, which selects the new row), and every branch's menu (`branchMenu`: the Branches view, the Branch
-Explorer, the switcher, the top bar), the **Merge request** section of a branch's details while it has none to merge ("A branch's merge request at a glance"), in the `create` group above **New code review…**, which stays: a review of a
+Explorer, the switcher, the top bar), in the `create` group above **New code review…**, which stays: a review of a
 branch with no destination is still asked for, and it is the only kind a branch with nowhere to merge (`/main`) can
 have. Such a branch (no ancestor in its name and no parent, `canMergeSomewhere`) has no New merge request entry,
-rather than one always refused. No shortcut: creating one is rare, and the palette has it.
+rather than one always refused. A branch's details offer it too, as **New** in their Merge request section while the
+branch has none to merge ("A branch's merge request at a glance"). No shortcut: creating one is rare, and the palette
+has it.
 
 - **From** and **Into** sit on one row with an arrow between, read as a sentence. Each opens the branch list
   (`BranchField`, `BranchChoiceList`), the branches read only once it opens: From the branches that can merge
@@ -387,8 +389,11 @@ offers Add, opening the New merge request dialog on that branch ("Creating one")
 - A request still to merge (Open or Draft): its card, and nothing to create.
 - A merged or closed one: its card, with New beside the title (the standing review puts a request still to merge
   first, so none is left).
-- None, or only a plain code review: "No merge request", with New.
-- While the branch's review is read: a placeholder line, so the section doesn't pop in under the pointer.
+- No review: "No merge request", with New.
+- A plain code review: "No open merge request", with New. It may stand over an older merged or closed request (a
+  newer review stands over those), so the section says only what it knows.
+- While the branch's review is read: a placeholder line, so the section doesn't pop in under the pointer. When that
+  read fails, no section, as before it was read: it can't say whether there's a request.
 - A branch with nowhere to merge (`/main`, `canMergeSomewhere`): no section, unless a request names it anyway (its
   card, nothing to create).
 
