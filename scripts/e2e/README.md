@@ -137,9 +137,9 @@ placed with `position: absolute` or `fixed` (a virtual list's rows, a popover), 
 (`.visually-hidden`, clipped to a pixel), and the overhang a box's own negative margin asks for (Settings' pane, room
 for focus rings). Two pixels are rounding.
 
-It catches only what overflows, so the fake's lists of pending changes, changesets and labels, and the diff of
-`src/player.cs`, are longer than the window (`LONGER_THAN_THE_WINDOW` in `fakeCm/repository.cjs`): a view whose list
-doesn't scroll fails. A new view or page whose content can grow shows enough of it to overflow.
+It catches only what overflows, so the fake's lists of pending changes, changesets and labels, the diff of
+`src/player.cs` (`LONGER_THAN_THE_WINDOW` in `fakeCm/repository.cjs`) and the merge's changes (`fakeCm/merge.cjs`) are
+longer than the window: a view or page whose list doesn't scroll fails. A new view or page whose content can grow shows enough of it to overflow.
 
 `CUT_OFF_ALLOWED` lists what may end below its box, each by a selector and why. Never add one to get a step through:
 a box cut off is a bug users see.
