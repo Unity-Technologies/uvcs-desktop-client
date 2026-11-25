@@ -33,7 +33,7 @@ import { MergeItemList } from './MergeItemList';
 import { MergeOptionsMenu } from './MergeOptionsMenu';
 import { contributorDecisions, contributorOf, mergeOptionsOffered, type Contributor } from './mergeOptions';
 import { MergePanes } from './MergePanes';
-import { buildMergeItems, directoryConflictsInListOrder, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, MERGE_ITEM_FACTS, MERGE_VIEW_OFFER, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, directoryConflictsInListOrder, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, MERGE_ITEM_FACTS, MERGE_VIEW_OFFER, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { pairMergeMetas } from './mergeMetaPairs';
 import { mergeItemTypes } from './mergeItemTypes';
@@ -44,6 +44,7 @@ import { completeMerge } from './mergeOperations';
 import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
 import { useFileConflicts } from './resolve/useFileConflicts';
+import { startingItem } from './startingItem';
 import { useSelectionFollowsItem } from './useSelectionFollowsItem';
 
 interface MergeSessionProps {
@@ -144,10 +145,11 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const run = useResolveRun({ states: fileStates, mergerFor, resolveInTool, onOpen: followRun, onEnd: afterRun });
   const runPlans = useRunOffer(fileStates, run);
 
-  // Start on the first thing that needs the user, as the list shows them (a `.meta` joined to its asset is never one), else on its first row.
+  // Where the page opens (`startingItem`), selected once.
+  const start = startingItem(selectedKey, pairs.shown, progress);
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(pairs.shown, progress) ?? inListOrder(pairs.shown)[0]!).key)));
-  }, [selectedKey, items, pairs.shown, progress, rowKeyOf]);
+    if (start) setSelection(singleSelection(rowKeyOf(start.key)));
+  }, [start, rowKeyOf]);
 
   // A conflicting file's arrows go on past its first or last conflict to the files around it that wait for the user.
   const conflictKeys = useMemo(() => conflictStepKeys(rows, selectedKey, (item) => item.kind === 'fileConflict' && needsDecision(item, progress)), [rows, selectedKey, progress]);
