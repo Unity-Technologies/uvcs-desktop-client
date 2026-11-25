@@ -4,7 +4,7 @@ import { reviewChipLayout, STATUS_ICON } from './reviewChipLayout';
 
 const measure = (text: string) => text.length * 5;
 const tip = { kind: 'tip', tip: '', tipSub: '' } as const;
-const chip = (fields: Partial<ReviewChip>): ReviewChip => ({ stateText: false, statusText: false, hover: tip, label: '', ...fields });
+const chip = (fields: Partial<ReviewChip>): ReviewChip => ({ stateText: false, statusText: false, verdictRoom: false, hover: tip, label: '', ...fields });
 
 describe('reviewChipLayout', () => {
   it("draws a merge request's state as a pill with its name, then its verdict's icon after it", () => {
