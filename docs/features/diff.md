@@ -770,7 +770,7 @@ menu takes. What it holds depends on the side right-clicked (`codeMenuTarget`):
   first one it reads: a CRLF file stays CRLF, which `diskText` wouldn't repair). Delete removes what every selection
   holds (`deletionEdits`), Pierre's `applyEdits` moving the carets; Select all selects the whole text.
 - **Read-only** (every other side): only what reads it. Copy copies the text selected in the page, read from its rows
-  (`pageTextSelection`, `copiedPageText`); lines picked by their numbers have "Copy lines" instead. Select all selects
+  (`pageTextSelection`, `copiedPageText`); lines picked by their numbers have "Copy lines 40–52" instead. Select all selects
   every line of the side, as Shift+click would, where lines are selected for links. Undo, Redo, Cut, Paste and Delete
   aren't offered, nor Replace: there's nothing to replace in. Find opens the search ("Find in the code", below), where a
   place has one; Annotate and a merge's conflicts have none.

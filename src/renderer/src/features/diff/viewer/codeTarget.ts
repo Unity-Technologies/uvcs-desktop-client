@@ -176,8 +176,8 @@ export function linesOnSide(lines: FocusedLines | null): SelectedSideLines | nul
 }
 
 /**
- * The lines a right-click's menu acts on: those the lines' menu just picked (`pickLines`, which selects the line
- * clicked before React shows it), where the place has that menu; else those already selected.
+ * The lines a right-click's menu acts on: those the lines' menu just picked (`pickLines`: the line clicked, or the
+ * lines selected when it's one of them, selecting nothing), where the place has that menu; else those already selected.
  */
 export function linesAtRightClick(picked: FocusedLines | null | undefined, selected: LineRange | null): SelectedSideLines | null {
   return picked !== undefined ? linesOnSide(picked) : selectedSideLines(selected);
