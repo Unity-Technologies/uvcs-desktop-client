@@ -249,8 +249,8 @@ The suite runs after every change, so it must take seconds, not minutes. A test 
   workspace: startup, every sidebar view, every kind of page, the palette, Settings, a theme switch; it fails on
   renderer errors and on any `cm` command the fake doesn't know. A view that starts running a new command teaches it
   to the fake (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`, a new kind of page
-  one in its `PAGES` and a step that opens it. It stays a pass through the
-  views plus what only the real app shows; what a module decides is a unit test (its README, "What belongs here").
+  one in its `PAGES` and a step that opens it. It stays a pass through the views plus what only the real app shows;
+  what a module decides is a unit test (its README, "What belongs here").
 - **The renderer's fakes** are in `renderer/src/testing/`: `fakeWindow` (`window.uvcs`; `fakeApi` answers the calls a
   test declares and fails it on any other), `fakeDialogs` (confirm and prompt), `operationOutcome` (the toasts, where
   the window went, the views refreshed), `queryProbes`.

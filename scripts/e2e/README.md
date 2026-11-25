@@ -139,7 +139,8 @@ for focus rings). Two pixels are rounding.
 
 It catches only what overflows, so the fake's lists of pending changes, changesets and labels, the diff of
 `src/player.cs` (`LONGER_THAN_THE_WINDOW` in `fakeCm/repository.cjs`) and the merge's changes (`fakeCm/merge.cjs`) are
-longer than the window: a view or page whose list doesn't scroll fails. A new view or page whose content can grow shows enough of it to overflow.
+longer than the window: a view or page whose list doesn't scroll fails. A new view or page whose content can grow
+shows enough of it to overflow.
 
 `CUT_OFF_ALLOWED` lists what may end below its box, each by a selector and why. Never add one to get a step through:
 a box cut off is a bug users see.
@@ -165,8 +166,9 @@ a box cut off is a bug users see.
   shows at the smoke test's window size. `history.cjs` answers `cm history --xml` and `cm find revision` with a
   workspace file's one revision, the one it loaded.
 - A command, `find` object or `--format` field it doesn't know fails with exit code 1, naming it, and the smoke test
-  fails listing it. A failure `cm` itself would give (`CmRefusal`: previewing a merge of task-001 or task-002 into main,
-  which the fake's merge rules refuse) is an answer, not a command it doesn't know. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
+  fails listing it. A failure `cm` itself would give (`CmRefusal`: previewing a merge of task-001 into any branch, or
+  of task-002 into any branch but task-001, which the fake's merge rules refuse) is an answer, not a command it doesn't
+  know. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
   objects in `repository.cjs`, output shaped as the app's parser reads it (its tests show real `cm` output).
 - `UVCS_FAKE_CM_VERSION_FILE` names a file, read on every command, holding the version `cm version` prints (the pinned
   one when there's none): an installed `cm` older than the app needs, for the update screen. In a development build,
