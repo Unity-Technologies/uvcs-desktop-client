@@ -13,7 +13,7 @@ import {
   applyChangeRequestArgs,
   descriptionArgs,
   editCommentArgs,
-  removeCommentArgs,
+  removeCommentsArgs,
   replyArgs,
   unapplyChangeRequestArgs,
 } from '../cm/reviewCommentArgs';
@@ -92,9 +92,12 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
       await withTempFile(statusCommentText(status, text), (textFile) => cm.query(editCommentArgs(commentGuid, textFile, at), at.options));
     },
 
-    async remove(place, commentGuid) {
+    async remove(place, commentGuids) {
       const at = cmPlace(place);
-      await cm.query(removeCommentArgs(commentGuid, at), at.options);
+      const args = removeCommentsArgs(commentGuids, at);
+      // `cm` asks the server twice for each comment (find it by its guid, delete it): a thread's replies hold a pooled
+      // shell long enough to stall the reads behind it, so they get a process of their own.
+      await (commentGuids.length > 1 ? cm.execute(args, at.options) : cm.query(args, at.options));
     },
 
     async markApplied(place, changeRequestGuid, changesetId) {

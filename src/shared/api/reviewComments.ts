@@ -23,7 +23,8 @@ export interface ReviewCommentsApi {
   edit(place: Place, commentGuid: string, text: string): Promise<void>;
   /** Edits what a reviewer said with their status (a `statusChanged` event's `guid`), the status kept. */
   editStatusComment(place: Place, commentGuid: string, status: CodeReviewStatus, text: string): Promise<void>;
-  remove(place: Place, commentGuid: string): Promise<void>;
+  /** Deletes the comments in one command, in the order given: a comment's replies before it (`commentsDeletedWith`). */
+  remove(place: Place, commentGuids: readonly string[]): Promise<void>;
   /** Marks a change request applied in a changeset of the review's repository, by hand. */
   markApplied(place: Place, changeRequestGuid: string, changesetId: number): Promise<void>;
   /** Marks an applied change request as not applied: it's open again. */
