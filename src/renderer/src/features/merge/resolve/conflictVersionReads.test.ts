@@ -23,6 +23,16 @@ describe('upFrontReads', () => {
     expect(upFrontReads(files).sources).toEqual([code.base, code.source, code.destination]);
     expect(upFrontReads(textures).sources).toEqual([]);
   });
+
+  it('reads the files in the order the merge page lists them, so it can tell sooner which one it opens on', () => {
+    const sun = fileOf('Lighting/Sun.cs');
+    const clouds = fileOf('Lighting/Clouds.cs');
+    const probe = fileOf('Lighting/Probes/Probe1.cs');
+    const { sources, firstOf } = upFrontReads([sun, probe, clouds]);
+    // Folder by folder, by name: the list's own order (`comparePaths`), the folder Probes between Clouds.cs and Sun.cs.
+    expect(sources.filter((_, index) => index % 3 === 0)).toEqual([clouds.base, probe.base, sun.base]);
+    expect([firstOf.get(clouds.key), firstOf.get(probe.key), firstOf.get(sun.key)]).toEqual([0, 3, 6]);
+  });
 });
 
 describe('readsOnOpen', () => {
