@@ -175,7 +175,9 @@ in it added on both) is its folder's row in a tree: selecting that row selects t
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
 (ARCHITECTURE.md "Folders once"). A Unity asset's `.meta` among the changes to apply is listed with it; a conflict never
 is, the asset's nor its meta's (`pairMergeMetas`): each is a decision with its own panel. The page starts on the first item that needs the user in the order the list shows
-(`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
+(`startingItem`), past the file conflicts that merge by themselves: while a file before it is still loading, which may
+merge by itself, the page shows a spinner and waits, and it never moves a selection made. With nothing to decide, it
+starts on the first row. After a run it goes back to the first item still waiting (`firstWaiting`). Directory conflicts are named in plain words ("Added on both sides
 with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Under its choices, a directory
 conflict on a file diffs the incoming item with yours or with the base ("Incoming ↔ Yours", "Incoming ↔ Base",
 `comparisonsOf`, `comparedVersions`): each side read by its path at the merge's changesets (`MergePlan.contributors`),
