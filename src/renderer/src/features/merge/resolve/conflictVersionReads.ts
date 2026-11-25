@@ -1,4 +1,5 @@
 import type { ContentSource, FileContent } from '@shared/domain/content';
+import { sortByPath } from '@shared/pathOrder';
 import type { ConflictedFile } from './useFileConflicts';
 
 /** One version of a conflicting file as far as it has been read. */
@@ -19,12 +20,14 @@ export interface UpFrontReads {
 /**
  * The versions read as the page opens: the three of every file whose status needs its automatic merge. A file known
  * to be a binary (`isKnownBinary`) needs a decision whatever its bytes hold: none of its versions is read up front,
- * though each may weigh hundreds of MB (textures, models, scenes).
+ * though each may weigh hundreds of MB (textures, models, scenes). They're asked in the order the page lists the files
+ * (`sortByPath`, as `mergeItemGroups`): the page opens on the first that needs the user once those before it are read
+ * (`startingItem`), not once `cm`'s order reaches them.
  */
 export function upFrontReads(files: readonly ConflictedFile[]): UpFrontReads {
   const sources: ContentSource[] = [];
   const firstOf = new Map<string, number>();
-  for (const file of files) {
+  for (const file of sortByPath(files, (candidate) => candidate.path)) {
     if (file.isKnownBinary) continue;
     firstOf.set(file.key, sources.length);
     sources.push(file.base, file.source, file.destination);

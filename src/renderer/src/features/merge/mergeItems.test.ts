@@ -102,7 +102,7 @@ describe('merge items', () => {
     expect(decided).toEqual(waiting);
   });
 
-  it('starts on the first item waiting for the user in the order the list shows: directory conflicts first', () => {
+  it('goes after a run to the first item waiting for the user in the order the list shows: directory conflicts first', () => {
     // The directory conflict is /twin.txt, after /a.txt in path order, but its group comes first.
     const items = buildMergeItems(plan, [], [file]);
     expect(firstWaiting(items, mergeProgress([fileState(false)], twinResolutions()))?.path).toBe('twin.txt');

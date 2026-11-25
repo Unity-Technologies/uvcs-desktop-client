@@ -13,6 +13,7 @@ import { pluralize } from '../../lib/text';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { assetOfMeta, diffedItem } from '../../lib/unityMetaPairs';
 import { EmptyState } from '../../ui/EmptyState';
+import { CenteredSpinner } from '../../ui/Spinner';
 import { NoMatches } from '../../ui/NoMatches';
 import { useDiffMetaShownFor } from '../diff/useDiffMetaShownFor';
 import { FileStepsContext, selectNow, useFileSteps } from '../diff/viewer/fileSteps';
@@ -44,6 +45,8 @@ import { completeMerge } from './mergeOperations';
 import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
 import { useFileConflicts } from './resolve/useFileConflicts';
+import { mergeDetailOf } from './mergeDetailKind';
+import { startingItem } from './startingItem';
 import { useSelectionFollowsItem } from './useSelectionFollowsItem';
 
 interface MergeSessionProps {
@@ -92,6 +95,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const items = useMemo(() => buildMergeItems(plan, directory.decisions, conflictedFiles), [plan, directory.decisions, conflictedFiles]);
   // The list shows each Unity `.meta` change with its asset's; the progress and the merge itself count every item.
   const pairs = useMemo(() => pairMergeMetas(items), [items]);
+  const listed = useMemo(() => inListOrder(pairs.shown), [pairs.shown]);
   const directoryConflicts = useMemo(() => directoryConflictsInListOrder(items), [items]);
   const progress = useMemo(() => mergeProgress(fileStates, directory.resolutions, directory.applying), [fileStates, directory.resolutions, directory.applying]);
   const latest = useRef({ items: pairs.shown, progress });
@@ -144,10 +148,12 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const run = useResolveRun({ states: fileStates, mergerFor, resolveInTool, onOpen: followRun, onEnd: afterRun });
   const runPlans = useRunOffer(fileStates, run);
 
-  // Start on the first thing that needs the user, as the list shows them (a `.meta` joined to its asset is never one), else on its first row.
+  // Where the page opens (`startingItem`), selected once; a spinner until it can tell.
+  const start = startingItem(selectedKey, listed, progress);
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(pairs.shown, progress) ?? inListOrder(pairs.shown)[0]!).key)));
-  }, [selectedKey, items, pairs.shown, progress, rowKeyOf]);
+    if (start && start !== 'loading') setSelection(singleSelection(rowKeyOf(start.key)));
+  }, [start, rowKeyOf]);
+  const detail = mergeDetailOf({ hidesAll, shown: Boolean(diffed), start, selectedGroup: Boolean(selectedGroup) });
 
   // A conflicting file's arrows go on past its first or last conflict to the files around it that wait for the user.
   const conflictKeys = useMemo(() => conflictStepKeys(rows, selectedKey, (item) => item.kind === 'fileConflict' && needsDecision(item, progress)), [rows, selectedKey, progress]);
@@ -248,7 +254,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
         />
       }
       detail={
-        hidesAll ? null : shown && diffed ? (
+        detail === 'item' && shown && diffed ? (
           <FileStepsContext.Provider value={shown.kind === 'fileConflict' ? conflictSteps : null}>
             <MergeDetail
               workspacePath={workspacePath}
@@ -266,15 +272,17 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               onResolveDirectory={(conflict, resolution, next) => void directory.decide(conflict, resolution, next)}
             />
           </FileStepsContext.Provider>
-        ) : selectedGroup ? (
+        ) : detail === 'loading' ? (
+          <CenteredSpinner />
+        ) : detail === 'group' && selectedGroup ? (
           <EmptyState
             icon={<Folder size={24} />}
             title={selectedGroup.type === 'group' ? selectedGroup.label : selectedGroup.path}
             description={`${pluralize(rangeLength(selectedGroup.held), 'item')}. Select one to see what the merge does to it.`}
           />
-        ) : (
+        ) : detail === 'nothing' ? (
           <EmptyState title="Nothing selected" />
-        )
+        ) : null
       }
     />
   );
