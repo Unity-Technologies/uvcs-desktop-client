@@ -7,6 +7,8 @@ const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
 const { signInFailure } = require('./signIn.cjs');
 const { matching } = require('./where.cjs');
+const { REVISIONS_FOUND, historyOutput } = require('./history.cjs');
+const { isFakeMerge, listsMergeFiles, mergeListing, mergePreview, mergeVersion } = require('./merge.cjs');
 const { version: PINNED_CM_VERSION } = require('../../../cm-version.json');
 
 /** A command `cm` itself refuses, as it would the real one: it fails, but the fake knew what to answer. */
@@ -22,6 +24,7 @@ const FINDABLE = {
   label: repository.LABELS,
   merge: repository.MERGES,
   review: repository.REVIEWS,
+  revision: REVISIONS_FOUND,
   shelve: repository.SHELVES,
 };
 
@@ -76,7 +79,8 @@ const COMMANDS = {
   find: find,
   diff: (args) => formatted(args, DIFFERENCES),
   cat: cat,
-  ls: lsOutput,
+  ls: (args) => (listsMergeFiles(args) ? mergeListing(args) : lsOutput(args)),
+  history: historyOutput,
   'lock list': lockList,
   'repository list': repositoryList,
   showacl: showAcl,
@@ -90,21 +94,24 @@ const COMMANDS = {
   'mergerequest edit': () => '',
   // A new merge request: `cm` prints its id alone. The fake keeps no new review: the lists read stay as they are.
   'mergerequest create': () => `${NEW_MERGE_REQUEST_ID}\n`,
-  merge: mergeRefusedByRules,
+  merge: mergeOnServer,
 };
 
 /** The id the fake gives a merge request it is asked to create: after every review `repository.REVIEWS` holds. */
 const NEW_MERGE_REQUEST_ID = 90;
 
 /**
- * `cm merge <branch> --to=<branch>`, previewed: refused by the server's merge rules, as `cm` words them in English
- * (docs/features/merge-requests.md "Merging"). task-001, with an open merge request, isn't reviewed yet; task-002 has
- * none. The fake merges nothing else.
+ * `cm merge <branch> --to=<branch>`, previewed. Into main, refused by the server's merge rules, as `cm` words them in
+ * English (docs/features/merge-requests.md "Merging"): task-001, with an open merge request, isn't reviewed yet;
+ * task-002 has none. task-002 into task-001 is the merge with conflicts the merge page shows (`merge.cjs`). The fake
+ * merges nothing else, and runs no merge.
  */
-function mergeRefusedByRules([source, ...options]) {
+function mergeOnServer(args) {
+  const [source, ...options] = args;
   const to = options.find((option) => option.startsWith('--to='));
   if (options.includes('--merge') || !to) throw new Error('The fake cm only previews merges to a branch');
   const [branch, destination] = [source.replace(/^br:/, ''), to.slice('--to=br:'.length)];
+  if (isFakeMerge(branch, destination)) return mergePreview(options);
   const rules = 'Cannot perform the merge because of the Merge Rules.';
   if (branch === '/main/task-001') throw new CmRefusal(`${rules} Review the branch '${branch}' to merge it to '${destination}'.`);
   if (branch === '/main/task-002') throw new CmRefusal(`${rules} Branch '${branch}' needs an open merge request to '${destination}'.`);
@@ -192,15 +199,15 @@ function cat(args) {
 
 function writeRevision(spec, target) {
   const revision = /^revid:(\d+)/.exec(spec)?.[1];
-  const content = revision ? REVISIONS[revision] : loadedContent(spec);
+  const content = mergeVersion(spec) ?? (revision ? REVISIONS[revision] : loadedContent(spec));
   if (content === undefined) throw new Error(`The fake cm has no revision ${spec}`);
   writeFileSync(target, content);
   return '';
 }
 
 function loadedContent(path) {
-  const relative = path.slice(WORKSPACE.path.length + 1).replaceAll('\\', '/');
-  return path.startsWith(WORKSPACE.path) ? FILES[relative]?.loaded : undefined;
+  const relative = repository.workspacePathOf(path);
+  return relative === undefined ? undefined : FILES[relative]?.loaded;
 }
 
 /** `cm lock list --machinereadable --fieldseparator=… --endlineseparator=…`: its fields in `cm`'s order. */

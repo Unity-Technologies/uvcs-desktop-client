@@ -1,6 +1,7 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
-// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
-// model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
+// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view and every kind of page (`PAGES`: a
+// merge with conflicts, a history, the repository at a changeset...), a diff in a new window, a model diff, a branch's
+// permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
 // error, any `cm` command the fake doesn't know, a view that doesn't show, a step that sends the same server command
 // twice, or content cut off where nothing scrolls. It asserts only that things appear, never pixels or copy. Screenshots go to
 // <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`/<checkout>-<hash>.
@@ -18,6 +19,11 @@ import { createWorkspace } from './workspaceFixture.mjs';
 
 /** The sidebar's views by their accessible names, in its order (`VIEWS` in viewRegistry.ts): a new view is one line. */
 const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Merge requests', 'Locks', 'Sync'];
+/**
+ * Every kind of page (`Page` in pages.ts), each opened by a step that waits for it (`pageShown`): a new kind is one
+ * line here and a step, or `smokeOpensEveryPage.test.ts` fails.
+ */
+const PAGES = ['history', 'diff', 'merge', 'codeReview', 'browseRepository'];
 /** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /**
@@ -164,6 +170,21 @@ function stillLoading(loading) {
   });
 }
 
+/** The kinds of page a step saw shown (`pageShown`); each of `PAGES` must be among them once the run ends. */
+const pagesShown = new Set();
+
+/** Waits for a page of `kind` to show in the window (`data-page`, `PageFrame`): only a page shown counts as reached. */
+async function pageShown(kind) {
+  await main.locator(`[data-page="${kind}"]`).filter({ visible: true }).first().waitFor();
+  pagesShown.add(kind);
+}
+
+/** Leaves the page shown for the view under it, by the breadcrumb's way back (`Breadcrumb`), and waits for the view. */
+async function backTo(view) {
+  await main.locator('[data-page]').filter({ visible: true }).getByRole('button', { name: view, exact: true }).click();
+  await main.getByRole('heading', { level: 1, name: view, exact: true }).waitFor();
+}
+
 /**
  * Waits until `page` reads, changes and waits to read nothing (`markReadsInFlight`), and still doesn't two frames
  * later, once what the last answer showed has asked for what it needs: each command logged then belongs to the step
@@ -184,15 +205,20 @@ async function readsSettled(page = window) {
 /**
  * Runs a step, its start written to the fake `cm`'s log so the duplicate check (`duplicateReport`) counts each step's
  * commands apart. `rereads` names what, in the step, reads again on purpose (an operation, a refresh): its commands
- * aren't checked.
+ * aren't checked. `leave` puts the window back for the steps after it (leaves the page the step opened), after the
+ * screenshot, which shows what the step opened.
  */
-async function step(name, run, { rereads } = {}) {
+async function step(name, run, { rereads, leave } = {}) {
   appendFileSync(cmLog, `${JSON.stringify({ step: name, rereads })}\n`);
   try {
     await run();
     await readsSettled();
     await nothingCutOff();
     if (SHOTS_OF_EVERY_STEP) await screenshot(name.toLowerCase().replaceAll(' ', '-'));
+    if (leave) {
+      await leave();
+      await readsSettled();
+    }
     console.log(`ok    ${name}`);
   } catch (error) {
     // Playwright's call log, under the message's first line, says what the step was doing when it gave up: a run that
@@ -251,6 +277,7 @@ try {
     await window.getByRole('navigation').getByRole('button', { name: /^Merge requests( \d+)?$/ }).click();
     // The row's title: the details panel names the selected row too.
     await main.getByRole('row').getByText('Review player movement', { exact: true }).dblclick();
+    await pageShown('codeReview');
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await settled();
   });
@@ -277,6 +304,58 @@ try {
     await main.getByRole('button', { name: 'Open merge request' }).click();
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await settled();
+  });
+  await step('A merge with conflicts', async () => {
+    // The merge page laid out with real content, which no unit test lays out: a list longer than the window, a conflict,
+    // a diff. Into another branch on the server, as the workspace has changes, which a merge into it waits for. The
+    // fake's merge (`fakeCm/merge.cjs`) has a conflict to decide, one that merges by itself and 30 changes to apply.
+    // Closed without merging: nothing is checked in.
+    await window.getByRole('navigation').getByRole('button', { name: /^Branches( \d+)?$/ }).click();
+    await main.getByRole('row').filter({ hasText: 'task-002' }).first().click({ button: 'right' });
+    await window.getByRole('menuitem', { name: 'Merge to another branch on the server…' }).click();
+    await window.getByRole('dialog').getByRole('option', { name: /task-001/ }).click();
+    // The refused merge of the step before is still the one in progress.
+    await window.getByRole('dialog').getByRole('button', { name: 'Start another merge' }).click();
+    await pageShown('merge');
+    // The conflict that merges by itself, the one to decide, and a change to apply.
+    await main.getByText('Sky.cs', { exact: true }).first().click();
+    await main.getByText('float exposure = 1.5f;').first().waitFor();
+    await main.getByText('Sun.cs', { exact: true }).first().click();
+    await main.getByText('float intensity = 1.2f;').first().waitFor();
+    await main.getByText('Probe01.asset', { exact: true }).first().click();
+    await main.getByText('m_Name: Probe01').first().waitFor();
+    await settled();
+  }, {
+    leave: async () => {
+      await main.getByRole('button', { name: 'Close merge' }).click();
+      await window.getByRole('dialog').getByRole('button', { name: 'Close merge' }).click();
+      await main.locator('[data-page="merge"]').waitFor({ state: 'detached' });
+    },
+  });
+  // The history and the repository at a changeset: pages no other step opens (`PAGES`).
+  await step("A file's history", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
+    await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().click({ button: 'right' });
+    await window.getByRole('menuitem', { name: 'View history' }).click();
+    await pageShown('history');
+    // Its one revision, the one the workspace loaded (`fakeCm/history.cjs`).
+    await main.getByText('Player jumps').first().waitFor();
+    await settled();
+  }, { leave: () => backTo('Changes') });
+  await step('The repository at a changeset', async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
+    // Found by the view's filter: the list is longer than the window and draws only the rows on screen.
+    await main.getByRole('textbox', { name: 'Filter changesets' }).fill('Player runs');
+    await main.getByRole('row').filter({ hasText: 'Player runs' }).first().click({ button: 'right' });
+    await window.getByRole('menuitem', { name: 'Browse repository at this changeset' }).click();
+    await pageShown('browseRepository');
+    await main.getByText('README.md', { exact: true }).first().waitFor();
+    await settled();
+  }, {
+    leave: async () => {
+      await backTo('Changesets');
+      await main.getByRole('textbox', { name: 'Filter changesets' }).fill('');
+    },
   });
   await step('Branch Explorer timeline', async () => {
     // From another view its shortcut opens the Branch Explorer with the timeline shown.
@@ -341,6 +420,7 @@ try {
     // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
     await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
     await window.getByRole('dialog').getByRole('option', { name: /^Changeset 3/ }).click();
+    await pageShown('diff');
     // Visible only: the views shown lately stay mounted, hidden, and may list the same file (`mountedViews`).
     await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
@@ -434,6 +514,11 @@ try {
 const savedSettings = existsSync(settingsFile) ? JSON.parse(readFileSync(settingsFile, 'utf8')) : {};
 if (errors.length === 0 && (savedSettings.showGravatar !== false || savedSettings.gravatarChoiceAsked !== true)) {
   errors.push(`"Not now" wasn't saved: showGravatar ${savedSettings.showGravatar}, gravatarChoiceAsked ${savedSettings.gravatarChoiceAsked}`);
+}
+
+// Every kind of page a step opened. Only after a clean run: a step that failed stopped the ones after it.
+if (errors.length === 0) {
+  errors.push(...PAGES.filter((kind) => !pagesShown.has(kind)).map((kind) => `no step showed a page of kind ${kind}: open one with a step that waits for it (pageShown)`));
 }
 
 // Every command the fake couldn't answer, its `--format` separators made visible.
