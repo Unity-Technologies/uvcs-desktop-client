@@ -127,11 +127,11 @@ export function isAuthor(review: Pick<CodeReviewSummary, 'owner'>, user: string)
 }
 
 /**
- * What a reviewer's Ask again and remove buttons say in their tooltips and to a screen reader: each names who it acts
- * on, since every row shows the same two buttons. Ask again's keeps the words it shows, so voice control finds it.
+ * What a reviewer's ask-again and remove buttons say in their tooltips and to a screen reader: each names who it acts
+ * on, since every row shows the same two buttons.
  */
 export function reviewerActionLabels(reviewer: CodeReviewer, groups: ReviewerGroups): { askAgain: string; remove: string } {
   const name = reviewerLabel(reviewer, groups);
   const who = isGroup(reviewer, groups) ? `the ${name} group` : name;
-  return { askAgain: `Ask again for ${who}'s review`, remove: `Remove ${who} from the reviewers` };
+  return { askAgain: `Ask ${who} to review again`, remove: `Remove ${who} from the reviewers` };
 }

@@ -4,11 +4,9 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { usePlaceUser } from '../../../app/account/accounts';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { Avatar } from '../../../ui/Avatar';
-import { Button } from '../../../ui/Button';
 import { FilterPopover } from '../../../ui/FilterPopover';
 import { GroupAvatar } from '../../../ui/GroupAvatar';
 import { IconButton } from '../../../ui/IconButton';
-import { Tooltip } from '../../../ui/Tooltip';
 import { changeReviewers, removeReviewer, reRequestReview } from '../codeReviewOperations';
 import { isGroup, reviewerLabel, reviewerRef } from '../reviewerGroups';
 import { canReRequest, isAuthor, reviewerActionLabels } from '../reviewers';
@@ -21,8 +19,8 @@ import styles from './ReviewConversation.module.css';
 
 /**
  * Who reviews it: each reviewer with the status they gave as its icon, a group with the group icon, the author marked;
- * Ask again, written out on a reviewer who gave a status (the one time it applies), and a quiet × to take them off,
- * both always shown. The heading's button picks reviewers from the server's users and groups.
+ * asking one again (once they gave a status) and a quieter × to take them off, both always shown, each tooltip naming
+ * the reviewer. The heading's button picks reviewers from the server's users and groups.
  */
 export function ReviewersSection({ review }: { review: CodeReview }) {
   // Its own per page: a review may show in two views kept mounted (`KeptView`).
@@ -73,17 +71,12 @@ export function ReviewersSection({ review }: { review: CodeReview }) {
               {isAuthor(review, reviewer.name) && <span className={styles.pill}>Author</span>}
               <span className={styles.reviewerActions}>
                 {canReRequest(reviewer, user) && (
-                  <Tooltip content={labels.askAgain}>
-                    <Button
-                      size="small"
-                      variant="ghost"
-                      icon={<RotateCcw size={12} />}
-                      aria-label={labels.askAgain}
-                      onClick={() => void reRequestReview(place, review, ref)}
-                    >
-                      Ask again
-                    </Button>
-                  </Tooltip>
+                  <IconButton
+                    size="small"
+                    icon={<RotateCcw size={13} />}
+                    label={labels.askAgain}
+                    onClick={() => void reRequestReview(place, review, ref)}
+                  />
                 )}
                 <IconButton
                   size="small"

@@ -777,8 +777,8 @@ button.pill:hover {
 }
 
 /*
- * Asking again and removing, always shown: Ask again written out, as it only shows when it applies; the × quiet until
- * its row is under the pointer, as every row has one.
+ * Asking again and removing, always shown, as people didn't find them under the pointer; the × quieter until its row
+ * is under the pointer, as every row has one.
  */
 .reviewerActions {
   display: inline-flex;

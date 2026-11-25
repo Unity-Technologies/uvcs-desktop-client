@@ -38,7 +38,7 @@ know (`cm codereview subscription`) would be read as a review to create.
   picker waiting for it (`dialogPick`). It is read even where the server's groups answered: a name missing from that
   list (a server that lists none, a group made since it was read) can't be told from a user, and the page's writes
   must name each one as `cm` takes it. Where that type is read (`CodeReviewer.kind`), it decides: the
-  page's Reviewers, its picker, Remove and Ask again name a group as one on any server, one that lists no
+  page's Reviewers, its picker, Remove and Ask to review again name a group as one on any server, one that lists no
   groups too. Elsewhere (the list's stack, the picker's offered groups) the server's groups
   (`cm listusers <server> --onlygroups`, read once and kept, the list Permissions and the picker read too:
   `useReviewerGroups`, `reviewerGroups`) tell a group from a user by name, whatever its case (`isGroup`,
@@ -57,7 +57,7 @@ know (`cm codereview subscription`) would be read as a review to create.
   first, then the groups, then the users, each by name (`offeredReviewers`), as the official client lists them. What
   changed applies as it closes (`pickChanges`, `changeReviewers`): one `cm codereview reviewer add <id> --users=a,b
   --groups=g`, one `cm codereview reviewer remove <id> --users=c`. Each reviewer's row always shows a quiet × to remove
-  them and, once they gave a status, an **Ask again** button to ask them to review again (`canReRequest`, never the
+  them and, once they gave a status, a button to ask them to review again (`canReRequest`, never the
   user themselves; `cm codereview review <id> --re-request --users=a` or `--groups=g`, which puts them back to "Under
   review"); both name who they act on in their tooltips (`reviewerActionLabels`). Neither waits for the pointer: users
   didn't find them when they did. What the picker changes is worked

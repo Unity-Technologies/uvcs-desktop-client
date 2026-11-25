@@ -138,18 +138,14 @@ describe('offeredReviewers', () => {
 
 describe('reviewerActionLabels', () => {
   it('names the reviewer each button acts on, as their row shows them', () => {
-    expect(reviewerActionLabels(ANA, GROUPS)).toEqual({ askAgain: "Ask again for Ana's review", remove: 'Remove Ana from the reviewers' });
+    expect(reviewerActionLabels(ANA, GROUPS)).toEqual({ askAgain: 'Ask Ana to review again', remove: 'Remove Ana from the reviewers' });
   });
 
   it('says a group is one', () => {
-    const labels = { askAgain: "Ask again for the qa-team group's review", remove: 'Remove the qa-team group from the reviewers' };
+    const labels = { askAgain: 'Ask the qa-team group to review again', remove: 'Remove the qa-team group from the reviewers' };
     expect(reviewerActionLabels(QA, GROUPS)).toEqual(labels);
     // A server that lists no groups: `cm` types the reviewer as one.
     expect(reviewerActionLabels({ name: 'qa-team', status: 'Reviewed', kind: 'group' }, NO_GROUPS)).toEqual(labels);
-  });
-
-  it('keeps the words the Ask again button shows, for voice control', () => {
-    expect(reviewerActionLabels(ANA, GROUPS).askAgain).toContain('Ask again');
   });
 });
 
