@@ -94,10 +94,8 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
 
     async remove(place, commentGuids) {
       const at = cmPlace(place);
-      const args = removeCommentsArgs(commentGuids, at);
-      // `cm` asks the server twice for each comment (find it by its guid, delete it): a thread's replies hold a pooled
-      // shell long enough to stall the reads behind it, so they get a process of their own.
-      await (commentGuids.length > 1 ? cm.execute(args, at.options) : cm.query(args, at.options));
+      // A long thread runs in a process of its own (`runsLong`: `MAX_QUICK_COMMENT_DELETES`).
+      await cm.query(removeCommentsArgs(commentGuids, at), at.options);
     },
 
     async markApplied(place, changeRequestGuid, changesetId) {

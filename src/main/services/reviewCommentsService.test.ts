@@ -238,12 +238,12 @@ describe('writing on a review', () => {
     expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'delete', 'c1'] }]);
   });
 
-  it('deletes a comment and its replies with one command, in the order given, in a process of its own', async () => {
+  it('deletes a comment and its replies with one command, in the order given', async () => {
     const { service, commands } = reviewComments({ 'codereview comment delete': '' });
 
     await service.remove(IN_WORKSPACE, ['r2', 'r1', 'c1']);
 
-    expect(commands).toMatchObject([{ via: 'execute', args: ['codereview', 'comment', 'delete', 'r2', 'r1', 'c1'] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'delete', 'r2', 'r1', 'c1'] }]);
   });
 
   it('writes the description from a file, an empty one clearing it', async () => {

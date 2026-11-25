@@ -63,7 +63,7 @@ you touch:
      missing is never watched, and its shells go when that time ends. A session takes about a second to answer its
      first command, so until one in that directory has, the query runs as a process of its own (the first window's
      start as the app loads: `readFirstScreenAhead`). A workspace write that may run long (`runsLong`: more than `MAX_QUICK_WRITE_PATHS`
-     paths, recursive, or a transfer) runs as a process of its own too, so it never holds a session every read of the
+     paths, recursive, or a transfer; a delete of more than `MAX_QUICK_COMMENT_DELETES` review comments) runs as a process of its own too, so it never holds a session every read of the
      workspace would wait behind. No quick command carries an option a `cm shell` keeps for its whole
      session (`--username`, `--server`, `-path`…: `STICKY_SHELL_OPTIONS`; docs/features/accounts.md "Options that stick
      to a shell").
