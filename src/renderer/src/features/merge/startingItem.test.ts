@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, MergePlan } from '@shared/domain/merge';
 import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
-import { buildMergeItems, mergeProgress, type MergeItem } from './mergeItems';
+import { buildMergeItems, mergeProgress } from './mergeItems';
 import { pairMergeMetas } from './mergeMetaPairs';
 import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 import { startingItem } from './startingItem';
@@ -31,7 +31,8 @@ const plan = (directoryConflicts: DirectoryConflict[] = [], changes: MergePlan['
   warnings: [],
 });
 
-const pathOf = (item: MergeItem | undefined): string | undefined => item?.path;
+/** The path of the item the page starts on, or why it starts on none. */
+const pathOf = (start: ReturnType<typeof startingItem>): string | undefined => (start === 'loading' ? start : start?.path);
 
 describe('startingItem', () => {
   const items = buildMergeItems(plan(), [], [sun, clouds, sky]);
@@ -41,9 +42,9 @@ describe('startingItem', () => {
     expect(pathOf(startingItem(null, items, progress))).toBe('Lighting/Sun.cs');
   });
 
-  it("waits while a conflict before the first that needs the user is still loading: it may merge by itself", () => {
+  it("waits, the page loading, while a conflict before the first that needs the user is still loading: it may merge by itself", () => {
     const progress = mergeProgress([manual(sun), loading(clouds), automatic(sky)], resolutionsByConflict([]));
-    expect(startingItem(null, items, progress)).toBeUndefined();
+    expect(startingItem(null, items, progress)).toBe('loading');
   });
 
   it('starts at once on a conflict that needs the user when everything before it has loaded, whatever loads after', () => {
@@ -53,7 +54,7 @@ describe('startingItem', () => {
 
   it('waits while nothing has loaded yet', () => {
     const progress = mergeProgress([loading(sun), loading(clouds), loading(sky)], resolutionsByConflict([]));
-    expect(startingItem(null, items, progress)).toBeUndefined();
+    expect(startingItem(null, items, progress)).toBe('loading');
   });
 
   it('starts on a conflict whose versions could not be read: the user decides it', () => {
