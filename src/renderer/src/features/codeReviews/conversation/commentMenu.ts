@@ -10,7 +10,7 @@ import type { ReviewThread } from './reviewThreads';
 interface CommentMenuActions {
   edit: () => void;
   remove: () => void;
-  /** What Copy offers: its text and its link (`reviewCommentCopyTexts`). */
+  /** What Copy offers: its text and its link, and a change request's short GUID (`reviewCommentCopyTexts`). */
   copyTexts: CopyTexts;
   /** Where the thread is in the conversation, from its code (the Changes tab). */
   showInConversation?: () => void;
