@@ -7,7 +7,7 @@ src/
   shared/     Types shared by both processes: domain model, API contract, events. No runtime deps (a test checks it).
   main/       Electron main process. Talks to `cm`, the file system and the OS.
   preload/    Exposes `window.uvcs` (invoke + events) to the renderer, and the few values the page needs before its
-              first frame (`platform`, the starting zoom). No other capability or channel.
+              first frame (`platform`). No other capability or channel.
   renderer/   React UI.
 ```
 
@@ -106,7 +106,7 @@ pure, tested helpers in `main/cm/`, then a query or mutation in the renderer thr
 the server takes a `Place` and runs its commands through `cmPlace`, tested in a workspace and in a repository with none
 ("Places", below). The preload
 and the IPC channel never change: the preload gains no capability or channel; besides `invoke` and `on` it exposes only
-values the page needs synchronously before its first frame (`platform`, the starting zoom `initialZoom`).
+values the page needs synchronously before its first frame (`platform`).
 
 ## Places: a workspace, or a repository with none
 
@@ -1345,12 +1345,16 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   its caption buttons on the top bar's end (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
   `--caption-buttons-width` free), with a menu button at the bar's start (and Alt or F10) popping up the menu bar's menus;
   Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`) and the page's
-  zoom (View > Zoom In, Zoom Out; Chromium keeps one per origin, so every window shares it and it outlives a restart).
-  The menu's own items (`zoomPage`, not Electron's zoom roles, which tell nobody), each page load (`followPageZoom`)
-  and showing a window (`fitWindowControls`, before `show()`) center the traffic lights in the scaled top bar
-  (`trafficLightsAt`) and make the caption buttons as tall as it (`fitCaptionButtons`). The page reads the zoom it
-  starts at before its first frame (`initialZoom`) and hears each change (`pageZoomChanged`): `--window-zoom` keeps
-  84 window points of the top bar free for the traffic lights at any zoom. The menus
+  zoom (View > Zoom In, Zoom Out). The app keeps one zoom, saved (`zoomLevel`): every window opens at it and keeps it
+  as its own (`WINDOW_ZOOM_MODE`, `isolated`), and the menu's own items (`zoomPage`, not Electron's zoom roles, which
+  tell nobody) set it on every window. Chromium's default keys a zoom by the page's whole `file://` address, query
+  included: a window's zoom changed under it when its page dropped its query (`openPlaceFromAddress`), and came back
+  at a launch only at the very same address. The menu's items, each page load (`followPageZoom`) and showing a window
+  (`fitWindowControls`, before `show()`) center the traffic lights in the scaled top bar (`trafficLightsAt`) and make
+  the caption buttons as tall as it (`fitCaptionButtons`). The page starts at the zoom its address names
+  (`startingZoomIn`; the preload's `webFrame.getZoomFactor` may not have it yet as the page loads) and hears it again
+  as it loads and at each change (`pageZoomChanged`): `--window-zoom` keeps 84 window points of the top bar free for
+  the traffic lights at any zoom. The menus
   (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
   or Quit (Linux), Help with Check for Updates and About, and `&` marks each item's Alt letter. The menus hold what
   a person looks for there: windows and workspaces (File), the branch work (Branch: switch, new, merges), the palette,
