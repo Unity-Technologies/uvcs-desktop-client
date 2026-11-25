@@ -11,11 +11,8 @@ describe('validateBranchName', () => {
     expect(validateBranchName('fix  login form')).toBeUndefined();
   });
 
-  it('rejects separators, line breaks and spec characters', () => {
-    expect(validateBranchName('a/b')).toBeDefined();
-    expect(validateBranchName('a\\b')).toBeDefined();
-    expect(validateBranchName('task@repo')).toBeDefined();
-    expect(validateBranchName('two\nlines')).toBeDefined();
-    expect(validateBranchName("it's")).toBeDefined();
+  // What cm refuses, then what a Windows folder name refuses (a task workspace's folder is named after its branch).
+  it.each(['@', '#', '/', ':', '"', '?', "'", '\n', '\r', '\\', '<', '>', '|', '*', '\t'])('rejects %j', (character) => {
+    expect(validateBranchName(`a${character}b`)).toBeDefined();
   });
 });
