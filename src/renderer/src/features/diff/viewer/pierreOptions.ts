@@ -13,12 +13,16 @@ export const CARET_HELD_ATTRIBUTE = 'data-caret-held';
  * Code takes the app's code font, whose stack has each OS's (Pierre's own knows neither Cascadia nor DejaVu), at
  * 12px rather than Pierre's 13px: the size the classic desktop client shows code at. Only the font shrinks: lines
  * stay 20px tall, the height Pierre's virtualizer and Annotate's `ANNOTATION_LINE_HEIGHT` count on.
- * The editor's caret stays drawn, still, while the code's menu is open on it (`CARET_HELD_ATTRIBUTE`): Pierre draws it
- * only while the text has the focus, which the menu takes. Its rules are `!important`: Pierre puts the CSS it's given
- * in a cascade layer (`@layer unsafe`), and its editor's own, which hides the caret, in none, which wins over any layer.
+ * The editor's caret takes the app's caret color (`--editor-caret`: a soft gray on light, near-white on dark): Pierre's
+ * own takes the code theme's cursor color, a blue that reads as a selection more than a caret
+ * (`--diffs-bg-caret-override` wins over the theme's).
+ * It stays drawn, still, while the code's menu is open on it (`CARET_HELD_ATTRIBUTE`): Pierre draws it only while the
+ * text has the focus, which the menu takes. Those rules are `!important`: Pierre puts the CSS it's given in a cascade
+ * layer (`@layer unsafe`), and its editor's own, which hides the caret, in none, which wins over any layer.
  */
 export const PIERRE_SURFACE_CSS =
-  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px}' +
+  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px;' +
+  '--diffs-bg-caret-override:var(--editor-caret)}' +
   `:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{visibility:visible!important;animation:none!important}`;
 
 /**
