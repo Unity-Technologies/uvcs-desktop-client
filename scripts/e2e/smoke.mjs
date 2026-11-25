@@ -343,12 +343,19 @@ try {
   }, { leave: () => backTo('Changes') });
   await step('The repository at a changeset', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
+    // Found by the view's filter: the list is longer than the window and draws only the rows on screen.
+    await main.getByRole('textbox', { name: 'Filter changesets' }).fill('Player runs');
     await main.getByRole('row').filter({ hasText: 'Player runs' }).first().click({ button: 'right' });
     await window.getByRole('menuitem', { name: 'Browse repository at this changeset' }).click();
     await pageShown('browseRepository');
     await main.getByText('README.md', { exact: true }).first().waitFor();
     await settled();
-  }, { leave: () => backTo('Changesets') });
+  }, {
+    leave: async () => {
+      await backTo('Changesets');
+      await main.getByRole('textbox', { name: 'Filter changesets' }).fill('');
+    },
+  });
   await step('Branch Explorer timeline', async () => {
     // From another view its shortcut opens the Branch Explorer with the timeline shown.
     await window.keyboard.press(process.platform === 'darwin' ? 'Meta+Alt+T' : 'Alt+Shift+T');
