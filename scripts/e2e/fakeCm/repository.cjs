@@ -41,7 +41,7 @@ const numbered = (count) => Array.from({ length: count }, (_, index) => index + 
 const BRANCHES = [
   { id: 3, name: '/main', parent: '', changeset: 4, date: daysAgo(30), comment: 'The main branch', guid: 'aaaaaaaa-0000-0000-0000-000000000003', ...visible, ...common },
   { id: 20, name: '/main/task-001', parent: '/main', changeset: 7, date: daysAgo(10), comment: 'Player movement: https://acme.atlassian.net/browse/VCS-12', guid: 'aaaaaaaa-0000-0000-0000-000000000020', ...visible, ...common },
-  { id: 30, name: '/main/task-002', parent: '/main', changeset: 6, date: daysAgo(9), comment: 'Scene lighting', guid: 'aaaaaaaa-0000-0000-0000-000000000030', ...visible, ...common },
+  { id: 30, name: '/main/task-002', parent: '/main', changeset: 6, date: daysAgo(9.95), comment: 'Scene lighting', guid: 'aaaaaaaa-0000-0000-0000-000000000030', ...visible, ...common },
 ];
 
 function changeset(changesetid, branch, parent, days, comment, owner = OWNER) {
@@ -70,8 +70,8 @@ const MERGES = [];
 const LABELS = [
   { id: 50, name: 'BL001', changeset: 2, branch: '/main', date: daysAgo(25), comment: 'First playable', ...common },
   { id: 51, name: 'BL002', changeset: 4, branch: '/main', date: daysAgo(15), comment: 'Second playable', ...common },
-  // Nightly builds: a list of labels longer than the window.
-  ...numbered(LONGER_THAN_THE_WINDOW).map((night) => ({ id: 500 + night, name: `NIGHTLY-${String(night).padStart(3, '0')}`, changeset: 4, branch: '/main', date: daysAgo(16 + night / 10), comment: `Nightly build ${night}`, ...common })),
+  // A build of each lighting pass, labeled just after it: a list of labels longer than the window.
+  ...numbered(LONGER_THAN_THE_WINDOW).map((pass) => ({ id: 500 + pass, name: `LIGHTING-${String(pass).padStart(3, '0')}`, changeset: 1000 + pass, branch: '/main/task-002', date: daysAgo(9.9 - pass / 50 - 0.01), comment: `Build of lighting pass ${pass}`, ...common })),
 ];
 
 const SHELVES = [
