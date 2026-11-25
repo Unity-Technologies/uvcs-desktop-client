@@ -14,11 +14,12 @@ export const CARET_HELD_ATTRIBUTE = 'data-caret-held';
  * 12px rather than Pierre's 13px: the size the classic desktop client shows code at. Only the font shrinks: lines
  * stay 20px tall, the height Pierre's virtualizer and Annotate's `ANNOTATION_LINE_HEIGHT` count on.
  * The editor's caret stays drawn, still, while the code's menu is open on it (`CARET_HELD_ATTRIBUTE`): Pierre draws it
- * only while the text has the focus, which the menu takes.
+ * only while the text has the focus, which the menu takes. Its rules are `!important`: Pierre puts the CSS it's given
+ * in a cascade layer (`@layer unsafe`), and its editor's own, which hides the caret, in none, which wins over any layer.
  */
 export const PIERRE_SURFACE_CSS =
   ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px}' +
-  `:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{visibility:visible;animation:none}`;
+  `:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{visibility:visible!important;animation:none!important}`;
 
 /**
  * How a diff marks the words two lines change: word by word, nothing on lines past 1,000 characters (Pierre's own

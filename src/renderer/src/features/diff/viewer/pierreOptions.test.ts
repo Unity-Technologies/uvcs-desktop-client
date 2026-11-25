@@ -13,7 +13,7 @@ describe('PIERRE_SURFACE_CSS: how code reads in every diff', () => {
   });
 
   it("keeps the editor's caret drawn, still, while the code's menu holds the focus", () => {
-    expect(PIERRE_SURFACE_CSS).toContain(`:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{visibility:visible;animation:none}`);
+    expect(PIERRE_SURFACE_CSS).toContain(`:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{visibility:visible!important;animation:none!important}`);
   });
 });
 
