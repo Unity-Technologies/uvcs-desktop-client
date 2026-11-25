@@ -5,6 +5,11 @@ const TRANSFERS = new Set(['checkin', 'ci', 'merge', 'switch', 'undelete', 'upda
 const RECURSIVE_FLAGS = new Set(['-r', '-R', '--recursive']);
 /** A workspace write of more paths than this can take seconds to minutes (undoing 20,000 files takes minutes). */
 export const MAX_QUICK_WRITE_PATHS = 50;
+/**
+ * `cm codereview comment delete` asks the server twice for each comment (finds it by its guid, deletes it): a comment
+ * and a few replies take tens of ms on a warm shell, a long thread long enough to stall the reads behind it.
+ */
+export const MAX_QUICK_COMMENT_DELETES = 10;
 
 /**
  * Whether a command may run long enough that it must not hold one of a workspace's two pooled `cm shell` sessions,
@@ -13,6 +18,7 @@ export const MAX_QUICK_WRITE_PATHS = 50;
  * process of their own would first spend 100-150 ms starting `cm`.
  */
 export function runsLong(args: readonly string[]): boolean {
+  if (deletesReviewComments(args)) return namedComments(args) > MAX_QUICK_COMMENT_DELETES;
   if (!changesWorkspace(args)) return false;
   // A partial workspace's `cm partial update|switch|checkin` transfers as the regular command does.
   if (args[0] === 'partial') return runsLong(args.slice(1));
@@ -20,6 +26,15 @@ export function runsLong(args: readonly string[]): boolean {
   if (TRANSFERS.has(command)) return true;
   if (args.some((arg) => RECURSIVE_FLAGS.has(arg))) return true;
   return namedPaths(args) > MAX_QUICK_WRITE_PATHS;
+}
+
+function deletesReviewComments(args: readonly string[]): boolean {
+  return args[0] === 'codereview' && args[1] === 'comment' && args[2] === 'delete';
+}
+
+/** The guids a `cm codereview comment delete` names. */
+function namedComments(args: readonly string[]): number {
+  return args.slice(3).filter((arg) => !arg.startsWith('-')).length;
 }
 
 /** Every argument after the command that isn't an option: the paths, and a changelist's name and verb. */

@@ -12,7 +12,7 @@ vi.mock('../../changesets/ChangesetPickerDialog', () => ({
 
 import { workspacePlace } from '@shared/domain/place';
 import { queryClient } from '../../../app/queryClient';
-import { answerConfirms } from '../../../testing/fakeDialogs';
+import { answerConfirms, askedDialogs } from '../../../testing/fakeDialogs';
 import { reviewSubscriptionKey } from '../codeReviewKey';
 import { shownToasts, watchRefreshes } from '../../../testing/operationOutcome';
 import {
@@ -74,7 +74,7 @@ describe('writing on a review', () => {
       () => discardChangeRequest(inWs, comment, 'Not needed'),
       () => editReviewComment(inWs, comment, 'Nicer'),
       () => editStatusComment(inWs, status, 'LGTM'),
-      () => deleteReviewComment(inWs, comment),
+      () => deleteReviewComment(inWs, [comment]),
       () => saveReviewDescription(inWs, 41, 'Why'),
     ];
 
@@ -99,11 +99,20 @@ describe('writing on a review', () => {
     fakeApi.answer('reviewComments.remove', () => undefined);
 
     answerConfirms(false);
-    expect(await deleteReviewComment(inWs, comment)).toBe(false);
+    expect(await deleteReviewComment(inWs, [comment])).toBe(false);
     answerConfirms(true);
-    expect(await deleteReviewComment(inWs, comment)).toBe(true);
+    expect(await deleteReviewComment(inWs, [comment])).toBe(true);
 
-    expect(fakeApi.argsOf('reviewComments.remove')).toEqual([[inWs, 'c1']]);
+    expect(fakeApi.argsOf('reviewComments.remove')).toEqual([[inWs, ['c1']]]);
+  });
+
+  it('deletes a comment and its replies with one call, saying how many go', async () => {
+    fakeApi.answer('reviewComments.remove', () => undefined);
+
+    expect(await deleteReviewComment(inWs, [{ guid: 'r2' }, { guid: 'r1' }, comment])).toBe(true);
+
+    expect(askedDialogs().map(({ title }) => title)).toEqual(['Delete this comment and its 2 replies?']);
+    expect(fakeApi.argsOf('reviewComments.remove')).toEqual([[inWs, ['r2', 'r1', 'c1']]]);
   });
 });
 
@@ -179,7 +188,7 @@ describe("what a write reads again of the user's email subscription", () => {
     answerConfirms(true);
 
     expect(await subscriptionReadAgainAfter(() => editReviewComment(inWs, comment, 'Nicer'))).toBe(false);
-    expect(await subscriptionReadAgainAfter(() => deleteReviewComment(inWs, comment))).toBe(false);
+    expect(await subscriptionReadAgainAfter(() => deleteReviewComment(inWs, [comment]))).toBe(false);
     expect(await subscriptionReadAgainAfter(() => saveReviewDescription(inWs, 41, 'What it does'))).toBe(false);
   });
 });

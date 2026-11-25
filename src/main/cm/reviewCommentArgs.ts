@@ -70,8 +70,9 @@ export function editCommentArgs(commentGuid: string, textFile: string, at: CmPla
   return ['codereview', 'comment', 'edit', commentGuid, `-commentsfile=${textFile}`, ...at.repositoryOption];
 }
 
-export function removeCommentArgs(commentGuid: string, at: CmPlace): string[] {
-  return ['codereview', 'comment', 'delete', commentGuid, ...at.repositoryOption];
+/** `cm codereview comment delete`: every comment given, one after another, going on past one it can't delete. */
+export function removeCommentsArgs(commentGuids: readonly string[], at: CmPlace): string[] {
+  return ['codereview', 'comment', 'delete', ...commentGuids, ...at.repositoryOption];
 }
 
 /**

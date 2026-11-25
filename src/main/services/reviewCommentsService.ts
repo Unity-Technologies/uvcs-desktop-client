@@ -13,7 +13,7 @@ import {
   applyChangeRequestArgs,
   descriptionArgs,
   editCommentArgs,
-  removeCommentArgs,
+  removeCommentsArgs,
   replyArgs,
   unapplyChangeRequestArgs,
 } from '../cm/reviewCommentArgs';
@@ -92,9 +92,10 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
       await withTempFile(statusCommentText(status, text), (textFile) => cm.query(editCommentArgs(commentGuid, textFile, at), at.options));
     },
 
-    async remove(place, commentGuid) {
+    async remove(place, commentGuids) {
       const at = cmPlace(place);
-      await cm.query(removeCommentArgs(commentGuid, at), at.options);
+      // A long thread runs in a process of its own (`runsLong`: `MAX_QUICK_COMMENT_DELETES`).
+      await cm.query(removeCommentsArgs(commentGuids, at), at.options);
     },
 
     async markApplied(place, changeRequestGuid, changesetId) {

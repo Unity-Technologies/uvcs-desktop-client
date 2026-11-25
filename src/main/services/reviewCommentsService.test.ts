@@ -230,12 +230,20 @@ describe('writing on a review', () => {
     expect(seen.content).toBe('[status-reviewed]LGTM, ship it.');
   });
 
-  it('deletes a comment', async () => {
-    const { service, lines } = reviewComments({ 'codereview comment delete': '' });
+  it('deletes a comment with one quick command', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment delete': '' });
 
-    await service.remove(IN_WORKSPACE, 'c1');
+    await service.remove(IN_WORKSPACE, ['c1']);
 
-    expect(lines()).toEqual(['codereview comment delete c1']);
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'delete', 'c1'] }]);
+  });
+
+  it('deletes a comment and its replies with one command, in the order given', async () => {
+    const { service, commands } = reviewComments({ 'codereview comment delete': '' });
+
+    await service.remove(IN_WORKSPACE, ['r2', 'r1', 'c1']);
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'comment', 'delete', 'r2', 'r1', 'c1'] }]);
   });
 
   it('writes the description from a file, an empty one clearing it', async () => {
@@ -279,7 +287,7 @@ describe('writing on a review', () => {
     await service.addOnLine(ON_REPOSITORY, 41, { revisionId: 5, firstLine: 3, lastLine: 3, kind: 'comment' }, 'a');
     await service.reply(ON_REPOSITORY, 'c1', 'b');
     await service.edit(ON_REPOSITORY, 'c1', 'c');
-    await service.remove(ON_REPOSITORY, 'c1');
+    await service.remove(ON_REPOSITORY, ['c1']);
     await service.setDescription(ON_REPOSITORY, 41, 'd');
     await service.markApplied(ON_REPOSITORY, 'c1', 12);
     await service.markNotApplied(ON_REPOSITORY, 'c1');
