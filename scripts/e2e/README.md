@@ -20,7 +20,8 @@ any `cm` command the fake couldn't answer, a server command while the sign-in sc
 sent the same command line twice from the same folder ("Duplicate server commands" below), content cut off where
 nothing scrolls ("Cut-off content" below), and an answer to the profile pictures question that wasn't saved. Beyond those and the larger editor being on top, it asserts only
 that things appear, never pixels or copy.
-About 15 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
+About 13 seconds a run. It runs with reduced motion (`emulateMedia`): the app's durations are zero (`--duration-*`), so
+no step waits for a view's entrance or a dialog's, and the cut-off check measures boxes where they rest. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
 runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
 in `UVCS_E2E_SHOTS` when set; on CI (`CI=true`) only a failed step's, the one the job keeps. A run empties its own folder as it starts, never the one around it. A failed step also
 prints Playwright's call log, what it was waiting for when it gave up, and a view that never settles names each
@@ -113,8 +114,8 @@ box doesn't scroll (`findCutOffContent`, `cutOffContent.mjs`). Such content spil
 be reached: a list without its last rows, a diff without its scrollbar, a button under the window's edge. A page's frame
 once grew past the window this way, and neither the merge page's list nor its diff scrolled.
 
-It runs in the page once the step's animations end (a view's entrance moves it a few pixels; loops like spinners are
-ignored), and leaves out what can't be cut off: boxes placed with `position: absolute` or `fixed`, what a scrolling box
+It runs in the page once the step's animations end (loops like spinners are ignored), and leaves out what can't be cut
+off or isn't there to stay: what is still loading (a skeleton fills its box, cut where it ends), boxes placed with `position: absolute` or `fixed`, what a scrolling box
 holds, what a 1px box holds (read by screen readers only, `.visually-hidden`), what an inline box holds (a span is as
 tall as its line), and the overhang a box's own negative margin asks for (room for focus rings). Two pixels are rounding.
 
