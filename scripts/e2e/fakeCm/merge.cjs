@@ -24,11 +24,11 @@ const sky = (exposure, tint) => `class Sky {\n  float exposure = ${exposure};\n 
 const FILES = [
   { path: 'Sun.cs', kind: 'conflict', versions: [sun('1f', 'Color.white'), sun('1.2f', 'Color.white'), sun('0.8f', 'Color.white')] },
   { path: 'Sky.cs', kind: 'conflict', versions: [sky('1f', 'Color.blue'), sky('1.5f', 'Color.blue'), sky('1f', 'Color.cyan')] },
-  ...numbered(6).map((number) => ({ path: `Probe${number}.asset`, kind: 'changed', versions: [probe(number, 1), probe(number, 2), probe(number, 1)] })),
-  ...numbered(24).map((number) => ({ path: `Baked/Probe${number}.asset`, kind: 'added', versions: [undefined, probe(number, 1), undefined] })),
+  ...paddedNumbers(6).map((number) => ({ path: `Probe${number}.asset`, kind: 'changed', versions: [probe(number, 1), probe(number, 2), probe(number, 1)] })),
+  ...paddedNumbers(24).map((number) => ({ path: `Baked/Probe${number}.asset`, kind: 'added', versions: [undefined, probe(number, 1), undefined] })),
 ].map((file, index) => ({ ...file, path: `${FOLDER}/${file.path}`, itemId: 500 + index, revisionIds: [1000 + index * 3, 1001 + index * 3, 1002 + index * 3] }));
 
-function numbered(count) {
+function paddedNumbers(count) {
   return Array.from({ length: count }, (_, index) => String(index + 1).padStart(2, '0'));
 }
 
