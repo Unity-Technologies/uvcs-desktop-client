@@ -14,6 +14,14 @@ export function useShownFile(page: Page | undefined): ShownFile | null {
   return shownFileOf(page, onScreen, selected, revision, browsed);
 }
 
+/**
+ * The file the page shows now, with `picked` lines of it as if they were selected: what a link to lines the lines' menu
+ * acts on names, though a right-click leaves the selection as it was.
+ */
+export function shownFileWithLines(page: Page | undefined, picked: Required<Omit<ShownFile, 'revision'>>): ShownFile | null {
+  return shownFileOf(page, useShownDiffFile.getState().shown, picked, useShownRevision.getState().shown, useShownBrowseItem.getState().shown);
+}
+
 /** The same, read once (a command running), so nothing re-renders as the selection moves. */
 export function shownFileNow(page: Page | undefined): ShownFile | null {
   return shownFileOf(page, useShownDiffFile.getState().shown, useSelectedLines.getState().selected, useShownRevision.getState().shown, useShownBrowseItem.getState().shown);

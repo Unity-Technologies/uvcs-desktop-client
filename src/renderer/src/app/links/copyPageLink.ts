@@ -2,11 +2,11 @@ import type { Place } from '@shared/domain/place';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { formatShortcut } from '../../lib/shortcuts';
 import { copyToClipboard } from '../../ui/copyToClipboard';
-import type { Page } from '../navigation/pages';
+import type { FocusedLines, Page } from '../navigation/pages';
 import type { LinkTarget } from './linkNavigation';
 import { placeLinkTo } from './linkTo';
 import { nextTimeHint, pageLinkTarget, pageObjectTarget } from './shownLink';
-import { shownFileNow } from './useShownFile';
+import { shownFileNow, shownFileWithLines } from './useShownFile';
 
 /**
  * Copies a link to the lines selected in a page (or the file it shows), as ⇧⌘C does then: from the line chip and the
@@ -14,6 +14,11 @@ import { shownFileNow } from './useShownFile';
  */
 export function copyPageLink(place: Place, page: Page): Promise<void> {
   return copyTarget(place, pageLinkTarget(page, shownFileNow(page)), nextTimeHint(formatShortcut(hotkey('copyLink'))));
+}
+
+/** The link to `lines` of the file `path` in a page, as if they were selected: the lines' menu's, which selects nothing. */
+export function pageLinesTarget(page: Page, path: string, lines: FocusedLines): LinkTarget | null {
+  return pageLinkTarget(page, shownFileWithLines(page, { path, lines }));
 }
 
 /** Copies a link to the page's own object (`pageObjectTarget`): its header's "Copy link". */

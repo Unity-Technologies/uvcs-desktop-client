@@ -753,7 +753,8 @@ page's conflicts (`ConflictHunks`) have none: Pierre numbers each side of a conf
 3), so no line number or selection there names one text to go to or compare. It follows the menus' one grammar, so it
 reads, in groups: Undo, Redo; Find, Replace, Go to line…, Compare with clipboard; Cut, Copy, Paste; Delete, Select all.
 Where a diff selects lines for links (a committed diff, Annotate), the lines' own entries join it at the end of their
-groups ("Annotate at this line", "Copy link to line 42", "Copy line": `lineMenuEntries`). What it holds depends on the
+groups ("Annotate at line 42", "Copy link to line 42", "Copy line 42": `lineMenuEntries`), naming the lines they act on,
+as the right-click selects nothing. What it holds depends on the
 side right-clicked (`codeMenuTarget`):
 
 - **Typed into** (the newer side of a workspace file's diff once its editor is attached, the whole-file editor, a
