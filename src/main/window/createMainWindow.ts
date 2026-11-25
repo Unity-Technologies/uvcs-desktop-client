@@ -4,13 +4,14 @@ import type { Place } from '@shared/domain/place';
 import type { PageSeed, PageWindowPage } from '@shared/domain/pageWindow';
 import type { SavedWindow } from '@shared/domain/settings';
 import { cmSetupQuery, pageWindowQuery, startingPlaceQuery, type CmSetupStart } from '@shared/startingPlace';
+import { startingZoomQuery } from '@shared/startingZoom';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { isWebAddress } from '../system/webAddress';
 import { windowIcon } from './appIcon';
 import { cascadedWindowBounds, keepWindowBoundsSaved, loadWindowBounds, reopenedWindowBounds, type SavedBoundsKey } from './savedWindowBounds';
-import { fitWindowControls, followPageZoom } from './pageZoom';
+import { fitWindowControls, followPageZoom, savedZoomFactor, WINDOW_ZOOM_MODE } from './pageZoom';
 import { titleBarOptions } from './titleBar';
 import { windowsStayInBackground } from './backgroundWindows';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
@@ -60,6 +61,7 @@ export function createMainWindow(
   const chrome = windowChrome(process.platform);
   // Overrides `inBackground`: every window shows without the focus, and leaves the person's saved bounds alone.
   const keptInBackground = windowsStayInBackground(process.env, app.isPackaged);
+  const zoomFactor = savedZoomFactor(settings);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
     ...bounds,
@@ -74,6 +76,8 @@ export function createMainWindow(
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       sandbox: true,
+      zoomMode: WINDOW_ZOOM_MODE,
+      zoomFactor,
       // A window left behind others still runs its timers and animation frames, and its page reads as visible.
       ...(keptInBackground ? { backgroundThrottling: false } : {}),
     },
@@ -106,7 +110,8 @@ export function createMainWindow(
     return { action: 'deny' };
   });
 
-  loadPage(window, page && place ? pageWindowQuery(place, page, seed) : { ...startingPlaceQuery(place, reopen?.view), ...cmSetupQuery(cmSetup) });
+  const startsOn = page && place ? pageWindowQuery(place, page, seed) : { ...startingPlaceQuery(place, reopen?.view), ...cmSetupQuery(cmSetup) };
+  loadPage(window, { ...startsOn, ...startingZoomQuery(zoomFactor) });
   return window;
 }
 

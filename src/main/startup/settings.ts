@@ -17,9 +17,13 @@ export function sendSettingsChanges(settings: Pick<SettingsStore, 'onChanged'>, 
   settings.onChanged((changed, changes) => windowsShowAnyOf(changes) && send(changed));
 }
 
-const SAVED_AS_WINDOWS_MOVE: readonly string[] = ['windowBounds', 'pageWindowBounds'] satisfies (keyof AppSettings)[];
+/**
+ * Read only by the main process as a window opens: the windows' bounds, saved as windows move, and the zoom, saved at
+ * each zoom step, which each page hears on its own (`pageZoomChanged`).
+ */
+const READ_AS_WINDOWS_OPEN: readonly string[] = ['windowBounds', 'pageWindowBounds', 'zoomLevel'] satisfies (keyof AppSettings)[];
 
-/** The windows' bounds are saved as windows move and read only when one opens: no window shows them. */
+/** Whether some window shows a setting among `changes`: none shows those read only as a window opens. */
 export function windowsShowAnyOf(changes: Partial<AppSettings>): boolean {
-  return Object.keys(changes).some((key) => !SAVED_AS_WINDOWS_MOVE.includes(key));
+  return Object.keys(changes).some((key) => !READ_AS_WINDOWS_OPEN.includes(key));
 }
