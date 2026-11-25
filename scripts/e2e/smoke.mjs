@@ -203,9 +203,9 @@ async function step(name, run, { rereads } = {}) {
   }
 }
 
-/** Fails the step when something shown can't be reached: cut off where nothing scrolls (`findCutOffContent`). */
-async function nothingCutOff() {
-  const cutOff = await withTimeout(window.evaluate(findCutOffContent, cutOffArguments(CUT_OFF_ALLOWED, LOADING)), TIMEOUT_MS, 'the cut-off check');
+/** Fails the step when something shown in `page` can't be reached: cut off where nothing scrolls (`findCutOffContent`). */
+async function nothingCutOff(page = window) {
+  const cutOff = await withTimeout(page.evaluate(findCutOffContent, cutOffArguments(CUT_OFF_ALLOWED, LOADING)), TIMEOUT_MS, 'the cut-off check');
   if (cutOff.length > 0) throw new Error(`Cut off where nothing scrolls (scripts/e2e/README.md "Cut-off content"):\n  ${cutOff.join('\n  ')}`);
 }
 
@@ -312,6 +312,7 @@ try {
     const opened = app.waitForEvent('window');
     await main.getByRole('button', { name: 'Open in new window' }).click();
     const pageWindow = await opened;
+    await pageWindow.emulateMedia({ reducedMotion: 'reduce' });
     pageWindow.on('pageerror', (error) => errors.push(`page window pageerror: ${error.message}`));
     pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`page window console.error: ${message.text()}`));
     // The diff moved: its window shows it, with its one option, and this window is back on the list.
@@ -319,6 +320,7 @@ try {
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).waitFor();
     await readsSettled(pageWindow);
+    await nothingCutOff(pageWindow);
     await pageWindow.close();
   });
   await step('Permissions', async () => {
@@ -397,10 +399,12 @@ try {
     const opened = app.waitForEvent('window');
     await main.getByRole('button', { name: 'Open in new window' }).click();
     const pageWindow = await opened;
+    await pageWindow.emulateMedia({ reducedMotion: 'reduce' });
     pageWindow.on('pageerror', (error) => errors.push(`repository page window pageerror: ${error.message}`));
     pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`repository page window console.error: ${message.text()}`));
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await readsSettled(pageWindow);
+    await nothingCutOff(pageWindow);
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
