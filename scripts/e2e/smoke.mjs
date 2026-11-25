@@ -87,6 +87,9 @@ const browserWindow = await app.browserWindow(window);
 // (Windows, a Linux desktop) or a small screen would otherwise leave smaller than the page laid out.
 await browserWindow.evaluate((shown, size) => shown.setContentSize(size.width, size.height), VIEWPORT);
 await window.setViewportSize(VIEWPORT);
+// Reduced motion: the app's durations are zero (`--duration-*`), so no step waits for a view's entrance or a dialog's,
+// and the cut-off check measures boxes where they rest. Only loops (spinners) still move, and nothing waits on them.
+await window.emulateMedia({ reducedMotion: 'reduce' });
 
 const main = window.getByRole('main');
 let shotNumber = 0;
@@ -202,7 +205,7 @@ async function step(name, run, { rereads } = {}) {
 
 /** Fails the step when something shown can't be reached: cut off where nothing scrolls (`findCutOffContent`). */
 async function nothingCutOff() {
-  const cutOff = await withTimeout(window.evaluate(findCutOffContent, cutOffArguments(CUT_OFF_ALLOWED)), TIMEOUT_MS, 'the cut-off check');
+  const cutOff = await withTimeout(window.evaluate(findCutOffContent, cutOffArguments(CUT_OFF_ALLOWED, LOADING)), TIMEOUT_MS, 'the cut-off check');
   if (cutOff.length > 0) throw new Error(`Cut off where nothing scrolls (scripts/e2e/README.md "Cut-off content"):\n  ${cutOff.join('\n  ')}`);
 }
 
