@@ -320,9 +320,11 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   request with a reply saying why (`… reply --discard`).
 - Deleting a comment deletes every reply under it, at any depth and whoever wrote it (`commentsDeletedWith`): `cm`
   deletes only the comments it's named, and a reply left behind would answer nothing (the official client leaves them).
-  One `cm codereview comment delete` names them all, each reply before what it answers, so a delete that fails partway
-  (`cm` goes on past one it can't delete) leaves no reply whose comment is gone. `cm` asks the server twice per comment
-  (finds it by its guid, deletes it), so more than one runs in a process of its own (`execute()`), never a pooled shell.
+  One `cm codereview comment delete` names them all, each reply before what it answers, so a delete cut short (`cm`
+  reaching the server no more) leaves no reply whose comment is gone; a reply `cm` can't delete while it goes on (it
+  goes past one and fails at the end), or one written since the review was read, shows as a thread of its own
+  (`threadsOf`). `cm` asks the server twice per comment (finds it by its guid, deletes it), so a long thread runs in a
+  process of its own (`runsLong`: `MAX_QUICK_COMMENT_DELETES`), never a pooled shell.
 - A thread's reply box follows its drafts (`useAnswerBox`), wherever the thread shows (the conversation, a line, an
   image, a model). A reply (or discard) left with words in it shows open with them when the thread shows again, a
   settled thread unfolded for it (`answerShownOnReturn`, `initialThreadCardFold`); a box emptied before leaving shows
@@ -333,8 +335,8 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   hand ("Reply…", "Discard…") takes the focus. A draft in a folded round of the conversation stays hidden until the
   round opens.
 - Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
-  on what the review targets): only its author edits a comment; only its author deletes it, its replies with it, anyone's
-  (`canDeleteComment`); anyone but who asked for it
+  on what the review targets): only its author edits a comment; only its author deletes a comment, and every reply
+  under it goes too, whoever wrote it (`canDeleteComment`, `commentsDeletedWith`); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text and
   link to copy (Copy ▸ Comment, Link; see "Links to comments").
 - **What a reviewer said with their status** is edited by that reviewer, in place in the timeline

@@ -7,7 +7,7 @@ import { isAffectedByCodeReviews, isAffectedByTakingPartInReview } from '../../.
 import { confirm } from '../../../ui/dialog/confirm';
 import { pickChangeset } from '../../changesets/ChangesetPickerDialog';
 import { changesetsToApplyIn, type ChangeRequestMark } from './changeRequestMarks';
-import { deleteConfirmation } from './commentDeletion';
+import { deleteConfirmation, deleteFailedTitle } from './commentDeletion';
 
 // Every write on a review reads the review again, its lists too: the counts of comments and open ones change with it.
 // What the user writes (a comment, a reply) subscribes them to its emails again: that is read too.
@@ -69,7 +69,7 @@ export async function deleteReviewComment(place: Place, comments: readonly Pick<
   const confirmed = await confirm({ ...deleteConfirmation(comments.length), confirmLabel: 'Delete', danger: true });
   if (!confirmed) return false;
   const guids = comments.map((comment) => comment.guid);
-  return runVoidAction(place, "Couldn't delete the comment", () => api.reviewComments.remove(place, guids), isAffectedByCodeReviews);
+  return runVoidAction(place, deleteFailedTitle(comments.length), () => api.reviewComments.remove(place, guids), isAffectedByCodeReviews);
 }
 
 export function saveReviewDescription(place: Place, reviewId: number, text: string): Promise<boolean> {

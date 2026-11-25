@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { commentsDeletedWith, deleteConfirmation } from './commentDeletion';
+import { commentsDeletedWith, deleteConfirmation, deleteFailedTitle } from './commentDeletion';
 import { threadsOf } from './reviewThreads';
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
@@ -44,5 +44,12 @@ describe('deleteConfirmation', () => {
   it('says how many replies go with it', () => {
     expect(deleteConfirmation(2)).toEqual({ title: 'Delete this comment and its reply?', message: 'Everyone on the review stops seeing them.' });
     expect(deleteConfirmation(4)).toEqual({ title: 'Delete this comment and its 3 replies?', message: 'Everyone on the review stops seeing them.' });
+  });
+});
+
+describe('deleteFailedTitle', () => {
+  it('names the replies when they were part of the delete', () => {
+    expect(deleteFailedTitle(1)).toBe("Couldn't delete the comment");
+    expect(deleteFailedTitle(3)).toBe("Couldn't delete the comment and its replies");
   });
 });
