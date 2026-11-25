@@ -22,12 +22,14 @@ interface ActionContextMenuProps {
   onCloseAutoFocus?: (event: Event) => void;
   /** Runs before the menu opens; preventing the event's default opens none. */
   onContextMenu?: (event: ReactMouseEvent) => void;
+  /** Runs as the menu opens and closes. */
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ActionContextMenu({ entries, children, onCloseAutoFocus, onContextMenu }: ActionContextMenuProps) {
+export function ActionContextMenu({ entries, children, onCloseAutoFocus, onContextMenu, onOpenChange }: ActionContextMenuProps) {
   const trigger = useRef<HTMLElement>(null);
   return (
-    <ContextMenu.Root modal={false}>
+    <ContextMenu.Root modal={false} onOpenChange={onOpenChange}>
       <ContextMenu.Trigger asChild ref={trigger} onContextMenu={onContextMenu}>
         {children}
       </ContextMenu.Trigger>

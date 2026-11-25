@@ -242,9 +242,9 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const placeLineAction = useMemo(() => placeAction && releasingSelection(placeAction, () => latestSelected.current, () => select(null)), [placeAction, select]);
   const lineTools = useLineTools({
     containerRef: container,
+    path: fileName,
     layout,
     range: lineLinks.range,
-    select: lineLinks.select,
     selectable: lineLinks.selectedLines !== undefined,
     publishes: lineLinks.publishes,
     textOf: (side) => (side === 'old' ? original : diffedText),
@@ -339,7 +339,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
 
   return (
     <div className={styles.frame}>
-      <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
+      <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu} onOpenChange={codeMenu.onOpenChange}>
         <div
           ref={setContainer}
           className={styles.diff}

@@ -174,13 +174,16 @@ badges.
   - a quiet **"Copy link" chip** by the first of them, at the right end of its pane, as a change's "Revert change"
     sits (`LineLinkChip`, placed by `lineChipAnchor`); its tooltip says what it copies ("Copy link to lines 40–52 of
     Player.cs", `copyLinkLabel`) and the ⇧⌘C that copies it too;
-  - **a right-click on code**, which first selects the line clicked when it isn't selected (`rightClickSelection`,
-    `useLineTools`): wherever lines are selected for links (a committed diff, Annotate, a browsed or Files file), the
-    lines' entries join the code's menu (`lineMenuEntries`, through `useCodeMenu`; features/diff.md "The code's
-    menu"): "Annotate at this line" in a diff (the newer side's, `diffEntryAnnotation`), "Copy link to line 42" (⇧⌘C)
-    and "Copy line" (its text, `linesText`). Changes' code menu has no line entries: its lines are picked to discard
-    them, and no link names a pending change.
-  - Copied from either, the toast teaches the shortcut ("⇧⌘C copies it next time", `nextTimeHint`, `copyPageLink`).
+  - **a right-click on code**, which acts on the line clicked, or on the lines selected when it's one of them
+    (`rightClickedLines`, `useLineTools`), and selects nothing: the menu names the lines instead. Wherever lines are
+    selected for links (a committed diff, Annotate, a browsed or Files file), the lines' entries join the code's menu
+    (`lineMenuEntries`, through `useCodeMenu`; features/diff.md "The code's menu"): "Annotate at line 42" in a diff
+    (the newer side's, `diffEntryAnnotation`), "Copy link to line 42" (a link to those lines, though not selected:
+    `pageLinesTarget`; offered only where a link can name them) and "Copy line 42" (its text, `linesText`). Changes'
+    code menu has no line entries: its lines are picked to discard them, and no link names a pending change.
+  - Copied from either, the toast teaches the shortcut ("⇧⌘C copies it next time", `nextTimeHint`, `copyLinesLink`),
+    and the menu's entry shows it, only where ⇧⌘C copies the same: the lines selected. Lines right-clicked but not
+    selected copy their own link, while ⇧⌘C copies the selection, or the file.
   - Line numbers say how on hover ("Click to select · Shift+click a range", `lineNumberHint`), not while dragging.
 - **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy the most specific thing in front (`useCopyLinkCommand`,
   `linkToCopy`): the lines selected in the page when there are some (`pageLinkTarget`, as their chip), else the page's

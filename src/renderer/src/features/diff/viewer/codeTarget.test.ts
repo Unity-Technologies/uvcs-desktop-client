@@ -10,6 +10,7 @@ import {
   keyboardGoToLine,
   lineMenuOf,
   linesAtRightClick,
+  selectionsAfterRightClick,
   linesOnSide,
   menuLinesOf,
   primarySelection,
@@ -207,5 +208,30 @@ describe('fragmentSide', () => {
     expect(fragmentSide('deletions', null)).toBe('old');
     expect(fragmentSide('additions', null)).toBe('new');
     expect(fragmentSide('additions', 'additions')).toBeNull();
+  });
+});
+
+describe('selectionsAfterRightClick: where a right-click leaves the text typed into', () => {
+  const at = (line: number, character: number) => ({ line, character });
+  const caret = (line: number, character: number) => ({ start: at(line, character), end: at(line, character) });
+  const word = { start: at(4, 10), end: at(4, 18) };
+
+  it('moves the caret to the point clicked, as code editors do', () => {
+    expect(selectionsAfterRightClick([caret(0, 0)], at(6, 3))).toEqual([caret(6, 3)]);
+    expect(selectionsAfterRightClick([word], at(9, 0))).toEqual([caret(9, 0)]);
+  });
+
+  it('keeps text selected when the click is on it, ends included, for Cut and Copy to act on', () => {
+    expect(selectionsAfterRightClick([word], at(4, 12))).toBeNull();
+    expect(selectionsAfterRightClick([word], at(4, 18))).toBeNull();
+    expect(selectionsAfterRightClick([{ start: word.end, end: word.start }], at(4, 10))).toBeNull();
+  });
+
+  it('keeps every caret and selection when the click is on any of them', () => {
+    expect(selectionsAfterRightClick([caret(1, 0), word], at(4, 15))).toBeNull();
+  });
+
+  it('leaves them as they are off the text (below the last line)', () => {
+    expect(selectionsAfterRightClick([word], null)).toBeNull();
   });
 });

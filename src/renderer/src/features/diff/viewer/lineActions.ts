@@ -69,8 +69,8 @@ export function lineUnderPointer({ lineNumber, lineType, pane }: RowUnderPointer
   return { side, lineNumber };
 }
 
-/** The selection a right-click on `clicked` makes: what is selected when the line is in it, else that line alone. */
-export function rightClickSelection(selected: LineRange | null, clicked: ChangedLine): LineRange {
+/** The lines a right-click on `clicked` acts on: those selected when the line is one of them, else that line alone. */
+export function rightClickedLines(selected: LineRange | null, clicked: ChangedLine): LineRange {
   const lines = linkedLinesOf(selected);
   const inside = lines && sideOf(lines) === clicked.side && clicked.lineNumber >= lines.first && clicked.lineNumber <= lines.last;
   return inside ? selected! : { start: clicked.lineNumber, side: clicked.side, end: clicked.lineNumber, endSide: clicked.side };
@@ -82,12 +82,12 @@ export function linesText(text: string, { first, last }: FocusedLines): string {
 }
 
 /**
- * The lines a right-click's menu acts on (`useLineTools`): the selection it makes on the line clicked
- * (`rightClickSelection`), else what is selected; null off any line with none selected, where no menu opens.
+ * The lines a right-click's menu acts on (`useLineTools`): those of the line clicked (`rightClickedLines`), else those
+ * selected; null off any line with none selected, where no menu opens.
  */
-export function contextMenuSelection(selected: LineRange | null, clicked: ChangedLine | null): LineRange | null {
-  const selection = clicked ? rightClickSelection(selected, clicked) : selected;
-  return linkedLinesOf(selection) ? selection : null;
+export function contextMenuLines(selected: LineRange | null, clicked: ChangedLine | null): LineRange | null {
+  const lines = clicked ? rightClickedLines(selected, clicked) : selected;
+  return linkedLinesOf(lines) ? lines : null;
 }
 
 /** What the toast says "Copy line" copied: "Line", "Lines". */

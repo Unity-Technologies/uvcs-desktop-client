@@ -111,9 +111,9 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   const lineLinks = useLineLinks({ path, selectable: true, containerRef: scrollerRef, shown: scroller !== null, scrollTo: scrollToAnnotatedLine });
   const lineTools = useLineTools({
     containerRef: scrollerRef,
+    path,
     layout: 'file',
     range: lineLinks.range,
-    select: lineLinks.select,
     selectable: true,
     publishes: lineLinks.publishes,
     textOf: () => code,
@@ -130,7 +130,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   const pickedBlock = blocks[picked];
 
   return (
-    <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
+    <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu} onOpenChange={codeMenu.onOpenChange}>
       <div
         ref={attachScroller}
         className={styles.scroller}

@@ -15,22 +15,27 @@ const RANGE = { side: 'new', first: 40, last: 52 } as const;
 
 describe('lineMenuEntries', () => {
   it('annotates, links to and copies the lines, in that order', () => {
-    expect(labels(linesMenu({ lines: LINE, copyLink: vi.fn(), copyLines: vi.fn(), annotate: vi.fn() }))).toEqual(['Annotate at this line', '—', 'Copy link to line 42', 'Copy line']);
-    expect(labels(linesMenu({ lines: RANGE, copyLink: vi.fn(), copyLines: vi.fn(), annotate: vi.fn() }))).toEqual(['Annotate at these lines', '—', 'Copy link to lines 40–52', 'Copy lines']);
+    expect(labels(linesMenu({ lines: LINE, copyLink: vi.fn(), copyLines: vi.fn(), annotate: vi.fn() }))).toEqual(['Annotate at line 42', '—', 'Copy link to line 42', 'Copy line 42']);
+    expect(labels(linesMenu({ lines: RANGE, copyLink: vi.fn(), copyLines: vi.fn(), annotate: vi.fn() }))).toEqual(['Annotate at lines 40–52', '—', 'Copy link to lines 40–52', 'Copy lines 40–52']);
   });
 
-  it('shows the shortcut that copies the link', () => {
-    const link = linesMenu({ lines: LINE, copyLink: vi.fn(), copyLines: vi.fn() }).find((entry) => entry !== SEPARATOR && (entry as Action).id === 'copyLineLink') as Action;
-    expect(link.shortcut).toBe(hotkey('copyLink'));
+  const linkEntry = (menu: MenuEntry[]) => menu.find((entry) => entry !== SEPARATOR && (entry as Action).id === 'copyLineLink') as Action;
+
+  it('shows the shortcut that copies the link when its lines are the ones selected, which the shortcut copies', () => {
+    expect(linkEntry(linesMenu({ lines: LINE, linesSelected: true, copyLink: vi.fn(), copyLines: vi.fn() })).shortcut).toBe(hotkey('copyLink'));
+  });
+
+  it('shows no shortcut for lines right-clicked but not selected: the shortcut copies the selection, or the file', () => {
+    expect(linkEntry(linesMenu({ lines: LINE, linesSelected: false, copyLink: vi.fn(), copyLines: vi.fn() })).shortcut).toBeUndefined();
   });
 
   it("annotates no older side's lines, nor where nothing can be annotated (an annotation itself)", () => {
-    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLink: vi.fn(), copyLines: vi.fn(), annotate: vi.fn() }))).toEqual(['Copy link to line 42', 'Copy line']);
-    expect(labels(linesMenu({ lines: LINE, copyLink: vi.fn(), copyLines: vi.fn() }))).toEqual(['Copy link to line 42', 'Copy line']);
+    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLink: vi.fn(), copyLines: vi.fn(), annotate: vi.fn() }))).toEqual(['Copy link to line 42', 'Copy line 42']);
+    expect(labels(linesMenu({ lines: LINE, copyLink: vi.fn(), copyLines: vi.fn() }))).toEqual(['Copy link to line 42', 'Copy line 42']);
   });
 
   it('copies only the text where no link names the lines', () => {
-    expect(labels(linesMenu({ lines: LINE, copyLines: vi.fn() }))).toEqual(['Copy line']);
+    expect(labels(linesMenu({ lines: LINE, copyLines: vi.fn() }))).toEqual(['Copy line 42']);
   });
 });
 
@@ -43,23 +48,23 @@ describe("a place's own action on a line", () => {
 
   it('comes first, on the lines selected', () => {
     const menu = linesMenu({ lines: RANGE, copyLines: vi.fn(), lineAction: onNewerSide });
-    expect(labels(menu)).toEqual(['Comment on lines 40–52', '—', 'Copy lines']);
+    expect(labels(menu)).toEqual(['Comment on lines 40–52', '—', 'Copy lines 40–52']);
     (menu[0] as Action).run();
     expect(onNewerSide.run).toHaveBeenCalledWith({ side: 'additions', firstLineNumber: 40, lineNumber: 52 });
   });
 
   it("isn't offered on lines the place doesn't take", () => {
-    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLines: vi.fn(), lineAction: onNewerSide }))).toEqual(['Copy line']);
+    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLines: vi.fn(), lineAction: onNewerSide }))).toEqual(['Copy line 42']);
   });
 
   it('offers its other way right after it, on the same lines', () => {
     const suggest = vi.fn();
     const withVariant: LineAction = { ...onNewerSide, variant: { label: (lines) => `Suggest change on lines ${lines.firstLineNumber}–${lines.lineNumber}`, run: suggest } };
     const menu = linesMenu({ lines: RANGE, copyLines: vi.fn(), lineAction: withVariant });
-    expect(labels(menu)).toEqual(['Comment on lines 40–52', 'Suggest change on lines 40–52', '—', 'Copy lines']);
+    expect(labels(menu)).toEqual(['Comment on lines 40–52', 'Suggest change on lines 40–52', '—', 'Copy lines 40–52']);
     (menu[1] as Action).run();
     expect(suggest).toHaveBeenCalledWith({ side: 'additions', firstLineNumber: 40, lineNumber: 52 });
-    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLines: vi.fn(), lineAction: withVariant }))).toEqual(['Copy line']);
+    expect(labels(linesMenu({ lines: { ...LINE, side: 'old' }, copyLines: vi.fn(), lineAction: withVariant }))).toEqual(['Copy line 42']);
   });
 
   it('names the older side as the diff does', () => {

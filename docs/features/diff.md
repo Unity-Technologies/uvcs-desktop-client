@@ -755,8 +755,11 @@ page's conflicts (`ConflictHunks`) have none: Pierre numbers each side of a conf
 3), so no line number or selection there names one text to go to or compare. It follows the menus' one grammar, so it
 reads, in groups: Undo, Redo; Find, Replace, Go to line…, Compare with clipboard; Cut, Copy, Paste; Delete, Select all.
 Where a diff selects lines for links (a committed diff, Annotate), the lines' own entries join it at the end of their
-groups ("Annotate at this line", "Copy link to line 42", "Copy line": `lineMenuEntries`). What it holds depends on the
-side right-clicked (`codeMenuTarget`):
+groups ("Annotate at line 42", "Copy link to line 42", "Copy line 42": `lineMenuEntries`), naming the lines they act on,
+as the right-click selects nothing. On text typed into, the right-click first moves the caret where it clicks, as code
+editors do, unless it's on text selected, which Cut and Copy then act on (`selectionsAfterRightClick`); while the menu
+is open, the caret stays drawn (`CARET_HELD_ATTRIBUTE`): Pierre draws it only while the text has the focus, which the
+menu takes. What it holds depends on the side right-clicked (`codeMenuTarget`):
 
 - **Typed into** (the newer side of a workspace file's diff once its editor is attached, the whole-file editor, a
   merge's hand-editing): everything, through Pierre's editor. Undo and Redo are its history (`canUndo`, `canRedo`). Cut,
@@ -767,7 +770,7 @@ side right-clicked (`codeMenuTarget`):
   first one it reads: a CRLF file stays CRLF, which `diskText` wouldn't repair). Delete removes what every selection
   holds (`deletionEdits`), Pierre's `applyEdits` moving the carets; Select all selects the whole text.
 - **Read-only** (every other side): only what reads it. Copy copies the text selected in the page, read from its rows
-  (`pageTextSelection`, `copiedPageText`); lines picked by their numbers have "Copy lines" instead. Select all selects
+  (`pageTextSelection`, `copiedPageText`); lines picked by their numbers have "Copy lines 40–52" instead. Select all selects
   every line of the side, as Shift+click would, where lines are selected for links. Undo, Redo, Cut, Paste and Delete
   aren't offered, nor Replace: there's nothing to replace in. Find opens the search ("Find in the code", below), where a
   place has one; Annotate and a merge's conflicts have none.

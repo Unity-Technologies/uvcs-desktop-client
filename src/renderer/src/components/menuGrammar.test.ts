@@ -513,10 +513,10 @@ describe('text', () => {
       'Find',
       'Go to line…',
       'Compare with clipboard',
-      'Annotate at these lines',
+      'Annotate at lines 40–52',
       'Copy',
       'Copy link to lines 40–52',
-      'Copy lines',
+      'Copy lines 40–52',
       'Select all',
     ]);
   });
