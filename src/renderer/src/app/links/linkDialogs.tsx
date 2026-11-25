@@ -7,11 +7,11 @@ import { OptionCards } from '../../ui/OptionCards';
 import { checkForUpdates, setAboutOpen } from '../updates/updateStore';
 import { linkProblemWords, type LinkFailure } from './linkProblemWords';
 
-/** Says why a link couldn't open; one a newer version wrote offers to check for updates (the About dialog). */
+/** Says why a link couldn't open; one naming what this version doesn't know offers to check for updates (the About dialog). */
 export async function showLinkFailure(failure: LinkFailure): Promise<void> {
   const { title, message, offersUpdate } = linkProblemWords(failure);
   if (offersUpdate) {
-    if (await confirm({ title, message, confirmLabel: 'Check for updates' })) {
+    if (await confirm({ title, message, confirmLabel: 'Check for updates', cancelLabel: 'OK' })) {
       setAboutOpen(true);
       void checkForUpdates();
     }

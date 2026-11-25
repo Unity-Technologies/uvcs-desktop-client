@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { linkProblemWords } from './linkProblemWords';
 
 describe('linkProblemWords', () => {
-  it('offers an update only for a link naming what this version does not know', () => {
-    expect(linkProblemWords({ kind: 'unknown', detail: 'It names a page "timeline".' })).toEqual({
-      title: 'This link needs a newer version',
-      message: 'It names a page "timeline". A newer version of the app may open it.',
+  it('says a link naming what this version does not know is not supported, and offers an update without promising it', () => {
+    expect(linkProblemWords({ kind: 'unknown' })).toEqual({
+      title: "This link isn't supported",
+      message: "This version of the app can't open this link.",
       offersUpdate: true,
     });
     expect(linkProblemWords({ kind: 'malformed', detail: 'Its changeset number is not valid.' }).offersUpdate).toBe(false);
