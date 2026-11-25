@@ -19,7 +19,7 @@ export function MergeRequestDetailsSection({ branch }: { branch: BranchInfo }) {
   const section = branchMergeRequestSectionOf(branch, useBranchReview(branch.id, useSettled()));
   if (section.body === 'hidden') return null;
   const action = section.canCreate && (
-    <DetailsSectionAction icon={<GitPullRequestPlus size={12} />} data-tip="New merge request" onClick={() => openCreateMergeRequestDialog(place, branch)}>
+    <DetailsSectionAction icon={<GitPullRequestPlus size={12} />} data-tip="New merge request" aria-label="New merge request" onClick={() => openCreateMergeRequestDialog(place, branch)}>
       New
     </DetailsSectionAction>
   );
