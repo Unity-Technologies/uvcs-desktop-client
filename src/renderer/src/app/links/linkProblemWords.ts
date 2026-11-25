@@ -9,7 +9,7 @@ export type LinkFailure =
 export interface LinkProblemWords {
   title: string;
   message: string;
-  /** A link a newer version wrote: the dialog offers to check for updates. */
+  /** A link naming what this version doesn't know: the dialog offers to check for updates, in case a newer one does. */
   offersUpdate: boolean;
 }
 
@@ -20,7 +20,7 @@ export function linkProblemWords(failure: LinkFailure): LinkProblemWords {
     case 'malformed':
       return { title: "This link can't be opened", message: failure.detail, offersUpdate: false };
     case 'unknown':
-      return { title: 'This link needs a newer version', message: `${failure.detail} A newer version of the app may open it.`, offersUpdate: true };
+      return { title: "This link isn't supported", message: "This version of the app can't open this link.", offersUpdate: true };
     case 'notInWorkspace':
       return { title: 'No workspace holds this folder', message: failure.folder, offersUpdate: false };
     case 'notFound':
