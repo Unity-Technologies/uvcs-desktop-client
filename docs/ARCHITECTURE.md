@@ -1767,9 +1767,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     its middle reaches.
   - Every box a view or page sits in that grows to fill the window (`flex: 1`) lets its content be smaller than
     it is: `min-width: 0` and `min-height: 0`, or an `overflow` that clips (`viewWrappersFitTheWindow.test.ts`; the
-    boxes are listed once, `VIEW_WRAPPERS` in `testing/viewWrappers.ts`). A flex item is otherwise as tall as its
-    content: `PageFrame` without `min-height: 0` let a long merge grow past the window, and neither its list nor its
-    diff scrolled.
+    boxes are listed once, `VIEW_WRAPPERS` in `testing/viewWrappers.ts`). A flex item is otherwise as large as its
+    content along its parent's direction, and a box can't tell which way its parent lays out, so the rule asks for
+    both: `PageFrame` without `min-height: 0`, in the column `.layer` a merge in progress stays mounted in, let a long
+    merge grow past the window, and neither its list nor its diff scrolled.
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
     A stagger's delays are made of a duration token too (`ui/AvatarStack`'s), so reduced motion zeroes them as well.
