@@ -4,15 +4,21 @@ import { pierreThemeName } from '../../../lib/codeTheme';
 import type { DiffLayout } from './diffPreferencesStore';
 import { pierreTint } from './pierreTint';
 
+/** Set on Pierre's element while the code's menu is open on the text typed into (`useCodeMenu`): its caret stays drawn. */
+export const CARET_HELD_ATTRIBUTE = 'data-caret-held';
+
 /**
  * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
  * diffs blend with the app in both themes while keeping Pierre's syntax and add/remove colors.
  * Code takes the app's code font, whose stack has each OS's (Pierre's own knows neither Cascadia nor DejaVu), at
  * 12px rather than Pierre's 13px: the size the classic desktop client shows code at. Only the font shrinks: lines
  * stay 20px tall, the height Pierre's virtualizer and Annotate's `ANNOTATION_LINE_HEIGHT` count on.
+ * The editor's caret stays drawn, still, while the code's menu is open on it (`CARET_HELD_ATTRIBUTE`): Pierre draws it
+ * only while the text has the focus, which the menu takes.
  */
 export const PIERRE_SURFACE_CSS =
-  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px}';
+  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px}' +
+  `:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{visibility:visible;animation:none}`;
 
 /**
  * How a diff marks the words two lines change: word by word, nothing on lines past 1,000 characters (Pierre's own

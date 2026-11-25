@@ -130,7 +130,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   const pickedBlock = blocks[picked];
 
   return (
-    <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
+    <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu} onOpenChange={codeMenu.onOpenChange}>
       <div
         ref={attachScroller}
         className={styles.scroller}

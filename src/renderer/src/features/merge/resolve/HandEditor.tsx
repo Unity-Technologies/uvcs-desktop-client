@@ -64,7 +64,7 @@ export function HandEditor({ path, text, onChange }: HandEditorProps) {
 
   return (
     <div className={styles.frame}>
-      <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
+      <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu} onOpenChange={codeMenu.onOpenChange}>
         <div
           ref={setSurface}
           className={styles.surface}
