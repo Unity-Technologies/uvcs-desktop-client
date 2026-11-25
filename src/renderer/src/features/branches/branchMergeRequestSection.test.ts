@@ -20,13 +20,20 @@ describe('the Merge request section of a branch details', () => {
     }
   });
 
-  it('offers a new one when the branch has none, or only a plain code review', () => {
-    expect(branchMergeRequestSectionOf(task, null)).toEqual({ body: 'none', canCreate: true });
-    expect(branchMergeRequestSectionOf(task, plainReview)).toEqual({ body: 'none', canCreate: true });
+  it('offers a new one when the branch has no review', () => {
+    expect(branchMergeRequestSectionOf(task, null)).toEqual({ body: 'none', text: 'No merge request', canCreate: true });
+  });
+
+  it('says only that none is open under a plain code review, which may stand over an older merged or closed request', () => {
+    expect(branchMergeRequestSectionOf(task, plainReview)).toEqual({ body: 'none', text: 'No open merge request', canCreate: true });
   });
 
   it('waits while the branch review is read, so the section keeps its place', () => {
     expect(branchMergeRequestSectionOf(task, undefined)).toEqual({ body: 'reading', canCreate: false });
+  });
+
+  it('hides when the branch review could not be read, rather than say what it does not know', () => {
+    expect(branchMergeRequestSectionOf(task, undefined, { failed: true })).toEqual({ body: 'hidden' });
   });
 
   it('hides for a branch with nowhere to merge, unless it holds a request anyway', () => {
@@ -36,6 +43,6 @@ describe('the Merge request section of a branch details', () => {
   });
 
   it('counts a top-level branch with a parent as one that can merge', () => {
-    expect(branchMergeRequestSectionOf({ name: '/release', parent: '/main' }, null)).toEqual({ body: 'none', canCreate: true });
+    expect(branchMergeRequestSectionOf({ name: '/release', parent: '/main' }, null)).toEqual({ body: 'none', text: 'No merge request', canCreate: true });
   });
 });
