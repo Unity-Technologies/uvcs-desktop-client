@@ -6,9 +6,13 @@ describe('validateBranchName', () => {
     expect(validateBranchName('scm-1234_fix.login')).toBeUndefined();
   });
 
-  it('rejects separators, spaces and spec characters', () => {
-    expect(validateBranchName('a/b')).toBeDefined();
-    expect(validateBranchName('my branch')).toBeDefined();
-    expect(validateBranchName('task@repo')).toBeDefined();
+  it('accepts spaces, as cm does', () => {
+    expect(validateBranchName('my branch')).toBeUndefined();
+    expect(validateBranchName('fix  login form')).toBeUndefined();
+  });
+
+  // What cm refuses, then what a Windows folder name refuses (a task workspace's folder is named after its branch).
+  it.each(['@', '#', '/', ':', '"', '?', "'", '\n', '\r', '\\', '<', '>', '|', '*', '\t'])('rejects %j', (character) => {
+    expect(validateBranchName(`a${character}b`)).toBeDefined();
   });
 });
