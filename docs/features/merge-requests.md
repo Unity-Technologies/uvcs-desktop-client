@@ -27,7 +27,7 @@ included.
 `mergeRequestForm`, in `mergeRequestDraft.ts`) is offered by the Merge requests view's header and its empty state, the
 palette in every workspace and repository window (`codeReviews.newMergeRequest`, `useMergeRequestCommands`; while the
 view shows, its own, which selects the new row), and every branch's menu (`branchMenu`: the Branches view, the Branch
-Explorer, the switcher, the top bar), in the `create` group above **New code review…**, which stays: a review of a
+Explorer, the switcher, the top bar), the **Merge request** section of a branch's details while it has none to merge ("A branch's merge request at a glance"), in the `create` group above **New code review…**, which stays: a review of a
 branch with no destination is still asked for, and it is the only kind a branch with nowhere to merge (`/main`) can
 have. Such a branch (no ancestor in its name and no parent, `canMergeSomewhere`) has no New merge request entry,
 rather than one always refused. No shortcut: creating one is rare, and the palette has it.
