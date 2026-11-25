@@ -46,6 +46,25 @@ describe("a branch's review chip", () => {
   });
 });
 
+describe("a branch's review chip in a column (the Branches view's)", () => {
+  it.each([
+    ['an open request waiting', request('Open', 'Under review')],
+    ['a merged request, which has no verdict', request('Merged', 'Reviewed')],
+    ['a code review', plain('Reviewed')],
+  ])('keeps the verdict\'s room for %s, so every chip in the column ends on one line', (_, review) => {
+    expect(reviewChipOf(review, false, { inColumn: true }).verdictRoom).toBe(true);
+  });
+
+  it('keeps it when narrow too', () => {
+    expect(reviewChipOf(request('Merged', 'Reviewed'), true, { inColumn: true }).verdictRoom).toBe(true);
+  });
+
+  it('keeps no room out of a column: a chip after a name ends where its glyphs do', () => {
+    expect(reviewChipOf(request('Merged', 'Reviewed'), false).verdictRoom).toBe(false);
+    expect(reviewChipOf(plain('Reviewed'), false).verdictRoom).toBe(false);
+  });
+});
+
 describe('codeReviewLine', () => {
   it('says what it is and where it stands', () => {
     expect(codeReviewLine(plain('Reviewed'))).toBe('Code review 12 · Reviewed');
