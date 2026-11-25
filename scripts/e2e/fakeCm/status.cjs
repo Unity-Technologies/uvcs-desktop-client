@@ -1,6 +1,7 @@
 // `cm status`: what the workspace is loaded from (`--header --xml`) and its pending changes as records
 // (`--machinereadable`), the files the user edited (`onDisk` and `loaded`, CH) and the private ones (`onDisk` only, PR).
 const { join } = require('node:path');
+const { optionValue } = require('./format.cjs');
 const { FILES, REPOSITORY, SERVER, WORKSPACE } = require('./repository.cjs');
 
 function header() {
@@ -18,15 +19,9 @@ function changes(withPrivate) {
 /** The options that ask for some kinds of change; asked for none, `cm status` lists every kind, private files too. */
 const KIND_OPTIONS = new Set(['--controlledchanged', '--changed', '--checkout', '--localdeleted', '--localmoved', '--private', '--added', '--deleted', '--moved']);
 
-/** The value of `--<name>=<value>`, as `cm` takes the machine-readable separators. */
-function option(args, name) {
-  const prefix = `--${name}=`;
-  return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) ?? '';
-}
-
 /** `cm status --machinereadable`: a `STATUS` record, then, with `--changelists`, the Default changelist and its changes. */
 function statusRecords(args) {
-  const [field, end] = [option(args, 'fieldseparator') || ' ', option(args, 'endlineseparator')];
+  const [field, end] = [optionValue(args, 'fieldseparator') || ' ', optionValue(args, 'endlineseparator') ?? ''];
   const records = [
     ['STATUS', WORKSPACE.changeset, REPOSITORY, SERVER],
     ...(args.includes('--changelists') ? [['CHLIST', 'Default', 'Default Unity VCS changelist']] : []),
@@ -41,7 +36,7 @@ function statusRecords(args) {
  * changes as records with `--machinereadable`.
  */
 function statusOutput(args) {
-  if (args.includes('--machinereadable') && args.includes('--header')) return `${['STATUS', WORKSPACE.changeset, REPOSITORY, SERVER].join(option(args, 'fieldseparator') || ' ')}\n`;
+  if (args.includes('--machinereadable') && args.includes('--header')) return `${['STATUS', WORKSPACE.changeset, REPOSITORY, SERVER].join(optionValue(args, 'fieldseparator') || ' ')}\n`;
   if (args.includes('--machinereadable')) return statusRecords(args);
   if (!args.includes('--xml') || !args.includes('--header')) throw new Error('The fake cm answers cm status only with --header --xml or --machinereadable');
   return `<?xml version="1.0" encoding="utf-8"?><StatusOutput>${header()}</StatusOutput>\n`;

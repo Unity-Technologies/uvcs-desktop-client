@@ -237,7 +237,13 @@ const LOCKS = [
   },
 ];
 
+/** An absolute path's place in the workspace, with forward slashes, or undefined for one outside it. */
+function workspacePathOf(path) {
+  return path.startsWith(WORKSPACE.path) ? path.slice(WORKSPACE.path.length + 1).replaceAll('\\', '/') : undefined;
+}
+
 module.exports = {
+  workspacePathOf,
   ATTRIBUTES,
   ATTRIBUTE_TYPES,
   BRANCHES,

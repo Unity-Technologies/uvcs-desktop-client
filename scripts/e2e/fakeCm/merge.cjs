@@ -4,7 +4,7 @@
 // changes to apply than the merge page's list shows at once. Their versions are listed by `cm ls --tree=cs:N` and
 // read by `cm cat`, as the merge page reads them.
 const { createHash } = require('node:crypto');
-const { formatRecords } = require('./format.cjs');
+const { formatRecords, optionValue } = require('./format.cjs');
 const { OWNER, REPOSITORY_SPEC } = require('./repository.cjs');
 
 const SOURCE = { branch: '/main/task-002', changeset: 6 };
@@ -40,16 +40,10 @@ function isFakeMerge(source, destination) {
   return source === SOURCE.branch && destination === DESTINATION.branch;
 }
 
-/** The value of `--<name>=<value>`. */
-function option(args, name) {
-  const prefix = `--${name}=`;
-  return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
-}
-
 /** The preview's records, as `cm merge … --machinereadable --printcontributors` prints them, with its separators. */
 function mergePreview(args) {
   if (!args.includes('--machinereadable') || !args.includes('--printcontributors')) throw new Error('The fake cm previews a merge only --machinereadable --printcontributors');
-  const [field, end] = [option(args, 'fieldseparator') ?? ' ', option(args, 'endlineseparator') ?? ''];
+  const [field, end] = [optionValue(args, 'fieldseparator') ?? ' ', optionValue(args, 'endlineseparator') ?? ''];
   const contributor = (role, { branch, changeset }) => ['CONTRIBUTOR', role, changeset, `cs:${changeset}@${REPOSITORY_SPEC}`, branch];
   const records = [
     contributor('SRC', SOURCE),
@@ -83,8 +77,8 @@ function listsMergeFiles(args) {
  * changeset (one of the merge's three): the conflicts the preview completes, a change's versions the page diffs.
  */
 function mergeListing(args) {
-  const tree = /^cs:(\d+)$/.exec(option(args, 'tree') ?? '')?.[1];
-  const format = option(args, 'format');
+  const tree = /^cs:(\d+)$/.exec(optionValue(args, 'tree') ?? '')?.[1];
+  const format = optionValue(args, 'format');
   if (tree === undefined || versionIndex(tree) < 0 || !format) throw new Error('The fake cm lists the merge\'s files only --tree=cs:<one of its changesets> and --format');
   const at = versionIndex(tree);
   const records = args.filter((arg) => !arg.startsWith('--')).flatMap((arg) => {

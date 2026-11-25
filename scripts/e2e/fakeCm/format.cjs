@@ -17,4 +17,10 @@ function formatRecords(template, records) {
   return records.map((record) => `${fillFormat(template, record)}\n`).join('');
 }
 
-module.exports = { fillFormat, formatRecords };
+/** The value of `--<name>=<value>` among a command's arguments, or undefined when it isn't there. */
+function optionValue(args, name) {
+  const prefix = `--${name}=`;
+  return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
+}
+
+module.exports = { fillFormat, formatRecords, optionValue };

@@ -206,8 +206,8 @@ function writeRevision(spec, target) {
 }
 
 function loadedContent(path) {
-  const relative = path.slice(WORKSPACE.path.length + 1).replaceAll('\\', '/');
-  return path.startsWith(WORKSPACE.path) ? FILES[relative]?.loaded : undefined;
+  const relative = repository.workspacePathOf(path);
+  return relative === undefined ? undefined : FILES[relative]?.loaded;
 }
 
 /** `cm lock list --machinereadable --fieldseparator=… --endlineseparator=…`: its fields in `cm`'s order. */
