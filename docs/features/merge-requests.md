@@ -380,6 +380,21 @@ merge card's words (`reviewSectionOf`): while Open, and once merged if the revie
 required: it merged whatever the review said); never for a draft or a closed one. One frame and width wherever it
 stands alone (`.framed`). It reads nothing: it is drawn from the review the branch's chip already holds (`reviewOfEachBranch`).
 
+The **Merge request** section of a branch's details (`MergeRequestDetailsSection`; `branchMergeRequestSectionOf`
+decides) is never empty-handed: with no request still to merge it offers **New** at the title's right, as Attributes
+offers Add, opening the New merge request dialog on that branch ("Creating one"). What it shows:
+
+- A request still to merge (Open or Draft): its card, and nothing to create.
+- A merged or closed one: its card, with New beside the title (the standing review puts a request still to merge
+  first, so none is left).
+- None, or only a plain code review: "No merge request", with New.
+- While the branch's review is read: a placeholder line, so the section doesn't pop in under the pointer.
+- A branch with nowhere to merge (`/main`, `canMergeSomewhere`): no section, unless a request names it anyway (its
+  card, nothing to create).
+
+Once created, the reviews are read again (`isAffectedByCodeReviews`) and the section shows the new request's card. It
+costs nothing more: the review it decides from is the one the branch's chip reads (`useBranchReview`).
+
 ## Where a branch's merge request shows
 
 - **Which request counts for a branch**: two rules, both in `reviewsByBranch.ts`, both over reviews listed newest
