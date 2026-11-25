@@ -301,7 +301,8 @@ content whole: changes made to the file after the diff go too, which the confirm
 A workspace file shown against its own past (loaded revision, reviewed copy, or nothing for an
 added file: `canEditInPlace`) is typed into directly on its modified side, like the official client; every other diff
 (history, merges, conflicts) is read-only, with no caret. The caret is drawn in the text color (`--text-primary`), as
-code editors draw it, not the code theme's blue (`PIERRE_SURFACE_CSS`). Pierre's editor holds the text and its undo (⌘Z while typing);
+code editors draw it, not the code theme's blue (`PIERRE_SURFACE_CSS`). Pierre's editor holds the text and its undo
+(⌘Z while typing);
 `useFileBuffer` keeps what the disk doesn't have yet: Discard and Save (⌘S) show in the header as soon as there is some.
 Without unsaved edits the diff follows the disk; with some it holds still and says the file changed on disk. Saving
 reads back the text the editor holds, so the diff stays as it is (`heldModifiedText`): showing it anew would end the
