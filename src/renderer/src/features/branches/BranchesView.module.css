@@ -43,7 +43,20 @@
   flex: none;
 }
 
+/* The review's chip sits at the cell's right edge, so the chips of every row, at any depth, line up as a column. */
+.trailingChip {
+  margin-left: auto;
+}
+
 .hiddenIcon {
   flex: none;
   color: var(--text-tertiary);
+}
+
+/* Every pill in the column is as wide as the widest state ("Merged"), its glyph and name centered: one shape down the
+   column, whatever the state. Icon-only pills (a narrow column) keep their own width. */
+.trailingChip [data-state]:not([data-icon-only='true']),
+.trailingChip [data-status]:not([data-icon-only='true']) {
+  justify-content: center;
+  min-width: 66px;
 }
