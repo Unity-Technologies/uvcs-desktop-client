@@ -8,11 +8,13 @@ const TOLERANCE_PX = 2;
 
 /**
  * Runs in the page: each box shown that ends below the box holding it, where that box doesn't scroll, as
- * `<what> ends <n>px below <what holds it>`. `allowed` is a CSS selector for what may (`CUT_OFF_ALLOWED`), or ''.
- * It waits for the animations that end (a view's entrance moves it a few pixels) and ignores the ones that loop.
+ * `<what> ends <n>px below <what holds it>`. `allowed` is a CSS selector for what may (`CUT_OFF_ALLOWED`), or '';
+ * `loading`, one for what is still loading (`LOADING` in smoke.mjs).
+ * The smoke test runs with reduced motion, so the app's own animations last no time; any other that ends is waited
+ * for (one moves a box while it runs), and loops (spinners) are ignored.
  * Self-contained: Playwright sends its source to the page.
  */
-export async function findCutOffContent({ allowed, tolerance }) {
+export async function findCutOffContent({ allowed, loading, tolerance }) {
   const ending = document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity);
   await Promise.all(ending.map((animation) => animation.finished.catch(() => {})));
 
@@ -31,7 +33,8 @@ export async function findCutOffContent({ allowed, tolerance }) {
 
   const found = [];
   for (const element of document.querySelectorAll('main *, [role="dialog"] *')) {
-    if (allowed && element.closest(allowed)) continue;
+    // A placeholder fills its box with skeleton rows, cut where the box ends: what loads replaces it.
+    if ((allowed && element.closest(allowed)) || element.closest(loading)) continue;
     const style = getComputedStyle(element);
     if (style.position === 'absolute' || style.position === 'fixed' || style.display === 'contents') continue;
     if (!element.checkVisibility()) continue;
@@ -51,7 +54,7 @@ export async function findCutOffContent({ allowed, tolerance }) {
   return found;
 }
 
-/** The check's arguments: what may be cut off, as one selector. */
-export function cutOffArguments(allowed) {
-  return { allowed: allowed.map(({ selector }) => selector).join(', '), tolerance: TOLERANCE_PX };
+/** The check's arguments: what may be cut off and what is loading, each as one selector. */
+export function cutOffArguments(allowed, loading) {
+  return { allowed: allowed.map(({ selector }) => selector).join(', '), loading, tolerance: TOLERANCE_PX };
 }
