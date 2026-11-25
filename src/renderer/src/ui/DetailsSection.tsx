@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import styles from './DetailsSection.module.css';
 
 interface DetailsSectionProps {
@@ -18,6 +18,24 @@ export function DetailsSection({ title, action, children }: DetailsSectionProps)
       </div>
       <div className={styles.card}>{children}</div>
     </section>
+  );
+}
+
+interface DetailsSectionActionProps extends ComponentProps<'button'> {
+  /** A small icon before the label, saying what it adds or makes (a plus, or the object's own with one). */
+  icon: ReactNode;
+}
+
+/**
+ * The control at the right of a section's title ("Add", "New"), one look in every section. It takes a button's props,
+ * so a menu can open from it (`ActionDropdownMenu`'s trigger).
+ */
+export function DetailsSectionAction({ icon, children, ...button }: DetailsSectionActionProps) {
+  return (
+    <button type="button" className={styles.action} {...button}>
+      {icon}
+      {children}
+    </button>
   );
 }
 
