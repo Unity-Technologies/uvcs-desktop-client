@@ -11,20 +11,26 @@ import { asMergeRequest, isActiveMergeRequest, type MergeRequestReview } from '.
 export type BranchMergeRequestSection =
   | { body: 'hidden' }
   | { body: 'reading'; canCreate: false }
-  | { body: 'none'; canCreate: true }
+  | { body: 'none'; text: string; canCreate: true }
   | { body: 'card'; request: MergeRequestReview; canCreate: boolean };
 
 /**
  * The section for `branch`, from the review that stands for it (`useBranchReview`: none yet while it's read, null when
  * it has none). That review is a request still to merge whenever the branch has one (`reviewOfEachBranch`), so a merged,
  * closed or plain one means there's none to merge and a new one can be made. A branch with nowhere to merge (`/main`,
- * `canMergeSomewhere`) can't have one, so it shows no section unless a request names it anyway.
+ * `canMergeSomewhere`) can't have one, so it shows no section unless a request names it anyway. A plain review may stand
+ * over an older merged or closed request, so under one it says only that none is open. A read that `failed` hides the
+ * section, as before it was read: it doesn't know whether there's a request.
  */
-export function branchMergeRequestSectionOf(branch: Pick<Branch, 'name' | 'parent'>, review: CodeReviewSummary | null | undefined): BranchMergeRequestSection {
+export function branchMergeRequestSectionOf(
+  branch: Pick<Branch, 'name' | 'parent'>,
+  review: CodeReviewSummary | null | undefined,
+  { failed = false }: { failed?: boolean } = {},
+): BranchMergeRequestSection {
   const canMerge = canMergeSomewhere(branch);
   const request = asMergeRequest(review ?? undefined);
   if (request) return { body: 'card', request, canCreate: canMerge && !isActiveMergeRequest(request) };
-  if (!canMerge) return { body: 'hidden' };
+  if (!canMerge || (review === undefined && failed)) return { body: 'hidden' };
   if (review === undefined) return { body: 'reading', canCreate: false };
-  return { body: 'none', canCreate: true };
+  return { body: 'none', text: review ? 'No open merge request' : 'No merge request', canCreate: true };
 }
