@@ -9,6 +9,8 @@ import { linesWords } from './lineActions';
 interface LineMenuContext {
   /** The lines the menu acts on: those selected when right-clicked on one of them, else the one right-clicked. */
   lines: FocusedLines;
+  /** They are the lines selected, those ⇧⌘C copies a link to: only then does the link's entry show it. */
+  linesSelected?: boolean;
   /** Copies a link to them, where a link names them (`copyPageLink`). */
   copyLink?: () => void;
   copyLines: () => void;
@@ -23,13 +25,13 @@ interface LineMenuContext {
  * comments on it), who last changed them (the newer side's lines only: that's the revision annotated), a link to them,
  * and their text.
  */
-export function lineMenuEntries({ lines, copyLink, copyLines, annotate, lineAction }: LineMenuContext): (GroupedEntry | false | undefined)[] {
+export function lineMenuEntries({ lines, linesSelected = false, copyLink, copyLines, annotate, lineAction }: LineMenuContext): (GroupedEntry | false | undefined)[] {
   const target = lineActionTarget(lines);
   return [
     lineAction?.offers(target) && menuAction('lineAction', () => lineAction.run(target), { label: lineAction.label(target) }),
     lineAction?.variant && lineAction.offers(target) && menuAction('lineActionVariant', () => lineAction.variant!.run(target), { label: lineAction.variant.label(target) }),
     annotate && lines.side === 'new' && menuAction('annotateLine', annotate, { label: `Annotate at ${linesWords(lines)}` }),
-    copyLink && menuAction('copyLineLink', copyLink, { label: `Copy link to ${linesWords(lines)}`, shortcut: hotkey('copyLink') }),
+    copyLink && menuAction('copyLineLink', copyLink, { label: `Copy link to ${linesWords(lines)}`, ...(linesSelected && { shortcut: hotkey('copyLink') }) }),
     menuAction('copyLines', copyLines, { label: `Copy ${linesWords(lines)}` }),
   ];
 }

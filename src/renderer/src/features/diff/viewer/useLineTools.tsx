@@ -47,12 +47,15 @@ export function useLineTools({ containerRef, path, layout, range, selectable, pu
   const linkable = link.target !== null;
   const anchor = lineChipAnchor(range, linkable);
   const menuLines = useRef<FocusedLines | null>(null);
+  const menuOnSelection = useRef(false);
 
   /** The lines the menu acts on, none off any line with none selected. */
   const pickLines = (event: MouseEvent): FocusedLines | null => {
     const row = rowUnderPointer(event.nativeEvent.composedPath());
     const clicked = row && lineUnderPointer(row);
-    menuLines.current = linkedLinesOf(contextMenuLines(range, clicked));
+    const lines = contextMenuLines(range, clicked);
+    menuLines.current = linkedLinesOf(lines);
+    menuOnSelection.current = lines !== null && lines === range;
     return menuLines.current;
   };
 
@@ -60,10 +63,13 @@ export function useLineTools({ containerRef, path, layout, range, selectable, pu
   const lineEntries = (): (GroupedEntry | false | undefined)[] => {
     const lines = menuLines.current;
     if (!lines) return [];
+    const onSelection = menuOnSelection.current;
     const linesLink = link.linkToLines(path, lines);
     return lineMenuEntries({
       lines,
-      copyLink: linesLink ? () => link.copyTarget(linesLink) : undefined,
+      linesSelected: onSelection,
+      // The lines selected copy as ⇧⌘C does, their toast teaching it; others copy their own link.
+      copyLink: linesLink ? () => (onSelection ? link.copy() : link.copyLink(linesLink)) : undefined,
       copyLines: () => copyToClipboard(linesText(textOf(lines.side), lines), copiedLinesWord(lines)),
       annotate: annotateAt && (() => annotateAt(lines)),
       lineAction,

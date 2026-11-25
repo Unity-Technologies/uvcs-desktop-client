@@ -16,9 +16,13 @@ export function copyPageLink(place: Place, page: Page): Promise<void> {
   return copyTarget(place, pageLinkTarget(page, shownFileNow(page)), nextTimeHint(formatShortcut(hotkey('copyLink'))));
 }
 
-/** The link to `lines` of the file `path` in a page, as if they were selected: the lines' menu's, which selects nothing. */
+/**
+ * The link to `lines` of the file `path` in a page, as if they were selected: the lines' menu's, which selects nothing.
+ * None where the page's link can't name them (a browsed file's older side, a name no link can carry).
+ */
 export function pageLinesTarget(page: Page, path: string, lines: FocusedLines): LinkTarget | null {
-  return pageLinkTarget(page, shownFileWithLines(page, { path, lines }));
+  const target = pageLinkTarget(page, shownFileWithLines(page, { path, lines }));
+  return target?.lines ? target : null;
 }
 
 /** Copies a link to the page's own object (`pageObjectTarget`): its header's "Copy link". */
@@ -26,9 +30,12 @@ export function copyPageObjectLink(place: Place, page: Page): Promise<void> {
   return copyTarget(place, pageObjectTarget(page, shownFileNow(page)));
 }
 
-/** Copies a link to lines selected outside any page (the Files view: `LineLinks.linkOf`), as the chip and menu do. */
-export function copyLinesLink(place: Place, target: LinkTarget | null): Promise<void> {
-  return copyTarget(place, target, nextTimeHint(formatShortcut(hotkey('copyLink'))));
+/**
+ * Copies a link to lines (the line chip's, the lines' menu's, in a page or the Files view): its toast teaches ⇧⌘C only
+ * where ⇧⌘C copies the same, the lines selected (`teachesShortcut`).
+ */
+export function copyLinesLink(place: Place, target: LinkTarget | null, teachesShortcut = true): Promise<void> {
+  return copyTarget(place, target, teachesShortcut ? nextTimeHint(formatShortcut(hotkey('copyLink'))) : undefined);
 }
 
 async function copyTarget(place: Place, target: LinkTarget | null, hint?: string): Promise<void> {
