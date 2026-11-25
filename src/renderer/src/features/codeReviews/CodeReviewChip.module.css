@@ -5,3 +5,9 @@
   height: 16px;
   margin-left: 3px;
 }
+
+/* Its room kept in a column of chips (a branch list's), with or without a verdict, so every pill ends on one line. */
+.status[data-room='true'] {
+  justify-content: center;
+  width: 14px;
+}

@@ -433,11 +433,19 @@ costs nothing more: the review it decides from is the one the branch's chip read
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
   names a merge request's state in its pill ("Open"), then its verdict (a check, a cross, a quiet dot while it waits;
   none for a draft, a merged or a closed one). A code review's chip shows its
-  status's pill. Narrow, the names go and the glyphs stay. The canvas draws the very same pill and icons. Hovering a merge request's chip shows its
+  status's pill. Narrow, the names go and the glyphs stay. The canvas draws the very same pill and icons (without the Branches view's column widths). Hovering a merge request's chip shows its
   summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`codeReviewLine`);
   `reviewChipOf` decides which (`hover`). Every chip, a merge request's or a code review's, is outlined in its color under the pointer, with
-  the hand cursor: a click opens the review. No new
-  column and no "+N more": the list filtered by the branch shows the others.
+  the hand cursor: a click opens the review. No "+N more": the list filtered by the branch shows the others.
+  In the Branches view the chips line up as a column at the right edge of the name's cell, at any depth of the tree
+  (`trailingChip`): every merge request pill with its name is one width, as wide as "Merged" (in `em`, as the name
+  follows each OS's font), and the verdict keeps its room on a
+  row without one (`reviewChipOf`'s `inColumn`, `verdictRoom`), so every chip ends on one line. Short of room, the
+  chips still give up their names before the name is trimmed (`chipsFit`). The workspace's mark and a hidden
+  branch's eye stay beside the name: they describe the branch. Tried and dropped: a column of its own (wide, and
+  empty on most rows), chips right after the name (they zigzag with its length and the tree's indentation), and
+  pills of their own widths at the right edge, or starting at one left edge (a column of uneven shapes). Lists to
+  pick a branch from keep the chip after the name: they're read row by row, and the date holds their right edge.
 - **Lists to pick a branch from** (`BranchSearchList`'s `reviews`: the branch switcher, the Files and Changesets
   branch chips, the branch picker (`pickBranch`: merge, compare, move, and Work on a branch in the task workspace
   dialog), the New merge request dialog's From and Into, the review page's destination): each row drawn shows its
