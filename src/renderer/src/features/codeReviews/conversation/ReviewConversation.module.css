@@ -776,18 +776,30 @@ button.pill:hover {
   margin: -4px 0;
 }
 
-/* Asking again and removing show under the pointer, or once a key reaches them. */
+/*
+ * Asking again and removing, always shown: Ask again written out, as it only shows when it applies; the × quiet until
+ * its row is under the pointer, as every row has one.
+ */
 .reviewerActions {
   display: inline-flex;
   flex: none;
+  align-items: center;
+  gap: 2px;
   margin-left: auto;
-  opacity: 0;
-  transition: opacity var(--duration-fast);
 }
 
-.reviewer:hover .reviewerActions,
-.reviewerActions:focus-within {
-  opacity: 1;
+/* Within its row, so it outweighs the ghost button's own color. */
+.reviewer .removeReviewer {
+  color: var(--text-tertiary);
+}
+
+.reviewer:hover .removeReviewer,
+.reviewer .removeReviewer:focus-visible {
+  color: var(--text-secondary);
+}
+
+.reviewer .removeReviewer:hover {
+  color: var(--text-primary);
 }
 
 
