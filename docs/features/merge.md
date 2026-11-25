@@ -174,12 +174,13 @@ panel's choices, Keep both under the name it was given, else the one the panel s
 in it added on both) is its folder's row in a tree: selecting that row selects the conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
 (ARCHITECTURE.md "Folders once"). A Unity asset's `.meta` among the changes to apply is listed with it; a conflict never
-is, the asset's nor its meta's (`pairMergeMetas`): each is a decision with its own panel. The page starts on the first item that needs the user in the order the list shows
-(`startingItem`), past the file conflicts that merge by themselves: while a file before it is still loading, which may
-merge by itself, the page shows a spinner and waits, and it never moves a selection made. With nothing to decide, it
-starts on the first row. After a run it goes back to the first item still waiting (`firstWaiting`). Directory conflicts are named in plain words ("Added on both sides
-with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Under its choices, a directory
-conflict on a file diffs the incoming item with yours or with the base ("Incoming ↔ Yours", "Incoming ↔ Base",
+is, the asset's nor its meta's (`pairMergeMetas`): each is a decision with its own panel. The page starts on the
+first item that needs the user in the order the list shows (`startingItem`), past the file conflicts that merge by
+themselves: while a file before it is still loading, which may merge by itself, the page shows a spinner and waits
+(`mergeDetailOf`), and it never moves a selection made. With nothing to decide, it starts on the first row. After a
+run it goes back to the first item still waiting (`firstWaiting`). Directory conflicts are named in plain words
+("Added on both sides with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Under its
+choices, a directory conflict on a file diffs the incoming item with yours or with the base ("Incoming ↔ Yours", "Incoming ↔ Base",
 `comparisonsOf`, `comparedVersions`): each side read by its path at the merge's changesets (`MergePlan.contributors`),
 never by item id, since a directory conflict names no repository and an id under an xlink is another item; a side
 that deleted the item is empty. The base only in a merge (undoing, `cm`'s base is the changeset undone; cherry picking,
@@ -284,7 +285,7 @@ versions are read only while the file shows, once the selection settles on it (`
 `openFile`, `useSettledValue`: holding ↓ through a folder of textures reads none it passes), in one batch. A file whose
 destination is text may still hold a binary version: its versions are read, and their bytes tell, as for every text
 file (`loadConflict`). Every other conflicting file's three versions load at once (`upFrontReads`: its status needs
-its automatic merge), watched by one observer whose results reach the page at most once a frame
+its automatic merge), asked in the order the list shows the files, so the page knows sooner where it starts, watched by one observer whose results reach the page at most once a frame
 (`useQueriesByFrame`, `watchQueriesByFrame`): `useQueries` rendered the page, and compared every query's options
 again, for each version that answered, freezing it for seconds. Frames stop while the window is hidden, minimised or
 covered, so results also arrive after `HIDDEN_HAND_OVER_MS` without one: a merge loading behind other windows keeps
