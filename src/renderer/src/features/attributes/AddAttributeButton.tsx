@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import styles from './AttributeChips.module.css';
+import { DetailsSectionAction } from '../../ui/DetailsSection';
 
 interface AddAttributeButtonProps {
   /** The attribute types to offer (`AttributesSection.addable`); no button without one. */
@@ -13,10 +13,7 @@ export function AddAttributeButton({ attributes, onAdd }: AddAttributeButtonProp
   if (attributes.length === 0) return null;
   return (
     <ActionDropdownMenu align="end" entries={attributes.map((name) => ({ id: name, label: name, run: () => onAdd(name) }))}>
-      <button className={styles.add}>
-        <Plus size={12} />
-        Add
-      </button>
+      <DetailsSectionAction icon={<Plus size={12} />}>Add</DetailsSectionAction>
     </ActionDropdownMenu>
   );
 }

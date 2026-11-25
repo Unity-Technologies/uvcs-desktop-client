@@ -156,25 +156,6 @@
   background: var(--bg-hover);
 }
 
-.add {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  height: 22px;
-  padding: 0 6px;
-  border: none;
-  border-radius: var(--radius-full);
-  background: none;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-}
-
-.add:hover,
-.add[data-state='open'] {
-  background: var(--bg-hover);
-  color: var(--accent-text);
-}
-
 /* The value opened under the chips: its editor, or a long text to read. */
 .opened {
   display: flex;
