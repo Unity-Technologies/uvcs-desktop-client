@@ -112,7 +112,7 @@ export function directoryConflictsInListOrder(items: MergeItem[]): DirectoryConf
   return inListOrder(items).flatMap((item) => (item.kind === 'directoryConflict' ? [item.conflict] : []));
 }
 
-/** The first item still waiting for the user, as the list shows them: where the page starts, and goes after a run. */
+/** The first item still waiting for the user, as the list shows them: where the page goes after a run (where it opens is `startingItem`). */
 export function firstWaiting(items: MergeItem[], progress: MergeProgress): MergeItem | undefined {
   return inListOrder(items).find((item) => needsDecision(item, progress));
 }
