@@ -2,6 +2,7 @@ import type { LineRange } from '@shared/domain/reviewConversation';
 import type { ReviewChangeRequest } from '../../features/codeReviews/changeRequests/changeRequests';
 import { indexCandidates, rankCandidates, type CandidateIndex } from '../../lib/candidateRanking';
 import { applyChangeText, shortGuid } from '../../lib/comments/commentReferences';
+import { commentLineText } from '../../lib/comments/commentText';
 import { lastSegment } from '../../lib/paths';
 import { SUGGESTION_LIMIT, suggestionDetail, type Suggestion } from './suggestionItems';
 import { rangeSpan } from '../../lib/rangeWords';
@@ -21,7 +22,8 @@ export function changeRequestIndex(requests: readonly ReviewChangeRequest[]): Ca
 /**
  * The rows of the change requests to apply (docs/features/rich-comments.md, "Suggestions"): each request's first line,
  * its file and line when it has one and its review (`cr:43`), who asked; a pick writes `cm`'s own reference,
- * `[apply-change:c0d1ce00]`, which a check-in applies.
+ * `[apply-change:c0d1ce00]`, which a check-in applies. Its tooltip names its number, the one that reference holds, over
+ * its whole first line: the row has no room for either.
  */
 export function changeRequestSuggestions(index: CandidateIndex<ReviewChangeRequest>, typed: string): Suggestion[] {
   return rankCandidates(index, typed, SUGGESTION_LIMIT).map((request) => ({
@@ -31,6 +33,7 @@ export function changeRequestSuggestions(index: CandidateIndex<ReviewChangeReque
     detail: [...(request.location ? [locationText(request.location)] : []), `cr:${request.reviewId}`].join(' · '),
     owner: request.author,
     insert: applyChangeText(request.guid),
+    tip: { text: `Change request ${shortGuid(request.guid)}`, sub: commentLineText(request.text) },
   }));
 }
 

@@ -47,6 +47,11 @@ export interface Suggestion {
   issue?: Issue;
   /** What a pick writes in the comment, a space after it. */
   insert: string;
+  /**
+   * What hovering the row says, where the row can't show it: a change request's number ("Change request 2c17a694"),
+   * over its whole first line, which the row cuts.
+   */
+  tip?: { text: string; sub: string };
 }
 
 /**

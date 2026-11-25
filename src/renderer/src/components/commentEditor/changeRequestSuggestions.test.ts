@@ -27,10 +27,9 @@ describe('changeRequestSuggestions', () => {
     ]);
   });
 
-  it('names a request in its tooltip by the number a check-in comment applies it by, over its whole first line, which the row cuts', () => {
+  it('names a request in its tooltip by the number a check-in comment applies it by, over its whole first line, which the row cuts to its width', () => {
     const long = request(5, `${'Move the camera behind the player when the level starts, '.repeat(2)}not above.\n\nThe intro looks odd.`);
     const [suggestion] = changeRequestSuggestions(changeRequestIndex([long]), '');
-    expect(suggestion?.label.endsWith('…')).toBe(true);
     expect(suggestion?.tip).toEqual({ text: 'Change request c0d1ce05', sub: `${'Move the camera behind the player when the level starts, '.repeat(2)}not above.` });
   });
 

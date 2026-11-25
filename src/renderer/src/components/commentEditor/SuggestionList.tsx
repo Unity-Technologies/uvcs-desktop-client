@@ -67,6 +67,8 @@ export function SuggestionList({ id, rows, active, anchor, query, onPick, onHove
             className={styles.option}
             role="option"
             aria-selected={index === active}
+            data-tip={row.kind === 'pick' ? row.suggestion.tip?.text : undefined}
+            data-tip-sub={row.kind === 'pick' ? row.suggestion.tip?.sub : undefined}
             onMouseMove={() => index !== active && onHover(index)}
             onClick={() => onPick(index)}
           >
