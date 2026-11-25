@@ -1,5 +1,7 @@
 // The synthetic repository the fake `cm` answers from: a few objects of each kind, their fields named as `cm` names
-// them in `--format` output. Small on purpose: the smoke test checks that views show, not what.
+// them in `--format` output. Small on purpose: the smoke test checks that views show, not what. A few lists, and one
+// diff, are longer than the window (`LONGER_THAN_THE_WINDOW`), so content that can't scroll is cut off and the
+// smoke test's cut-off check fails (scripts/e2e/README.md "Cut-off content").
 
 const REPOSITORY = 'demo';
 const SERVER = 'local';
@@ -31,6 +33,10 @@ function roundTripDate(date) {
   return `${day}T${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}.${String(date.getMilliseconds()).padStart(3, '0')}0000${zone}`;
 }
 const visible = { hidden: 'false' };
+/** How many items make a list longer than the smoke test's window (1400×880) at the app's row heights. */
+const LONGER_THAN_THE_WINDOW = 40;
+/** `1…count`, for the items that make a list long. */
+const numbered = (count) => Array.from({ length: count }, (_, index) => index + 1);
 
 const BRANCHES = [
   { id: 3, name: '/main', parent: '', changeset: 4, date: daysAgo(30), comment: 'The main branch', guid: 'aaaaaaaa-0000-0000-0000-000000000003', ...visible, ...common },
@@ -39,7 +45,7 @@ const BRANCHES = [
 ];
 
 function changeset(changesetid, branch, parent, days, comment, owner = OWNER) {
-  const guid = `cccccccc-0000-0000-0000-00000000000${changesetid}`;
+  const guid = `cccccccc-0000-0000-0000-${String(changesetid).padStart(12, '0')}`;
   return { changesetid, id: 100 + changesetid, branch, parent, date: daysAgo(days), comment, guid, ...common, owner };
 }
 
@@ -51,7 +57,9 @@ const CHANGESETS = [
   changeset(3, '/main', 2, 20, 'Tune the camera after cs:2, as [apply-change:ffffffff] asked'),
   changeset(4, '/main', 3, 15, 'Release notes'),
   changeset(5, '/main/task-001', 4, 10, 'VCS-12 Player jumps\n\nAlso fixes VCS-13 and VCS-99, as https://acme.atlassian.net/browse/VCS-14 asked.'),
-  changeset(6, '/main/task-002', 4, 9, 'Warmer lights'),
+  // The scene's lights tuned step by step: a list of changesets longer than the window, older than the lists' first rows.
+  ...numbered(LONGER_THAN_THE_WINDOW).map((step) => changeset(1000 + step, '/main/task-002', step === 1 ? 4 : 999 + step, 9.9 - step / 50, `Lighting pass ${step}`)),
+  changeset(6, '/main/task-002', 1000 + LONGER_THAN_THE_WINDOW, 9, 'Warmer lights'),
   // Incoming: checked in on the workspace's branch after the changeset it loaded.
   changeset(7, '/main/task-001', 5, 8, 'Player runs', 'teammate@example.com'),
 ];
@@ -62,6 +70,8 @@ const MERGES = [];
 const LABELS = [
   { id: 50, name: 'BL001', changeset: 2, branch: '/main', date: daysAgo(25), comment: 'First playable', ...common },
   { id: 51, name: 'BL002', changeset: 4, branch: '/main', date: daysAgo(15), comment: 'Second playable', ...common },
+  // Nightly builds: a list of labels longer than the window.
+  ...numbered(LONGER_THAN_THE_WINDOW).map((night) => ({ id: 500 + night, name: `NIGHTLY-${String(night).padStart(3, '0')}`, changeset: 4, branch: '/main', date: daysAgo(16 + night / 10), comment: `Nightly build ${night}`, ...common })),
 ];
 
 const SHELVES = [
@@ -164,9 +174,10 @@ const REPOSITORIES = [{ repid: 1, repname: REPOSITORY, repserver: SERVER, repown
  */
 const FILES = {
   'README.md': { loaded: '# Demo\n\nA small game.\n' },
+  // Its diff is longer than the window: the edit, then a move for each of the player's states.
   'src/player.cs': {
     loaded: 'class Player {\n  float speed = 4f;\n  void Move() { }\n}\n',
-    onDisk: 'class Player {\n  float speed = 5f;\n  void Move() { }\n  void Jump() { }\n}\n',
+    onDisk: `class Player {\n  float speed = 5f;\n  void Move() { }\n  void Jump() { }\n${numbered(LONGER_THAN_THE_WINDOW).map((state) => `  void State${state}() { }\n`).join('')}}\n`,
   },
   'src/camera.cs': { loaded: 'class Camera {\n  float distance = 10f;\n}\n', parent: 'class Camera {\n  float distance = 8f;\n}\n' },
   // A 3D model, written as text (OBJ) so the fixture stays readable: its diff is the model diff's, which reads the
@@ -177,6 +188,8 @@ const FILES = {
     onDisk: 'o Crate\nusemtl Wood_mat\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n',
   },
   'notes.txt': { onDisk: 'Ideas for the next level.\n' },
+  // Levels the user retuned: a list of pending changes longer than the window, after the files the steps click.
+  ...Object.fromEntries(numbered(LONGER_THAN_THE_WINDOW).map((level) => [`tests/levels/level-${String(level).padStart(2, '0')}.txt`, { loaded: `level ${level}\n`, onDisk: `level ${level}, harder\n` }])),
   // A sound and its .meta, both changed: the sound's diff is a binary file's (a NUL byte makes it one, `looksBinary`),
   // and its .meta can be shown instead.
   'Assets/hurt.wav': { loaded: 'RIFF\u0000\u0000WAVE\u0001', onDisk: 'RIFF\u0000\u0000WAVE\u0002' },
