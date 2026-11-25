@@ -246,9 +246,10 @@ The suite runs after every change, so it must take seconds, not minutes. A test 
   that changes as `cm` would is `playAlongWorkspace`, built on it. The `cm shell` protocol itself is tested against
   `main/cm/testing/fakeCmShell`, a script that answers like `cm shell`.
 - **The smoke test** (`npm run e2e`, `scripts/e2e/README.md`) drives the built app over a fake `cm` and a temp
-  workspace: startup, every sidebar view, a diff, the palette, Settings, a theme switch; it fails on renderer errors
-  and on any `cm` command the fake doesn't know. A view that starts running a new command teaches it to the fake
-  (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`. It stays a pass through the
+  workspace: startup, every sidebar view, every kind of page, the palette, Settings, a theme switch; it fails on
+  renderer errors and on any `cm` command the fake doesn't know. A view that starts running a new command teaches it
+  to the fake (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`, a new kind of page
+  one in its `PAGES` and a step that opens it. It stays a pass through the
   views plus what only the real app shows; what a module decides is a unit test (its README, "What belongs here").
 - **The renderer's fakes** are in `renderer/src/testing/`: `fakeWindow` (`window.uvcs`; `fakeApi` answers the calls a
   test declares and fails it on any other), `fakeDialogs` (confirm and prompt), `operationOutcome` (the toasts, where
@@ -279,6 +280,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
 | `scripts/e2e/smoke.mjs` (`duplicateReport`)               | no step sends the same command line twice from the same folder (scripts/e2e/README.md, "Duplicate server commands") |
+| `app/navigation/smokeOpensEveryPage.test.ts`              | the smoke test opens every kind of page (`Page`): each is in `smoke.mjs`'s `PAGES`, and a run fails when no step shows one |
 | `main/cm/noStickyShellOptions.test.ts`                    | no option a `cm shell` keeps for its session (`--username`, `--server`…: `STICKY_SHELL_OPTIONS`) reaches a pooled shell |
 | `main/cm/commandOutputs.test.ts`, `testing/fakeCmClient.test.ts` | no list is read as one string; every command says how it's read (`COMMAND_OUTPUTS`) |
 | `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |

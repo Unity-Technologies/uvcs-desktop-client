@@ -10,7 +10,9 @@ so an effect whose cleanup leaves something its second run can't use (a WebGL ca
 there, while the production build, which ships, runs each effect once. Each run builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
 `--user-data-dir`, opens a Unity organization's page and a workspace, answers the question about profile pictures,
 visits every sidebar view, a merge request's conversation with the larger comment editor opened over it (the panel,
-not its backdrop, under a press at its middle) and the merge page its server's rules refuse, the Branch Explorer's
+not its backdrop, under a press at its middle) and the merge page its server's rules refuse, a merge with conflicts and
+more changes than its list shows at once (a conflict, a change's diff; closed without merging), a file's history, the
+repository at a changeset, the Branch Explorer's
 timeline, a diff, a model diff (a 3D model's, in its worker), the `.meta` of a binary file, a diff in a new window, a branch's permissions, the
 command palette and a link pasted in it, a session that ends and comes back, the repository explored without a
 workspace (from the home screen: its views and a changeset's diff, in a window of its own too) and Settings, and switches to the dark theme. It
@@ -18,10 +20,11 @@ fails on any `pageerror` or `console.error`, a view whose heading doesn't show o
 only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton until it shows again),
 any `cm` command the fake couldn't answer, a server command while the sign-in screen covers the window, a step that
 sent the same command line twice from the same folder ("Duplicate server commands" below), content cut off where
-nothing scrolls ("Cut-off content" below), and an answer to the profile pictures question that wasn't saved. Beyond
-those and the larger editor being on top, it asserts only that things appear, never pixels or copy.
+nothing scrolls ("Cut-off content" below), an answer to the profile pictures question that wasn't saved, and a kind of
+page no step showed (`PAGES`, below). Beyond those and the larger editor being on top, it asserts only that things
+appear, never pixels or copy.
 
-About 13 seconds a run. It runs with reduced motion (`emulateMedia`, in every window it opens): the app's durations are
+About 14 seconds a run. It runs with reduced motion (`emulateMedia`, in every window it opens): the app's durations are
 zero (`--duration-*`), so no step waits for a view's entrance or a dialog's, and the cut-off check measures boxes where
 they rest. What runs only with motion on (a smooth scroll's glide, the model viewer's camera glide, a discarded line's
 animation) isn't reached here; their decisions are unit-tested (`smoothScrollPlan`).
@@ -54,6 +57,12 @@ costs that many times over. What a pure module decides (which items, labels, cou
 reads the disk) is pinned by a unit test next to that module (CLAUDE.md "Tests are the quality gate"), not by a step
 here: a step only opens what a new view or page adds and waits for it to settle. A new step says what in it a unit
 test couldn't reach.
+
+Every kind of page (`Page` in `app/navigation/pages.ts`) is in `PAGES`, and a step opens each one and waits for it
+to show (`pageShown`, by the `data-page` its `PageFrame` carries); a run in which one never showed fails. A new kind
+of page is one line there and a step that opens it, or `smokeOpensEveryPage.test.ts` fails. A step that opens a page
+under a view whose list later steps use leaves it once its screenshot is taken (`step`'s `leave`): a view keeps its
+pages, so going back to it would show the page again.
 
 A step waits for what it is about to use before it types or presses a key, as a person would: the dialog open, the
 result shown. Keys sent earlier land nowhere, and what a dialog reads when it opens (the palette's results) can take
@@ -149,9 +158,15 @@ a box cut off is a bug users see.
   (`showacl`), the workspace's files (45 pending changes) and the revisions `cm cat` and `cm diff` answer. The long
   lists are there for the cut-off check ("Cut-off content"). `status.cjs`
   answers `cm status --header --xml` and the changes as `--machinereadable` records, `tree.cjs` `cm ls --format=…`.
+  `merge.cjs` is the one merge the fake previews, task-002 into task-001 on the server: its records as `cm merge
+  --machinereadable --printcontributors` prints them, the listing of its files at its three changesets (`cm ls
+  --tree=cs:N`) and their versions (`cm cat` by revision, item or path). Its 32 files, in `Assets/Lighting`, which the
+  workspace hasn't, are a conflict to decide, one that merges by itself and 30 changes to apply: more than the list
+  shows at the smoke test's window size. `history.cjs` answers `cm history --xml` and `cm find revision` with a
+  workspace file's one revision, the one it loaded.
 - A command, `find` object or `--format` field it doesn't know fails with exit code 1, naming it, and the smoke test
-  fails listing it. A failure `cm` itself would give (`CmRefusal`: previewing a merge of task-001 or task-002, which
-  the fake's merge rules refuse) is an answer, not a command it doesn't know. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
+  fails listing it. A failure `cm` itself would give (`CmRefusal`: previewing a merge of task-001 or task-002 into main,
+  which the fake's merge rules refuse) is an answer, not a command it doesn't know. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
   objects in `repository.cjs`, output shaped as the app's parser reads it (its tests show real `cm` output).
 - `UVCS_FAKE_CM_VERSION_FILE` names a file, read on every command, holding the version `cm version` prints (the pinned
   one when there's none): an installed `cm` older than the app needs, for the update screen. In a development build,
