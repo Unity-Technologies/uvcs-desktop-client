@@ -242,7 +242,7 @@ describe('threadHeaderOf', () => {
 
     it('names the kind of a change request or a question on the whole review', () => {
       expect(headerOf(threadOf(comment(1, { kind: 'question' }))).pill).toMatchObject({ kind: 'Question', kindTip: 'Question', label: 'Open' });
-      expect(headerOf(threadOf(comment(1, { kind: 'changeRequest' }))).pill).toMatchObject({ kind: 'Change request', kindTip: 'Change request 2c17a694', label: 'Open' });
+      expect(headerOf(threadOf(comment(1, { kind: 'changeRequest', guid: REQUEST.guid }))).pill).toMatchObject({ kind: 'Change request', kindTip: 'Change request 2c17a694', label: 'Open' });
     });
   });
 });

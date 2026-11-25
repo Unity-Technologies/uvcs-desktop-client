@@ -353,7 +353,7 @@ function StatePill({ pill, onSeeApplied, onSeeAnswer }: StatePillProps) {
 function PillContent({ pill }: { pill: HeaderPill }) {
   return (
     <>
-      <ThreadKindIcon kind={pill.kind} size={12} named={pill.kindTip !== null} />
+      <ThreadKindIcon kind={pill.kind} size={12} name={pill.kindTip} />
       <span className={styles.pillLabel}>{pill.label}</span>
     </>
   );

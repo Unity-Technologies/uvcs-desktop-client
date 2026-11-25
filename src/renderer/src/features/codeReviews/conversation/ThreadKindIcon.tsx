@@ -7,12 +7,13 @@ export const THREAD_KIND_ICONS = { Question: CircleHelp, 'Change request': GitPu
 
 /**
  * A thread's kind as an icon (a change request, a question, a plain comment), named for a screen reader and in its
- * tooltip; not `named` beside words that name it already, where it is only drawn.
+ * tooltip: by its kind, or by the `name` given ("Change request 2c17a694", `HeaderPill.kindTip`); a null `name` beside
+ * words that name it already, where it is only drawn.
  */
-export function ThreadKindIcon({ kind, size = 13, named = true }: { kind: ThreadKindName; size?: number; named?: boolean }) {
+export function ThreadKindIcon({ kind, size = 13, name = kind }: { kind: ThreadKindName; size?: number; name?: string | null }) {
   const Icon = THREAD_KIND_ICONS[kind];
-  return named ? (
-    <span role="img" aria-label={kind} data-tip={kind} className={styles.kindIcon}>
+  return name !== null ? (
+    <span role="img" aria-label={name} data-tip={name} className={styles.kindIcon}>
       <Icon size={size} aria-hidden />
     </span>
   ) : (
