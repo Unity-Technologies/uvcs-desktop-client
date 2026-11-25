@@ -1,8 +1,8 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
 // model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
-// error, any `cm` command the fake doesn't know, a view that doesn't show, or a step that sends the same server command
-// twice. It asserts only that things appear, never pixels or copy. Screenshots go to
+// error, any `cm` command the fake doesn't know, a view that doesn't show, a step that sends the same server command
+// twice, or content cut off where nothing scrolls. It asserts only that things appear, never pixels or copy. Screenshots go to
 // <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`/<checkout>-<hash>.
 // A step earns its place only for what unit tests can't reach (scripts/e2e/README.md "What belongs here").
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -12,6 +12,7 @@ import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 import { commandsByStep, duplicateReport, needsServer, readableCommandLine, readCommandLog } from '../build/duplicateServerCommands.mts';
+import { cutOffArguments, findCutOffContent } from './cutOffContent.mjs';
 import { fakeCmExecutable } from './fakeCm/executable.mjs';
 import { createWorkspace } from './workspaceFixture.mjs';
 
@@ -25,6 +26,11 @@ const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync']
  * One that no longer happens only warns, so those changes can merge in any order; then its line goes. None today.
  */
 const KNOWN_DUPLICATES = [];
+/**
+ * What may end below the box holding it, where nothing scrolls (`findCutOffContent`), each with why:
+ * `{ selector: '[aria-label="Timeline"]', why: 'what makes it right' }`. None today.
+ */
+const CUT_OFF_ALLOWED = [];
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 const VIEWPORT = { width: 1400, height: 880 };
@@ -182,6 +188,7 @@ async function step(name, run, { rereads } = {}) {
   try {
     await run();
     await readsSettled();
+    await nothingCutOff();
     if (SHOTS_OF_EVERY_STEP) await screenshot(name.toLowerCase().replaceAll(' ', '-'));
     console.log(`ok    ${name}`);
   } catch (error) {
@@ -191,6 +198,12 @@ async function step(name, run, { rereads } = {}) {
     await screenshot(`FAILED-${name.toLowerCase().replaceAll(' ', '-')}`).catch(() => {});
     throw new Error(`${name}: ${error.message.split('\n')[0]}`);
   }
+}
+
+/** Fails the step when something shown can't be reached: cut off where nothing scrolls (`findCutOffContent`). */
+async function nothingCutOff() {
+  const cutOff = await withTimeout(window.evaluate(findCutOffContent, cutOffArguments(CUT_OFF_ALLOWED)), TIMEOUT_MS, 'the cut-off check');
+  if (cutOff.length > 0) throw new Error(`Cut off where nothing scrolls (scripts/e2e/README.md "Cut-off content"):\n  ${cutOff.join('\n  ')}`);
 }
 
 const started = Date.now();
