@@ -32,8 +32,15 @@ class FakeWebContents extends EventEmitter {
   /** What the page gets when it opens a window or follows a link (`setWindowOpenHandler`). */
   openHandler?: WindowOpenHandler;
 
-  constructor(readonly id: number) {
+  /** Each window's own zoom, as its `isolated` zoom mode keeps it: from `webPreferences.zoomFactor` as it opens. */
+  zoomLevel: number;
+
+  constructor(
+    readonly id: number,
+    zoomFactor = 1,
+  ) {
     super();
+    this.zoomLevel = Math.log(zoomFactor) / Math.log(1.2);
   }
   isDestroyed(): boolean {
     return false;
@@ -60,15 +67,8 @@ class FakeWebContents extends EventEmitter {
   setWindowOpenHandler(handler: WindowOpenHandler): void {
     this.openHandler = handler;
   }
-  /** One zoom for every page, as Chromium keeps one per origin and every window's page is the same `file://` one. */
-  get zoomLevel(): number {
-    return state.zoomLevel;
-  }
-  set zoomLevel(level: number) {
-    state.zoomLevel = level;
-  }
   getZoomFactor(): number {
-    return 1.2 ** state.zoomLevel;
+    return 1.2 ** this.zoomLevel;
   }
 }
 
@@ -103,7 +103,7 @@ export class FakeWindow extends EventEmitter {
   constructor(readonly options: BrowserWindowConstructorOptions = {}) {
     super();
     this.id = state.nextId++;
-    this.webContents = new FakeWebContents(this.id + 100);
+    this.webContents = new FakeWebContents(this.id + 100, options.webPreferences?.zoomFactor);
     const { x = 0, y = 0, width = 800, height = 600 } = options;
     this.normalBounds = { x, y, width, height };
     state.windows.push(this);
@@ -176,7 +176,6 @@ const state = {
   focused: null as FakeWindow | null,
   nextId: 1,
   openedExternally: [] as string[],
-  zoomLevel: 0,
 };
 
 /** The OS theme: a test sets `shouldUseDarkColors` and emits `updated`, as a theme switch does. */
@@ -212,7 +211,6 @@ export const fakeElectron = {
     state.focused = null;
     state.nextId = 1;
     state.openedExternally = [];
-    state.zoomLevel = 0;
     Object.assign(nativeTheme, { shouldUseDarkColors: false, themeSource: 'system' });
     nativeTheme.removeAllListeners();
     app.isPackaged = true;

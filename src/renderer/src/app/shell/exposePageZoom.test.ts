@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { startingZoomQuery } from '@shared/startingZoom';
 import { exposePageZoom } from './exposePageZoom';
 
 /** A style that remembers the last `--window-zoom` it was given. */
@@ -8,21 +9,18 @@ function zoomStyle() {
   return { setProperty: (name: string, value: string | null) => void values.set(name, value ?? ''), zoom: () => values.get('--window-zoom') };
 }
 
-afterEach(() => Object.assign(window.uvcs, { initialZoom: 1 }));
-
 describe('exposePageZoom', () => {
-  it('sets the zoom the page starts at before anything else, for its first frame', () => {
-    Object.assign(window.uvcs, { initialZoom: 1.2 ** -2 });
+  it('sets the zoom the window names in the page address before anything else, for its first frame', () => {
     const style = zoomStyle();
 
-    exposePageZoom(style);
+    exposePageZoom(`?${new URLSearchParams(startingZoomQuery(1.2 ** -2))}`, style);
 
     expect(style.zoom()).toBe(String(1.2 ** -2));
   });
 
   it('follows each change of the zoom', () => {
     const style = zoomStyle();
-    exposePageZoom(style);
+    exposePageZoom('', style);
 
     fakeApi.emit('pageZoomChanged', { zoom: 1.5 });
 

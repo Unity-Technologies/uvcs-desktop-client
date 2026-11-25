@@ -108,6 +108,16 @@ describe('createMainWindow', () => {
     expect(vi.mocked(loadWindowBounds).mock.calls[0]?.[1]).toBe('pageWindowBounds');
   });
 
+  // Chromium's own zoom follows the page's address, which the page changes (`openPlaceFromAddress`): the zoom changed
+  // with it, under the traffic lights. A window's zoom is its own (`isolated`), set as it opens.
+  it('opens at the zoom the app was left at, which stays whatever address the page goes to, and names it in the address', () => {
+    createMainWindow(memorySettings({ zoomLevel: -1 }), { place: workspacePlace('/wk') });
+    const window = fakeElectron.windows().at(-1)!;
+
+    expect(window.options.webPreferences).toMatchObject({ zoomMode: 'isolated', zoomFactor: 1.2 ** -1 });
+    expect(window.loadedQuery).toEqual({ workspace: '/wk', zoom: String(1.2 ** -1) });
+  });
+
   it("takes Windows' Back command (a mouse's back button, the Browser Back key) to the page", () => {
     const window = open();
 
