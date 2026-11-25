@@ -217,7 +217,7 @@ describe('parseLink', () => {
       expect(parseLink(text)).toMatchObject({ problem: { kind: 'malformed' } });
     });
 
-    // A link a later version writes may name what this one doesn't know: the app says it may need an update.
+    // A link naming what this version doesn't know (a page a later version added, or a typo) is unknown: the app says it isn't supported.
     it.each([
       'uvcs://acme.unity/repos/game/attributes/3',
       'uvcs://acme.unity/repos/game/changesets/1/comments',

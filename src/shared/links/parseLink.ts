@@ -286,4 +286,4 @@ function malformed(detail: string): { problem: LinkProblem } {
 }
 
 /** A link naming what this version doesn't know (`LinkProblem`). */
-const UNKNOWN: { problem: LinkProblem } = { problem: { kind: 'unknown' } };
+const UNKNOWN: Readonly<{ problem: LinkProblem }> = { problem: { kind: 'unknown' } };
