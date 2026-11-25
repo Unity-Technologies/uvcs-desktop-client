@@ -754,7 +754,9 @@ page's conflicts (`ConflictHunks`) have none: Pierre numbers each side of a conf
 reads, in groups: Undo, Redo; Find, Replace, Go to line…, Compare with clipboard; Cut, Copy, Paste; Delete, Select all.
 Where a diff selects lines for links (a committed diff, Annotate), the lines' own entries join it at the end of their
 groups ("Annotate at line 42", "Copy link to line 42", "Copy line 42": `lineMenuEntries`), naming the lines they act on,
-as the right-click selects nothing. While it's open on text typed into, the caret stays drawn where it was
+as the right-click selects nothing. On text typed into, the right-click first moves the caret where it clicks, as code
+editors do, unless it's on text selected, which Cut and Copy then act on (`selectionsAfterRightClick`); while the menu
+is open, the caret stays drawn
 (`CARET_HELD_ATTRIBUTE`): Pierre draws it only while the text has the focus, which the menu takes. What it holds
 depends on the side right-clicked (`codeMenuTarget`):
 

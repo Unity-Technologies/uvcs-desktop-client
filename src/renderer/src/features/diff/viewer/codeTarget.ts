@@ -8,7 +8,7 @@ import type { LineRange } from './lineSelection';
 import type { PageTextSelection } from './pierreDom';
 import { fragmentOfLines, fragmentOfSpan, type CodeFragment } from './clipboardComparison';
 import type { DiffSides } from './shownDiff';
-import { isEmptySpan, spanText, type TextSpan } from './textSpans';
+import { isEmptySpan, orderedSpan, spanText, type TextPosition, type TextSpan } from './textSpans';
 
 /** How a place shows code: one text (the whole-file editor, a merge) or a diff's two sides. */
 export interface CodeLayoutSides {
@@ -61,6 +61,23 @@ export interface OpenedCode {
   selections: TextSpan[];
   /** What a read-only side has selected. */
   readOnly: ReadOnlySelection;
+}
+
+/**
+ * Where a right-click leaves the editor's selections (zero-based): a caret at the point clicked, as code editors move
+ * it, or as they are (null) when it's on text they hold, for Cut and Copy to act on, or off the text.
+ */
+export function selectionsAfterRightClick(selections: readonly TextSpan[], clicked: TextPosition | null): TextSpan[] | null {
+  if (!clicked) return null;
+  const holds = selections.some((span) => {
+    const { start, end } = orderedSpan(span);
+    return !isEmptySpan(span) && !isBefore(clicked, start) && !isBefore(end, clicked);
+  });
+  return holds ? null : [{ start: clicked, end: clicked }];
+}
+
+function isBefore(a: TextPosition, b: TextPosition): boolean {
+  return a.line < b.line || (a.line === b.line && a.character < b.character);
 }
 
 /** The selection holding text the editor treats as its own (its last, as Pierre's editor reads it); none for carets alone. */

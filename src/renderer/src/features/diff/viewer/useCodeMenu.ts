@@ -24,6 +24,7 @@ import {
   primarySelection,
   readOnlyFragment,
   selectedSideLines,
+  selectionsAfterRightClick,
   type CodeLayoutSides,
   type OpenedCode,
 } from './codeTarget';
@@ -33,7 +34,7 @@ import { deletionEdits } from './editorTextEdits';
 import { goToLineError, goToLineQuestion, lineToGoTo } from './goToLine';
 import type { LineRange } from './lineSelection';
 import type { ScrollToLine } from './useLineLinks';
-import { editorHasFocusIn, pageTextSelection, rowUnderPointer } from './pierreDom';
+import { editorHasFocusIn, modifiedTextPositionAt, pageTextSelection, rowUnderPointer } from './pierreDom';
 import { CARET_HELD_ATTRIBUTE } from './pierreOptions';
 import { orderedSpan, shownLineCount, wholeTextSpan, type TextSpan } from './textSpans';
 
@@ -81,6 +82,7 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
     // Off the code (a chip or a label over it): no menu, not even the system's.
     if (!host || !event.nativeEvent.composedPath().includes(host)) return event.preventDefault();
     const target = codeMenuTarget(rowUnderPointer(event.nativeEvent.composedPath()), latest.current.sides, editorNow() !== null);
+    if (target.typedInto) moveCaretTo(event);
     opened.current = {
       target,
       selections: target.typedInto ? editorSelections() : [],
@@ -91,6 +93,14 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
       host.setAttribute(CARET_HELD_ATTRIBUTE, '');
       caretHeldOn.current = host;
     }
+  };
+
+  /** A right-click moves the caret where it clicks first, unless on text selected (`selectionsAfterRightClick`). */
+  const moveCaretTo = (event: MouseEvent): void => {
+    const place = modifiedTextPositionAt(containerRef.current, { x: event.clientX, y: event.clientY });
+    const clicked = place && { line: place.lineNumber - 1, character: place.character };
+    const next = selectionsAfterRightClick(editorSelections(), clicked);
+    if (next) editorNow()?.setSelections(next.map((span) => ({ ...span, direction: 'none' as const })));
   };
 
   /** The menu closing lets Pierre draw the caret as it would (`onContextMenu` held it). */
