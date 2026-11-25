@@ -12,8 +12,8 @@ describe('PIERRE_SURFACE_CSS: how code reads in every diff', () => {
     expect(PIERRE_SURFACE_CSS).not.toContain('--diffs-line-height');
   });
 
-  it("draws the editor's caret in the secondary text color, not the code theme's blue", () => {
-    expect(PIERRE_SURFACE_CSS).toContain('--diffs-bg-caret-override:var(--text-secondary)');
+  it("draws the editor's caret in its own color (`--editor-caret`), not the code theme's blue", () => {
+    expect(PIERRE_SURFACE_CSS).toContain('--diffs-bg-caret-override:var(--editor-caret)');
   });
 });
 
