@@ -154,6 +154,8 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   When the person asks to see the app, run it or try something in it, launch it without `--background`, as they'd
   open it. `npm run dev` and `npm start` never take it; the smoke test and `scripts/screenshot.mjs` always do.
 - Check **both themes** and a narrow window, and that the console shows no errors (`playwright-cli console`).
+- Check **a short window holding more than fits**: more items than the list shows, a diff longer than its pane. Scroll
+  every list, panel and diff to its end. Sandboxes are small: a page cut off with real data looks fine with theirs.
 - Check a **development build** too, where StrictMode mounts every component twice (ARCHITECTURE.md "Effects survive a
   second mount"): `npx electron-vite build --mode development`, then `npm run app:debug` (`-- --background` when on
   your own); or, only while the person watches, `npx electron-vite dev --remoteDebuggingPort 9333` and attach. A production build alone hid a crash of the model diff.

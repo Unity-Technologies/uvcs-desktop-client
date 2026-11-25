@@ -17,10 +17,16 @@ workspace (from the home screen: its views and a changeset's diff, in a window o
 fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays `Loading` (what shows
 only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton until it shows again),
 any `cm` command the fake couldn't answer, a server command while the sign-in screen covers the window, a step that
-sent the same command line twice from the same folder ("Duplicate server commands" below), and an answer to the
-profile pictures question that wasn't saved. Beyond those and the larger editor being on top, it asserts only
-that things appear, never pixels or copy.
-About 15 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
+sent the same command line twice from the same folder ("Duplicate server commands" below), content cut off where
+nothing scrolls ("Cut-off content" below), and an answer to the profile pictures question that wasn't saved. Beyond
+those and the larger editor being on top, it asserts only that things appear, never pixels or copy.
+
+About 13 seconds a run. It runs with reduced motion (`emulateMedia`, in every window it opens): the app's durations are
+zero (`--duration-*`), so no step waits for a view's entrance or a dialog's, and the cut-off check measures boxes where
+they rest. What runs only with motion on (a smooth scroll's glide, the model viewer's camera glide, a discarded line's
+animation) isn't reached here; their decisions are unit-tested (`smoothScrollPlan`).
+
+Screenshots of each step go to `<os temp>/uvcs-e2e-shots/<checkout>-<hash>`, one folder per checkout so
 runs in several worktrees at once keep theirs (a failed step's is `NN-FAILED-<step>.png`), or to `<checkout>-<hash>`
 in `UVCS_E2E_SHOTS` when set; on CI (`CI=true`) only a failed step's, the one the job keeps. A run empties its own folder as it starts, never the one around it. A failed step also
 prints Playwright's call log, what it was waiting for when it gave up, and a view that never settles names each
@@ -106,6 +112,29 @@ issue and the change that removes it; it allows that duplicate in that step only
 warning without failing, so that change can merge before or after the line goes; remove the line then. Never add a
 line to get a new duplicate through: fix it, or name the issue that will.
 
+## Cut-off content
+
+The rule: after every step, nothing shown in a window's page or a dialog ends below the nearest box clipping it
+(`overflow-y` other than `visible`), or below the window when none does, unless that box scrolls (`findCutOffContent`,
+`cutOffContent.mjs`). Such content can't be read to its end: a list without its last rows, a diff without its
+scrollbar, a button under the window's edge. The page windows a step opens are checked before it closes them.
+
+Only downwards: sideways, the app cuts text on purpose (a cell's or a comment's ellipsis, its whole text a hover away),
+so a box cut off on the right isn't checked.
+
+It runs once the animations on what it checks end (loops like spinners, and a toast's countdown, aren't waited for),
+and leaves out what isn't laid out to stay: what is still loading (a skeleton fills its box, cut where it ends), boxes
+placed with `position: absolute` or `fixed` (a virtual list's rows, a popover), what screen readers alone read
+(`.visually-hidden`, clipped to a pixel), and the overhang a box's own negative margin asks for (Settings' pane, room
+for focus rings). Two pixels are rounding.
+
+It catches only what overflows, so the fake's lists of pending changes, changesets and labels, and the diff of
+`src/player.cs`, are longer than the window (`LONGER_THAN_THE_WINDOW` in `fakeCm/repository.cjs`): a view whose list
+doesn't scroll fails. A new view or page whose content can grow shows enough of it to overflow.
+
+`CUT_OFF_ALLOWED` lists what may end below its box, each by a selector and why. Never add one to get a step through:
+a box cut off is a bug users see.
+
 ## The fake `cm` (`fakeCm/`)
 
 - `cm.cjs` runs a command as a process (`cm find …`) or as `cm shell` (commands on stdin, each answer ending with
@@ -115,8 +144,10 @@ line to get a new duplicate through: fix it, or name the issue that will.
   is the command's own template filled from the objects' fields (`format.cjs`), so a new field is one more property
   on the objects. `find` keeps only the objects its query's comparisons match
   (`where.cjs`); other conditions keep every object.
-- `repository.cjs` is the synthetic repository: 3 branches, 8 changesets (one incoming), 2 labels, a shelve, a code
-  review, an attribute, a lock, the repository's and server's permissions (`showacl`), the workspace's files and the revisions `cm cat` and `cm diff` answer. `status.cjs`
+- `repository.cjs` is the synthetic repository: 3 branches, 48 changesets (one incoming, 40 of them a run of passes
+  on one branch), 42 labels, a shelve, a code review, an attribute, a lock, the repository's and server's permissions
+  (`showacl`), the workspace's files (45 pending changes) and the revisions `cm cat` and `cm diff` answer. The long
+  lists are there for the cut-off check ("Cut-off content"). `status.cjs`
   answers `cm status --header --xml` and the changes as `--machinereadable` records, `tree.cjs` `cm ls --format=…`.
 - A command, `find` object or `--format` field it doesn't know fails with exit code 1, naming it, and the smoke test
   fails listing it. A failure `cm` itself would give (`CmRefusal`: previewing a merge of task-001 or task-002, which
