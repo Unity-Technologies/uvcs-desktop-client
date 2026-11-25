@@ -317,7 +317,8 @@ try {
     // The refused merge of the step before is still the one in progress.
     await window.getByRole('dialog').getByRole('button', { name: 'Start another merge' }).click();
     await pageShown('merge');
-    // It opens on the first conflict, which merges by itself (Sky.cs); then the one to decide, and a change to apply.
+    // The conflict that merges by itself, the one to decide, and a change to apply.
+    await main.getByText('Sky.cs', { exact: true }).first().click();
     await main.getByText('float exposure = 1.5f;').first().waitFor();
     await main.getByText('Sun.cs', { exact: true }).first().click();
     await main.getByText('float intensity = 1.2f;').first().waitFor();
