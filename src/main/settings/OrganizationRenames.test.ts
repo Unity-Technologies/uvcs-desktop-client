@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import { parseOrganizationId } from '@shared/domain/stableIds';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { UnityOrganizationIds } from '../cm/UnityOrganizationIds';
 import { OrganizationRenames } from './OrganizationRenames';
+
+const ACME = parseOrganizationId('1375943370549')!;
 
 /** Settings held in memory, as `SettingsStore` holds them, and the ids `cm getconfig organization` prints by name. */
 function renamesOver(settings: Partial<AppSettings>, idsByName: Record<string, string>) {
@@ -42,7 +45,18 @@ describe('OrganizationRenames', () => {
     const { renames, lines, writes } = renamesOver({ favoriteOrganizations: ['acme@unity'] }, { 'acme@unity': '1375943370549\n' });
     await renames.follow(['acme@unity', 'arcade@unity']);
     await renames.follow(['acme@unity', 'arcade@unity']);
-    expect(lines()).toEqual(['getconfig organization acme@unity --format={unityid}', 'getconfig organization arcade@unity --format={unityid}']);
+    expect(lines()).toEqual(['getconfig organization acme@unity --format={unityid}']);
     expect(writes()).toBe(1);
   });
+
+  it("reads only the recorded organizations' ids while their names answer them, however many are listed", async () => {
+    const recorded = { serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: ACME } } };
+    const { renames, lines, writes } = renamesOver(recorded, { 'acme@unity': `${ACME}\n`, 'arcade@unity': '1375488836673\n' });
+
+    await renames.follow(['acme@unity', 'arcade@unity', 'kart@unity', 'racers@unity']);
+
+    expect(lines()).toEqual(['getconfig organization acme@unity --format={unityid}']);
+    expect(writes()).toBe(0);
+  });
+
 });

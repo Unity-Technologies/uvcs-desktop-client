@@ -2,8 +2,9 @@
 // `serverSettings`) is kept by its name (`acme@unity`), as `cm` and every list name it, and follows the organization
 // when its owners rename it. No other organization can ever take a name one had, so a name never leads to another
 // organization's settings; but a renamed one would lose its own. So each organization that keeps something records
-// its id (`ServerSettings.organizationId`), and an organization listed under a name that keeps nothing, whose id was
-// recorded under its former name, takes what that name kept (ARCHITECTURE.md "Settings survive renames").
+// its id (`ServerSettings.organizationId`). Each session reads those ids again by their names; only when a name no
+// longer answers its id are the other organizations listed read, and the one with that id takes what its former name
+// kept (ARCHITECTURE.md "Settings survive renames").
 
 import { isFavoriteOrganization, withFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { isUnityOrganization } from '@shared/domain/organizations';
@@ -16,12 +17,23 @@ import type { OrganizationId } from '@shared/domain/stableIds';
 export type OrganizationsKept = Pick<AppSettings, 'favoriteOrganizations' | 'serverSettings'>;
 
 /**
- * The organizations listed whose id is worth reading: one that keeps something and hasn't recorded its id and, once
- * any organization recorded one, one that keeps nothing, which may be a renamed one under its new name.
+ * The organizations whose id is worth reading first: each that recorded one, to confirm its name still answers it,
+ * and each listed that keeps something with no id recorded yet. Once per session each (`UnityOrganizationIds`).
  */
 export function organizationsToIdentify(kept: OrganizationsKept, listed: readonly string[]): string[] {
-  const anyRecorded = Object.values(kept.serverSettings).some((settings) => settings.organizationId !== undefined);
-  return listed.filter((server) => isUnityOrganization(server) && serverSettingsOf(kept.serverSettings, server).organizationId === undefined && (anyRecorded || keepsSomething(kept, server)));
+  const recorded = Object.keys(kept.serverSettings).filter((key) => kept.serverSettings[key]!.organizationId !== undefined);
+  return [...recorded, ...unrecorded(kept, listed).filter((server) => keepsSomething(kept, server))];
+}
+
+/**
+ * The organizations to read next, to find a renamed one: when a name that recorded an id no longer answers it (`cm`
+ * learned the organization's new name, and forgot the old one), every listed organization not read yet with no id
+ * recorded, one of which is it under its new name. None while every recorded name answers its id.
+ */
+export function organizationsToSearch(kept: OrganizationsKept, listed: readonly string[], read: ReadonlyMap<string, OrganizationId | undefined>): string[] {
+  const readByKey = new Map([...read].map(([server, id]) => [serverKey(server), id]));
+  const lost = Object.entries(kept.serverSettings).some(([key, { organizationId }]) => organizationId !== undefined && readByKey.has(key) && readByKey.get(key) !== organizationId);
+  return lost ? unrecorded(kept, listed).filter((server) => !readByKey.has(serverKey(server))) : [];
 }
 
 /**
@@ -59,6 +71,11 @@ export function withoutIdAlone(kept: OrganizationsKept, server: string): ServerS
   if (kept.serverSettings[key]?.organizationId === undefined || keepsSomething(kept, server)) return kept.serverSettings;
   const { [key]: _forgotten, ...others } = kept.serverSettings;
   return others;
+}
+
+/** The listed Unity organizations with no id recorded. */
+function unrecorded(kept: OrganizationsKept, listed: readonly string[]): string[] {
+  return listed.filter((server) => isUnityOrganization(server) && serverSettingsOf(kept.serverSettings, server).organizationId === undefined);
 }
 
 /** Whether the organization keeps anything: a favorite or a setting, its recorded id aside. */

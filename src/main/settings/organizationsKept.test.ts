@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseOrganizationId, type OrganizationId } from '@shared/domain/stableIds';
-import { organizationsFollowed, organizationsToIdentify, type OrganizationsKept } from './organizationsKept';
+import { organizationsFollowed, organizationsToIdentify, organizationsToSearch, type OrganizationsKept } from './organizationsKept';
 
 const ACME = parseOrganizationId('1375943370549')!;
 const ARCADE = parseOrganizationId('1375488836673')!;
@@ -21,14 +21,35 @@ describe('organizationsToIdentify', () => {
     expect(organizationsToIdentify(state, ['Acme@unity', 'arcade@unity', 'kart@unity'])).toEqual(['Acme@unity', 'arcade@unity']);
   });
 
-  it('once one recorded its id, reads those that keep nothing: one may be a renamed organization', () => {
-    const state = kept({ servers: { 'acme@unity': { homeProject: 'Racing', organizationId: ACME } } });
-    expect(organizationsToIdentify(state, ['acme@unity', 'acme-studio@unity'])).toEqual(['acme-studio@unity']);
+  it('reads again the id of each name that recorded one, listed or not, and none of the organizations that keep nothing', () => {
+    const state = kept({ servers: { 'acme@unity': { homeProject: 'Racing', organizationId: ACME }, 'arcade@unity': { organizationId: ARCADE } } });
+    expect(organizationsToIdentify(state, ['acme@unity', 'kart@unity', 'racers@unity'])).toEqual(['acme@unity', 'arcade@unity']);
   });
 
   it('reads no server that is no Unity organization', () => {
-    const state = kept({ favorites: ['games@cloud', 'host:8087'], servers: { 'acme@unity': { organizationId: ACME } } });
+    const state = kept({ favorites: ['games@cloud', 'host:8087'] });
     expect(organizationsToIdentify(state, ['games@cloud', 'host:8087', 'local'])).toEqual([]);
+  });
+
+  it("doesn't count a recorded id as something kept", () => {
+    expect(organizationsToIdentify(kept({ servers: { 'acme@unity': { organizationId: ACME } } }), ['kart@unity'])).toEqual(['acme@unity']);
+  });
+});
+
+describe('organizationsToSearch', () => {
+  const state = kept({ servers: { 'acme@unity': { homeProject: 'Racing', organizationId: ACME } }, favorites: ['arcade@unity'] });
+  const listed = ['acme@unity', 'arcade@unity', 'acmestudio@unity', 'kart@unity', 'games@cloud'];
+
+  it('reads nothing more while every recorded name answers its id', () => {
+    expect(organizationsToSearch(state, listed, new Map([['acme@unity', ACME], ['arcade@unity', ARCADE]]))).toEqual([]);
+  });
+
+  it("reads the listed organizations not read yet with no id recorded once a recorded name doesn't answer it (cm forgot the old name)", () => {
+    expect(organizationsToSearch(state, listed, new Map([['acme@unity', undefined], ['arcade@unity', ARCADE]]))).toEqual(['acmestudio@unity', 'kart@unity']);
+  });
+
+  it('reads them too when a recorded name answers another id', () => {
+    expect(organizationsToSearch(state, listed, new Map([['ACME@unity', ARCADE]]))).toEqual(['arcade@unity', 'acmestudio@unity', 'kart@unity']);
   });
 });
 
