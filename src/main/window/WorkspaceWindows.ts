@@ -458,12 +458,15 @@ export class WorkspaceWindows {
   /**
    * A window reopened on a repository explored without a workspace opens at once on the name it was saved with; once
    * the server says the repository goes by another (`specNow`: free when the name still names it and its server was
-   * listed, else one listing), the window is asked to open that one. A server out of reach leaves it as it was.
+   * listed, else one listing), the window is asked to open that one, unless the user took it elsewhere meanwhile. A
+   * server out of reach leaves it as it was.
    */
   private async followRename(window: BrowserWindow, { repository, repositoryGuid }: SavedWindow): Promise<void> {
     if (!repository || !repositoryGuid) return;
     const specNow = await this.options.repositoryGuids.specNow(repository, repositoryGuid).catch(() => repository);
     if (specNow === repository || window.isDestroyed()) return;
+    const shown = this.shownBy(window.webContents.id);
+    if (shown && !samePlace(shown, repositoryPlace(repository))) return;
     this.requested.set(window.webContents.id, repositoryPlace(specNow));
     sendEventTo(window.webContents, 'workspaceOpenRequested', {});
   }
