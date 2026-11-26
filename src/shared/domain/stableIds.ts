@@ -23,6 +23,9 @@ export type BranchGuid = Guid<'branch'>;
 /** A Unity project's GUID: a project is a repository of its own type, listed with its `{repguid}`. */
 export type ProjectGuid = Guid<'project'>;
 
+/** A shelve's `{guid}` (`cm find shelve`): its number is per repository, and its repository's name changes with a rename. */
+export type ShelveGuid = Guid<'shelve'>;
+
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function parseRepositoryGuid(text: string): RepositoryGuid | undefined {
@@ -38,6 +41,10 @@ export function parseBranchGuid(text: string): BranchGuid | undefined {
 }
 
 export function parseProjectGuid(text: string): ProjectGuid | undefined {
+  return parseGuid(text);
+}
+
+export function parseShelveGuid(text: string): ShelveGuid | undefined {
   return parseGuid(text);
 }
 
