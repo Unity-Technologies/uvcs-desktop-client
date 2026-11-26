@@ -3,7 +3,7 @@ import './errors/installUnexpectedErrorHandlers';
 import { release } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
-import { repositoryPlace } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { cmBranchNameReads } from './cm/branchNames';
 import { listRepositories } from './cm/listRepositories';
@@ -59,6 +59,7 @@ import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 import { WorkspaceServers } from './workspace/WorkspaceServers';
 import { readWorkspaceGuid } from './workspace/workspaceIdentity';
+import { tellingRepositoryChanges } from './workspace/repositoryChanges';
 import { readWorkspaceOrigin } from './cm/workspaceStatus';
 
 const userData = app.getPath('userData');
@@ -84,7 +85,10 @@ const cm = new CmClient(() => cmRuntime.cmPath(), join(userData, 'outside-worksp
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it; each one's server
 // remembered as it's read, for the sign-in gate.
 const workspaceServers = new WorkspaceServers((directory) => readWorkspaceOrigin(cm, directory));
-const headers = new WorkspaceHeaders(workspaceServers.remembering(cmHeaderReaders(cm)));
+// A workspace read on another repository than before lets its branch names go: ids are per repository.
+const headers = new WorkspaceHeaders(
+  tellingRepositoryChanges(workspaceServers.remembering(cmHeaderReaders(cm)), (workspacePath) => branchNames.forget(workspacePlace(workspacePath))),
+);
 // One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
 const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
