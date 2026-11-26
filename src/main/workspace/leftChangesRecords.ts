@@ -3,6 +3,7 @@ import type { Shelve } from '@shared/domain/shelve';
 import { parseShelveGuid } from '@shared/domain/stableIds';
 import type { LeftChanges, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
+import { automaticShelveComment } from '../cm/automaticShelve';
 import { selectorPlace } from './switchSelectors';
 
 /** A record of changes the app shelved to switch or update: never one the user shelved away. */
@@ -97,11 +98,14 @@ function followingRename<End extends RecordEnd>(end: End, at: WorkspaceSpot): En
 /**
  * The record's shelve among `shelves`, the automatic shelves of the repository the workspace is on (`repository`, as
  * named now). By its GUID once known: a renamed repository's shelve is still the record's. Until then by its number, in
- * the repository the record names.
+ * the repository the record names; or, the repository renamed before the GUID was learned, the shelve of that number
+ * whose automatic comment names where the changes were left (`br:37`).
  */
 export function shelveOf(record: SwitchShelveRecord, shelves: Shelve[], repository: string): Shelve | undefined {
   if (record.shelveGuid) return shelves.find((shelve) => parseShelveGuid(shelve.guid) === record.shelveGuid);
-  return record.repository === repository ? shelves.find((shelve) => shelve.id === record.shelveId) : undefined;
+  const numbered = shelves.find((shelve) => shelve.id === record.shelveId);
+  if (record.repository === repository) return numbered;
+  return record.source.objectRef && numbered?.comment === automaticShelveComment(record.source.objectRef) ? numbered : undefined;
 }
 
 /**

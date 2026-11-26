@@ -36,7 +36,9 @@ renames"). It is the workspace's by its GUID, and what a rename changed is writt
   is its own number, a branch is the one the window already read (`workspaceSpot`, `LeftChangesApi.find`'s `branch`)
   or, on arrival from a switch, one a list read lately under the workspace's branch name (`BranchNamesCache.knownName`).
 - **How its shelve is found**: by the shelve's GUID (`shelveGuid`), learned the first time `cm find shelve` lists it,
-  whatever the repository is called now (`shelveOf`); until then by its number in the repository the record names.
+  whatever the repository is called now (`shelveOf`); until then by its number in the repository the record names or,
+  that repository renamed before the GUID was learned, by its number and its automatic comment naming where the
+  changes were left.
 - **The limit**: neither `cm status --header` nor `cm getworkspacefrompath` prints a branch's id, so `hasOwnWaiting`
   reads no server data and, when no list read a renamed branch lately, leaves the changes to the "Welcome back" banner
   instead of restoring them on arrival.
