@@ -193,6 +193,7 @@ describe('guidOf', () => {
     const fake = fakeCmClient({
       'repository list': () => listings[Math.min(calls++, listings.length - 1)]!,
       'repository acme@cloud': '',
+      'repository rename': '',
       // A workspace of `game` renamed to `racer` still names it `game`, which cm still takes; no other name answers.
       ls: ({ args }) => (args.includes('--tree=cs:0@game@acme@cloud') ? formatOutput(['2']) : cmFails("The specified repository couldn't be found: tools.")),
     });
@@ -291,6 +292,19 @@ describe('guidOf', () => {
     expect(await service.guidOf('tools@acme@cloud')).toBeNull();
     expect(await service.guidOf('tools@acme@cloud')).toBeNull();
     expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), expect.stringMatching(/^ls \/ --tree=cs:0@tools@acme@cloud/)]);
+  });
+
+  it('moves what was still kept by the old spec under the GUID before renaming, listing nothing more', async () => {
+    const { service, settings, trackersKept, lines } = lookups(listed('game'));
+    await service.list('acme@cloud');
+    settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
+
+    await service.rename('game@acme@cloud', 'racer');
+
+    expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+    expect(trackersKept).toEqual([['game@acme@cloud', GAME]]);
+    expect(await service.guidOf('racer@acme@cloud')).toBe(GAME);
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), 'repository rename game@acme@cloud racer']);
   });
 
   it('rejects when the server can’t be listed', async () => {
