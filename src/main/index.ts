@@ -58,6 +58,7 @@ import { WindowWrites } from './window/WindowWrites';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 import { WorkspaceServers } from './workspace/WorkspaceServers';
+import { readWorkspaceGuid } from './workspace/workspaceIdentity';
 import { readWorkspaceOrigin } from './cm/workspaceStatus';
 
 const userData = app.getPath('userData');
@@ -168,7 +169,7 @@ const issueTrackers = createIssueTrackers({
 const api = createServices({
   cm,
   operations,
-  reviews: new ReviewStore(join(userData, 'review-snapshots')),
+  reviews: new ReviewStore(join(userData, 'review-snapshots'), (workspacePath) => readWorkspaceGuid(headers, workspacePath)),
   diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
   settings,
   watchers,
