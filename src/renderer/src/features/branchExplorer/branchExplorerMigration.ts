@@ -32,7 +32,7 @@ export function migrateBranchExplorerPreferences(persisted: unknown, version: nu
   const keptAny = Object.values(kept).some((value) => value !== undefined);
   return {
     remembered: version >= 1 ? remembered : { ...remembered, dateRange: sincePresetOf(remembered.dateRange) ?? 'lastMonth', people: EVERYONE },
-    kept: keptAny ? JSON.parse(JSON.stringify(kept)) : null,
+    kept: keptAny ? kept : null,
   };
 }
 

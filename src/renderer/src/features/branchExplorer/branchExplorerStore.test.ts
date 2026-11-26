@@ -47,14 +47,10 @@ describe('Branch Explorer preferences', () => {
   it('puts what version 2 kept per repository aside for the app’s settings, and remembers the rest', async () => {
     const kept = { rulesOff: { 'game@host': true }, pinsByRepository: { 'game@host': [{ branch: 4, row: 1 }] } };
     localStorage.setItem('branch-explorer-preferences', JSON.stringify({ state: { hideMergedBranches: true, ...kept }, version: 2 }));
-    fakeApi.answer('settings.addWindowSettings', () => new Promise(() => {}));
 
     await useBranchExplorerPreferences.persist.rehydrate();
 
     expect(JSON.parse(localStorage.getItem(BRANCH_EXPLORER_KEPT_KEY)!)).toEqual(kept);
-    expect(fakeApi.argsOf('settings.addWindowSettings')).toEqual([
-      [{ repositorySettings: { 'game@host': { explorerRulesOff: true, branchPins: [{ branch: 4, row: 1 }] } }, serverSettings: {}, changesetColors: { users: [] } }],
-    ]);
     expect(persisted()).not.toHaveProperty('pinsByRepository');
     expect(persisted()).not.toHaveProperty('rulesOff');
     expect(preferences().hideMergedBranches).toBe(true);

@@ -36,7 +36,9 @@ exposePageZoom();
 markReadsInFlight(queryClient);
 guardUnloading();
 trackPointerReturnFocus();
-// What this window's storage kept before the app's settings held it (sync remotes, home projects), handed over once.
+// What this window's storage kept before the app's settings held it (the Branch Explorer's rules, moved branches and
+// colors, which its store put aside as the imports above read it; the sync remotes; the home projects), handed over
+// once, or at the next start when the settings can't take it now.
 void bringStoredWindowSettings();
 // A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.
 if (!openPageWindowFromAddress()) {

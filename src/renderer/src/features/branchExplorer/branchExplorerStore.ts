@@ -5,7 +5,7 @@ import type { BranchPins, ExplorerRule, UserColors } from '@shared/domain/branch
 import { navigation } from '../../app/navigation/navigationStore';
 import { updateRepositorySettings, useRepositorySettings } from '../../app/settings/useScopedSettings';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
-import { BRANCH_EXPLORER_KEPT_KEY, bringStoredWindowSettings } from '../../app/settings/windowKeptSettings';
+import { BRANCH_EXPLORER_KEPT_KEY } from '../../app/settings/windowKeptSettings';
 import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { EVERYONE, rememberedPick, type PeoplePick } from '../../lib/peopleFilter';
 import type { SincePreset } from '../../lib/sincePresets';
@@ -63,13 +63,10 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       migrate: (persisted, version) => {
         // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
         useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
-        // The app's settings keep the rules, moved branches and colors now: put aside until they take them, which may be
-        // at the next start when they can't now (`bringStoredWindowSettings`).
+        // The app's settings keep the rules, moved branches and colors now: put aside for them, which `main.tsx` hands
+        // over once this store is read (`bringStoredWindowSettings`).
         const { remembered, kept } = migrateBranchExplorerPreferences(persisted, version);
-        if (kept) {
-          localStorage.setItem(BRANCH_EXPLORER_KEPT_KEY, JSON.stringify(kept));
-          void bringStoredWindowSettings();
-        }
+        if (kept) localStorage.setItem(BRANCH_EXPLORER_KEPT_KEY, JSON.stringify(kept));
         return remembered as BranchExplorerPreferences;
       },
       merge: rememberedPreferences,
