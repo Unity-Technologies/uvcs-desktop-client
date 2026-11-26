@@ -34,7 +34,7 @@ export function oldestFirst(changesets: readonly Changeset[]): Changeset[] {
 
 /**
  * The changesets the filter shows: every word in the number, the comment or the author, by the name shown and as
- * stored (`userFilterTexts`, ARCHITECTURE.md "Filters"). A blank filter shows them all.
+ * stored (`userFilterTexts`, docs/architecture/lists.md "Filters"). A blank filter shows them all.
  */
 export function filterChangesets(changesets: readonly Changeset[], query: string): readonly Changeset[] {
   if (!query.trim()) return changesets;

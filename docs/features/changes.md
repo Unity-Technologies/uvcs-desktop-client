@@ -1,7 +1,7 @@
 # Changes
 
 What the Changes view does with pending changes that the rest of the app doesn't show. The list itself (rows, order,
-List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item rows".
+List or Tree, groups) follows docs/architecture/lists.md "Lists of changed files" and "Item rows".
 
 ## The check-in's comment
 
@@ -38,7 +38,7 @@ checked in, the most useful action alone, quiet. What each case shows and what i
   chevrons under its checkbox, their checkboxes under its icon. A flat list without groups stays flush. The summary's checkbox
   lines up with the top-level ones (`topLevelCheckboxInset`).
 
-A Unity asset and its `.meta` are one row (ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"): checking, undoing, adding, checking out, moving
+A Unity asset and its `.meta` are one row (docs/architecture/lists.md "Lists of changed files", "A Unity asset with its `.meta`"): checking, undoing, adding, checking out, moving
 to a changelist and the filter rules take the meta along; "Open .meta" and "Open .meta diff" open the meta alone.
 
 ## Changelist menus

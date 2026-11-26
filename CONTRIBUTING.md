@@ -14,7 +14,8 @@ behalf of your company. A pull request is merged only once it's accepted.
 ## Before you open a pull request
 
 1. Read [CLAUDE.md](CLAUDE.md) (the rules every change follows) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-   (how the code is organized), then the doc of the area you touch in `docs/features/`.
+   (how the code is organized), then the `docs/architecture/` doc of the layer you change and the doc of the area you
+   touch in `docs/features/`.
 2. Ship tests with the change, and update the docs it makes untrue.
 3. Make sure `npm run typecheck` and `npm test` pass. For a change to startup, navigation or many views, run
    `npm run e2e:development` too, or `npm run e2e` (both builds) when it changes how the app is built: CLAUDE.md

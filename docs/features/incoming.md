@@ -2,11 +2,11 @@
 
 Incoming (`features/incoming`) shows what the branch has that the workspace doesn't, what of it collides with local
 changes, and the update that takes it. How the app learns there is something incoming (the incoming check, the chip,
-its card) is ARCHITECTURE.md "Refresh"; this is the view.
+its card) is docs/architecture/renderer.md "Refresh"; this is the view.
 
 ## Changesets, then files
 
-The left pane is the incoming changesets above the files, as every list of changed files shows them (ARCHITECTURE.md
+The left pane is the incoming changesets above the files, as every list of changed files shows them (docs/architecture/lists.md
 "Lists of changed files"). The files are what Incoming is for:
 
 - **The changesets** (`IncomingChangesetList`) are listed as a branch diff lists its own (`ChangesetFold`,
@@ -50,7 +50,7 @@ A file selected shows its diff: across the whole update, or what its changeset d
 conflict panel only in "All incoming changes", where conflicts are resolved: the update merges the whole of it. In a
 changeset it shows what that changeset did, its conflict mark still on its row.
 
-A Unity asset's `.meta` is listed with it (ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"), unless the meta collides with local
+A Unity asset's `.meta` is listed with it (docs/architecture/lists.md "Lists of changed files", "A Unity asset with its `.meta`"), unless the meta collides with local
 changes (`pairIncomingMetas`): a conflict is decided on its own, so it keeps its own row.
 
 ## Menus

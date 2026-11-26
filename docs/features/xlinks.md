@@ -4,6 +4,9 @@ An xlink is a folder of the workspace that shows another repository at a changes
 one (revision ids per repository, `RevisionRef`, `cm ls --tree` through xlinks) is in ARCHITECTURE.md ("Xlinks").
 This doc holds how xlinks are created and edited.
 
+Sandbox: `scripts/sandboxes/xlinks.sh` (a writable xlink with branch expansion rules, a read-only one
+showing a folder of its repository, and branches and a label to point them to).
+
 ## Creating and editing
 
 Files offers **New xlink…** on a controlled folder or file of the workspace's repository (it goes in the folder, or

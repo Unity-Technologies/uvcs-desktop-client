@@ -41,7 +41,7 @@ before.
   The prefixes are `cm`'s own, read as `cm` reads them: lower case only (`CS:12` isn't one), the body up to the
   first `@`, then the repository with `rep:` and `repserver:` dropped. `cm` has no spec for a code
   review, so `cr:` is the app's, chosen to read like the others (`#311` was rejected: `#` is issues'). The
-  palette reads the same prefixes (`KIND_PREFIXES`, ARCHITECTURE.md "Prefixes"). `cm` has no end-of-token rule either (it takes one argument), so a comment's sentence punctuation and
+  palette reads the same prefixes (`KIND_PREFIXES`, docs/architecture/renderer.md "Prefixes"). `cm` has no end-of-token rule either (it takes one argument), so a comment's sentence punctuation and
   emphasis marks (`see cs:12.`, `(br:/main)`, `**cs:12**`) are left out of the reference (`TRAILING_PUNCTUATION`). A
   reference starts only after a space, a line's start, a bracket or an emphasis mark: `ana@acme.com`, `/a/cs:1`,
   `10:30:00` hold none.

@@ -1,7 +1,7 @@
 # Locks
 
 The Locks view lists the repository's exclusive checkouts (`cm lock list`) and releases them (`cm lock unlock`);
-how its rows, filters and refreshes work is in ARCHITECTURE.md (Item rows, Filters, Server budget). This doc holds
+how its rows, filters and refreshes work is in docs/architecture/lists.md (Item rows, Filters) and ARCHITECTURE.md (Server budget). This doc holds
 what the code can't show.
 
 ## Lock rules

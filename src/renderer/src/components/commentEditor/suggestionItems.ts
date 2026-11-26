@@ -23,7 +23,7 @@ import { indexCandidates, rankCandidates, type CandidateIndex } from '../../lib/
 import { indexPeople } from '../../lib/peopleIndex';
 import type { SuggestionKind } from './suggestionTriggers';
 
-/** How many suggestions a list shows: the best few, never everything (ARCHITECTURE.md "Big lists"). */
+/** How many suggestions a list shows: the best few, never everything (docs/architecture/lists.md "Big lists"). */
 export const SUGGESTION_LIMIT = 8;
 
 /** A row of the suggestion list, and what picking it writes. */

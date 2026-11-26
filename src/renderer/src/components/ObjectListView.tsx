@@ -39,7 +39,7 @@ interface ObjectListViewProps<Row> extends Omit<TableProps<Row>, 'selectFirstRow
 /**
  * The body of every view listing objects (branches, changesets, labels, shelves, code reviews, locks, attributes),
  * under its header and filter bar: the table (a row always selected) with the focused row's details beside it
- * (ARCHITECTURE.md "List and details"). It keeps that layout from the first frame on: a skeleton of it while
+ * (docs/architecture/lists.md "List and details"). It keeps that layout from the first frame on: a skeleton of it while
  * loading; with no rows, the column titles over `noMatches` while filters hide them (nothing to select beside them),
  * else the empty state beside them, or under them while the details are hidden.
  * Only an error reading the rows takes the whole body.

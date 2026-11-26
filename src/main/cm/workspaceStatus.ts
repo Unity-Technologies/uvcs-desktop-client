@@ -136,7 +136,7 @@ export function selectorName(configName: string, repositoryName: string): string
 
 /**
  * `cm status --header --machinereadable` of the workspace at `workspacePath`, a local read with `--compact`
- * (ARCHITECTURE.md "`cm status` asks the server for its header"). Unlike `--xml`, it names a Unity organization's
+ * (docs/architecture/cm-output.md "`cm status` asks the server for its header"). Unlike `--xml`, it names a Unity organization's
  * server as people do (`AcmeStudio@unity`), but not what the workspace has loaded.
  */
 export function machineReadableHeaderArgs(workspacePath: string): string[] {

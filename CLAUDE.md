@@ -26,8 +26,7 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 - **Fast, reliable, beautiful** — UI *and* code, verified on screen, not in the diff (see "Seeing the app"). Two
   themes, one calm layout.
 - **`cm` economy: protect the server.** `cm` is not `git`: almost every command is a network round trip to a server
-  many people share (a large production repository holds ~280k changesets, ~20k branches). See "Every `cm` command
-  earns its place".
+  many people share. See "Every `cm` command earns its place".
 - **Written for people.** Every text a person reads (pull request titles and bodies, release notes, commit messages,
   error messages, toasts, labels, docs) says exactly what it does for that reader, in plain English, in the fewest
   words: the effect first, one idea, no comparisons they didn't ask for. Write it with the `writing-for-people` skill
@@ -36,18 +35,23 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 
 ## Read before changing code
 
-1. `docs/ARCHITECTURE.md` — always. Layers, how a request flows, the server budget, `cm` parsing rules, xlinks,
-   secrets, windows, and the renderer's shared conventions (data, refresh, menus, keyboard, filters, lists, styling).
-2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`).
+1. `docs/ARCHITECTURE.md` — always. The rules every change respects, in short (layers, how a request flows, places,
+   the server budget, reading `cm` output, safety, settings, the renderer's tiers), and where each one's details are.
+2. The `docs/architecture/` doc of the layer you change: `running-cm.md` and `cm-output.md` for a `cm` call,
+   `renderer.md` for the UI (`lists.md` for a list, a filter or a details panel), `main-process.md` for windows,
+   errors, operations and start-up. Then the feature doc of the area you touch (`docs/features/*.md`). Both are listed
+   at the top of ARCHITECTURE.md.
 3. The code next to what you change, and its tests: they show the idiom to follow.
 4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`). The app highlights with
    Shiki and doesn't use Pierre's own highlighter, @pierre/highlights (why: `docs/features/diff.md`); its
-   `pierre-highlights` skill is installed because the diffs skill links to it. We pin @pierre/diffs 1.6.2, so check what
-   they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
-   (`pierreSkillVersion.test.ts` names the command) and re-applying the `localChanges` each `pierre-version.json` lists.
+   `pierre-highlights` skill is installed because the diffs skill links to it. The app pins one version of
+   @pierre/diffs (package.json), so check what they say against `node_modules`; updating @pierre/diffs means
+   reinstalling both skills from its tag (`pierreSkillVersion.test.ts` names the command) and re-applying the
+   `localChanges` each `pierre-version.json` lists.
 
-This file holds the rules and where to find things; ARCHITECTURE.md holds the details and the numbers. When they
-seem to disagree, the code and its tests decide, and the doc gets fixed.
+This file holds the rules and where to find things; ARCHITECTURE.md holds the architecture's rules in short, and
+`docs/architecture/` their details and numbers. When they seem to disagree, the code and its tests decide, and the
+doc gets fixed.
 
 ## Architecture in one screen
 
@@ -69,8 +73,7 @@ src/renderer/  React UI. Talks to main only through `api.<area>.<method>` (`rend
 
 ## Every `cm` command earns its place
 
-Before adding or changing a `cm` call, answer these (the why and the numbers: ARCHITECTURE.md "Server budget" and
-"How a request flows"):
+Before adding or changing a `cm` call, answer these (the why and the numbers: docs/architecture/running-cm.md):
 
 1. **Is it needed at all?** Can a result already read answer it (a list's `--format` fields, `BranchNamesCache`, the
    workspace info that follows `.plastic`, `cm status` already on screen)? Only local reads are free (the list is
@@ -119,8 +122,9 @@ npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts and scripts/build/**/*.test.ts
-npm run e2e          # the smoke test, every view of the real app against a fake cm, and the first run's setup screen, over a development build then a production one (~60 s)
-npm run e2e:development   # the smoke test over the development build only (~30 s): the one to run while working
+npm run e2e          # the smoke test, every view of the real app against a fake cm, and the first run's setup screen, over a development
+                     # build then a production one
+npm run e2e:development   # the smoke test over the development build only: the one to run while working
 npm run dist         # the installer for this OS, into dist/
 npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
@@ -162,34 +166,10 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
 - Parallel agents: a distinct `UVCS_CDP_PORT` and `-s=<session>` each.
 - One-shot screenshots: `node scripts/screenshot.mjs /tmp/shot.png open:<workspace> key:Meta+3` (steps in its header;
   it prints renderer errors as `[renderer]` and `[pageerror]`).
-- Sandboxes on a local server: `scripts/sandboxes/demo.sh` (a small game project), `branch-explorer.sh` (a branch
-  topology), `long-branch-names.sh` (very long, nested and non-ASCII branch names; a task that conflicts), `moves.sh`
-  (every kind of move, some changed too, checked in and pending; a file and a folder the detection can't pair: Search
-  matches), `move-matches.sh` (hundreds of new files at known similarities to deleted ones, both ways, and a pairing
-  the detection gets wrong: Search matches' slider), `moved-code.sh` (code moved inside a file, as it was and edited,
-  checked in and pending), `permissions.sh` (permissions at every level, a secured path and a group of branches; never
-  the server's own), `models.sh` (a Unity project with one changeset per 3D model diff case: units, rotation, pivot,
-  hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `textures.sh`
-  (TGA, TIFF, PSD, EXR and HDR textures changed, resized, added, deleted, unreadable and in conflict: the image
-  diff; takes names), `incoming.sh`
-  (a workspace three changesets behind, with a local change that conflicts: Incoming), `partial-operations.sh`
-  (a partial workspace behind, with a change pending, a branch to switch to and a label it must refuse: `cm partial`),
-  `merge-conflicts.sh` (a branch whose merge has file and directory conflicts and changes
-  in several folders: the merge page), `deletes.sh`
-  (changesets deleting a file, a folder, an accented name, and a path a new file took: restoring deleted items),
-  `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
-  Editor installed), `purged.sh` (changesets whose earlier, later or both versions a purge removed: needs the purge
-  permission on the local server), `xlinks.sh` (a writable xlink with branch expansion rules and a read-only one
-  showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks),
-  `code-reviews.sh` (a review holding every kind of comment: change requests pending, applied and discarded, questions
-  answered and not, comments on a deleted file, under one changeset and on an older revision; a description, a rename
-  and a status change; comments on a car GLB and an OBJ, on points and whole parts, one on a part gone, one on a door
-  a take swings, one on a skinned antenna's tip a take bends; reviews of a changeset and a shelve), `merge-requests.sh`
-  (a task branch per merge request case: none, draft, open with and without reviewers, in rework, reviewed and clean,
-  reworked then reviewed with check-ins after, reviewed and conflicting, closed, merged, two of one branch, a nested
-  branch into its parent, a destination changed; plain reviews of a branch, a changeset and a shelve),
-  `workspace-kinds.sh` (a standard, a partial and, on Windows, a dynamic workspace of one repository: the chips that
-  tell them apart).
+- Sandboxes on a local server: `scripts/sandboxes/*.sh`, one per case a feature has to show (a branch topology, every
+  kind of move, merge conflicts, code reviews, 3D models, textures, xlinks…); each script's first lines say what it
+  builds and how to run it, and the feature doc of its area names it. `demo.sh` builds a small game project for any
+  screenshot.
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
@@ -210,8 +190,9 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
   synthetic"). Most services have no contract test yet: add one for the service you change.
 - **Interactions**: flows across modules, including their failure paths: a switch with changes (shelve, undo,
   switch, bring; a failure puts the changes back), a menu builder serving every place, a shortcut reaching its command.
-- **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
-  static test ("Rules the tests enforce" below). A bug fix starts with a test that fails without it.
+- **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository may become a
+  static test, when it clears the bar in "Rules the tests enforce" below. A bug fix starts with a test that fails
+  without it.
 - **Every case the feature names**: each case a feature's doc (`docs/features/`) names, or its sandbox script builds,
   has a test (code moved unchanged, a texture unreadable, a conflict on a directory). A case the sandbox shows and no
   test covers is the bug that ships.
@@ -228,8 +209,8 @@ selection. The component maps that result to JSX and wires events; only presenta
 a class from a prop). The idiom: `diffBodyOf` (`features/diff/viewer/diffBody.ts`) names what the diff viewer shows,
 and the viewer only switches on it. What's on screen is verified with Playwright.
 
-**Super fast.** The number of tests doesn't matter; the time they take does (today about 6,100 tests in 8 s).
-The suite runs after every change, so it must take seconds, not minutes. A test never needs UVCS infrastructure: no
+**Super fast.** The number of tests doesn't matter; the time they take does. The suite runs after every change, so
+it must take seconds, not minutes. A test never needs UVCS infrastructure: no
 `cm` installation, server, account, network or real workspace.
 
 - **Each test takes milliseconds**, about 100 ms at most locally: CI's runners are much slower and vitest fails a test
@@ -273,54 +254,15 @@ skip or loosen it.
 
 ### Rules the tests enforce
 
-Static tests keep the load-bearing rules; extend them rather than working around them.
+Static tests keep the load-bearing rules of the whole repository: colors only from the tokens, the renderer's tiers,
+no ORed ids, every shortcut in the registry, `cm` never opening a tool, and more. `docs/rules-the-tests-enforce.md`
+lists each one with its rule. When one fails, fix the code, or extend the test with the reason a place is an
+exception; never work around it.
 
-| Test                                                      | Rule                                                              |
-| --------------------------------------------------------- | ----------------------------------------------------------------- |
-| `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
-| `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
-| `scripts/e2e/smoke.mjs` (`duplicateReport`)               | no step sends the same command line twice from the same folder (scripts/e2e/README.md, "Duplicate server commands") |
-| `app/navigation/smokeOpensEveryPage.test.ts`              | the smoke test opens every kind of page (`Page`): each is in `smoke.mjs`'s `PAGES`, and a run fails when no step shows one |
-| `main/cm/noStickyShellOptions.test.ts`                    | no option a `cm shell` keeps for its session (`--username`, `--server`…: `STICKY_SHELL_OPTIONS`) reaches a pooled shell |
-| `main/cm/commandOutputs.test.ts`, `testing/fakeCmClient.test.ts` | no list is read as one string; every command says how it's read (`COMMAND_OUTPUTS`) |
-| `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
-| `renderer/src/rendererTiers.test.ts`                      | `lib/` and `ui/` never import the tiers above them                |
-| `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |
-| `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
-| `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
-| `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
-| `renderer/src/noAiLookalikeIcons.test.ts`                 | no sparkles or wands: "Automatic" never reads as an AI feature    |
-| `renderer/src/hoverKeepsLayout.test.ts`                   | no hover rule changes a box's size: a box that grows on hover can wrap away from the pointer and flicker |
-| `renderer/src/viewWrappersMakeNoStackingContext.test.ts`  | the boxes the views sit in make no stacking context: a view's overlay lies over the window |
-| `renderer/src/viewWrappersFitTheWindow.test.ts`           | no box the views sit in grows past the window, so what holds more than fits scrolls |
-| `renderer/src/codeScrollsSideways.test.ts`                | every place showing code with Pierre has `PaneScrollbars`         |
-| `renderer/src/effectsReturnCleanUps.test.ts`              | no effect returns what a DOM call gives (`scrollIntoView`'s promise), which React takes for its clean-up |
-| `renderer/src/elementsKeptWhileHidden.test.ts`            | an element held in state comes from `useKeptElement`, kept while a view's `Activity` hides it |
-| `renderer/src/noDocumentWideIds.test.ts`                  | no component writes out an element id: views kept mounted would share it (`useId`) |
-| `renderer/src/chipsAreLinks.test.ts`                      | a comment's chips are links, except where a click belongs to what holds them (`CHIPS_NOT_LINKS` says why for each) |
-| `renderer/src/detailsPanelsHide.test.ts`                  | every details panel has the header button that hides it (`DetailsToggleButton`) |
-| `renderer/src/detailsPanelsShowAttributesInSection.test.ts` | every details panel shows attributes in its Attributes section (`AttributesDetailsSection`), never as chips in its header |
-| `renderer/src/splittersRemembered.test.ts`               | every splitter remembers where it was dragged, under a key of its own (`RememberedSplitPane`) |
-| `renderer/src/windowStorageHoldsLayoutOnly.test.ts`      | the window's storage holds only layout (`LAYOUT_STORES`), and only maps keyed by something of the window (`KEYED_MAPS`): places are settings |
-| `renderer/src/listViewsRefresh.test.ts`                   | every list view (`ObjectListView`) has the Refresh button in its header (`ViewRefreshButton`) |
-| `renderer/src/placesCoveredBySignIn.test.ts`              | every window showing a place's views or pages covers them with the sign-in screen (`SignInCover`) |
-| `renderer/src/rowActionsEverywhere.test.ts`               | every list driven from its filter whose results have actions (`isRowMenuKey`) shows the "…" (`RowActionsButton`) and opens it on a right click |
-| `renderer/src/newButtonsShowTheirObject.test.ts`          | every "New …" button shows what it creates with a plus (an icon named `…Plus`, like `TagPlus`), never the bare `Plus` |
-| `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
-| `main/cm/noCmInternalFiles.test.ts`                       | nothing reads `cm`'s own files (`.plastic/`, the config folder); only the first-run import reads the config, never writes it |
-| `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
-| `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
-| `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
-| `scripts/build/releaseNote.test.ts`, the Release note check | every pull request has a release note for users, or says why not (`readReleaseNote`); no picture or video sits after the closing line or in "Fixed issues", where an unreferenced `--attach` lands, and none shows a file never uploaded; one in backticks or a fence is text (`misplacedPicture`) |
-| `scripts/build/noInvisibleCharacters.test.ts`               | no source, script or doc holds an invisible formatting character (bidirectional controls, zero-width joiners): an emoji that needs one writes it as an escape |
-| `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` and `pierre-highlights` skills describe the @pierre/diffs and @pierre/highlights versions installed |
-| `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
-| `shared/links/parseLink.test.ts`                          | every link shape reads back as written; the official client's links keep opening |
-| `app/links/linkNavigation.test.ts`                        | every sidebar view has a link name, and every link name opens a view |
-| `components/menuGrammar.test.ts` (Copy)                   | every object's Copy menu offers its link                          |
-| `main/links/schemeRegistration.test.ts`                   | the installers register `uvcs://` with the command the app registers |
-
-Not enforced yet: no `any` (there are none today). A static test for it is welcome.
+A new static test earns its place the way a `cm` command does. Add one only when it is clearly worth it: a rule many
+changes could break, checked simply, in milliseconds, by a test that stays easy to keep. One that would catch a rare
+case, or cost time on every run, isn't added: a unit test next to the code, or the review, covers it. A new static
+test joins that list.
 
 ## Conventions
 
@@ -333,7 +275,8 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
   live. Platform differences go through small pure helpers that take the platform (`lib/platform.ts`,
   `shared/windowChrome.ts`, `formatShortcut` in `lib/shortcuts.ts`, `Whereabouts` in `main/system/apps`). Watch path
   separators and drive letters, CRLF, NFD names on macOS, Windows' console code page, `.cmd` launchers and
-  32,767-character command lines (ARCHITECTURE.md "Parsing `cm` output"). What can't be run here is tested with each
+  32,767-character command lines (docs/architecture/running-cm.md "How `CmClient` runs a command"; code pages:
+  cm-output.md "Parsing `cm` output"). What can't be run here is tested with each
   OS's own input (its paths, its tools' output), and `UVCS_RENDERER_PLATFORM` previews another OS's UI.
 - **Copy**: plain words, short. Labels name things, tooltips define them, no sentence restates what the screen shows.
   UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags. Error
@@ -422,20 +365,15 @@ them on the server, and reading shell command lines cost more to keep right than
    as an order with its effect (the `writing-for-people` skill's "Pull request titles" holds the rule), and nothing in it names an internal review or approval ("Public text says
    what changed", in Commits). The title, the body and the release note are written with the `writing-for-people`
    skill, then run through the `humanizer` skill.
-   **Every pull request carries its release note**, written with the `release-notes` skill
-   (`.claude/skills/release-notes`): the `## Release note` section, `### New:`, `Improved:` or `Fixed:` and a title,
-   then a short description, or `None:` and why users have nothing to read. It is what users read in What's New and on
-   the releases page, so it is written for them, apart from the title and the rest of the body, which are for
-   reviewers: the app's words, never the code's. The Release note check (`readReleaseNote`) fails a pull request
-   without one.
-   **Pictures**: the `release-notes` skill decides whether the note gets one, which kind (the element, a region, the
-   window, a before and after, a GIF) and how it's framed, from what the user would see, a fix of something drawn
-   wrong included; it is also what reviewers look at. A change visible in the app whose note needs none still shows
-   reviewers one screenshot of the outcome under "Behavior with this pull request" (a sandbox, the light theme), or a
-   short GIF when a still can't show it. Reference each where it goes as `![alt](./shot.png)` and attach it with `gh
-   pr create --attach ./shot.png` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`):
-   an unreferenced attachment lands after the closing line, outside every section, and a reference to a file not
-   attached stays broken; the Release note check (`misplacedPicture`) fails both. Never commit them to the repository.
+   **Every pull request carries its release note**, written with the `release-notes` skill: the `## Release note`
+   section, `### New:`, `Improved:` or `Fixed:` and a title, then a short description, or `None:` and why users have
+   nothing to read. It is written for users, in the app's words, never the code's; the rest of the body is for
+   reviewers. **Pictures**: the skill decides whether the note gets one, which kind and how it's framed; a change
+   visible in the app whose note needs none still shows reviewers one screenshot of the outcome under "Behavior with
+   this pull request" (a sandbox, the light theme), or a short GIF when a still can't show it. Reference each where it
+   goes and attach it with `gh pr create --attach` (`gh` 2.99 or later; the skill says how); never commit them. The
+   Release note check fails a pull request with no note (`readReleaseNote`) or a picture out of place
+   (`misplacedPicture`).
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
@@ -449,7 +387,12 @@ merge it (docs/features/updates.md "CI"). Once the user says it merged, remove i
 
 - `docs/` describes how the app works **now**, never its history. A change that alters behavior, a `cm` quirk or a
   convention updates the relevant doc in the same commit.
-- Rules every change must respect go in `docs/ARCHITECTURE.md`; one area's rules go in its `docs/features/*.md`
-  (create one when a new area has rules the code can't show, and list it at the top of ARCHITECTURE.md). Name the
+- Rules every change must respect go in `docs/ARCHITECTURE.md`, in short; their details and numbers in the
+  `docs/architecture/` doc of their layer. One area's rules go in its `docs/features/*.md` (create one when a new area
+  has rules the code can't show, and list it at the top of ARCHITECTURE.md). Name the
   symbols (`inCmPathForm`) so they can be found. Say each rule in one place and point to it from the others.
 - Record why an obvious alternative was rejected when it was tried, so it isn't proposed again.
+- No figure the next change makes wrong: how many tests there are, how long a run takes, what a folder holds when
+  nothing keeps the list in step. Point to where it's found instead (the folder, each script's header). A list a rule
+  keeps in step stays (ARCHITECTURE.md's tables of docs, the static tests' list), a fact true of one version names that
+  version, and a measurement that explains a decision stays, with how it was measured.

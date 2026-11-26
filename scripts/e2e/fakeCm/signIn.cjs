@@ -30,7 +30,7 @@ function serverOf(args, workspaceServer, otherServers) {
 function isLocal(args) {
   if (args[0] === 'workspace' || args[0] === 'wk') return args[1] === 'list';
   // Unless told not to, `cm status` works out the workspace's header, asking the server for its branch's head
-  // (ARCHITECTURE.md "`cm status` asks the server for its header"): the window's first read of a workspace fails so.
+  // (docs/architecture/cm-output.md "`cm status` asks the server for its header"): the window's first read of a workspace fails so.
   if (args[0] === 'status') return args.some((arg) => arg === '--compact' || arg.startsWith('--cset') || arg.startsWith('--format'));
   return LOCAL_COMMANDS.has(args[0]);
 }
