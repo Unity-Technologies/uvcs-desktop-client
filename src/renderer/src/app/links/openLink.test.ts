@@ -6,10 +6,12 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { WorkspaceHead } from '@shared/domain/workspace';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
+import { queryKeys } from '../../api/queryKeys';
 import { fakeApi } from '../../testing/fakeWindow';
 import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
 import { useHomeSection } from '../home/homeSectionStore';
 import { useNavigation } from '../navigation/navigationStore';
+import { queryClient } from '../queryClient';
 import { useSession } from '../workspace/sessionStore';
 import { pickLinkWorkspace, showLinkFailure } from './linkDialogs';
 import { openLink } from './openLink';
@@ -257,6 +259,19 @@ describe("a link to a server's repositories", () => {
     expect(fakeApi.argsOf('windows.openLinkAtHome')).toEqual([['uvcs://mycroquerorg.unity/projects/Racing']]);
     expect(useHomeSection.getState().section).toEqual({ kind: 'server', server: 'MyCroquerOrg@unity' });
     expect(fakeApi.argsOf('settings.updateServerSettings')).toEqual([['MyCroquerOrg@unity', { homeProject: 'Racing' }]]);
+  });
+
+  it("keeps the project by its GUID when the organization's listing is already read, so a rename keeps it picked", async () => {
+    const racing = '5a1c2d3e-0000-4000-8000-00000000abcd';
+    queryClient.setQueryData(queryKeys.repositories('Racers@unity'), { repositories: [], projects: [{ name: 'Racing', guid: racing }], deletedRepositories: [] });
+    fakeApi.answer('settings.updateServerSettings', async () => ({ ...DEFAULT_SETTINGS, serverSettings: { 'racers@unity': { homeProject: racing } } }));
+    fakeApi.answer('windows.openLinkAtHome', async () => 'openHere');
+    fakeApi.answer('repositories.servers', async () => [{ server: 'Racers@unity', user: 'ana', workingMode: 'SSOWorkingMode' }]);
+
+    await openLink('uvcs://racers.unity/projects/Racing');
+
+    expect(fakeApi.argsOf('settings.updateServerSettings')).toEqual([['Racers@unity', { homeProject: racing }]]);
+    expect(fakeApi.methods()).not.toContain('repositories.list');
   });
 
   it('leaves this window as it is when another window on the home screen took it', async () => {

@@ -3,11 +3,13 @@ import './errors/installUnexpectedErrorHandlers';
 import { release } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
-import { repositoryPlace } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { cmBranchNameReads } from './cm/branchNames';
 import { listRepositories } from './cm/listRepositories';
 import { RepositoryGuids } from './cm/RepositoryGuids';
+import { UnityOrganizationIds } from './cm/UnityOrganizationIds';
+import { OrganizationRenames } from './settings/OrganizationRenames';
 import { CmClient } from './cm/CmClient';
 import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
 import { createCmRuntime } from './cmRuntime/createCmRuntime';
@@ -58,6 +60,8 @@ import { WindowWrites } from './window/WindowWrites';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 import { WorkspaceServers } from './workspace/WorkspaceServers';
+import { readWorkspaceGuid } from './workspace/workspaceIdentity';
+import { tellingRepositoryChanges } from './workspace/repositoryChanges';
 import { readWorkspaceOrigin } from './cm/workspaceStatus';
 
 const userData = app.getPath('userData');
@@ -83,9 +87,6 @@ const cm = new CmClient(() => cmRuntime.cmPath(), join(userData, 'outside-worksp
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it; each one's server
 // remembered as it's read, for the sign-in gate.
 const workspaceServers = new WorkspaceServers((directory) => readWorkspaceOrigin(cm, directory));
-const headers = new WorkspaceHeaders(workspaceServers.remembering(cmHeaderReaders(cm)));
-// One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
-const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
@@ -94,9 +95,17 @@ const branchNames = new BranchNamesCache(
   // A repository's names are kept while a window explores it (`windows.explores`); its last window lets them go.
   (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
 );
+// A workspace read on another repository than before lets its branch names go: ids are per repository.
+const headers = new WorkspaceHeaders(
+  tellingRepositoryChanges(workspaceServers.remembering(cmHeaderReaders(cm)), (workspacePath) => branchNames.forget(workspacePlace(workspacePath))),
+);
+// One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
+const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 // Every listing of a server's repositories, which teaches the GUIDs their settings are kept by (`RepositoryGuids`).
 const repositoryGuids = new RepositoryGuids((server) => listRepositories(cm, server));
+// What a Unity organization keeps follows it to its new name when its owners rename it (`OrganizationRenames`).
+const organizationRenames = new OrganizationRenames(settings, new UnityOrganizationIds(cm));
 const workspaceCopies = new WorkspaceCopies({ cm });
 watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
 const revisionCat = new RevisionCat({ cm });
@@ -169,7 +178,7 @@ const issueTrackers = createIssueTrackers({
 const api = createServices({
   cm,
   operations,
-  reviews: new ReviewStore(join(userData, 'review-snapshots')),
+  reviews: new ReviewStore(join(userData, 'review-snapshots'), (workspacePath) => readWorkspaceGuid(headers, workspacePath)),
   diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
   settings,
   watchers,
@@ -185,6 +194,7 @@ const api = createServices({
   repositoryPaths,
   branchNames,
   repositoryGuids,
+  organizationRenames,
   issueTrackers,
   diagnosticLog: appLog,
   signIns,

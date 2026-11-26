@@ -77,6 +77,8 @@ export function commandsByStep(lines: readonly CommandLogLine[]): LoggedStep[] {
 export function needsServer(args: readonly string[]): boolean {
   const [command = '', subcommand] = args;
   if (command === 'workspace' || command === 'wk') return subcommand !== 'list';
+  // Only an organization's config is read from this machine alone (`organizationIdArgs`).
+  if (command === 'getconfig') return subcommand !== 'organization';
   if (command === 'status') return !args.some((arg) => arg === '--compact' || arg.startsWith('--cset') || arg.startsWith('--format'));
   return !LOCAL_COMMANDS.has(command);
 }

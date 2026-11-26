@@ -234,6 +234,25 @@ by name, and never passes it to `cm`.
   repository: it is offered as one another app left (adopted as foreign), its changelists are lost, and the folder
   where added files waited is no longer used to put them back. Review marks kept under the id's repository no longer
   show.
+- **Its name can change**: an organization's owners can change its name (`acme` in `acme@unity`) in the Unity
+  Dashboard. The old name stops working at once, with no redirect, and no other organization can ever take it; the
+  organization's id stays. Workspaces keep working, as they name the organization by its id. So the app keeps what an
+  organization keeps by its name and records its id with it (ARCHITECTURE.md "Settings survive renames"):
+  `cm getconfig organization <org> --format={unityid}` (`organizationIdArgs`) prints the id (`1375943370549`; `-1` for
+  an organization that isn't a Unity one) from what `cm` keeps on this machine, never asking a server, and fails for
+  an organization `cm` hasn't signed in to here. `cm` learns a new name's id when it first signs in to it, and forgets
+  the old name then. Its `--format` takes no `{tab}`: the command fails on it. It answers one organization a call, so
+  `UnityOrganizationIds` asks it once per organization for the session: each session reads again the ids of the
+  organizations that recorded one, and of those that keep something with none recorded (`organizationsToIdentify`);
+  only when a recorded name no longer answers its id does it read the other organizations listed, to find it under
+  its new name (`organizationsToSearch`). The profiles changing (a sign-in, a profile removed) makes it read them
+  again (`OrganizationRenames.listed`, `UnityOrganizationIds.forget`), so a rename `cm` learns during a session is
+  followed at once. A recorded organization whose name stops answering for another reason (the user left it) makes
+  each session read the listed organizations with no id recorded, all local reads, until it keeps nothing: the
+  sidebar lists only the profiles' organizations, so its favorite no longer shows there, and only its page, opened
+  from a link to it, still offers the star that removes it. Never read `cm`'s own file mapping names to ids
+  ("`cm` owns its files").
+  `{unityid}` is the same number as the id form `<id>@cloud`; the app never builds that form from it.
 - **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
   `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
   sidebar lists one Unity account's at a time, by its switcher (docs/features/accounts.md "Home"), and groups them
@@ -252,7 +271,9 @@ by name, and never passes it to `cm`.
   (`svgPathOf`), so its license ships in the third-party notices with the rest. A repository there is named after its
   project, the part before the first `/` (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`,
   `nameWithProject`), which New repository builds from the project picked and Rename keeps (`repositoryRename`).
-  The Repositories view filters by project (`ProjectFilter`, remembered per organization: `ServerSettings.homeProject`, `updateServerSettings`) and
+  The Repositories view filters by project (`ProjectFilter`, remembered per organization by the project's GUID, so a renamed project stays picked:
+  `ServerSettings.homeProject`, `useHomeProject`; a name kept before moves to the GUID once a listing holds it,
+  `movedHomeProject`) and
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
   names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
   app doesn't call: it shows the organization's name as `cm` takes it.

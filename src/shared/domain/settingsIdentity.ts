@@ -12,10 +12,20 @@ import type { AppSettings } from './settings';
 export type SettingIdentity =
   /** It names no workspace, repository, branch, project, organization or user: a choice of the app. */
   | 'namesNoObject'
+  /** The stable id itself of the object whose settings hold it, recorded to recognize it after a rename: it names no other object. */
+  | 'theIdItself'
   | 'workspaceGuid'
   | 'repositoryGuid'
   | 'branchGuid'
   | 'projectGuid'
+  /** A place a window shows: a workspace by its GUID, a repository explored without one by its repository's GUID. */
+  | 'placeGuid'
+  /**
+   * A Unity organization, by its name (`acme@unity`), as `cm` and every list name it: its owners can rename it, and no
+   * other organization ever takes a name one had, so what it keeps follows it to its new name by its id
+   * (`OrganizationRenames`). Which one names a server of its own too says how that one is kept.
+   */
+  | { organizationFollowedById: string }
   /** An object kept by its number in the repository whose settings hold it: numbers are per repository, as these are. */
   | { byIdIn: 'repository'; because: string }
   /** A file or folder, found by its path: why no GUID does. */
@@ -37,16 +47,16 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   defaultWorkspaceRoot: 'namesNoObject',
   pendingChangesOnSwitch: 'namesNoObject',
   restoreLeftChangesAutomatically: 'namesNoObject',
-  switchShelves: { byName: 'Not yet: by workspace GUID, but matched to the workspace’s repository and branch by name.' },
-  reviewModeWorkspaces: { byPath: 'Not yet: a workspace by its path, a repository by its spec.' },
+  switchShelves: 'workspaceGuid',
+  reviewModeWorkspaces: 'placeGuid',
   reviewModeHintDone: 'namesNoObject',
   showGravatar: 'namesNoObject',
   gravatarChoiceAsked: 'namesNoObject',
   notifyOnIncoming: 'namesNoObject',
   homeAccount: { byName: 'A Unity account is the user cm signs in with, a server account its server: cm has no other id for either.' },
-  favoriteOrganizations: { byName: 'Not yet: by the organization’s name.' },
+  favoriteOrganizations: { organizationFollowedById: 'A cloud organization (`acme@cloud`), which cm gives no id, by its name alone.' },
   repositorySettings: 'repositoryGuid',
-  serverSettings: { byName: 'Not yet: by the organization’s name; a server of its own is its address, which has no other id.' },
+  serverSettings: { organizationFollowedById: 'A cloud organization by its name alone, as cm gives it no id; a server of its own by its address, which has no other id.' },
   changesetColors: { byName: 'cm prints no id for a user, only the owner of what they made.' },
   mergeTool: 'namesNoObject',
   mergeToolRules: 'namesNoObject',
@@ -76,5 +86,6 @@ export const REPOSITORY_SETTINGS_IDENTITY: { readonly [Setting in keyof Required
 };
 
 export const SERVER_SETTINGS_IDENTITY: { readonly [Setting in keyof Required<ServerSettings>]: SettingIdentity } = {
-  homeProject: { byName: 'Not yet: the project by its name.' },
+  homeProject: 'projectGuid',
+  organizationId: 'theIdItself',
 };

@@ -1,13 +1,12 @@
 import { FolderLock, FolderOpen, House, ListChecks, Monitor, Moon, PanelRight, ServerCog, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
 import { useMemo } from 'react';
-import { placeId } from '@shared/domain/place';
 import type { ThemePreference } from '@shared/domain/settings';
 import { toggleDetailsInFront } from '../../components/detailsInFront';
 import { TimelineIcon } from '../../components/TimelineIcon';
 import { useBranchExplorerPreferences } from '../../features/branchExplorer/branchExplorerStore';
 import { timelineToggle } from '../../features/branchExplorer/timeline/timelineToggle';
 import { openOwnRepositoryPermissions } from '../../features/permissions/openPermissions';
-import { setReviewMode } from '../../features/review/reviewModeSetting';
+import { setReviewMode, useReviewModeOn } from '../../features/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useCommands, type Command } from '../commands/commandStore';
@@ -37,8 +36,8 @@ export function usePlaceCommands(): void {
   const place = usePlace();
   const goHome = useSession((state) => state.goHome);
   const openWorkspace = useOpenWorkspace();
-  const { theme, reviewModeWorkspaces } = useSettings();
-  const reviewing = reviewModeWorkspaces.includes(placeId(place));
+  const { theme } = useSettings();
+  const reviewing = useReviewModeOn(place);
   const updateSettings = useUpdateSettings();
   const commandLogOpen = useCommandLogStore((state) => state.open);
   const timelineShown = useBranchExplorerPreferences((state) => state.showTimeline);

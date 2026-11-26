@@ -23,6 +23,22 @@ export type BranchGuid = Guid<'branch'>;
 /** A Unity project's GUID: a project is a repository of its own type, listed with its `{repguid}`. */
 export type ProjectGuid = Guid<'project'>;
 
+/** A shelve's `{guid}` (`cm find shelve`): its number is per repository, and its repository's name changes with a rename. */
+export type ShelveGuid = Guid<'shelve'>;
+
+/**
+ * A Unity organization's id, the digits `cm getconfig organization` prints as `{unityid}` (`1375943370549`): an
+ * organization's name (`acme` in `acme@unity`) can be changed by its owners, its id never. It is what recognizes an
+ * organization under its new name, and is never shown nor passed to `cm` (ARCHITECTURE.md "Unity organizations").
+ */
+export type OrganizationId = string & { readonly [stableIdKind]: 'organization' };
+
+/** The id `text` holds, or undefined for none: `-1`, which `cm` prints for an organization that isn't a Unity one, or an empty field. */
+export function parseOrganizationId(text: string): OrganizationId | undefined {
+  const trimmed = text.trim();
+  return /^\d+$/.test(trimmed) ? (trimmed as OrganizationId) : undefined;
+}
+
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function parseRepositoryGuid(text: string): RepositoryGuid | undefined {
@@ -38,6 +54,10 @@ export function parseBranchGuid(text: string): BranchGuid | undefined {
 }
 
 export function parseProjectGuid(text: string): ProjectGuid | undefined {
+  return parseGuid(text);
+}
+
+export function parseShelveGuid(text: string): ShelveGuid | undefined {
   return parseGuid(text);
 }
 

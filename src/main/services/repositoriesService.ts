@@ -8,9 +8,12 @@ import type { ProfilesContext, ServiceContext } from './ServiceContext';
  * The listings go through `RepositoryGuids`, which keeps the repositories' GUIDs that what the app keeps for a
  * repository is kept by, and follows a rename made here at once.
  */
-export function createRepositoriesService({ cm, repositoryGuids, settings, issueTrackers, diffReviews }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
+export function createRepositoriesService({ cm, repositoryGuids, organizationRenames, settings, issueTrackers, diffReviews }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
+  /** The servers; what a Unity organization keeps meanwhile follows it if its owners renamed it (`OrganizationRenames`). */
   async function servers() {
-    return serverProfiles(await profiles.read());
+    const listed = serverProfiles(await profiles.read());
+    void organizationRenames.listed(listed.map((profile) => profile.server)).catch((error: unknown) => console.warn('[settings] Organizations not followed:', error));
+    return listed;
   }
 
   function list(server: string): Promise<RepositoryListing> {

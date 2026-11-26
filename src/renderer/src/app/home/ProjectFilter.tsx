@@ -11,7 +11,7 @@ interface ProjectFilterProps {
   repositoryCount: number;
   /** The project shown, none for all projects. */
   project: UnityProject | null;
-  onChange: (project: string | null) => void;
+  onChange: (project: UnityProject | null) => void;
 }
 
 const repositoriesIn = (count: number): string => holdsCount(count, 'repository', 'repositories');
@@ -41,7 +41,7 @@ export function ProjectFilter({ choices, repositoryCount, project, onChange }: P
       })}
       placeholder="Find a project"
       empty="No matching projects"
-      onPick={(picked) => onChange(picked?.name ?? null)}
+      onPick={onChange}
     />
   );
 }

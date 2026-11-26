@@ -1,8 +1,20 @@
-import { mkdtemp, readdir, rm, utimes, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ReviewStore } from './ReviewStore';
+import { parseWorkspaceGuid, type WorkspaceGuid } from '@shared/domain/stableIds';
+import { WORKSPACE_GUID } from '../cm/testing/cmOutput';
+import { DISK_FOLDERS, ReviewStore } from './ReviewStore';
+
+const GUID = parseWorkspaceGuid(WORKSPACE_GUID) as WorkspaceGuid;
+
+/** The workspace's GUID as `cm getworkspacefrompath` prints it, wherever its folder is. */
+const knownGuid = async (): Promise<WorkspaceGuid | undefined> => GUID;
+
+/** What Windows answers while a file in the folder is open. */
+const refused = (operation: string) => async (): Promise<void> => {
+  throw Object.assign(new Error(`EPERM: operation not permitted, ${operation}`), { code: 'EPERM' });
+};
 
 describe('ReviewStore', () => {
   let workspace: string;
@@ -12,7 +24,7 @@ describe('ReviewStore', () => {
   beforeEach(async () => {
     workspace = await mkdtemp(join(tmpdir(), 'review-wk-'));
     root = await mkdtemp(join(tmpdir(), 'review-root-'));
-    store = new ReviewStore(root);
+    store = new ReviewStore(root, knownGuid);
   });
 
   afterEach(async () => {
@@ -76,6 +88,76 @@ describe('ReviewStore', () => {
   it('remembers marks across restarts', async () => {
     await write('a.ts', 'one');
     await store.mark(workspace, ['a.ts']);
-    expect(await new ReviewStore(root).marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await new ReviewStore(root, knownGuid).marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+  });
+
+  it('keeps the marks of a workspace moved or renamed: they are kept by its GUID, not its folder', async () => {
+    await write('a.ts', 'one');
+    await store.mark(workspace, ['a.ts']);
+    const moved = `${workspace}-moved`;
+    await rename(workspace, moved);
+    workspace = moved;
+
+    expect(await new ReviewStore(root, knownGuid).marks(moved)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toEqual([GUID]);
+  });
+
+  it("moves the marks kept by the workspace's path to its GUID the first time they're read", async () => {
+    await write('a.ts', 'one');
+    // A `cm` that prints no GUID keeps them by the path, as every version did before.
+    await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
+    const [byPath] = await readdir(root);
+    expect(byPath).not.toBe(GUID);
+
+    const byGuid = new ReviewStore(root, knownGuid);
+    expect(await byGuid.marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toEqual([GUID]);
+    await write('a.ts', 'two');
+    expect((await byGuid.readSnapshot(workspace, 'a.ts')).text).toBe('one');
+  });
+
+  it("drops the folder kept by the path once the GUID's has the marks", async () => {
+    await write('a.ts', 'one');
+    await store.mark(workspace, ['a.ts']);
+    // A `cm` that printed no GUID meanwhile left a folder by the path.
+    await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
+    expect(await readdir(root)).toHaveLength(2);
+
+    expect(await new ReviewStore(root, knownGuid).marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toEqual([GUID]);
+  });
+
+  it("reads the GUID's marks when the leftover folder kept by the path can't be removed, and leaves it for later", async () => {
+    await write('a.ts', 'one');
+    await store.mark(workspace, ['a.ts']);
+    await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
+    const stuck = new ReviewStore(root, knownGuid, { ...DISK_FOLDERS, remove: refused('rmdir') });
+
+    expect(await stuck.marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toHaveLength(2);
+  });
+
+  it("keeps showing the marks kept by the path when their folder can't be moved (a file open in it, on Windows)", async () => {
+    await write('a.ts', 'one');
+    await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
+    const [byPath] = await readdir(root);
+    const unmovable = new ReviewStore(root, knownGuid, { ...DISK_FOLDERS, move: refused('rename') });
+
+    expect(await unmovable.marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toEqual([byPath]);
+  });
+
+  it("reads the GUID again after a read that failed, keeping no empty marks meanwhile", async () => {
+    await write('a.ts', 'one');
+    await store.mark(workspace, ['a.ts']);
+    let fails = true;
+    const flaky = new ReviewStore(root, async () => {
+      if (fails) throw new Error('cm failed');
+      return GUID;
+    });
+
+    await expect(flaky.marks(workspace)).rejects.toThrow('cm failed');
+    fails = false;
+    expect(await flaky.marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
   });
 });

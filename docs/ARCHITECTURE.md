@@ -163,7 +163,10 @@ xlinks: features/xlinks.md.
 A Unity Cloud organization's server has a name (`AcmeStudio@unity`) and an id form (`2398571046213@cloud`). The app
 never shows the id form, never compares it with a name and never passes it to `cm` (`fakeCmClient` fails a test that
 does: `namesOrganizationById`); it takes the name from an output `cm` already names it in, never by mapping ids
-itself. Where each name comes from, the two kinds of organizations, projects and deleted repositories:
+itself. An organization's own name can change; its id never does, and is the one thing settings record of it, never
+shown nor passed to `cm` ("Settings survive renames"). That id (`{unityid}`) is the same number as the id form, which
+the app never builds from it. Where each name comes from, the two kinds of organizations,
+projects and deleted repositories:
 architecture/cm-output.md "Unity organizations".
 
 ## No external tool opens by itself
@@ -303,13 +306,15 @@ the app's settings.
     Branch Explorer's rules and moved branches, whether its rules and changeset colors apply, the sync remote; its
     recent comments (`recentCommentsByRepository`), likewise;
   - a server (`serverSettings`, `ServerSettings` by `serverKey`): the home screen's project;
-  - a workspace: its recent branches (`recentBranchesByWorkspace`) and review mode (`reviewModeWorkspaces`).
+  - a workspace, by its GUID: its recent branches (`recentBranchesByWorkspace`), the changes it left on a switch
+    (`switchShelves`) and review mode (`reviewModeWorkspaces`, which keeps a repository explored without a workspace
+    by the repository's GUID).
   A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
   main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
-  `setFavoriteOrganization`), never written whole from a window's copy. A value of the whole app (a Settings choice, the
-  changeset colors) is written whole (`saveSettings`): every window follows `settingsChanged`, so its copy is current
-  but for a save still on its way. `scopedSettings.ts` keeps only what differs from
-  having nothing, so the file holds only what the user set.
+  `setFavoriteOrganization`, `review.setReviewMode`), never written whole from a window's copy. A value of the whole
+  app (a Settings choice, the changeset colors) is written whole (`saveSettings`): every window follows
+  `settingsChanged`, so its copy is current but for a save still on its way. `scopedSettings.ts` keeps only what
+  differs from having nothing, so the file holds only what the user set.
 - **The window's storage** (`localStorage`, zustand's `persist`): only how the views are laid out, what costs a click to
   set again: splitter widths, folds, sorting, view toggles, filters, the diff's layout. Every window keeps its own copy
   of such a store and writes all of it back on any change, so the last window to change it wins: right for a layout,
@@ -363,6 +368,13 @@ be passed where one is kept.
   `keepRepositoryByGuid`), a branch diff's review marks as they are first read or marked (`formerDiffReviewName`).
   What a window's storage hands over later by spec (`addWindowSettings`) goes under the GUID when a listing taught it.
   What was kept for a repository never opened again stays where it was.
+- **A Unity organization** is kept by its name (`acme@unity`), which every list and `cm` use: its owners can change
+  it, and no other organization can ever take a name one had. So what it keeps (its favorite, its `ServerSettings`)
+  records its id (`OrganizationId`, `ServerSettings.organizationId`), and follows it to its new name
+  (`OrganizationRenames`, `organizationsKept.ts`). The id comes from `cm getconfig organization`, a local read, once
+  per organization for the session (`UnityOrganizationIds`): those that recorded one are read again each session, and
+  the others only when a recorded name stops answering its id. An id goes once its organization keeps nothing else.
+  Details: architecture/cm-output.md "Unity organizations".
 
 ## `cm` owns its files
 

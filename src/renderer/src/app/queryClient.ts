@@ -33,7 +33,7 @@ export function createQueryClient(): QueryClient {
  */
 export const SLOW_CHANGING_QUERY = { staleTime: 5 * 60_000, refetchOnWindowFocus: false } as const;
 
-export { IMMUTABLE_QUERY } from './queryMeta';
+export { IMMUTABLE_QUERY, immutableOnceRead } from './queryMeta';
 
 /**
  * Meta of a query keyed by a part of the workspace info (the selector, or where the workspace stands): a refresh
@@ -65,7 +65,10 @@ export async function markWorkspaceHeadsStaleIfMoved(client: QueryClient, before
 }
 
 export function isRefreshable(query: Query): boolean {
-  return query.meta?.immutable !== true;
+  const immutable = query.meta?.immutable;
+  // `immutableOnceRead`: immutable only once its answer says so.
+  if (typeof immutable === 'function') return !(immutable as (data: unknown) => boolean)(query.state.data);
+  return immutable !== true;
 }
 
 /** Immutable results kept once off screen: the objects opened last (a changeset's files, a revision's text). */

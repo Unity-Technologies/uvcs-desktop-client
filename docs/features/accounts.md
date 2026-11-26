@@ -57,7 +57,9 @@ there are two or more (`accountSwitchCommands`), on the home screen only.
   its right-click menu (`organizationMenu`, which also copies its name and link) and the star in its page's header (`FavoriteOrganizationButton`) add it or take it out.
   The sidebar lists the favorites first, under Favorites, and only there (`serverGroups`); every group stays by name, as
   a list that orders itself by use moves under the user's hand. The main process changes the list
-  (`withFavoriteOrganization`), so two windows don't overwrite each other's; it changes nothing in `cm`.
+  (`withFavoriteOrganization`), so two windows don't overwrite each other's; it changes nothing in `cm`. A favorite
+  stays one when the organization's owners rename it: it records the organization's id and follows it to its new name
+  (`OrganizationRenames`, ARCHITECTURE.md "Settings survive renames").
 - **The filter** (`OrganizationFilter`): from ten organizations, Unity and cloud ones together
   (`showsOrganizationFilter`, `ORGANIZATION_FILTER_MIN`), a search field above them keeps the
   organizations whose name holds every word typed, and marks them, by every list's rule (docs/architecture/lists.md "Filters"); this computer and the servers, few, always show. Most people have one to

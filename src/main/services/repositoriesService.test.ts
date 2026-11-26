@@ -34,6 +34,16 @@ describe('servers', () => {
     ]);
     expect(commands).toMatchObject([{ via: 'query', args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
   });
+
+  it('has what an organization keeps follow it under the names the profiles list now', async () => {
+    const fake = fakeCmClient({ 'profile list': formatOutput(['acmestudio@unity', 'acmestudio@unity', 'ana', 'SSOWorkingMode']) });
+    const followed: string[][] = [];
+    const context = serviceContext(fake.cm, { organizationRenames: { listed: async (servers) => void followed.push([...servers]), follow: async () => undefined } });
+
+    await createRepositoriesService(context, profilesContext(fake.cm)).servers();
+
+    expect(followed).toEqual([['local', 'acmestudio@unity']]);
+  });
 });
 
 describe('repositories', () => {

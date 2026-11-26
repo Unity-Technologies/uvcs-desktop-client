@@ -1,3 +1,4 @@
+import type { ShelveGuid } from './stableIds';
 import type { SelectorKind } from './workspace';
 
 /** What happens to pending changes shelved by a switch: they stay behind in the shelve, or come along. */
@@ -84,14 +85,25 @@ export interface ShelvedChangelist {
   paths: string[];
 }
 
-/** An automatic shelve the app created while switching, kept in the app settings until it is restored or discarded. */
+/**
+ * An automatic shelve the app created while switching, kept in the app settings until it is restored or discarded.
+ * What a rename changes (a branch's spec, the repository's name) is followed by what it never changes: the workspace's
+ * GUID, a branch's object id, the shelve's GUID (`LeftChangesFinder`).
+ */
 export interface SwitchShelveRecord {
   workspaceGuid: string;
   shelveId: number;
+  /** `name@server`, as it was named when last seen. */
   repository: string;
-  /** Where the changes were made: the selector spec (`br:/main/t1`), its display name and its object reference (`br:29`). */
+  /** The shelve's GUID, learned the first time the shelve is listed (`cm find shelve`); absent until then. */
+  shelveGuid?: ShelveGuid;
+  /**
+   * Where the changes were made: the selector spec (`br:/main/t1`) and display name as last seen, and its object
+   * reference (`br:29`), which a rename keeps.
+   */
   source: { spec: string; name: string; objectRef: string };
-  target: { spec: string; name: string };
+  /** Where they went; its object reference once the workspace was seen on it, its id known (a branch's renamed later is followed). */
+  target: { spec: string; name: string; objectRef?: string };
   mode: PendingChangesAction;
   /** Set when the changes were put aside to update or to load an xlink, or shelved away by the user (see `ShelvedChangesReason`); absent: a switch. */
   reason?: ShelvedChangesReason;

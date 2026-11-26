@@ -122,8 +122,9 @@ the workspace only gives the page a window and a repository to read.
 4. **A server link** opens on a home screen, never taking a window away from the workspace or repository it shows
    (`windows.openLinkAtHome`): this window's when it shows the home screen, else another window's, else a new one's.
    It shows the server's repositories (as the user's profiles name the server, `serverLinkPlace`), the project the
-   link names picked, or all of them for none (`ServerSettings.homeProject`, `useHomeSection`). It reads nothing beyond the
-   list the home screen reads anyway. A project the organization doesn't have shows all of them.
+   link names picked, or all of them for none (`ServerSettings.homeProject`, `useHomeSection`): kept by its GUID when the
+   organization's list is already read, else by the name the link gives until the list is read (`homeProjectOfLink`).
+   It reads nothing beyond the list the home screen reads anyway. A project the organization doesn't have shows all of them.
 5. **The workspace** (`linkDestination`, from the workspaces and their repositories the home screen reads, all local:
    `cm workspace list`, `cm wi`; `cm status` only for one `cm wi` names by an organization's id, and only when its
    repository's own name is the link's):

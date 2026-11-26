@@ -1133,14 +1133,27 @@ reply): a place lists rows that come later after the others (`annotationRowsOf`)
 ## Review marks
 
 `main/review/ReviewStore` keeps, per workspace, the fingerprint of each file marked reviewed (and a copy of its text,
-read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/`; marks of paths that leave the pending changes are dropped.
-Committed diffs (changeset, branch, shelve, range, code review) keep marks too, in `main/review/DiffReviewStore`: per repository,
-by its GUID (`<guid>.json`), by the diff's name (`cs:42`, `br:<branch GUID>`, `sh:3`: `diffReviewName`) and the revision reviewed,
-so a branch's file is changed since its review once another revision shows, and a rename of the repository or the branch
-made anywhere keeps them; the least recently reviewed diffs are forgotten. A branch's GUID is read only in review mode, where
-the marks show (`branchQuery`, one light `cm find` shared with every view of the branch); marks kept by its name before
-(`br:/main/task`) move under it as they're first read or marked (`formerDiffReviewName`). `features/review` holds the shared list pieces.
-Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
+read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/<workspace GUID>/`, so a workspace
+renamed or moved keeps them; a folder kept by the hash of the workspace's path, as before, moves there the first time
+its marks are read, or goes when the GUID's folder exists already (at a later start, when it can't be removed yet).
+One that can't be moved (Windows refuses while a file in it is open) is used for the session and moved at the next. Marks of paths that leave the pending changes are
+dropped. Committed diffs (changeset, branch, shelve, range, code review) keep marks too, in
+`main/review/DiffReviewStore`: per repository, by its GUID (`<guid>.json`), by the diff's name (`cs:42`,
+`br:<branch GUID>`, `sh:3`: `diffReviewName`) and the revision reviewed, so a branch's file is changed since its review
+once another revision shows, and a rename of the repository or the branch made anywhere keeps them; the least recently
+reviewed diffs are forgotten. A branch's GUID is read only in review mode, where the marks show (`branchQuery`, one
+light `cm find` shared with every view of the branch); marks kept by its name before (`br:/main/task`) move under it as
+they're first read or marked (`formerDiffReviewName`). `features/review` holds the shared list pieces.
+
+Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the
+marks. It is kept by the workspace's GUID, or the repository's for a repository explored without one
+(`api.review.reviewModeKey`, `reviewModeKeyOf`), so a rename or a move keeps it; what was kept by the path or the spec
+moves to the GUID the first time it is asked. A GUID is kept by the window for good; the path or spec, answered while
+no GUID could be told, is asked again by the next refresh (`isLastingReviewModeKey`, `immutableOnceRead`). A window
+asks for its place's key only while review mode is on somewhere (`needsReviewModeKey`): otherwise it's off without
+one, and a repository's window lists no server just to show the toggle. Turning it on or off is the main process's
+write from the stored list (`api.review.setReviewMode`), which moves and toggles in one change, so no window's copy
+writes over another's; it answers the key it used, which the window then keeps.
 Its toggle (`ReviewModeButton`) ends the filter bar of the lists that review (Changes and every diff), and the review bar
 (`ReviewBar`: progress, the "Unreviewed" filter, mark all, clear) opens right beneath it, between the filter bar and the
 list (and its header, in Changes): the toggle never moves as the bar comes and goes, and it is the one way out of review mode. The view's header was

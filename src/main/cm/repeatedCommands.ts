@@ -14,6 +14,8 @@ const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', '
 export function isServerCommand(args: readonly string[]): boolean {
   const [command = '', subcommand] = args;
   if (command === 'workspace' || command === 'wk') return subcommand !== 'list';
+  // Only an organization's config is read from this machine alone (`organizationIdArgs`).
+  if (command === 'getconfig') return subcommand !== 'organization';
   return !LOCAL_COMMANDS.has(command);
 }
 
