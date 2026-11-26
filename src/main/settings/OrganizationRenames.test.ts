@@ -88,4 +88,34 @@ describe('OrganizationRenames', () => {
 
     expect(current.serverSettings).toEqual({ 'arcade@unity': { homeProject: 'Kart' }, 'acme@unity': { organizationId: ACME } });
   });
+
+  it("waits while cm answers neither name, then follows the rename once it answers the new one", async () => {
+    const kept = { favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: ACME } } };
+    const listed = ['acme@unity', 'acmestudio@unity'];
+
+    const unknown = renamesOver(kept, {});
+    await unknown.renames.listed(listed);
+    expect(unknown.writes()).toBe(0);
+    expect(unknown.settings().serverSettings).toEqual(kept.serverSettings);
+    expect(unknown.settings().favoriteOrganizations).toEqual(kept.favoriteOrganizations);
+
+    const known = renamesOver(unknown.settings(), { 'acmestudio@unity': `${ACME}\n` });
+    await known.renames.listed(listed);
+    expect(known.settings().favoriteOrganizations).toEqual(['acmestudio@unity']);
+    expect(known.settings().serverSettings).toEqual({ 'acmestudio@unity': { homeProject: 'Racing', organizationId: ACME } });
+  });
+
+  it('records no id for a favorite removed while the ids were read', async () => {
+    let answer: (id: OrganizationId) => void = () => undefined;
+    let current: AppSettings = { ...DEFAULT_SETTINGS, favoriteOrganizations: ['acme@unity'] };
+    const store = { get: () => current, update: (changes: Partial<AppSettings>) => (current = { ...current, ...changes }) };
+    const renames = new OrganizationRenames(store, { idOf: () => new Promise<OrganizationId>((resolve) => (answer = resolve)), forget: () => undefined });
+
+    const following = renames.follow(['acme@unity']);
+    store.update({ favoriteOrganizations: [] });
+    answer(ACME);
+    await following;
+
+    expect(current.serverSettings).toEqual({});
+  });
 });
