@@ -156,13 +156,15 @@ describe('changes left before a rename', () => {
     expect(records.find({ shelveId: 2, repository: 'game@local' })).toMatchObject({ shelveGuid: SHELVE_2_GUID });
   });
 
-  it('stored before shelve GUIDs are offered again after a rename of the repository, by their shelve\'s number and comment', async () => {
-    const records = recordsOf([leftRecord(2, 'br:/main/task1', { repository: 'old@local' })]);
+  it("stored before shelve GUIDs never take another repository's shelve of the same number and comment: it's offered as another app's", async () => {
+    // A record of other@local; the workspace switched to eco@local, whose own automatic shelve 2 was left on its branch 37 too.
+    const kept = leftRecord(2, 'br:/main/task1', { repository: 'other@local' });
+    const records = recordsOf([kept]);
 
     expect(await new LeftChangesFinder(fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 })).cm, records).find('/work')).toEqual([
-      expect.objectContaining({ shelveId: 2, foreign: false }),
+      expect.objectContaining({ shelveId: 2, foreign: true }),
     ]);
-    expect(records.find({ shelveId: 2, repository: 'eco@local' })).toMatchObject({ shelveGuid: SHELVE_2_GUID });
+    expect(records.find({ shelveId: 2, repository: 'other@local' })).toEqual(kept);
   });
 
   it("on arrival, are compared by repository name until their shelve's GUID is known: only then could a rename have been followed", async () => {
