@@ -115,6 +115,26 @@ describe('BranchNamesCache', () => {
     expect(reads).toEqual(['/a', '/a']);
   });
 
+  it("keeps nothing of a list read the workspace was forgotten during: another repository's names, after a switch", () => {
+    const { cache } = setup();
+    const readSince = cache.readStarts(workspacePlace('/a'));
+    cache.forget(workspacePlace('/a'));
+
+    cache.remember(workspacePlace('/a'), [{ id: 37, name: '/main/task1' }], { readSince });
+    expect(cache.knownName(workspacePlace('/a'), 37)).toBeUndefined();
+    cache.remember(workspacePlace('/a'), [{ id: 37, name: '/main/task1' }], { readSince: cache.readStarts(workspacePlace('/a')) });
+    expect(cache.knownName(workspacePlace('/a'), 37)).toBe('/main/task1');
+  });
+
+  it('keeps nothing of one name read alone while the workspace was forgotten, still answering the lookup', async () => {
+    const { cache } = setup();
+    const lookup = cache.resolve(workspacePlace('/a'), [2]);
+    cache.forget(workspacePlace('/a'));
+
+    expect(await lookup).toEqual(new Map([[2, '/main/b2']]));
+    expect(cache.knownName(workspacePlace('/a'), 2)).toBeUndefined();
+  });
+
   it('keeps nothing for a workspace no window shows, still answering the lookup that read the names', async () => {
     const { cache, reads } = setup(undefined, () => false);
     cache.remember(workspacePlace('/wk'), [{ id: 7, name: '/main/task' }], { complete: true });
