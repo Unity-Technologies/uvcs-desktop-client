@@ -101,4 +101,42 @@ describe('RepositoryGuids', () => {
     expect(await guids.guidOf('acme@cloud', 'game')).toBe(GAME);
     expect(lines()).toHaveLength(2);
   });
+
+  it('finds a repository by its GUID under the name it goes by now, from the listing that taught it', async () => {
+    const { guids, lines } = guidsOf(listed(['racer', GAME]));
+    await guids.list('acme@cloud');
+
+    expect(await guids.nameOf('acme@cloud', GAME)).toBe('racer');
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('lists the server again for a GUID it doesn’t know once the last listing is old: a repository renamed elsewhere', async () => {
+    const { guids, lines, clock } = guidsOf(listed(['tools', TOOLS]), listed(['tools', TOOLS], ['racer', GAME]));
+    await guids.list('acme@cloud');
+
+    expect(await guids.nameOf('acme@cloud', GAME)).toBeUndefined();
+    clock.now += 61_000;
+    expect(await guids.nameOf('acme@cloud', GAME)).toBe('racer');
+    expect(lines()).toHaveLength(2);
+  });
+
+  it('finds a repository renamed in the app by its new name, without listing again', async () => {
+    const { guids, lines } = guidsOf(listed(['game', GAME]));
+    await guids.list('acme@cloud');
+
+    guids.renamed('acme@cloud', 'game', 'Racer');
+
+    expect(await guids.nameOf('acme@cloud', GAME)).toBe('Racer');
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('answers what a listing already taught without asking cm, and nothing for a server never listed', async () => {
+    const { guids, lines } = guidsOf(listed(['game', GAME]));
+
+    expect(guids.knownGuidOf('acme@cloud', 'game')).toBeUndefined();
+    await guids.list('acme@cloud');
+
+    expect(guids.knownGuidOf('ACME@cloud', 'Game')).toBe(GAME);
+    expect(lines()).toHaveLength(1);
+  });
 });

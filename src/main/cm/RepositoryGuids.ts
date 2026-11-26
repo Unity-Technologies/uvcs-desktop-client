@@ -18,8 +18,11 @@ const FRESH_LISTING_MS = 60_000;
  * Each listing replaces the server's names whole, so a name a renamed repository left behind goes with it.
  */
 export class RepositoryGuids {
-  /** By `serverKey`, then the repository's name in lower case, as `cm` takes names in any case. */
-  private readonly byServer = new Map<string, { guids: Map<string, RepositoryGuid>; listedAt: number }>();
+  /**
+   * By `serverKey`: each repository's GUID by its name in lower case, as `cm` takes names in any case, and its name as
+   * listed by its GUID.
+   */
+  private readonly byServer = new Map<string, { guids: Map<string, RepositoryGuid>; names: Map<RepositoryGuid, string>; listedAt: number }>();
   private readonly listing = new Map<string, Promise<RepositoryListing>>();
 
   constructor(
@@ -56,18 +59,44 @@ export class RepositoryGuids {
     return this.byServer.get(key)?.guids.get(name.toLowerCase());
   }
 
+  /** The GUID a listing already taught for `name` on `server`, without asking `cm`: undefined when none did. */
+  knownGuidOf(server: string, name: string): RepositoryGuid | undefined {
+    return this.byServer.get(serverKey(server))?.guids.get(name.toLowerCase());
+  }
+
+  /**
+   * The name the repository with `guid` goes by on `server` now, as the listing writes it: what a spec kept with its
+   * GUID follows when the repository was renamed (a sync remote, a window reopened at launch). Lists the server when
+   * no listing taught the GUID and the last one isn't fresh; undefined when the server holds no such repository.
+   * Rejects when the listing fails.
+   */
+  async nameOf(server: string, guid: RepositoryGuid): Promise<string | undefined> {
+    const key = serverKey(server);
+    const known = this.byServer.get(key);
+    const name = known?.names.get(guid);
+    if (name !== undefined || (known && this.now() - known.listedAt < FRESH_LISTING_MS)) return name;
+    await this.list(server);
+    return this.byServer.get(key)?.names.get(guid);
+  }
+
   /** A repository renamed here keeps its GUID under its new name at once, without listing its server again. */
   renamed(server: string, from: string, to: string): void {
-    const guids = this.byServer.get(serverKey(server))?.guids;
-    const guid = guids?.get(from.toLowerCase());
-    if (!guids || !guid) return;
-    guids.delete(from.toLowerCase());
-    guids.set(to.toLowerCase(), guid);
+    const known = this.byServer.get(serverKey(server));
+    const guid = known?.guids.get(from.toLowerCase());
+    if (!known || !guid) return;
+    known.guids.delete(from.toLowerCase());
+    known.guids.set(to.toLowerCase(), guid);
+    known.names.set(guid, to);
   }
 
   private remember(key: string, listing: RepositoryListing): void {
     const guids = new Map<string, RepositoryGuid>();
-    for (const repository of listing.repositories) if (repository.guid) guids.set(repository.name.toLowerCase(), repository.guid);
-    this.byServer.set(key, { guids, listedAt: this.now() });
+    const names = new Map<RepositoryGuid, string>();
+    for (const { name, guid } of listing.repositories) {
+      if (!guid) continue;
+      guids.set(name.toLowerCase(), guid);
+      names.set(guid, name);
+    }
+    this.byServer.set(key, { guids, names, listedAt: this.now() });
   }
 }
