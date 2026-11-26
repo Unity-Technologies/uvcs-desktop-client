@@ -343,6 +343,13 @@ be passed where one is kept.
   since), at most once a minute; one created or restored here lists it again at once (`added`). A listing that failed
   answers the lookups of the next minute with its failure, so windows asking again don't list a server out of reach. A replica on another
   server has a GUID of its own, and its own settings.
+- **A workspace keeps its repository's old name.** A workspace names its repository by the name it had when the
+  workspace was made, in `cm status --header`, `cm wi` and its selector, whatever renames came since, and `cm` still
+  takes that name (the server keeps it as an alias until another repository takes it). A name the listing doesn't
+  hold is looked up by the id of the repository `cm` takes it for: one `cm ls` of changeset 0's root
+  (`repositoryIdOf`), whose `{repid}` the listing holds with the GUID. The old name is kept for the session
+  (`RepositoryGuids` `formerNames`; a rename made here keeps it at once), below what a listing holds; a name no
+  repository goes by is asked again after a minute. Details: architecture/cm-output.md "A repository's GUID".
 - **The main process resolves, the renderer asks once.** A window reads its repository's GUID by its spec
   (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus, and only
   where something kept is needed: the Branch Explorer and Sync as they show, the issue tracker only when some

@@ -91,12 +91,12 @@ describe('RepositoryGuids', () => {
   });
 
   it('answers a name missing from a listing this recent as unknown, without listing again', async () => {
-    const { guids, lines, clock } = guidsOf(listed(['game', GAME]));
+    const { guids, listings, clock } = guidsOf(listed(['game', GAME]));
     await guids.guidOf('acme@cloud', 'game');
     clock.now += 59_000;
 
     expect(await guids.guidOf('acme@cloud', 'nothing-here')).toBeUndefined();
-    expect(lines()).toHaveLength(1);
+    expect(listings()).toHaveLength(1);
   });
 
   it('follows a rename made in the app at once, without listing again', async () => {

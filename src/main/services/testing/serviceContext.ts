@@ -9,6 +9,7 @@ import { checkConnection } from '../../cm/connectionCheck';
 import { RepositoryTrees } from '../../unity/RepositoryTrees';
 import type { CmClient } from '../../cm/CmClient';
 import { listRepositories } from '../../cm/listRepositories';
+import { repositoryIdOf } from '../../cm/repositoryIdOf';
 import { RepositoryGuids } from '../../cm/RepositoryGuids';
 import { RevisionCat } from '../../files/RevisionCat';
 import { WorkspaceCopies } from '../../files/WorkspaceCopies';
@@ -33,7 +34,7 @@ export function serviceContext(cm: CmClient, parts: Partial<ServiceContext> = {}
   // in the run's temp folder, and no issue tracker unless the test says so.
   const diffReviews = new DiffReviewStore(mkdtempSync(join(tmpdir(), 'diff-reviews-')));
   const issueTrackers = { keepRepositoryByGuid: () => undefined } as unknown as IssueTrackers;
-  return { cm, operations, diffReviews, issueTrackers, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), diagnosticLog: { write: () => undefined }, signIns: signInContext(cm), repositoryGuids: new RepositoryGuids((server) => listRepositories(cm, server)), organizationRenames: { listed: async () => undefined, follow: async () => undefined }, ...parts } as ServiceContext;
+  return { cm, operations, diffReviews, issueTrackers, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), diagnosticLog: { write: () => undefined }, signIns: signInContext(cm), repositoryGuids: new RepositoryGuids({ list: (server) => listRepositories(cm, server), idOf: (spec, server) => repositoryIdOf(cm, spec, server) }), organizationRenames: { listed: async () => undefined, follow: async () => undefined }, ...parts } as ServiceContext;
 }
 
 /** The servers' sign-in state, checked with `cm checkconnection` through the test's `cm`. */
