@@ -1,38 +1,20 @@
 import type { RepositoriesApi } from '@shared/api/repositories';
-import { isUnityOrganization } from '@shared/domain/organizations';
 import type { RepositoryListing } from '@shared/domain/repository';
-import { CmError } from '../cm/CmError';
-import { readFields } from '../cm/formatRecords';
 import { serverProfiles } from '../cm/profiles';
-import { repositoryListingOf, refusesTypeOption, repositoryListArgs } from '../cm/repositoryListing';
 import type { ProfilesContext, ServiceContext } from './ServiceContext';
-
-/** Remote servers can be slow or ask for credentials; don't let one hang the home screen. */
-const LIST_TIMEOUT_MS = 20_000;
 
 /**
  * `renamed` hears a repository renamed here, by its spec before and after (`game@acme@unity`, `racer@acme@unity`): its
- * issue tracker follows it (`IssueTrackers.repositoryRenamed`).
+ * issue tracker follows it (`IssueTrackers.repositoryRenamed`). The listings go through `RepositoryGuids`, which keeps
+ * the repositories' GUIDs, and follows a rename made here at once.
  */
-export function createRepositoriesService({ cm }: ServiceContext, { profiles }: ProfilesContext, renamed: (from: string, to: string) => void = () => undefined): RepositoriesApi {
+export function createRepositoriesService({ cm, repositoryGuids }: ServiceContext, { profiles }: ProfilesContext, renamed: (from: string, to: string) => void = () => undefined): RepositoriesApi {
   async function servers() {
     return serverProfiles(await profiles.read());
   }
 
-  /** A Unity organization's projects come with its repositories, in the same command. */
-  async function list(server: string): Promise<RepositoryListing> {
-    if (!isUnityOrganization(server)) return listOnce(server, false);
-    try {
-      return await listOnce(server, true);
-    } catch (error) {
-      if (!(error instanceof CmError) || !refusesTypeOption(error.message)) throw error;
-      return listOnce(server, false);
-    }
-  }
-
-  async function listOnce(server: string, withProjects: boolean): Promise<RepositoryListing> {
-    const records = await cm.executeRecords(repositoryListArgs(server, { withProjects }), readFields, { signal: AbortSignal.timeout(LIST_TIMEOUT_MS), server });
-    return repositoryListingOf(records, server, { withProjects });
+  function list(server: string): Promise<RepositoryListing> {
+    return repositoryGuids.list(server);
   }
 
   async function create(server: string, name: string): Promise<string> {
@@ -44,7 +26,9 @@ export function createRepositoriesService({ cm }: ServiceContext, { profiles }: 
   async function rename(repositorySpec: string, newName: string): Promise<void> {
     await cm.query(['repository', 'rename', repositorySpec, newName]);
     const at = repositorySpec.indexOf('@');
-    if (at > 0) renamed(repositorySpec, `${newName}${repositorySpec.slice(at)}`);
+    if (at <= 0) return;
+    repositoryGuids.renamed(repositorySpec.slice(at + 1), repositorySpec.slice(0, at), newName);
+    renamed(repositorySpec, `${newName}${repositorySpec.slice(at)}`);
   }
 
   async function remove(repositorySpec: string): Promise<void> {

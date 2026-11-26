@@ -6,6 +6,8 @@ import { app, BrowserWindow } from 'electron';
 import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { cmBranchNameReads } from './cm/branchNames';
+import { listRepositories } from './cm/listRepositories';
+import { RepositoryGuids } from './cm/RepositoryGuids';
 import { CmClient } from './cm/CmClient';
 import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
 import { createCmRuntime } from './cmRuntime/createCmRuntime';
@@ -93,6 +95,8 @@ const branchNames = new BranchNamesCache(
   (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
 );
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
+// Every listing of a server's repositories, which teaches the GUIDs their settings are kept by (`RepositoryGuids`).
+const repositoryGuids = new RepositoryGuids((server) => listRepositories(cm, server));
 const workspaceCopies = new WorkspaceCopies({ cm });
 watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
 const revisionCat = new RevisionCat({ cm });
@@ -179,6 +183,7 @@ const api = createServices({
   repositoryTrees,
   repositoryPaths,
   branchNames,
+  repositoryGuids,
   issueTrackers,
   diagnosticLog: appLog,
   signIns,

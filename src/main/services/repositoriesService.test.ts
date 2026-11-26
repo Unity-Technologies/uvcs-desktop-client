@@ -153,4 +153,19 @@ describe('repositories', () => {
     await service.rename('tools@acme@cloud', 'build-tools');
     expect(renames).toEqual([['tools@acme@cloud', 'build-tools@acme@cloud']]);
   });
+
+  it('keeps a repository renamed here known by its new name, with the GUID it had, without listing its server again', async () => {
+    const { cm, lines } = fakeCmClient({
+      'repository list': formatOutput(['4', 'tools', 'acme@cloud', 'bob', 'VCS', '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61']),
+      'repository rename': '',
+    });
+    const context = serviceContext(cm);
+    const renaming = createRepositoriesService(context, profilesContext(cm));
+    await renaming.list('acme@cloud');
+
+    await renaming.rename('tools@acme@cloud', 'build-tools');
+
+    expect(await context.repositoryGuids.guidOf('acme@cloud', 'build-tools')).toBe('5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61');
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), 'repository rename tools@acme@cloud build-tools']);
+  });
 });
