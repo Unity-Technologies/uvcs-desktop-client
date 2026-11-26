@@ -2,6 +2,7 @@ import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, GitBranch } from 'luc
 import { useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { updateRepositorySettings, useRepositorySettings } from '../../app/settings/scopedSettings';
 import { PathLabel } from '../../components/PathLabel';
 import { RepositoryPicker } from '../../components/RepositoryPicker';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
@@ -23,7 +24,6 @@ import { SkeletonBar } from '../../ui/Skeleton';
 import { useBranches } from '../branches/useBranches';
 import { syncBranchMenu, type BranchSync } from './syncBranchMenu';
 import { pullBranch, pushBranch } from './syncOperations';
-import { useSyncTargetStore } from './syncTargetStore';
 import styles from './SyncView.module.css';
 
 /**
@@ -32,8 +32,7 @@ import styles from './SyncView.module.css';
  */
 export function RepositorySyncPanel({ localRepository }: { localRepository: string | undefined }) {
   const workspacePath = useWorkspacePath();
-  const remote = useSyncTargetStore((state) => (localRepository && state.remoteByRepository[localRepository]) || null);
-  const setRemote = useSyncTargetStore((state) => state.setRemote);
+  const remote = useRepositorySettings(localRepository).syncRemote ?? null;
   const [filter, setFilter] = useState('');
   const [selection, setSelection] = useState(EMPTY_SELECTION);
   const { data: branches, isPending, error } = useBranches();
@@ -82,7 +81,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
             label="Remote repository"
             value={remote}
             exclude={localRepository}
-            onChange={(repository) => localRepository && setRemote(localRepository, repository.spec)}
+            onChange={(repository) => localRepository && void updateRepositorySettings(localRepository, { syncRemote: repository.spec })}
           />
         </div>
       </section>

@@ -4,6 +4,7 @@ import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useProjects, useServers } from '../workspace/workspaceQueries';
 import { TopBar } from '../shell/TopBar';
+import { useServerSettings } from '../settings/scopedSettings';
 import { BackToWorkspaceButton } from './BackToWorkspaceButton';
 import { homeLink } from './homeLink';
 import { useHomeAccountPick } from './homeAccountStore';
@@ -11,7 +12,6 @@ import { HomeSidebar } from './HomeSidebar';
 import { WELCOME } from './homeSection';
 import { useHomeSection } from './homeSectionStore';
 import { RepositoriesPanel } from './RepositoriesPanel';
-import { useProjectPickStore } from './projectPickStore';
 import { shownProject } from './repositoryProjects';
 import { useHomeCommands } from './useHomeCommands';
 import { WelcomePanel } from './WelcomePanel';
@@ -34,7 +34,7 @@ export function HomeScreen() {
   useEffect(() => forgetPickedAccount, [forgetPickedAccount]);
   const shownServer = section.kind === 'server' ? section.server : '';
   const { data: projects = NO_PROJECTS } = useProjects(section.kind === 'server' ? section.server : null);
-  const project = shownProject(useProjectPickStore((state) => state.picks[shownServer]), projects);
+  const project = shownProject(useServerSettings(shownServer).homeProject, projects);
   useHomeCommands(open, goHome, homeLink(section, project?.name ?? null));
   const openFolder = (): void => void openWorkspaceFolder(open);
 
