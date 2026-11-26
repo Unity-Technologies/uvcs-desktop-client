@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { FileContent } from '@shared/domain/content';
 import type { ReviewMark } from '@shared/domain/review';
 import type { WorkspaceGuid } from '@shared/domain/stableIds';
 import { toFileContent } from '../files/fileContent';
+import { pathExists } from '../files/pathExists';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { fingerprintFile, looksUnchanged, type Fingerprint } from './fingerprint';
 import { PersistedByKey } from './PersistedByKey';
@@ -131,11 +132,11 @@ export class ReviewStore {
     const guid = await this.guidOf(workspacePath);
     if (!guid) return byPath;
     const byGuid = join(this.root, guid);
-    if (await exists(byGuid)) {
+    if (await pathExists(byGuid)) {
       await this.folders.remove(byPath).catch(() => undefined);
       return byGuid;
     }
-    if (!(await exists(byPath))) return byGuid;
+    if (!(await pathExists(byPath))) return byGuid;
     return this.folders.move(byPath, byGuid).then(
       () => byGuid,
       () => byPath,
@@ -149,12 +150,6 @@ function snapshotPath(directory: string, path: string): string {
   return join(directory, hashOf(path));
 }
 
-function exists(path: string): Promise<boolean> {
-  return stat(path).then(
-    () => true,
-    () => false,
-  );
-}
 
 /**
  * Whether a file still holds what was reviewed. One touched but holding the same contents is `refreshed` with its new
