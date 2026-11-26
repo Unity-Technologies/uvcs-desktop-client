@@ -172,7 +172,7 @@ describe('checkinChanges', () => {
 
     expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true })).toBe(true);
 
-    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't save the settings", detail: 'Unable to connect to local' }]);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't add this comment to Recent comments", detail: 'Unable to connect to local' }]);
     expect(fakeApi.argsOf('settings.rememberRecentComment')).toEqual([]);
   });
 
@@ -185,7 +185,7 @@ describe('checkinChanges', () => {
 
     expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true })).toBe(true);
 
-    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't save the settings", detail: 'The settings file is read-only' }]);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't add this comment to Recent comments", detail: 'The settings file is read-only' }]);
   });
 
   it('remembers no empty comment', async () => {

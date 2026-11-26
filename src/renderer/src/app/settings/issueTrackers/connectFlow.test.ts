@@ -298,7 +298,7 @@ describe('issueTrackerPaneView', () => {
 
   it('says why when the repository’s GUID can’t be read: its server out of reach, or no repository by its name', () => {
     expect(issueTrackerPaneView({ ...read, guid: { error: new Error('Unable to connect to acme@unity') } })).toEqual({ kind: 'guidUnread', reason: 'Unable to connect to acme@unity' });
-    expect(issueTrackerPaneView({ ...read, guid: { data: null, error: null } })).toEqual({ kind: 'guidUnread', reason: "Couldn't find game@acme@unity on its server." });
+    expect(issueTrackerPaneView({ ...read, guid: { data: null, error: null } })).toEqual({ kind: 'guidUnread', reason: "Couldn't find game@acme@unity on its server. If it was renamed, open it again from the home screen." });
   });
 
   it('shows the sign-ins alone in a window with no repository', () => {
