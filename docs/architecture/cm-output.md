@@ -234,6 +234,17 @@ by name, and never passes it to `cm`.
   repository: it is offered as one another app left (adopted as foreign), its changelists are lost, and the folder
   where added files waited is no longer used to put them back. Review marks kept under the id's repository no longer
   show.
+- **Its name can change**: an organization's owners can change its name (`acme` in `acme@unity`) in the Unity
+  Dashboard. The old name stops working at once, with no redirect, and no other organization can ever take it; the
+  organization's id stays. Workspaces keep working, as they name the organization by its id. So the app keeps what an
+  organization keeps by its name and records its id with it (ARCHITECTURE.md "Settings survive renames"):
+  `cm getconfig organization <org> --format={unityid}` (`organizationIdArgs`) prints the id (`1375943370549`; `-1` for
+  an organization that isn't a Unity one) from what `cm` keeps on this machine, never asking a server, and fails for
+  an organization `cm` hasn't signed in to here. `cm` learns a new name's id when it first signs in to it, and forgets
+  the old name then. Its `--format` takes no `{tab}`: the command fails on it. It answers one organization a call, so
+  `UnityOrganizationIds` asks it once per organization for the session, and `organizationsToIdentify` only for those
+  that keep something or, once one recorded its id, those that keep nothing yet (one may be a renamed one). Never
+  read `cm`'s own file mapping names to ids ("`cm` owns its files").
 - **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
   `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
   sidebar lists one Unity account's at a time, by its switcher (docs/features/accounts.md "Home"), and groups them
