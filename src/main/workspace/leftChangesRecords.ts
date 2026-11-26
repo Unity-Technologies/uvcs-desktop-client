@@ -68,14 +68,19 @@ export function waitingOn(record: SwitchShelveRecord, at: WorkspaceSpot): LeftCh
   return record.mode === 'bring' && isAt(record.target, at) ? record : undefined;
 }
 
+/**
+ * By id when both ends know theirs: a branch that took the name of the one the changes were left on is another branch.
+ * By spec only when either id is unknown.
+ */
 function isAt(end: RecordEnd, at: WorkspaceSpot): boolean {
-  return end.spec === at.spec || (!!end.objectRef && end.objectRef === at.objectRef);
+  if (end.objectRef && at.objectRef) return end.objectRef === at.objectRef;
+  return end.spec === at.spec;
 }
 
 /**
  * The record with where its changes wait named as the workspace names it now (`at`): a branch it names by an id that is
- * now named otherwise was renamed. A target seen by its spec learns its id, so a later rename of it is followed too.
- * The same record when nothing changes.
+ * now named otherwise was renamed. An end with no id yet (a target, a shelve adopted from another app) learns it from
+ * its spec, so a later rename of it is followed too; an id held is never replaced. The same record when nothing changes.
  */
 export function followingRenames(record: SwitchShelveRecord, at: WorkspaceSpot): SwitchShelveRecord {
   const source = followingRename(record.source, at);
@@ -85,7 +90,7 @@ export function followingRenames(record: SwitchShelveRecord, at: WorkspaceSpot):
 
 function followingRename<End extends RecordEnd>(end: End, at: WorkspaceSpot): End {
   if (!at.objectRef || !isAt(end, at)) return end;
-  if (end.objectRef !== at.objectRef) return { ...end, objectRef: at.objectRef };
+  if (!end.objectRef) return { ...end, objectRef: at.objectRef };
   return end.spec === at.spec ? end : { ...end, spec: at.spec, name: at.name };
 }
 

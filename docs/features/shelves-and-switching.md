@@ -26,17 +26,20 @@ banner in Changes (`features/leftChanges`), or restored automatically on arrival
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
 
 A record survives renames made anywhere, in this app, another client or `cm` (ARCHITECTURE.md "Settings survive
-renames"). It is the workspace's by its GUID; it waits on a branch by its object id (`source.objectRef`, `br:37`, which
-the automatic shelve's comment names too) as well as its spec, and a target learns its id the first time the workspace
-is seen on it; it finds its shelve by the shelve's GUID (`shelveGuid`), learned the first time `cm find shelve` lists
-it, whatever the repository is called now (`shelveOf`). Where the workspace is, by id, comes free: a changeset is its
-own number, a branch is the one the window already read (`workspaceSpot`, `LeftChangesApi.find`'s `branch`) or, on
-arrival from a switch, one a list read lately under the workspace's branch name (`BranchNamesCache.knownName`); neither
-`cm status --header` nor `cm getworkspacefrompath` prints a branch's id, so `hasOwnWaiting` reads no server data and,
-when no list read the renamed branch, leaves the changes to the banner instead of restoring them on arrival. It doesn't
-compare the repository's name: a shelve of another repository the workspace switched to is told apart by `find`, by its
-GUID. What a rename changed is written back to the record as `find` sees it (`followingRenames`, `withShelve`), so
-records stored before keep working and learn what they lack.
+renames"). It is the workspace's by its GUID, and what a rename changed is written back to it as `find` sees it
+(`followingRenames`, `withShelve`), so records stored before keep working and learn what they lack.
+
+- **What it waits on**: a branch by its object id (`source.objectRef`, `br:37`, which the automatic shelve's comment
+  names too); a target learns its id the first time the workspace is seen on it. Ids are compared whenever both are
+  known, so a branch that took the name of the one the changes were left on is never taken for it; the spec decides
+  only while an id is unknown, and an id held is never replaced. Where the workspace is, by id, comes free: a changeset
+  is its own number, a branch is the one the window already read (`workspaceSpot`, `LeftChangesApi.find`'s `branch`)
+  or, on arrival from a switch, one a list read lately under the workspace's branch name (`BranchNamesCache.knownName`).
+- **How its shelve is found**: by the shelve's GUID (`shelveGuid`), learned the first time `cm find shelve` lists it,
+  whatever the repository is called now (`shelveOf`); until then by its number in the repository the record names.
+- **The limit**: neither `cm status --header` nor `cm getworkspacefrompath` prints a branch's id, so `hasOwnWaiting`
+  reads no server data and, when no list read a renamed branch lately, leaves the changes to the "Welcome back" banner
+  instead of restoring them on arrival.
 
 Both places that ask what happens to the pending changes, the switch's question (`SwitchWithChangesDialog`,
 `planSwitch` with the `switch` flow, which prefers leaving them) and the new-branch dialog (`CreateBranchDialog`, the
