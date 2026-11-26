@@ -64,7 +64,7 @@ export async function rememberRecentComment(repository: string, comment: string)
     const guid = await repositoryGuidToWrite(repository);
     queryClient.setQueryData(queryKeys.settings, await api.settings.rememberRecentComment(guid, comment));
   } catch (error) {
-    toast.error("Couldn't save the settings", error);
+    toast.error("Couldn't add this comment to Recent comments", error);
   }
 }
 

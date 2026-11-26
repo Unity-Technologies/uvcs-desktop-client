@@ -1,4 +1,4 @@
 /** Why what is kept for a repository can't be read or saved: its server holds no repository by that name. */
 export function repositoryNotFound(repositorySpec: string): string {
-  return `Couldn't find ${repositorySpec} on its server.`;
+  return `Couldn't find ${repositorySpec} on its server. If it was renamed, open it again from the home screen.`;
 }
