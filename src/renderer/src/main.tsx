@@ -11,6 +11,7 @@ import { isSettingUpCm, useCmRuntimeStore } from './app/cmSetup/cmRuntimeStore';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openPageWindowFromAddress } from './app/pageWindow/openPageWindowFromAddress';
 import { openPlaceFromAddress } from './app/workspace/openPlaceFromAddress';
+import { bringStoredWindowSettings } from './app/settings/windowKeptSettings';
 import { exposePageZoom } from './app/shell/exposePageZoom';
 import { markReadsInFlight } from './app/markReadsInFlight';
 import { queryClient } from './app/queryClient';
@@ -35,6 +36,8 @@ exposePageZoom();
 markReadsInFlight(queryClient);
 guardUnloading();
 trackPointerReturnFocus();
+// What this window's storage kept before the app's settings held it (sync remotes, home projects), handed over once.
+void bringStoredWindowSettings();
 // A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.
 if (!openPageWindowFromAddress()) {
   openPlaceFromAddress();
