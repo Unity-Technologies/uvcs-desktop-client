@@ -1,5 +1,6 @@
 import type { BranchPin, ExplorerRule } from './branchExplorerSettings';
 import { repositoryKey, serverKey } from './repository';
+import type { OrganizationId } from './stableIds';
 
 // What the app keeps for one repository or one server, in its settings (`AppSettings.repositorySettings`,
 // `serverSettings`), by `repositoryKey` and `serverKey`. The main process changes one entry at a time
@@ -28,6 +29,11 @@ export interface ServerSettings {
    * moves to the GUID once a listing holds it (`movedHomeProject`).
    */
   homeProject?: string;
+  /**
+   * A Unity organization's id (`UnityOrganizationIds`): what its settings and favorite follow to the organization's new
+   * name when its owners rename it (`OrganizationRenames`). Kept by the main process only.
+   */
+  organizationId?: OrganizationId;
 }
 
 /** A change to a scope's settings: a value replaces the one kept, `null` forgets it. */
