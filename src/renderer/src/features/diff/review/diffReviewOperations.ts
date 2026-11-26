@@ -36,6 +36,20 @@ export async function diffReviewTargetToWrite(place: Place, repositorySpec: stri
   return { place, repository, name: diffReviewName(target, branchGuid)!, formerName: formerDiffReviewName(target) };
 }
 
+/**
+ * Where a mark made now is written: where the diff's marks were read (`known`), else read now from the repository's
+ * spec; none while that isn't known either (the workspace's info still read), so nothing is marked under no repository.
+ */
+export function reviewTargetWhenKnown(
+  known: DiffReviewTarget | undefined,
+  place: Place,
+  repositorySpec: string | undefined,
+  target: DiffTarget,
+): (() => Promise<DiffReviewTarget>) | null {
+  if (known) return () => Promise.resolve(known);
+  return repositorySpec === undefined ? null : () => diffReviewTargetToWrite(place, repositorySpec, target);
+}
+
 async function branchGuidToWrite(place: Place, name: string) {
   const branch = await fetchBranch(place, name);
   const guid = branch ? parseBranchGuid(branch.guid) : undefined;

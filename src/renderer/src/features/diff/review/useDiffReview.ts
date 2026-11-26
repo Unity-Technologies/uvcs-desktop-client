@@ -10,7 +10,7 @@ import { branchQuery } from '../../branches/useBranches';
 import { useReviewModeOn } from '../../review/reviewModeSetting';
 import { useReviewMode, type ReviewMode } from '../../review/useReviewMode';
 import { diffReviewName, diffReviewStatusOf, formerDiffReviewName, type DiffReviewMarks } from './diffReview';
-import { diffReviewMarksKey, diffReviewTargetToWrite, setDiffReviewed, type DiffReviewTarget } from './diffReviewOperations';
+import { diffReviewMarksKey, reviewTargetWhenKnown, setDiffReviewed, type DiffReviewTarget } from './diffReviewOperations';
 
 const NO_MARKS: DiffReviewMarks = new Map();
 
@@ -49,7 +49,10 @@ export function useDiffReview(target: DiffTarget, entries: DiffEntry[], enabled 
     place,
     items: entries,
     statusOf,
-    setReviewed: (files, reviewed) => void setDiffReviewed(() => (known ? Promise.resolve(known) : diffReviewTargetToWrite(place, repositorySpec ?? '', target)), files, reviewed),
+    setReviewed: (files, reviewed) => {
+      const targetToWrite = reviewTargetWhenKnown(known, place, repositorySpec, target);
+      if (targetToWrite) void setDiffReviewed(targetToWrite, files, reviewed);
+    },
   });
   return { ...review, marks: review.on ? marks : NO_MARKS };
 }
