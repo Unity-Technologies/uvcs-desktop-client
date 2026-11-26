@@ -117,13 +117,25 @@ describe('recentCommentsOffer', () => {
   it('offers the repository’s comments once its GUID is known, and nothing to open while it has none', () => {
     const settings = settingsWith({ recentCommentsByRepository: { [GAME]: ['Fix cs:4207'] } });
 
-    expect(recentCommentsOffer(settings, GAME)).toEqual({ offered: true, comments: ['Fix cs:4207'] });
-    expect(recentCommentsOffer(settings, ART)).toEqual({ offered: false, comments: [] });
+    expect(recentCommentsOffer(settings, GAME)).toEqual({ offered: true, comments: ['Fix cs:4207'], waiting: null });
+    expect(recentCommentsOffer(settings, ART)).toEqual({ offered: false, comments: [], waiting: null });
   });
 
   it('offers the menu before the GUID is read while any comment is kept, the GUID read as it opens', () => {
-    expect(recentCommentsOffer(settingsWith({ recentCommentsByRepository: { [ART]: ['New textures'] } }), undefined)).toEqual({ offered: true, comments: [] });
-    expect(recentCommentsOffer(settingsWith({ recentComments: ['Older comment'] }), undefined)).toEqual({ offered: true, comments: [] });
-    expect(recentCommentsOffer(settingsWith(), undefined)).toEqual({ offered: false, comments: [] });
+    expect(recentCommentsOffer(settingsWith({ recentCommentsByRepository: { [ART]: ['New textures'] } }), undefined).offered).toBe(true);
+    expect(recentCommentsOffer(settingsWith({ recentComments: ['Older comment'] }), undefined).offered).toBe(true);
+    expect(recentCommentsOffer(settingsWith(), undefined).offered).toBe(false);
+  });
+
+  it('says the comments are loading while the GUID is read, never opening an empty menu', () => {
+    expect(recentCommentsOffer(settingsWith({ recentComments: ['Older comment'] }), undefined)).toEqual({ offered: true, comments: [], waiting: 'Loading…' });
+  });
+
+  it('says the comments couldn’t be read when the GUID can’t be', () => {
+    expect(recentCommentsOffer(settingsWith({ recentComments: ['Older comment'] }), undefined, { unreadable: true })).toEqual({
+      offered: true,
+      comments: [],
+      waiting: "Couldn't load this repository's recent comments",
+    });
   });
 });
