@@ -4,7 +4,7 @@ import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInForView, connectsWithSignIn, connectStage, pickedSignInShown, repositoryTrackerView, issueTrackerPaneView, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink, type SignInStep } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
+const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'j', projects: ['VCS'] }], bindingsKeptBySpec: [], sessionOnly: false, deviceFlowHosts });
 
 describe('linkReadBack', () => {
   it('reads a link back in parts too: the kind for a badge, the host, the project', () => {

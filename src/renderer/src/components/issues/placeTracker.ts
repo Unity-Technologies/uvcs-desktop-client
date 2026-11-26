@@ -17,10 +17,11 @@ const built = new WeakMap<IssueTrackerSetup, Map<RepositoryGuid, PlaceTracker | 
 
 /**
  * Whether any repository uses a tracker: only then does a window read its repository's GUID to find its own
- * (`usePlaceTracker`), so one with no tracker anywhere asks nothing.
+ * (`usePlaceTracker`), so one with no tracker anywhere asks nothing. A binding still kept by spec counts: reading the
+ * GUID moves it there.
  */
 export function tracksAnyRepository(setup: IssueTrackerSetup | undefined): boolean {
-  return setup !== undefined && setup.bindings.length > 0;
+  return setup !== undefined && (setup.bindings.length > 0 || setup.bindingsKeptBySpec.length > 0);
 }
 
 /** The tracker of a place's repository (its GUID), when it has one bound: none, and its comments read no issue. */

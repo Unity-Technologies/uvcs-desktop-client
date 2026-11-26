@@ -57,20 +57,28 @@ export interface TrackerConnection {
 
 /** A repository that uses a tracker: its connection and the projects its comments name. */
 export interface RepositoryTrackerBinding {
-  /**
-   * The repository's GUID, which a rename keeps (ARCHITECTURE.md "Settings survive renames"). One bound before it was
-   * kept by its GUID holds its spec (`game@acme@unity`) until the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`).
-   */
+  /** The repository's GUID, which a rename keeps (ARCHITECTURE.md "Settings survive renames"). */
   repository: RepositoryGuid;
   connectionId: string;
   /** Jira project keys (`VCS`), GitHub repositories (`acme/game`, lower case). */
   projects: string[];
 }
 
+/**
+ * A binding made before bindings were kept by the repository's GUID: by its spec (`game@acme@unity`), until the GUID is
+ * known (`IssueTrackerStore.keepRepositoryByGuid`).
+ */
+export type BindingKeptBySpec = Omit<RepositoryTrackerBinding, 'repository'> & { repository: string };
+
 /** What the windows know of the trackers: connections without their secrets, and bindings. */
 export interface IssueTrackerSetup {
   connections: TrackerConnection[];
   bindings: RepositoryTrackerBinding[];
+  /**
+   * Bindings still kept by spec: they count as trackers in use, so a window reads its repository's GUID, which moves
+   * them to it (`tracksAnyRepository`).
+   */
+  bindingsKeptBySpec: BindingKeptBySpec[];
   /** Credentials can't be kept on this computer (Linux without a keyring): they last until the app quits. */
   sessionOnly: boolean;
   /** The hosts GitHub's device flow can sign in to (`signInMethodsFor`): those an app is registered on. */
