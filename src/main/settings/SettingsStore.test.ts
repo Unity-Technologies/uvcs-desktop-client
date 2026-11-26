@@ -176,3 +176,49 @@ describe('SettingsStore and the choice of cm', () => {
     expect(settings.get().cmChoice).toBe('automatic');
   });
 });
+
+describe('SettingsStore repository and server settings', () => {
+  const pin = { branch: 7, row: 2 };
+
+  it('keep what every window changes in one repository, one value at a time, and write it to the file', () => {
+    const { settings, filePath } = store();
+    settings.updateRepositorySettings('game@host', { branchPins: [pin] });
+    settings.updateRepositorySettings('Game@host', { explorerRulesOff: true });
+    settings.updateRepositorySettings('art@host', { syncRemote: 'art@cloud' });
+
+    const expected = { 'game@host': { branchPins: [pin], explorerRulesOff: true }, 'art@host': { syncRemote: 'art@cloud' } };
+    expect(settings.get().repositorySettings).toEqual(expected);
+    expect(JSON.parse(readFileSync(filePath, 'utf8')).repositorySettings).toEqual(expected);
+  });
+
+  it('keep a server’s apart from every other server’s', () => {
+    const { settings } = store();
+    settings.updateServerSettings('acme@unity', { homeProject: 'Racing' });
+    settings.updateServerSettings('beta@unity', { homeProject: 'Kart' });
+    settings.updateServerSettings('acme@unity', { homeProject: null });
+    expect(settings.get().serverSettings).toEqual({ 'beta@unity': { homeProject: 'Kart' } });
+  });
+
+  it('take what a window kept before only where nothing is kept yet, the same when two windows bring it', () => {
+    const { settings } = store();
+    settings.updateRepositorySettings('game@host', { syncRemote: 'game@cloud' });
+    settings.update({ changesetColors: { users: [{ user: 'jane', hue: 1 }] } });
+    const kept = {
+      repositorySettings: { 'game@host': { syncRemote: 'old@cloud', branchPins: [pin] } },
+      serverSettings: { 'acme@unity': { homeProject: 'Racing' } },
+      changesetColors: { users: [{ user: 'old', hue: 2 }] },
+    };
+    settings.addWindowSettings(kept);
+    settings.addWindowSettings(kept);
+
+    expect(settings.get().repositorySettings).toEqual({ 'game@host': { syncRemote: 'game@cloud', branchPins: [pin] } });
+    expect(settings.get().serverSettings).toEqual({ 'acme@unity': { homeProject: 'Racing' } });
+    expect(settings.get().changesetColors).toEqual({ users: [{ user: 'jane', hue: 1 }] });
+  });
+
+  it('take a window’s changeset colors while it has none', () => {
+    const { settings } = store();
+    settings.addWindowSettings({ repositorySettings: {}, serverSettings: {}, changesetColors: { users: [{ user: 'old', hue: 2 }] } });
+    expect(settings.get().changesetColors).toEqual({ users: [{ user: 'old', hue: 2 }] });
+  });
+});
