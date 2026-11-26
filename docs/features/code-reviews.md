@@ -4,6 +4,10 @@ A code review asks people to review a branch, a changeset or a shelve. A merge r
 server, with a destination branch and a state: what this doc says of reviews holds for both, and what is a merge
 request's alone (its states, the Merge requests view's State chip, its chips) is in docs/features/merge-requests.md.
 
+Sandboxes: `scripts/sandboxes/code-reviews.sh` (a review holding every kind of comment, on code, a deleted file and
+3D models; reviews of a changeset and a shelve) and `review-rounds.sh` (a review that went back and forth over
+rounds).
+
 Every review command relies on the `cm` the app runs, which is never older than its own (cm-runtime.md "Which cm
 runs"): with `--format`, a field an older `cm` didn't know would fail the whole command, and a subcommand it didn't
 know (`cm codereview subscription`) would be read as a review to create.

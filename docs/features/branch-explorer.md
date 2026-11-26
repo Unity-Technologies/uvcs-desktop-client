@@ -5,6 +5,8 @@
 the search (`useGraphSearch`), the keys (`graphKeyboard`), what Enter and a double-click open (`openSelection`), and
 the canvas it drives through `GraphCanvasHandle` (`graphCanvasHandle`).
 
+Sandbox: `scripts/sandboxes/branch-explorer.sh` (a realistic branch topology).
+
 ## Scale
 
 Repositories reach ~280k changesets and ~20k branches. Layout packs branches into rows with a binary search per row
