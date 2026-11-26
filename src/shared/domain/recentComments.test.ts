@@ -118,7 +118,13 @@ describe('recentCommentsOffer', () => {
     const settings = settingsWith({ recentCommentsByRepository: { [GAME]: ['Fix cs:4207'] } });
 
     expect(recentCommentsOffer(settings, GAME)).toEqual({ offered: true, comments: ['Fix cs:4207'], waiting: null });
-    expect(recentCommentsOffer(settings, ART)).toEqual({ offered: false, comments: [], waiting: null });
+    expect(recentCommentsOffer(settingsWith(), ART)).toEqual({ offered: false, comments: [], waiting: null });
+  });
+
+  it('keeps offering the menu once the GUID is known with no comments of its own, saying so, so an open menu never vanishes', () => {
+    const settings = settingsWith({ recentCommentsByRepository: { [GAME]: ['Fix cs:4207'] } });
+
+    expect(recentCommentsOffer(settings, ART)).toEqual({ offered: true, comments: [], waiting: 'No recent comments in this repository' });
   });
 
   it('offers the menu before the GUID is read while any comment is kept, the GUID read as it opens', () => {
