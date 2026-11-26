@@ -1,0 +1,121 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import { parseOrganizationId, type OrganizationId } from '@shared/domain/stableIds';
+import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
+import { UnityOrganizationIds } from '../cm/UnityOrganizationIds';
+import { OrganizationRenames } from './OrganizationRenames';
+
+const ACME = parseOrganizationId('1375943370549')!;
+
+/** Settings held in memory, as `SettingsStore` holds them, and the ids `cm getconfig organization` prints by name. */
+function renamesOver(settings: Partial<AppSettings>, idsByName: Record<string, string>) {
+  let current: AppSettings = { ...DEFAULT_SETTINGS, ...settings };
+  let writes = 0;
+  const store = {
+    get: () => current,
+    update: (changes: Partial<AppSettings>) => {
+      writes++;
+      return (current = { ...current, ...changes });
+    },
+  };
+  const fake = fakeCmClient({
+    'getconfig organization': ({ args }) => idsByName[args[2]!] ?? cmFails(`Organization configuration not found for '${args[2]}'.`),
+  });
+  return { ...fake, renames: new OrganizationRenames(store, new UnityOrganizationIds(fake.cm)), settings: () => current, writes: () => writes };
+}
+
+describe('OrganizationRenames', () => {
+  it('follows a rename cm learns during the session, once the profiles list the new name', async () => {
+    const idsByName: Record<string, string> = { 'acme@unity': `${ACME}\n` };
+    const { renames, settings, lines } = renamesOver({ favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing' } } }, idsByName);
+    await renames.listed(['acme@unity']);
+    await renames.listed(['acme@unity']);
+
+    // The user signs in to the organization's new name: cm learns its id and forgets the old name.
+    delete idsByName['acme@unity'];
+    idsByName['acmestudio@unity'] = `${ACME}\n`;
+    await renames.listed(['acme@unity', 'acmestudio@unity']);
+
+    expect(settings().favoriteOrganizations).toEqual(['acmestudio@unity']);
+    expect(settings().serverSettings).toEqual({ 'acmestudio@unity': { homeProject: 'Racing', organizationId: ACME } });
+    expect(lines().filter((line) => line.includes('acme@unity'))).toHaveLength(2);
+  });
+
+  it("keeps a favorite and the project picked through the organization's rename, the old name still listed", async () => {
+    const before = renamesOver({ favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing' } } }, { 'acme@unity': '1375943370549\n' });
+    await before.renames.follow(['acme@unity', 'arcade@unity']);
+
+    // A later session: cm knows the organization by its new name only, and the old profile is still there.
+    const after = renamesOver(before.settings(), { 'acmestudio@unity': '1375943370549\n' });
+    await after.renames.follow(['acme@unity', 'acmestudio@unity', 'arcade@unity']);
+
+    expect(after.settings().favoriteOrganizations).toEqual(['acmestudio@unity']);
+    expect(after.settings().serverSettings).toEqual({ 'acmestudio@unity': { homeProject: 'Racing', organizationId: '1375943370549' } });
+  });
+
+  it('reads each id once for the session, and asks and writes nothing while no organization keeps anything', async () => {
+    const quiet = renamesOver({}, {});
+    await quiet.renames.follow(['acme@unity', 'arcade@unity']);
+    expect(quiet.lines()).toEqual([]);
+
+    const { renames, lines, writes } = renamesOver({ favoriteOrganizations: ['acme@unity'] }, { 'acme@unity': '1375943370549\n' });
+    await renames.follow(['acme@unity', 'arcade@unity']);
+    await renames.follow(['acme@unity', 'arcade@unity']);
+    expect(lines()).toEqual(['getconfig organization acme@unity --format={unityid}']);
+    expect(writes()).toBe(1);
+  });
+
+  it("reads only the recorded organizations' ids while their names answer them, however many are listed", async () => {
+    const recorded = { serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: ACME } } };
+    const { renames, lines, writes } = renamesOver(recorded, { 'acme@unity': `${ACME}\n`, 'arcade@unity': '1375488836673\n' });
+
+    await renames.follow(['acme@unity', 'arcade@unity', 'kart@unity', 'racers@unity']);
+
+    expect(lines()).toEqual(['getconfig organization acme@unity --format={unityid}']);
+    expect(writes()).toBe(0);
+  });
+
+  it('keeps a change a window made while the ids were read', async () => {
+    let answer: (id: OrganizationId) => void = () => undefined;
+    let current: AppSettings = { ...DEFAULT_SETTINGS, favoriteOrganizations: ['acme@unity'] };
+    const store = { get: () => current, update: (changes: Partial<AppSettings>) => (current = { ...current, ...changes }) };
+    const renames = new OrganizationRenames(store, { idOf: () => new Promise<OrganizationId>((resolve) => (answer = resolve)), forget: () => undefined });
+
+    const following = renames.follow(['acme@unity']);
+    store.update({ serverSettings: { 'arcade@unity': { homeProject: 'Kart' } } });
+    answer(ACME);
+    await following;
+
+    expect(current.serverSettings).toEqual({ 'arcade@unity': { homeProject: 'Kart' }, 'acme@unity': { organizationId: ACME } });
+  });
+
+  it("waits while cm answers neither name, then follows the rename once it answers the new one", async () => {
+    const kept = { favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: ACME } } };
+    const listed = ['acme@unity', 'acmestudio@unity'];
+
+    const unknown = renamesOver(kept, {});
+    await unknown.renames.listed(listed);
+    expect(unknown.writes()).toBe(0);
+    expect(unknown.settings().serverSettings).toEqual(kept.serverSettings);
+    expect(unknown.settings().favoriteOrganizations).toEqual(kept.favoriteOrganizations);
+
+    const known = renamesOver(unknown.settings(), { 'acmestudio@unity': `${ACME}\n` });
+    await known.renames.listed(listed);
+    expect(known.settings().favoriteOrganizations).toEqual(['acmestudio@unity']);
+    expect(known.settings().serverSettings).toEqual({ 'acmestudio@unity': { homeProject: 'Racing', organizationId: ACME } });
+  });
+
+  it('records no id for a favorite removed while the ids were read', async () => {
+    let answer: (id: OrganizationId) => void = () => undefined;
+    let current: AppSettings = { ...DEFAULT_SETTINGS, favoriteOrganizations: ['acme@unity'] };
+    const store = { get: () => current, update: (changes: Partial<AppSettings>) => (current = { ...current, ...changes }) };
+    const renames = new OrganizationRenames(store, { idOf: () => new Promise<OrganizationId>((resolve) => (answer = resolve)), forget: () => undefined });
+
+    const following = renames.follow(['acme@unity']);
+    store.update({ favoriteOrganizations: [] });
+    answer(ACME);
+    await following;
+
+    expect(current.serverSettings).toEqual({});
+  });
+});

@@ -29,6 +29,8 @@ function serverOf(args, workspaceServer, otherServers) {
 
 function isLocal(args) {
   if (args[0] === 'workspace' || args[0] === 'wk') return args[1] === 'list';
+  // Only an organization's config is read from this machine alone (`organizationIdArgs`).
+  if (args[0] === 'getconfig') return args[1] === 'organization';
   // Unless told not to, `cm status` works out the workspace's header, asking the server for its branch's head
   // (docs/architecture/cm-output.md "`cm status` asks the server for its header"): the window's first read of a workspace fails so.
   if (args[0] === 'status') return args.some((arg) => arg === '--compact' || arg.startsWith('--cset') || arg.startsWith('--format'));

@@ -15,6 +15,7 @@ import {
 } from '@shared/domain/scopedSettings';
 import { DEFAULT_SETTINGS, type AppSettings, type WindowKeptSettings } from '@shared/domain/settings';
 import { replaceFileSync } from '../files/replaceFileSync';
+import { withoutIdAlone } from './organizationsKept';
 import { withRecentBranch } from './recentBranches';
 import { withoutRecentWorkspace, withRecentWorkspace } from './recentWorkspaces';
 
@@ -74,7 +75,8 @@ export class SettingsStore {
 
   /** Adds an organization to the favorites, or removes it. */
   setFavoriteOrganization(server: string, favorite: boolean): AppSettings {
-    return this.update({ favoriteOrganizations: withFavoriteOrganization(this.settings.favoriteOrganizations, server, favorite) });
+    const favoriteOrganizations = withFavoriteOrganization(this.settings.favoriteOrganizations, server, favorite);
+    return this.update({ favoriteOrganizations, serverSettings: withoutIdAlone({ favoriteOrganizations, serverSettings: this.settings.serverSettings }, server) });
   }
 
   /** Changes one repository's settings (a spec, however written), keeping every other repository's. */
@@ -84,7 +86,8 @@ export class SettingsStore {
 
   /** Changes one server's settings, keeping every other server's. */
   updateServerSettings(server: string, changes: ScopedSettingsChange<ServerSettings>): AppSettings {
-    return this.update({ serverSettings: withServerSettings(this.settings.serverSettings, server, changes) });
+    const serverSettings = withServerSettings(this.settings.serverSettings, server, changes);
+    return this.update({ serverSettings: withoutIdAlone({ favoriteOrganizations: this.settings.favoriteOrganizations, serverSettings }, server) });
   }
 
   /**

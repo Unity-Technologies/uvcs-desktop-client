@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { matchingProjects, noRepositoriesState, projectChoices, repositoriesInProject, repositoryLabels, shownProject } from './repositoryProjects';
+import { homeProjectKept, homeProjectOfLink, matchingProjects, movedHomeProject, noRepositoriesState, projectChoices, repositoriesInProject, repositoryLabels, shownProject } from './repositoryProjects';
 
 const SERVER = 'racing@unity';
 
@@ -15,6 +15,11 @@ const LEGACY = repository('legacy');
 const REPOSITORIES = [ART, EDITOR, GAME, LEGACY];
 
 const unityProject = (name: string) => ({ name, guid: `guid-of-${name}` });
+
+const RACING_GUID = '5a1c2d3e-0000-4000-8000-00000000abcd';
+const KART_GUID = '7b2d3e4f-0000-4000-8000-00000000ef01';
+const RACING = { name: 'Racing', guid: RACING_GUID };
+const KART = { name: 'Kart', guid: KART_GUID };
 
 describe('projectChoices', () => {
   it('offers every project, empty ones too, with its repositories counted', () => {
@@ -40,13 +45,60 @@ describe('matchingProjects', () => {
 });
 
 describe('shownProject', () => {
-  it('shows the project picked while the organization has it', () => {
-    expect(shownProject('Racing', [unityProject('Racing')])).toEqual(unityProject('Racing'));
+  it('shows the project picked by its GUID, under whatever name it has now, as cm prints it in any case', () => {
+    expect(shownProject(RACING_GUID, [RACING, KART])).toEqual(RACING);
+    expect(shownProject(RACING_GUID, [{ name: 'Racing Renamed', guid: RACING_GUID }])).toEqual({ name: 'Racing Renamed', guid: RACING_GUID });
+    expect(shownProject(RACING_GUID.toUpperCase(), [RACING])).toEqual(RACING);
+  });
+
+  it('shows a project kept by its name before, until it moves to its GUID', () => {
+    expect(shownProject('Racing', [RACING, KART])).toEqual(RACING);
   });
 
   it('shows all projects when none was picked or the one picked is gone', () => {
-    expect(shownProject(undefined, [unityProject('Racing')])).toBeNull();
-    expect(shownProject('Deleted', [unityProject('Racing')])).toBeNull();
+    expect(shownProject(undefined, [RACING])).toBeNull();
+    expect(shownProject('Deleted', [RACING])).toBeNull();
+    expect(shownProject(KART_GUID, [RACING])).toBeNull();
+  });
+
+  it("never takes a project named like another's GUID for it", () => {
+    expect(shownProject(RACING_GUID, [{ name: RACING_GUID, guid: KART_GUID }])).toBeNull();
+  });
+});
+
+describe('homeProjectKept', () => {
+  it("keeps a project by its GUID, by its name only from a cm that printed none, and nothing for all projects", () => {
+    expect(homeProjectKept(RACING)).toBe(RACING_GUID);
+    expect(homeProjectKept({ name: 'Racing', guid: '' })).toBe('Racing');
+    expect(homeProjectKept(null)).toBeNull();
+  });
+});
+
+describe('homeProjectOfLink', () => {
+  it("keeps the project a link names by its GUID once the organization's listing is read", () => {
+    expect(homeProjectOfLink('Racing', [RACING, KART])).toBe(RACING_GUID);
+  });
+
+  it('keeps its name until then, or when the listing holds no such project', () => {
+    expect(homeProjectOfLink('Racing', undefined)).toBe('Racing');
+    expect(homeProjectOfLink('Racing', [KART])).toBe('Racing');
+  });
+
+  it('keeps nothing for a link to every project', () => {
+    expect(homeProjectOfLink(null, [RACING])).toBeNull();
+  });
+});
+
+describe('movedHomeProject', () => {
+  it('moves a project kept by name to its GUID once the listing holds it', () => {
+    expect(movedHomeProject('Racing', [KART, RACING])).toBe(RACING_GUID);
+  });
+
+  it('moves nothing kept by GUID already, nothing picked, a project gone, or one listed with no GUID', () => {
+    expect(movedHomeProject(RACING_GUID, [RACING])).toBeUndefined();
+    expect(movedHomeProject(undefined, [RACING])).toBeUndefined();
+    expect(movedHomeProject('Deleted', [RACING])).toBeUndefined();
+    expect(movedHomeProject('Racing', [{ name: 'Racing', guid: '' }])).toBeUndefined();
   });
 });
 

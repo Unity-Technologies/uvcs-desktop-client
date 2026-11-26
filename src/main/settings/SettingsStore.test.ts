@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { recentCommentsFor } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
+import { parseOrganizationId } from '@shared/domain/stableIds';
 import { SettingsStore } from './SettingsStore';
 
 function store(): { settings: SettingsStore; filePath: string } {
@@ -197,6 +198,27 @@ describe('SettingsStore repository and server settings', () => {
     settings.updateServerSettings('beta@unity', { homeProject: 'Kart' });
     settings.updateServerSettings('acme@unity', { homeProject: null });
     expect(settings.get().serverSettings).toEqual({ 'beta@unity': { homeProject: 'Kart' } });
+  });
+
+  it("forget an organization's id once it keeps nothing else, its project or its favorite gone", () => {
+    const { settings } = store();
+    const acme = parseOrganizationId('1375943370549')!;
+    settings.update({ favoriteOrganizations: ['beta@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: acme }, 'beta@unity': { organizationId: acme } } });
+
+    settings.updateServerSettings('acme@unity', { homeProject: null });
+    settings.setFavoriteOrganization('beta@unity', false);
+
+    expect(settings.get().serverSettings).toEqual({});
+  });
+
+  it("keep a favorite organization's id when its project goes", () => {
+    const { settings } = store();
+    const acme = parseOrganizationId('1375943370549')!;
+    settings.update({ favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: acme } } });
+
+    settings.updateServerSettings('acme@unity', { homeProject: null });
+
+    expect(settings.get().serverSettings).toEqual({ 'acme@unity': { organizationId: acme } });
   });
 
   it('take what a window kept before only where nothing is kept yet, the same when two windows bring it', () => {

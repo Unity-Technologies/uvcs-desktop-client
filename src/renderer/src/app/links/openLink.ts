@@ -1,11 +1,13 @@
 import { repositoryPlace, workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
 import type { WorkspaceHead, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
+import type { RepositoryListing } from '@shared/domain/repository';
 import { repositorySpec } from '@shared/domain/specs';
 import { formatLink } from '@shared/links/formatLink';
 import type { RepositoryLink, ServerLink, WorkspaceLink } from '@shared/links/link';
 import { sameServer } from '@shared/links/linkSegments';
 import { parseLink } from '@shared/links/parseLink';
 import { api } from '../../api/client';
+import { queryKeys } from '../../api/queryKeys';
 import { showInBranchExplorer } from '../../features/branchExplorer/branchExplorerStore';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { reviewConversationQuery } from '../../features/codeReviews/conversation/useReviewConversation';
@@ -15,6 +17,7 @@ import { changeRowKey } from '../../features/pendingChanges/changeRows';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
 import { toast } from '../../ui/toast/toastStore';
 import { useHomeSection } from '../home/homeSectionStore';
+import { homeProjectOfLink } from '../home/repositoryProjects';
 import { navigation } from '../navigation/navigationStore';
 import { firstViewOf, showsView } from '../navigation/views';
 import { selectInView } from '../navigation/viewSelectionStore';
@@ -58,7 +61,8 @@ export async function openLink(text: string): Promise<void> {
 async function openServerLink(link: ServerLink): Promise<void> {
   if ((await api.windows.openLinkAtHome(formatLink(link))) === 'handedOver') return;
   const { server, project } = serverLinkPlace(link, await queryClient.fetchQuery(serversQuery));
-  void updateServerSettings(server, { homeProject: project });
+  const listed = queryClient.getQueryData<RepositoryListing>(queryKeys.repositories(server))?.projects;
+  void updateServerSettings(server, { homeProject: homeProjectOfLink(project, listed) });
   useHomeSection.getState().show({ kind: 'server', server });
 }
 

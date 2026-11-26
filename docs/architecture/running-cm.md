@@ -67,7 +67,7 @@ Every command is logged and pushed to the window whose call ran it (`commandLogg
 
 A large production repository holds ~280k changesets, ~20k branches, thousands of labels, shelves and reviews,
 and many people use the same server. Every `cm` command other than local reads (`status`, `getworkspacefrompath`,
-`workspace list`, `profile list`, `version`...) is server work, so each one has to earn its place:
+`workspace list`, `profile list`, `getconfig organization`, `version`...) is server work, so each one has to earn its place:
 
 - **One command for N things**: never run a command per row, file, branch or id in a loop. Read everything a view
   needs in one command that returns N records (one `cm find` per list, one `cm ls` of every conflicting file:

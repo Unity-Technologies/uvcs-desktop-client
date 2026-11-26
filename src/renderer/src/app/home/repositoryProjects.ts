@@ -1,5 +1,6 @@
 import { nameInProject } from '@shared/domain/organizations';
 import type { RepositorySummary, UnityProject } from '@shared/domain/repository';
+import { parseProjectGuid, type ProjectGuid } from '@shared/domain/stableIds';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 
 /** A project to pick in a Unity organization's repositories, with how many of them it holds. */
@@ -19,9 +20,40 @@ export function matchingProjects(choices: readonly ProjectChoice[], search: stri
   return choices.filter((choice) => matchesWordFilter([choice.name], search));
 }
 
-/** The project the list shows: the one picked while the organization still has it, else none (all projects). */
-export function shownProject(picked: string | undefined, projects: readonly UnityProject[]): UnityProject | null {
-  return (picked !== undefined && projects.find((project) => project.name === picked)) || null;
+/**
+ * The project the list shows: the one kept (`ServerSettings.homeProject`) while the organization still has it, else
+ * none (all projects). It is kept by its GUID, which a rename keeps; a name kept before, or by a link read before the
+ * organization's listing, names it until `movedHomeProject` moves it to the GUID.
+ */
+export function shownProject(kept: string | undefined, projects: readonly UnityProject[]): UnityProject | null {
+  if (kept === undefined) return null;
+  const guid = parseProjectGuid(kept);
+  return projects.find((project) => (guid ? parseProjectGuid(project.guid) === guid : project.name === kept)) ?? null;
+}
+
+/**
+ * What the home screen keeps for the project picked: its GUID, or its name from a `cm` that printed none (it then
+ * moves to the GUID once a listing prints one); null for all projects.
+ */
+export function homeProjectKept(project: Pick<UnityProject, 'name' | 'guid'> | null): string | null {
+  return project === null ? null : (parseProjectGuid(project.guid) ?? project.name);
+}
+
+/**
+ * The project's name as a link names it, kept by its GUID when the organization's listing is already read and holds
+ * it, else by the name, which `movedHomeProject` moves to the GUID once the listing is read. Null for all projects.
+ */
+export function homeProjectOfLink(name: string | null, listed: readonly UnityProject[] | undefined): string | null {
+  if (name === null) return null;
+  const project = listed?.find((candidate) => candidate.name === name);
+  return project ? homeProjectKept(project) : name;
+}
+
+/** The GUID a project kept by name moves to, once the listing holds a project by that name with a GUID; else undefined. */
+export function movedHomeProject(kept: string | undefined, projects: readonly UnityProject[]): ProjectGuid | undefined {
+  if (kept === undefined || parseProjectGuid(kept)) return undefined;
+  const project = projects.find((candidate) => candidate.name === kept);
+  return project && parseProjectGuid(project.guid);
 }
 
 /** The repositories of `project`, or all of them for none. */
