@@ -64,7 +64,7 @@ export function withRecentComment(settings: RecentCommentSettings, repository: R
  * among the repositories checked in to last; dropped when the GUID keeps its own. The same object when the spec kept
  * none.
  */
-export function withRecentCommentsKeptByGuid(byRepository: Readonly<Record<string, string[]>>, spec: string, guid: RepositoryGuid): Readonly<Record<string, string[]>> {
+export function withRecentCommentsKeptByGuid(byRepository: Record<string, string[]>, spec: string, guid: RepositoryGuid): Record<string, string[]> {
   const key = repositoryKey(spec);
   if (!(key in byRepository)) return byRepository;
   const kept = guid in byRepository;

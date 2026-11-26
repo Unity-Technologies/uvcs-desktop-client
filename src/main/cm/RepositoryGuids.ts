@@ -100,7 +100,8 @@ export class RepositoryGuids {
   /**
    * The spec the repository kept as `spec` with its `guid` goes by now, on the same server: `spec` while its name still
    * names it (free once a listing taught the name), else its new name, renamed anywhere. `spec` too when the server
-   * holds it no more, so what uses it says so as it would have. Rejects when the server can't be listed.
+   * holds it no more: what uses it then reaches what goes by that name now, if anything, as it did before it was kept
+   * with its GUID. Rejects when the server can't be listed.
    */
   async specNow(spec: string, guid: RepositoryGuid): Promise<string> {
     const parts = repositorySpecParts(spec);

@@ -93,7 +93,7 @@ export class SettingsStore {
     const settings = withRepositoryKeptByGuid(repositorySettings, spec, guid);
     const comments = withRecentCommentsKeptByGuid(recentCommentsByRepository, spec, guid);
     if (settings === repositorySettings && comments === recentCommentsByRepository) return;
-    this.update({ repositorySettings: { ...settings }, recentCommentsByRepository: { ...comments } });
+    this.update({ repositorySettings: settings, recentCommentsByRepository: comments });
   }
 
   /** Changes one server's settings, keeping every other server's. */

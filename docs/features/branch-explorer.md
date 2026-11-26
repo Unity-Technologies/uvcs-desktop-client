@@ -68,8 +68,9 @@ The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`
 the app's settings (`RepositorySettings.explorerRules`; `useExplorerRules`, `setExplorerRules`), since a condition names
 that repository's branches and owners. A repository's settings are kept by its GUID, so a rename made anywhere keeps
 them. While the window reads it they read as none, and the rules tab and the Position entries wait for it, so nothing
-written from that empty copy replaces them (ARCHITECTURE.md "Settings survive renames"). The tab's decisions live in `model/ruleList.ts`: the empty state and the
-Filters and Formats sections (`ruleTabBody`), the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`),
+written from that empty copy replaces them (ARCHITECTURE.md "Settings survive renames"). The tab's decisions live in
+`model/ruleList.ts`: the empty state and the Filters and Formats sections (`ruleTabBody`), the kinds' names
+(`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`),
 how a row reads (its description, with its kind, condition and relatives under it: `ruleRowTitle`, `ruleRowDetail`),
 how the list changes, and when an edited rule can be saved (`ruleDraftProblem`). A rule opens in its own dialog
 (`editExplorerRule`), stacked on the options.

@@ -66,7 +66,7 @@ export function withRepositorySettings(
  * Every repository's settings with what was kept by `spec` before (`repositoryKey`) moved under the repository's
  * GUID, where the GUID's own win; the same object when nothing was kept by the spec.
  */
-export function withRepositoryKeptByGuid(byRepository: RepositorySettingsByKey, spec: string, guid: RepositoryGuid): RepositorySettingsByKey {
+export function withRepositoryKeptByGuid(byRepository: Record<string, RepositorySettings>, spec: string, guid: RepositoryGuid): Record<string, RepositorySettings> {
   const { [repositoryKey(spec)]: byName, ...others } = byRepository;
   if (!byName) return byRepository;
   return { ...others, [guid]: { ...byName, ...byRepository[guid] } };
