@@ -307,7 +307,7 @@ the app's settings.
     by the repository's GUID).
   A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
   main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
-  `setFavoriteOrganization`), never written whole from a window's copy. A value of the whole app (a Settings choice, the
+  `setFavoriteOrganization`, `review.setReviewMode`), never written whole from a window's copy. A value of the whole app (a Settings choice, the
   changeset colors) is written whole (`saveSettings`): every window follows `settingsChanged`, so its copy is current
   but for a save still on its way. `scopedSettings.ts` keeps only what differs from
   having nothing, so the file holds only what the user set.

@@ -4,7 +4,7 @@ import { isReviewModeOn, withReviewMode } from '@shared/domain/reviewModePlaces'
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY, queryClient } from '../../app/queryClient';
-import { saveSettings, useSettings } from '../../app/settings/useSettings';
+import { saveShown, useSettings } from '../../app/settings/useSettings';
 import { toast } from '../../ui/toast/toastStore';
 
 /** The keys of a review, said the same wherever review mode is offered or shown. */
@@ -29,12 +29,17 @@ export function useReviewModeOn(place: Place): boolean {
   return isReviewModeOn(useSettings().reviewModeWorkspaces, key);
 }
 
-/** Turns review mode on or off for the place. Turning it on is taking the offer, so the hint never shows again. */
+/**
+ * Turns review mode on or off for the place, shown at once. The main process changes the stored list
+ * (`api.review.setReviewMode`): another window's change, or the move of what was kept by the place's path, is never
+ * written over. Turning it on is taking the offer, so the hint never shows again.
+ */
 export async function setReviewMode(place: Place, on: boolean): Promise<void> {
   const key = await queryClient.fetchQuery(reviewModeKeyQuery(place));
-  // Read after the key: finding it may have just moved what was kept by the place's path to it.
-  const { reviewModeWorkspaces } = await api.settings.get();
-  await saveSettings({ reviewModeWorkspaces: withReviewMode(reviewModeWorkspaces, key, on), ...(on && { reviewModeHintDone: true }) });
+  await saveShown(
+    (current) => ({ ...current, reviewModeWorkspaces: withReviewMode(current.reviewModeWorkspaces, key, on), ...(on && { reviewModeHintDone: true }) }),
+    () => api.review.setReviewMode(place, on),
+  );
 }
 
 /** Review mode came on without its button (R, or marking a file from a menu): say so, how it works, and the way back. */

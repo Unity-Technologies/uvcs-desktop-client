@@ -1142,7 +1142,8 @@ another revision shows; the least recently reviewed diffs are forgotten. `featur
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
 It is kept by the workspace's GUID, or the repository's for a repository explored without one (`api.review.reviewModeKey`,
 `reviewModeKeyOf`), so a rename or a move keeps it; what was kept by the path or the spec moves to the GUID the first
-time it is asked.
+time it is asked. Turning it on or off is the main process's write from the stored list (`api.review.setReviewMode`),
+which moves and toggles in one change, so no window's copy writes over another's.
 Its toggle (`ReviewModeButton`) ends the filter bar of the lists that review (Changes and every diff), and the review bar
 (`ReviewBar`: progress, the "Unreviewed" filter, mark all, clear) opens right beneath it, between the filter bar and the
 list (and its header, in Changes): the toggle never moves as the bar comes and goes, and it is the one way out of review mode. The view's header was
