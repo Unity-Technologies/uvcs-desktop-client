@@ -18,6 +18,8 @@ export type SettingIdentity =
   | 'repositoryGuid'
   | 'branchGuid'
   | 'projectGuid'
+  /** A place a window shows: a workspace by its GUID, a repository explored without one by its repository's GUID. */
+  | 'placeGuid'
   /**
    * A Unity organization, by its name (`acme@unity`), as `cm` and every list name it: its owners can rename it, and no
    * other organization ever takes a name one had, so what it keeps follows it to its new name by its id
@@ -45,8 +47,8 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   defaultWorkspaceRoot: 'namesNoObject',
   pendingChangesOnSwitch: 'namesNoObject',
   restoreLeftChangesAutomatically: 'namesNoObject',
-  switchShelves: { byName: 'Not yet: by workspace GUID, but matched to the workspace’s repository and branch by name.' },
-  reviewModeWorkspaces: { byPath: 'Not yet: a workspace by its path, a repository by its spec.' },
+  switchShelves: 'workspaceGuid',
+  reviewModeWorkspaces: 'placeGuid',
   reviewModeHintDone: 'namesNoObject',
   showGravatar: 'namesNoObject',
   gravatarChoiceAsked: 'namesNoObject',

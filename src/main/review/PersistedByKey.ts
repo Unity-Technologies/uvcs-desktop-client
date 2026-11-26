@@ -1,7 +1,7 @@
 /**
  * State kept on disk per key (a workspace, a repository): read once, then kept in memory; saved one write after
  * another, so an older state never lands last. `read` answers the state a key starts from, empty when its file can't
- * be read.
+ * be read; a read that fails (where the file is couldn't be told) isn't kept, and the next load reads again.
  */
 export class PersistedByKey<State> {
   private readonly loaded = new Map<string, Promise<State>>();
@@ -13,8 +13,9 @@ export class PersistedByKey<State> {
   load(key: string): Promise<State> {
     let state = this.loaded.get(key);
     if (!state) {
-      state = this.read(key);
-      this.loaded.set(key, state);
+      const read = this.read(key);
+      read.catch(() => this.loaded.get(key) === read && this.loaded.delete(key));
+      this.loaded.set(key, (state = read));
     }
     return state;
   }

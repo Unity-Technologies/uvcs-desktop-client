@@ -23,6 +23,9 @@ export type BranchGuid = Guid<'branch'>;
 /** A Unity project's GUID: a project is a repository of its own type, listed with its `{repguid}`. */
 export type ProjectGuid = Guid<'project'>;
 
+/** A shelve's `{guid}` (`cm find shelve`): its number is per repository, and its repository's name changes with a rename. */
+export type ShelveGuid = Guid<'shelve'>;
+
 /**
  * A Unity organization's id, the digits `cm getconfig organization` prints as `{unityid}` (`1375943370549`): an
  * organization's name (`acme` in `acme@unity`) can be changed by its owners, its id never. It is what recognizes an
@@ -51,6 +54,10 @@ export function parseBranchGuid(text: string): BranchGuid | undefined {
 }
 
 export function parseProjectGuid(text: string): ProjectGuid | undefined {
+  return parseGuid(text);
+}
+
+export function parseShelveGuid(text: string): ShelveGuid | undefined {
   return parseGuid(text);
 }
 

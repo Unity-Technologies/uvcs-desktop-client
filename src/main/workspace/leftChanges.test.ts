@@ -95,6 +95,110 @@ describe('LeftChangesFinder', () => {
   });
 });
 
+describe('changes left before a rename', () => {
+  /** Changes left on branch 37 while it was named /main/old; the workspace is back on it, now /main/task1. */
+  const leftOnOldName = (changes: Partial<SwitchShelveRecord> = {}): SwitchShelveRecord => leftRecord(2, 'br:/main/old', changes);
+  const SHELVE_2_GUID = 'c7558622-b4f1-49eb-9f76-639af4d70002';
+  const onlyLocalCommands = (lines: string[]) => lines.every((line) => line.startsWith('status') || line.startsWith('getworkspacefrompath'));
+
+  it('are offered again on the branch renamed since, by the id the window read, under its name now', async () => {
+    const { cm, lines } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
+    const records = recordsOf([leftOnOldName()]);
+
+    expect(await new LeftChangesFinder(cm, records).find('/work', { name: '/main/task1', id: 37 })).toEqual([
+      expect.objectContaining({ shelveId: 2, sourceName: '/main/task1', foreign: false }),
+    ]);
+    expect(records.find({ shelveId: 2, repository: 'eco@local' })?.source).toEqual({ spec: 'br:/main/task1', name: '/main/task1', objectRef: 'br:37' });
+    expect(lines().some((command) => command.startsWith('find branch'))).toBe(false);
+  });
+
+  it('are found on arrival from the names a list already read, without asking the server', async () => {
+    const { cm, lines } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
+    const knownBranchName = (workspacePath: string, branchId: number) => (workspacePath === '/work' && branchId === 37 ? '/main/task1' : undefined);
+    const finder = new LeftChangesFinder(cm, recordsOf([leftOnOldName()]), undefined, undefined, knownBranchName);
+
+    expect(await finder.hasOwnWaiting('/work')).toBe(true);
+    expect(onlyLocalCommands(lines())).toBe(true);
+    expect(await finder.find('/work')).toEqual([expect.objectContaining({ shelveId: 2, sourceName: '/main/task1' })]);
+    expect(lines().some((command) => command.startsWith('find branch'))).toBe(false);
+  });
+
+  it('are not offered on another branch that took their branch name, and keep their id', async () => {
+    const { cm } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
+    // Left on /main/task1 (37), renamed since; the workspace is on branch 50, which took the name.
+    const records = recordsOf([leftRecord(2, 'br:/main/task1')]);
+    const finder = new LeftChangesFinder(cm, records, undefined, undefined, (_path, id) => (id === 37 ? '/main/task1-old' : undefined));
+
+    expect(await finder.find('/work', { name: '/main/task1', id: 50 })).toEqual([]);
+    expect(records.find({ shelveId: 2, repository: 'eco@local' })?.source.objectRef).toBe('br:37');
+  });
+
+  it("aren't restored on arrival while no list read the branch under its new name: \"Welcome back\" offers them", async () => {
+    const { cm, lines } = fakeCm(shelvesFound());
+
+    expect(await new LeftChangesFinder(cm, recordsOf([leftOnOldName()])).hasOwnWaiting('/work')).toBe(false);
+    expect(onlyLocalCommands(lines())).toBe(true);
+  });
+
+  it("learn their shelve's GUID, and are offered again once the repository is renamed", async () => {
+    const records = recordsOf([leftRecord(2, 'br:/main/task1')]);
+    await new LeftChangesFinder(fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 })).cm, records).find('/work');
+    expect(records.find({ shelveId: 2, repository: 'eco@local' })?.shelveGuid).toBe(SHELVE_2_GUID);
+
+    const renamed = fakeCmClient({
+      'status --header --xml': statusHeader('/main/task1', { repository: 'game' }),
+      getworkspacefrompath: WORKSPACE_NAMES,
+      'find shelve': shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }),
+    });
+    const finder = new LeftChangesFinder(renamed.cm, records);
+    expect(await finder.hasOwnWaiting('/work')).toBe(true);
+    expect(await finder.find('/work')).toEqual([expect.objectContaining({ shelveId: 2, foreign: false })]);
+    expect(records.find({ shelveId: 2, repository: 'game@local' })).toMatchObject({ shelveGuid: SHELVE_2_GUID });
+  });
+
+  it("stored before shelve GUIDs never take another repository's shelve of the same number and comment: it's offered as another app's", async () => {
+    // A record of other@local; the workspace switched to eco@local, whose own automatic shelve 2 was left on its branch 37 too.
+    const kept = leftRecord(2, 'br:/main/task1', { repository: 'other@local' });
+    const records = recordsOf([kept]);
+
+    expect(await new LeftChangesFinder(fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 })).cm, records).find('/work')).toEqual([
+      expect.objectContaining({ shelveId: 2, foreign: true }),
+    ]);
+    expect(records.find({ shelveId: 2, repository: 'other@local' })).toEqual(kept);
+  });
+
+  it("on arrival, are compared by repository name until their shelve's GUID is known: only then could a rename have been followed", async () => {
+    const { cm } = fakeCm(shelvesFound());
+    const unlisted = leftRecord(2, 'br:/main/task1', { repository: 'other@local' });
+    const listed = { ...unlisted, shelveGuid: SHELVE_2_GUID as SwitchShelveRecord['shelveGuid'] };
+
+    expect(await new LeftChangesFinder(cm, recordsOf([unlisted])).hasOwnWaiting('/work')).toBe(false);
+    expect(await new LeftChangesFinder(cm, recordsOf([listed])).hasOwnWaiting('/work')).toBe(true);
+  });
+
+  it('keep the record of another repository the workspace switched away from, whose shelve this one lists under the same number', async () => {
+    const records = recordsOf([leftRecord(2, 'br:/main/task1', { repository: 'other@local', shelveGuid: 'c7558622-b4f1-49eb-9f76-639af4d70009' as SwitchShelveRecord['shelveGuid'] })]);
+
+    expect(await new LeftChangesFinder(fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 })).cm, records).find('/work')).toEqual([
+      expect.objectContaining({ shelveId: 2, foreign: true }),
+    ]);
+    expect(records.find({ shelveId: 2, repository: 'other@local' })).toBeDefined();
+  });
+
+  it('are offered on a target renamed since, while they wait to be brought', async () => {
+    const { cm } = fakeCm(shelvesFound({ id: 2, comment: 'Automatic shelve created during switch operation (from br:5)' }));
+    const bringing = leftRecord(2, 'br:/main/task0', {
+      mode: 'bring',
+      source: { spec: 'br:/main/task0', name: '/main/task0', objectRef: 'br:5' },
+      target: { spec: 'br:/main/old', name: '/main/old', objectRef: 'br:37' },
+    });
+
+    expect(await new LeftChangesFinder(cm, recordsOf([bringing])).find('/work', { name: '/main/task1', id: 37 })).toEqual([
+      expect.objectContaining({ shelveId: 2, mode: 'bring', targetName: '/main/task1' }),
+    ]);
+  });
+});
+
 describe('shelves the user shelved away', () => {
   it('are never left changes: "Welcome back" and arriving from a switch leave them alone, and they are kept', async () => {
     const { cm } = fakeCm(shelvesFound());

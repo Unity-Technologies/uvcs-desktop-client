@@ -305,13 +305,15 @@ the app's settings.
   - a repository (`repositorySettings`, `RepositorySettings` by `repositoryKey`): the Branch Explorer's rules and moved
     branches, whether its rules and changeset colors apply, the sync remote;
   - a server (`serverSettings`, `ServerSettings` by `serverKey`): the home screen's project;
-  - a workspace: its recent branches (`recentBranchesByWorkspace`) and review mode (`reviewModeWorkspaces`).
+  - a workspace, by its GUID: its recent branches (`recentBranchesByWorkspace`), the changes it left on a switch
+    (`switchShelves`) and review mode (`reviewModeWorkspaces`, which keeps a repository explored without a workspace
+    by the repository's GUID).
   A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
   main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
-  `setFavoriteOrganization`), never written whole from a window's copy. A value of the whole app (a Settings choice, the
-  changeset colors) is written whole (`saveSettings`): every window follows `settingsChanged`, so its copy is current
-  but for a save still on its way. `scopedSettings.ts` keeps only what differs from
-  having nothing, so the file holds only what the user set.
+  `setFavoriteOrganization`, `review.setReviewMode`), never written whole from a window's copy. A value of the whole
+  app (a Settings choice, the changeset colors) is written whole (`saveSettings`): every window follows
+  `settingsChanged`, so its copy is current but for a save still on its way. `scopedSettings.ts` keeps only what
+  differs from having nothing, so the file holds only what the user set.
 - **The window's storage** (`localStorage`, zustand's `persist`): only how the views are laid out, what costs a click to
   set again: splitter widths, folds, sorting, view toggles, filters, the diff's layout. Every window keeps its own copy
   of such a store and writes all of it back on any change, so the last window to change it wins: right for a layout,

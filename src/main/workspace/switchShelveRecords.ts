@@ -21,6 +21,12 @@ export class SwitchShelveRecords {
     this.settings.update({ switchShelves: [...this.all().filter((existing) => !sameShelve(existing, record)), record] });
   }
 
+  /** Writes records found changed (named as now after a rename), each in the place of its version kept before. */
+  replace(changed: { kept: SwitchShelveRecord; now: SwitchShelveRecord }[]): void {
+    if (changed.length === 0) return;
+    this.settings.update({ switchShelves: this.all().map((record) => changed.find(({ kept }) => sameShelve(kept, record))?.now ?? record) });
+  }
+
   remove(keys: RecordKey[]): void {
     this.settings.update({ switchShelves: this.all().filter((record) => !keys.some((key) => sameShelve(record, key))) });
   }
