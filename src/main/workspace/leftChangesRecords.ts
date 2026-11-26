@@ -105,13 +105,13 @@ export function shelveOf(record: SwitchShelveRecord, shelves: Shelve[], reposito
 }
 
 /**
- * The record of `shelve`, as found now: in the repository as named now, with the shelve's GUID, which finds it after a
- * rename of the repository. The same record when nothing changes.
+ * The record of `shelve`, as found now: its number and the repository as named now, with the shelve's GUID, which finds
+ * it after a rename of the repository. The same record when nothing changes.
  */
 export function withShelve(record: SwitchShelveRecord, shelve: Shelve, repository: string): SwitchShelveRecord {
   const shelveGuid = parseShelveGuid(shelve.guid) ?? record.shelveGuid;
-  if (record.repository === repository && record.shelveGuid === shelveGuid) return record;
-  return { ...record, repository, ...(shelveGuid && { shelveGuid }) };
+  if (record.shelveId === shelve.id && record.repository === repository && record.shelveGuid === shelveGuid) return record;
+  return { ...record, shelveId: shelve.id, repository, ...(shelveGuid && { shelveGuid }) };
 }
 
 /** How "Welcome back" offers the changes of one of this app's records. */
