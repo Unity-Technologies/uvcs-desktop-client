@@ -16,6 +16,8 @@ export type SettingIdentity =
   | 'repositoryGuid'
   | 'branchGuid'
   | 'projectGuid'
+  /** A place a window shows: a workspace by its GUID, a repository explored without one by its repository's GUID. */
+  | 'placeGuid'
   /** An object kept by its number in the repository whose settings hold it: numbers are per repository, as these are. */
   | { byIdIn: 'repository'; because: string }
   /** A file or folder, found by its path: why no GUID does. */
@@ -37,8 +39,8 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   defaultWorkspaceRoot: 'namesNoObject',
   pendingChangesOnSwitch: 'namesNoObject',
   restoreLeftChangesAutomatically: 'namesNoObject',
-  switchShelves: { byName: 'Not yet: by workspace GUID, but matched to the workspace’s repository and branch by name.' },
-  reviewModeWorkspaces: { byPath: 'Not yet: a workspace by its path, a repository by its spec.' },
+  switchShelves: 'workspaceGuid',
+  reviewModeWorkspaces: 'placeGuid',
   reviewModeHintDone: 'namesNoObject',
   showGravatar: 'namesNoObject',
   gravatarChoiceAsked: 'namesNoObject',

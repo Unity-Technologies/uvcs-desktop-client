@@ -302,7 +302,9 @@ the app's settings.
   - a repository (`repositorySettings`, `RepositorySettings` by `repositoryKey`): the Branch Explorer's rules and moved
     branches, whether its rules and changeset colors apply, the sync remote;
   - a server (`serverSettings`, `ServerSettings` by `serverKey`): the home screen's project;
-  - a workspace: its recent branches (`recentBranchesByWorkspace`) and review mode (`reviewModeWorkspaces`).
+  - a workspace, by its GUID: its recent branches (`recentBranchesByWorkspace`), the changes it left on a switch
+    (`switchShelves`) and review mode (`reviewModeWorkspaces`, which keeps a repository explored without a workspace
+    by the repository's GUID).
   A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
   main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
   `setFavoriteOrganization`), never written whole from a window's copy. A value of the whole app (a Settings choice, the

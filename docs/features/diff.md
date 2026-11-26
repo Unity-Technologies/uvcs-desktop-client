@@ -1133,11 +1133,16 @@ reply): a place lists rows that come later after the others (`annotationRowsOf`)
 ## Review marks
 
 `main/review/ReviewStore` keeps, per workspace, the fingerprint of each file marked reviewed (and a copy of its text,
-read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/`; marks of paths that leave the pending changes are dropped.
+read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/<workspace GUID>/`, so a workspace
+renamed or moved keeps them; a folder kept by the hash of the workspace's path, as before, moves there the first time
+its marks are read. Marks of paths that leave the pending changes are dropped.
 Committed diffs (changeset, branch, shelve, range, code review) keep marks too, in `main/review/DiffReviewStore`: per repository,
 by the diff's name (`cs:42`, `br:/main/task`, `sh:3`) and the revision reviewed, so a branch's file is changed since its review once
 another revision shows; the least recently reviewed diffs are forgotten. `features/review` holds the shared list pieces.
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
+It is kept by the workspace's GUID, or the repository's for a repository explored without one (`api.review.reviewModeKey`,
+`reviewModeKeyOf`), so a rename or a move keeps it; what was kept by the path or the spec moves to the GUID the first
+time it is asked.
 Its toggle (`ReviewModeButton`) ends the filter bar of the lists that review (Changes and every diff), and the review bar
 (`ReviewBar`: progress, the "Unreviewed" filter, mark all, clear) opens right beneath it, between the filter bar and the
 list (and its header, in Changes): the toggle never moves as the bar comes and goes, and it is the one way out of review mode. The view's header was
