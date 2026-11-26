@@ -2,7 +2,6 @@ import { rm } from 'node:fs/promises';
 import type { KnownBranch } from '@shared/domain/branch';
 import type { Place } from '@shared/domain/place';
 import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
-import { selectorSpec } from '@shared/domain/specs';
 import type { KeptAsideFile, LeftChanges, RestoreResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { cmPlace } from '../cm/cmPlace';
 import type { CmClient } from '../cm/CmClient';
@@ -10,7 +9,7 @@ import type { OperationContext } from '../operations/OperationTracker';
 import { applyShelveCleanly, type ApplyOutcome } from './applyShelveCleanly';
 import { detachReplacedFiles } from './detachReplacedFiles';
 import { readAutomaticShelves, shelvesLeftOn, toForeignLeftChanges } from './foreignLeftChanges';
-import { isLeftChanges, toLeftChanges, waitingOn } from './leftChangesRecords';
+import { branchRefsOf, followingRenames, isLeftChanges, shelveOf, toLeftChanges, waitingOn, withShelve, workspaceSpot, type LeftChangesRecord, type WorkspaceSpot } from './leftChangesRecords';
 import { kindFromHeaders } from './shelveFlowDependencies';
 import { putBack } from './privateBackups';
 import { restoreChangelists } from './restoreChangelists';
@@ -21,12 +20,19 @@ import { deleteShelves, readShelveEntries } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 import { cmHeaderReaders, type HeaderReaders } from './WorkspaceHeaders';
 
+/** A branch's name as a list already read it (`BranchNamesCache.knownName`), without asking the server. */
+export type KnownBranchName = (workspacePath: string, branchId: number) => string | undefined;
+
 /**
  * The shelves left behind when switching away, found again when the workspace comes back:
  * this app's own records first, then the automatic shelves the official client or `cm switch` left
  * (they share the comment format, so the official lookup finds them). It also puts any recorded shelve's changes back
  * (restore, apply) and forgets them (discard, finish). Files moved aside that can't go back stay in the app's data
  * folder, and it tells (`tellKeptAside`).
+ *
+ * Records survive renames: a record is the workspace's by its GUID, waits on a branch by its object id as well as its
+ * name, and finds its shelve by the shelve's GUID once listed, whatever its repository is called now. What a rename
+ * changed is written back to the record as `find` sees it (`followingRenames`, `withShelve`).
  */
 export class LeftChangesFinder {
   constructor(
@@ -34,13 +40,16 @@ export class LeftChangesFinder {
     private readonly records: SwitchShelveRecords,
     private readonly headers: HeaderReaders = cmHeaderReaders(cm),
     private readonly tellKeptAside: (workspacePath: string, files: KeptAsideFile[]) => void = () => {},
+    private readonly knownBranchName: KnownBranchName = () => undefined,
   ) {}
 
   /** `branch`: the workspace's branch as the window already read it (`LeftChangesApi.find`). */
   async find(workspacePath: string, branch?: KnownBranch): Promise<LeftChanges[]> {
     const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
     const shelves = await readAutomaticShelves(this.cm, workspacePath);
-    const own = this.liveRecords(workspace, shelves).flatMap((record) => waitingOn(record, selectorSpec(workspace.selector)) ?? []);
+    const kept = this.records.forWorkspace(workspace.guid).filter(isLeftChanges);
+    const at = this.spotOf(workspacePath, workspace, kept, branch);
+    const own = this.liveRecords(kept, workspace, shelves, at).flatMap((record) => waitingOn(record, at) ?? []);
     const unrecorded = shelves.filter((shelve) => !this.records.find({ shelveId: shelve.id, repository: workspace.repository }));
     const foreign = await shelvesLeftOn(this.cm, workspacePath, workspace.selector, unrecorded, branch);
 
@@ -50,12 +59,16 @@ export class LeftChangesFinder {
     ];
   }
 
-  /** Whether this app's records have changes waiting on what the workspace is on now. Reads no server data. */
+  /**
+   * Whether this app's records have changes waiting on what the workspace is on now. Reads no server data: a branch
+   * renamed since is told by the names lists already read (`knownBranchName`). The repository isn't compared, as a
+   * rename changes its name: `find` tells a shelve of another repository apart by its GUID.
+   */
   async hasOwnWaiting(workspacePath: string): Promise<boolean> {
     const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
-    return this.records
-      .forWorkspace(workspace.guid)
-      .some((record) => record.repository === workspace.repository && waitingOn(record, selectorSpec(workspace.selector)));
+    const records = this.records.forWorkspace(workspace.guid).filter(isLeftChanges);
+    const at = this.spotOf(workspacePath, workspace, records);
+    return records.some((record) => waitingOn(record, at));
   }
 
   /**
@@ -146,16 +159,25 @@ export class LeftChangesFinder {
     return record?.workspaceGuid === workspace.guid ? record : undefined;
   }
 
+  /** Where the workspace is, by its spec and, when known for free, its object id (`workspaceSpot`). */
+  private spotOf(workspacePath: string, workspace: WorkspaceIdentity, records: SwitchShelveRecord[], known?: KnownBranch): WorkspaceSpot {
+    const nameOf = (branchId: number): string | undefined => this.knownBranchName(workspacePath, branchId);
+    return workspaceSpot(workspace.selector, { known, refs: branchRefsOf(records), nameOf });
+  }
+
   /**
-   * This workspace's records of left changes whose shelves still exist; the others were deleted elsewhere and are
-   * forgotten. Shelves the user shelved away carry the user's comment, not the automatic one: they aren't in `shelves`.
+   * The records (this workspace's, of left changes) whose shelves are in its repository's `shelves`, named as they are
+   * where the workspace is (`at`); those of the repository whose shelves are gone were deleted elsewhere and are
+   * forgotten. A record of another repository the workspace switched away from stays. Shelves the user shelved away
+   * carry the user's comment, not the automatic one: they aren't in `shelves`.
    */
-  private liveRecords(workspace: WorkspaceIdentity, shelves: Shelve[]): SwitchShelveRecord[] {
-    const existing = new Set(shelves.map((shelve) => shelve.id));
-    const records = this.records.forWorkspace(workspace.guid).filter((record) => record.repository === workspace.repository && isLeftChanges(record));
-    const gone = records.filter((record) => !existing.has(record.shelveId));
+  private liveRecords(records: LeftChangesRecord[], workspace: WorkspaceIdentity, shelves: Shelve[], at: WorkspaceSpot): SwitchShelveRecord[] {
+    const found = records.map((record) => ({ kept: record, shelve: shelveOf(record, shelves, workspace.repository) }));
+    const gone = found.filter(({ kept, shelve }) => !shelve && kept.repository === workspace.repository).map(({ kept }) => kept);
     if (gone.length > 0) this.records.remove(gone);
-    return records.filter((record) => existing.has(record.shelveId));
+    const live = found.flatMap(({ kept, shelve }) => (shelve ? [{ kept, now: followingRenames(withShelve(kept, shelve, workspace.repository), at) }] : []));
+    this.records.replace(live.filter(({ kept, now }) => kept !== now));
+    return live.map(({ now }) => now);
   }
 
   /** Records a shelve another app left here, as if this app had left it, so finishing it cleans up the same way. */
