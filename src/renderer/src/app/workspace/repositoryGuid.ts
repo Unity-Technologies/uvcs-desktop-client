@@ -32,8 +32,16 @@ export function repositoryGuidQuery(repositorySpec: string) {
  * that name). `read` false only takes one read already (by a check-in, another view): what reads it when it's needed.
  */
 export function useRepositoryGuid(repositorySpec: string | undefined, { read = true } = {}): RepositoryGuid | undefined {
-  const { data } = useQuery({ ...repositoryGuidQuery(repositorySpec ?? ''), enabled: repositorySpec !== undefined && read });
-  return data ?? undefined;
+  return useRepositoryGuidRead(repositorySpec, { read }).guid;
+}
+
+/**
+ * The repository's GUID as `useRepositoryGuid` reads it, and whether the read ended without one (`unreadable`: its
+ * server out of reach, no repository by that name), for what says so instead of waiting.
+ */
+export function useRepositoryGuidRead(repositorySpec: string | undefined, { read = true } = {}): { guid: RepositoryGuid | undefined; unreadable: boolean } {
+  const { data, isError } = useQuery({ ...repositoryGuidQuery(repositorySpec ?? ''), enabled: repositorySpec !== undefined && read });
+  return { guid: data ?? undefined, unreadable: isError || data === null };
 }
 
 /** The GUID of the window's place's repository (`usePlaceRepository`), as `useRepositoryGuid` reads it. */

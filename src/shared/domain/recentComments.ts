@@ -28,19 +28,26 @@ export interface RecentCommentsOffer {
   /** Whether its button shows. */
   offered: boolean;
   comments: string[];
+  /** Shown in the menu, disabled, in place of the comments while they can't be offered: none once they can. */
+  waiting: string | null;
 }
 
 /**
  * What the check-in's Recent comments menu offers in `repository` (its GUID): its comments once the GUID is known.
  * The GUID is read only as the menu opens (or once a check-in read it), so before that the button shows while any
- * comment is kept, and its comments come as the GUID does.
+ * comment is kept, and the menu says its comments are loading until the GUID comes, or that they couldn't be
+ * (`unreadable`: the server out of reach, no repository by that name).
  */
-export function recentCommentsOffer(settings: RecentCommentSettings, repository: RepositoryGuid | undefined): RecentCommentsOffer {
+export function recentCommentsOffer(settings: RecentCommentSettings, repository: RepositoryGuid | undefined, { unreadable = false } = {}): RecentCommentsOffer {
   if (repository !== undefined) {
     const comments = recentCommentsFor(settings, repository);
-    return { offered: comments.length > 0, comments };
+    return { offered: comments.length > 0, comments, waiting: null };
   }
-  return { offered: settings.recentComments.length > 0 || Object.keys(settings.recentCommentsByRepository).length > 0, comments: [] };
+  return {
+    offered: settings.recentComments.length > 0 || Object.keys(settings.recentCommentsByRepository).length > 0,
+    comments: [],
+    waiting: unreadable ? "Couldn't load this repository's recent comments" : 'Loading…',
+  };
 }
 
 /**

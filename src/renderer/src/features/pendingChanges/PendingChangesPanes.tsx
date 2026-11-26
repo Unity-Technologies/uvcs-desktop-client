@@ -15,7 +15,7 @@ import { FileTreeFoldingContext } from '../../components/fileTreeFolding';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
-import { useRepositoryGuid } from '../../app/workspace/repositoryGuid';
+import { useRepositoryGuidRead } from '../../app/workspace/repositoryGuid';
 import { branchWorkedOn } from '../../components/workingObject';
 import { singleSelection } from '../../lib/selection';
 import { shownRowsOf, withMetas } from '../../lib/unityMetaPairs';
@@ -98,7 +98,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const settings = useSettings();
   // Recent comments are kept by the repository's GUID, read as their menu first opens (or by a check-in), not on sight.
   const [recentCommentsOpened, setRecentCommentsOpened] = useState(false);
-  const repositoryGuid = useRepositoryGuid(workspace?.repository, { read: recentCommentsOpened });
+  const repositoryGuid = useRepositoryGuidRead(workspace?.repository, { read: recentCommentsOpened });
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
   const layout = useFileListViewStore((state) => state.layout);
   const groupByStatus = useFileListViewStore((state) => state.groupByStatus);
@@ -341,7 +341,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               behindDescription={behind && behindDescription(behind)}
               preparedChangelistNote={preparedNote}
               allReviewed={allReviewed}
-              recentComments={recentCommentsOffer(settings, repositoryGuid)}
+              recentComments={recentCommentsOffer(settings, repositoryGuid.guid, { unreadable: repositoryGuid.unreadable })}
               onRecentCommentsOpen={() => setRecentCommentsOpened(true)}
               mode={checkinMode}
               onModeChange={setCheckinMode}
