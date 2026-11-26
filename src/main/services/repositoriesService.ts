@@ -53,9 +53,8 @@ export function createRepositoriesService({ cm, repositoryGuids, settings, issue
 
   async function rename(repositorySpec: string, newName: string): Promise<void> {
     await cm.query(['repository', 'rename', repositorySpec, newName]);
-    const at = repositorySpec.indexOf('@');
-    if (at <= 0) return;
-    repositoryGuids.renamed(repositorySpec.slice(at + 1), repositorySpec.slice(0, at), newName);
+    const parts = repositorySpecParts(repositorySpec);
+    if (parts) repositoryGuids.renamed(parts.server, parts.name, newName);
   }
 
   async function remove(repositorySpec: string): Promise<void> {
