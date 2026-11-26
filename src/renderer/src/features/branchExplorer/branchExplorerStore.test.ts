@@ -8,7 +8,6 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { BRANCH_EXPLORER_KEPT_KEY } from '../../app/settings/windowKeptSettings';
 import { repositoryGuidToWrite } from '../../app/workspace/repositoryGuidToWrite';
-import { shownToasts } from '../../testing/operationOutcome';
 import { fakeApi } from '../../testing/fakeWindow';
 import { setBranchPins, setExplorerRulesOn, setUserColors, useBranchExplorerPreferences } from './branchExplorerStore';
 
@@ -27,40 +26,26 @@ beforeEach(() => {
 });
 
 describe('Branch Explorer preferences', () => {
-  it('asks the main process to change one repository’s moved branches and rules, by its GUID, shown at once', async () => {
+  it('writes a repository’s moved branches and rules under the GUID its shown copy was read by, shown at once, asking for none', () => {
     fakeApi.answer('settings.updateRepositorySettings', () => new Promise(() => {}));
-    void setBranchPins('game@host', [{ branch: 4, row: 1 }]);
-    void setExplorerRulesOn('game@host', false);
-    await repositoryGuidToWrite('game@host');
+    void setBranchPins(GAME, [{ branch: 4, row: 1 }]);
+    void setExplorerRulesOn(GAME, false);
 
     expect(fakeApi.argsOf('settings.updateRepositorySettings')).toEqual([
       [GAME, { branchPins: [{ branch: 4, row: 1 }] }],
       [GAME, { explorerRulesOff: true }],
     ]);
     expect(shownSettings().repositorySettings).toEqual({ [GAME]: { branchPins: [{ branch: 4, row: 1 }], explorerRulesOff: true } });
-    expect(fakeApi.argsOf('repositories.guidOf')).toEqual([['game@host']]);
+    expect(fakeApi.argsOf('repositories.guidOf')).toEqual([]);
   });
 
   it('keeps a repository’s rules and moved branches once it is renamed anywhere', async () => {
     fakeApi.answer('settings.updateRepositorySettings', () => new Promise(() => {}));
-    void setBranchPins('game@host', [{ branch: 4, row: 1 }]);
-    await repositoryGuidToWrite('game@host');
+    void setBranchPins(GAME, [{ branch: 4, row: 1 }]);
 
     const renamed = await repositoryGuidToWrite('racer@host');
 
     expect(repositorySettingsOf(shownSettings().repositorySettings, renamed)).toEqual({ branchPins: [{ branch: 4, row: 1 }] });
-  });
-
-  it('says a change wasn’t saved, and shows none, when the repository’s GUID can’t be read', async () => {
-    fakeApi.answer('repositories.guidOf', () => {
-      throw new Error('Unable to connect to host');
-    });
-
-    await setExplorerRulesOn('game@host', false);
-
-    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't save the settings", detail: 'Unable to connect to host' }]);
-    expect(fakeApi.argsOf('settings.updateRepositorySettings')).toEqual([]);
-    expect(shownSettings().repositorySettings).toEqual({});
   });
 
   it('keeps the changeset colors in the app’s settings', () => {
