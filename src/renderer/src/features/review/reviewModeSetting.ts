@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
+import { isReviewModeOn, withReviewMode } from '@shared/domain/reviewModePlaces';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY, queryClient } from '../../app/queryClient';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { toast } from '../../ui/toast/toastStore';
-import { isReviewModeOn, withReviewMode } from './reviewModeWorkspaces';
 
 /** The keys of a review, said the same wherever review mode is offered or shown. */
 export const REVIEW_KEYS = 'R marks a file, J and K move';

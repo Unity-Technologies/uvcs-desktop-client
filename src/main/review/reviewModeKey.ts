@@ -20,15 +20,6 @@ export async function reviewModeKeyOf(place: Place, guids: PlaceGuids): Promise<
   return guid ?? placeId(place);
 }
 
-/**
- * The places with review mode on, once what was kept by `from` (the place's `placeId`, as review mode was kept before)
- * is kept by `to` (its GUID); undefined when nothing moves.
- */
-export function movedReviewMode(keys: readonly string[], from: string, to: string): string[] | undefined {
-  if (from === to || !keys.includes(from)) return undefined;
-  return [...keys.filter((key) => key !== from && key !== to), to];
-}
-
 /** Repository names hold no `@`: the server is everything after the first one (`game@acme@unity`). */
 function repositoryGuidOf(repositorySpec: string, guids: PlaceGuids): Promise<RepositoryGuid | undefined> {
   const at = repositorySpec.indexOf('@');

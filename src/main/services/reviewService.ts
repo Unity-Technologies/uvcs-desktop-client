@@ -1,6 +1,7 @@
 import type { ReviewApi } from '@shared/api/review';
 import { placeId } from '@shared/domain/place';
-import { movedReviewMode, reviewModeKeyOf, type PlaceGuids } from '../review/reviewModeKey';
+import { movedReviewMode } from '@shared/domain/reviewModePlaces';
+import { reviewModeKeyOf, type PlaceGuids } from '../review/reviewModeKey';
 import { readWorkspaceGuid } from '../workspace/workspaceIdentity';
 import type { ServiceContext } from './ServiceContext';
 
