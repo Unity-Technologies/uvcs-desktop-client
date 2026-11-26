@@ -3,12 +3,14 @@ import { placeId } from '@shared/domain/place';
 import { movedReviewMode, withReviewMode } from '@shared/domain/reviewModePlaces';
 import { reviewModeKeyOf, type PlaceGuids } from '../review/reviewModeKey';
 import { readWorkspaceGuid } from '../workspace/workspaceIdentity';
+import { repositoryGuidOf } from './repositoryGuidOf';
 import type { ServiceContext } from './ServiceContext';
 
-export function createReviewService({ reviews, diffReviews, settings, headers, repositoryGuids }: ServiceContext): ReviewApi {
+export function createReviewService(context: ServiceContext): ReviewApi {
+  const { reviews, diffReviews, settings, headers } = context;
   const guids: PlaceGuids = {
     workspace: (workspacePath) => readWorkspaceGuid(headers, workspacePath),
-    repository: (server, name) => repositoryGuids.guidOf(server, name),
+    repository: (repositorySpec) => repositoryGuidOf(context, repositorySpec),
   };
 
   return {

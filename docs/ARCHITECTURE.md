@@ -363,9 +363,9 @@ be passed where one is kept.
   when a setting is added. A path or a name is kept only where nothing stable exists, and its line says why: the
   folder a workspace opens from, a user (`cm` prints no id for one), a server of its own (its address).
 - **What was kept by name before** moves to the object's GUID the first time the GUID is known, with no extra `cm`
-  call: a repository's settings, recent comments, issue tracker binding and review marks as `guidOf` answers
-  (`keepByGuid` in `repositoriesService`: `SettingsStore`, `IssueTrackerStore`, `DiffReviewStore`
-  `keepRepositoryByGuid`), a branch diff's review marks as they are first read or marked (`formerDiffReviewName`).
+  call: a repository's settings, recent comments, issue tracker binding and review marks as its GUID is first read
+  (`repositoryGuidOf`, the one way from a spec to its GUID, which `repositories.guidOf` and review mode's key share:
+  `SettingsStore`, `IssueTrackerStore`, `DiffReviewStore` `keepRepositoryByGuid`), a branch diff's review marks as they are first read or marked (`formerDiffReviewName`).
   What a window's storage hands over later by spec (`addWindowSettings`) goes under the GUID when a listing taught it.
   What was kept for a repository never opened again stays where it was.
 - **A Unity organization** is kept by its name (`acme@unity`), which every list and `cm` use: its owners can change
