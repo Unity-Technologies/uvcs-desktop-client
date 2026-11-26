@@ -64,6 +64,20 @@ describe('DiffReviewStore', () => {
     expect(await store().marks(REPO, 'br:guid-of-task')).toEqual([{ path: 'a.ts', revisionId: 10 }]);
   });
 
+  it('moves a diff’s marks kept by its former name when the first thing done is marking or unmarking', async () => {
+    const reviews = store();
+    await reviews.mark(REPO, 'br:/main/task', [{ path: 'a.ts', revisionId: 10 }, { path: 'c.ts', revisionId: 12 }]);
+
+    await reviews.mark(REPO, 'br:guid-of-task', [{ path: 'b.ts', revisionId: 11 }], 'br:/main/task');
+    await reviews.unmark(REPO, 'br:guid-of-task', ['c.ts'], 'br:/main/task');
+
+    expect(await store().marks(REPO, 'br:guid-of-task')).toEqual([
+      { path: 'a.ts', revisionId: 10 },
+      { path: 'b.ts', revisionId: 11 },
+    ]);
+    expect(await store().marks(REPO, 'br:/main/task')).toEqual([]);
+  });
+
   it('takes the file of marks kept by the repository’s spec as its GUID’s, once the GUID is known', async () => {
     const bySpec = join(root, `${createHash('sha1').update('game@acme@unity').digest('hex').slice(0, 16)}.json`);
     await writeFile(bySpec, JSON.stringify({ 'cs:4': { usedAt: 1, marks: { 'a.ts': 10 } } }));
