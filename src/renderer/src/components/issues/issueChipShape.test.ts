@@ -102,4 +102,8 @@ describe('placeTrackerOf', () => {
     expect(placeTrackerOf(setup([connection]), repositoryGuidFor(5))).toBeNull();
     expect(placeTrackerOf(undefined, repositoryGuidFor(1))).toBeNull();
   });
+
+  it('names the repository it was found for, so searching its issues reads no GUID of its own', () => {
+    expect(placeTrackerOf(setup([connection]), repositoryGuidFor(1))?.repository).toBe(repositoryGuidFor(1));
+  });
 });
