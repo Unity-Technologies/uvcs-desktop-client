@@ -1,5 +1,4 @@
-import type { RepositoryListing } from '@shared/domain/repository';
-import { repositorySpecParts, serverKey } from '@shared/domain/repository';
+import { REPOSITORY_LISTING_FRESH_MS, repositorySpecParts, serverKey, type RepositoryListing } from '@shared/domain/repository';
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 
 /**
@@ -8,7 +7,7 @@ import type { RepositoryGuid } from '@shared/domain/stableIds';
  * lists its server once a minute at most. A listing that failed this recently answers a lookup with its failure, so
  * windows asking again (each view mounting) don't list a server out of reach each time.
  */
-const FRESH_LISTING_MS = 60_000;
+const FRESH_LISTING_MS = REPOSITORY_LISTING_FRESH_MS;
 
 /**
  * The GUID of each repository by its name, per server: what the app keeps a repository's settings by, since a name
@@ -57,7 +56,7 @@ export class RepositoryGuids {
 
   /**
    * The GUID of the repository `name` names on `server`, listing the server when the name is unknown and the last
-   * listing isn't fresh; undefined when the server holds no such repository, or `cm` printed no GUID for it. Rejects
+   * listing isn't fresh; undefined when the server holds no such repository. Rejects
    * when the listing fails.
    */
   async guidOf(server: string, name: string): Promise<RepositoryGuid | undefined> {

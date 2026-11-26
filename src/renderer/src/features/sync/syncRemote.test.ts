@@ -12,7 +12,7 @@ describe('syncRemoteChange', () => {
     expect(syncRemoteChange({ ...summary, guid })).toEqual({ syncRemote: 'game@acme@cloud', syncRemoteGuid: guid });
   });
 
-  it('forgets the GUID of a remote picked before when the one picked now has none, from a cm that prints none', () => {
+  it('forgets the GUID of a remote picked before when the one picked now has none, a listing that printed none', () => {
     expect(syncRemoteChange(summary)).toEqual({ syncRemote: 'game@acme@cloud', syncRemoteGuid: null });
   });
 });

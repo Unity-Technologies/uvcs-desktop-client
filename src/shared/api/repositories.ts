@@ -9,7 +9,7 @@ export interface RepositoriesApi {
   /**
    * The GUID of the repository a spec names (`name@server`), which what the app keeps for it is kept by
    * (ARCHITECTURE.md "Settings survive renames"): free when its server was listed, else one listing. Null when the
-   * server holds no such repository, or `cm` prints no GUID; rejects when the server can't be listed.
+   * server holds no such repository; rejects when the server can't be listed.
    */
   guidOf(repositorySpec: string): Promise<RepositoryGuid | null>;
   /**

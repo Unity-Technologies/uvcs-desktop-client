@@ -1,5 +1,5 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import { repositoryKey } from '@shared/domain/repository';
+import { REPOSITORY_LISTING_FRESH_MS, repositoryKey } from '@shared/domain/repository';
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -11,20 +11,23 @@ import { usePlaceRepository } from './useWorkspace';
 // taught it, as the home screen's does, else one listing. Each window reads it once per repository, and what is kept
 // for the repository reads as none meanwhile, so nothing waits for it.
 
-/** The GUID of the repository a spec names; null when its server holds none by that name or `cm` prints none. */
+/**
+ * The GUID of the repository a spec names; null when its server holds none by that name, asked again once its listing
+ * is a minute old (`REPOSITORY_LISTING_FRESH_MS`), as the repository may have been made since. Every `cm` the app runs
+ * (its pinned version or newer: docs/features/cm-runtime.md) prints `{repguid}`.
+ */
 export function repositoryGuidQuery(repositorySpec: string) {
   return queryOptions({
     queryKey: queryKeys.repositoryGuid(repositoryKey(repositorySpec)),
     queryFn: () => api.repositories.guidOf(repositorySpec),
-    // A GUID never changes; and a name that found none isn't asked again on every focus, or a `cm` that prints no GUID
-    // would list the server each time.
-    staleTime: Infinity,
+    // A GUID never changes, and nothing is asked again on focus.
+    staleTime: (query) => (query.state.data === null ? REPOSITORY_LISTING_FRESH_MS : Infinity),
     refetchOnWindowFocus: false,
     meta: IMMUTABLE_QUERY,
   });
 }
 
-/** The repository's GUID; undefined while it's read, and when it can't be (its server out of reach, a `cm` printing none). */
+/** The repository's GUID; undefined while it's read, and when it can't be (its server out of reach, no repository by that name). */
 export function useRepositoryGuid(repositorySpec: string | undefined): RepositoryGuid | undefined {
   const { data } = useQuery({ ...repositoryGuidQuery(repositorySpec ?? ''), enabled: repositorySpec !== undefined });
   return data ?? undefined;
