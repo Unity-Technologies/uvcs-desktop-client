@@ -31,6 +31,8 @@ const SIGN_IN_CASES: string[][] = [
   ['workspace', 'list'],
   ['workspace', 'create', 'demo'],
   ['wk', 'delete', 'demo'],
+  ['getconfig', 'organization', 'acme@unity', '--format={unityid}'],
+  ['getconfig', 'extensionworkingmode'],
   ['status', '--header', '--xml'],
   ['status', '--compact'],
   ['status', '--cset'],

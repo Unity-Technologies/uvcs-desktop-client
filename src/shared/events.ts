@@ -69,7 +69,10 @@ export interface UvcsEvents {
   serverSessionsChanged: ServerSession[];
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
-  /** A workspace was picked from the OS recent documents; `system.takeRequestedPlace` tells which. */
+  /**
+   * The window is asked to open a place, which `system.takeRequestedPlace` tells: a workspace picked from the OS recent
+   * documents, or a repository it reopened on at launch, under the name a rename made elsewhere gave it.
+   */
   workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };

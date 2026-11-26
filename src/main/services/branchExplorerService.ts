@@ -17,6 +17,7 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
     // Each record is read as it arrives: a big repository's answers are hundreds of MB, never held whole. Merges are the
     // slowest query on big repositories, so they get their own process instead of waiting in line behind the pooled
     // `cm shell` sessions.
+    const readSince = branchNames.readStarts(place);
     const [visible, hidden, changesets, mergeLinks, labels] = await Promise.all([
       cm.queryRecords(finds.branches, graphBranch(false), options),
       cm.queryRecords(finds.hiddenBranches, graphBranch(true), options),
@@ -26,7 +27,7 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
     ]);
 
     // The code review chips name branches by id (often finished tasks, hidden): these lists answer them.
-    branchNames.remember(place, [...visible, ...hidden], { complete: true });
+    branchNames.remember(place, [...visible, ...hidden], { complete: true, readSince });
     const branches = query.includeHidden ? [...visible, ...hidden] : visible;
 
     return { branches: relevantBranches(branches, changesets, query.sinceDate), changesets, mergeLinks, labels };

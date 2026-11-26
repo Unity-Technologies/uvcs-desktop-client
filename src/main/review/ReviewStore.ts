@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { FileContent } from '@shared/domain/content';
 import type { ReviewMark } from '@shared/domain/review';
+import type { WorkspaceGuid } from '@shared/domain/stableIds';
 import { toFileContent } from '../files/fileContent';
+import { pathExists } from '../files/pathExists';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { fingerprintFile, looksUnchanged, type Fingerprint } from './fingerprint';
 import { PersistedByKey } from './PersistedByKey';
@@ -18,89 +20,136 @@ interface StoredMark extends Fingerprint {
 
 type Marks = Map<string, StoredMark>;
 
+/** A workspace's marks, and the folder they're kept in. */
+interface WorkspaceMarks {
+  directory: string;
+  marks: Marks;
+}
+
+/** How the folder kept by a workspace's path is moved to its GUID's, or removed once the GUID's holds the marks. */
+export interface FolderMoves {
+  move(from: string, to: string): Promise<void>;
+  remove(folder: string): Promise<void>;
+}
+
+/** On the disk; removing retries a few times, as Windows refuses while a file in the folder is open. */
+export const DISK_FOLDERS: FolderMoves = {
+  move: rename,
+  remove: (folder) => rm(folder, { recursive: true, force: true, maxRetries: 5 }),
+};
+
+/** The workspace's GUID (`WorkspaceHeaders.names`, a local read the workspace's window already made); undefined when `cm` printed none. */
+export type WorkspaceGuidOf = (workspacePath: string) => Promise<WorkspaceGuid | undefined>;
+
 /**
- * Review marks per workspace, kept in `<root>/<hash of the workspace path>/`: `marks.json` (path → fingerprint) and a
- * copy of each reviewed text file, named after the hash of its path. A workspace's folder goes away with its last mark.
+ * Review marks per workspace, kept in `<root>/<workspace GUID>/`, which a rename or a move of the workspace keeps
+ * (ARCHITECTURE.md "Settings survive renames"): `marks.json` (path → fingerprint) and a copy of each reviewed text file,
+ * named after the hash of its path. A workspace's folder goes away with its last mark. Marks were once kept by the hash
+ * of the workspace's path: such a folder moves to the GUID's the first time the workspace's marks are read.
  */
 export class ReviewStore {
-  private readonly files = new PersistedByKey<Marks>((workspacePath) =>
-    readFile(this.marksPath(workspacePath), 'utf8')
+  /** Read once per workspace path, folder and marks together; a read that fails (its GUID couldn't be read) is tried again. */
+  private readonly files = new PersistedByKey<WorkspaceMarks>(async (workspacePath) => {
+    const directory = await this.findFolder(workspacePath);
+    const marks: Marks = await readFile(join(directory, MARKS_FILE), 'utf8')
       .then((json) => new Map(Object.entries(JSON.parse(json) as Record<string, StoredMark>)))
-      .catch(() => new Map()),
-  );
+      .catch(() => new Map());
+    return { directory, marks };
+  });
 
-  constructor(private readonly root: string) {}
+  constructor(
+    private readonly root: string,
+    private readonly guidOf: WorkspaceGuidOf,
+    private readonly folders: FolderMoves = DISK_FOLDERS,
+  ) {}
 
   async marks(workspacePath: string): Promise<ReviewMark[]> {
-    const marks = await this.files.load(workspacePath);
+    const kept = await this.files.load(workspacePath);
     const checked = await Promise.all(
-      [...marks].map(async ([path, stored]) => ({ path, stored, ...(await stillReviewed(toAbsolutePath(workspacePath, path), stored)) })),
+      [...kept.marks].map(async ([path, stored]) => ({ path, stored, ...(await stillReviewed(toAbsolutePath(workspacePath, path), stored)) })),
     );
-    for (const { path, refreshed } of checked) if (refreshed) marks.set(path, refreshed);
-    if (checked.some(({ refreshed }) => refreshed)) await this.save(workspacePath, marks);
+    for (const { path, refreshed } of checked) if (refreshed) kept.marks.set(path, refreshed);
+    if (checked.some(({ refreshed }) => refreshed)) await this.save(workspacePath, kept);
     return checked.map(({ path, stored, reviewed }) => ({ path, state: reviewed ? 'reviewed' : 'changedSinceReview', hasSnapshot: stored.snapshot }));
   }
 
   async mark(workspacePath: string, paths: string[]): Promise<void> {
-    const marks = await this.files.load(workspacePath);
-    await mkdir(this.directory(workspacePath), { recursive: true });
+    const kept = await this.files.load(workspacePath);
+    await mkdir(kept.directory, { recursive: true });
     for (const path of paths) {
       const { bytes, ...fingerprint } = await fingerprintFile(toAbsolutePath(workspacePath, path));
       const snapshot = bytes !== undefined && bytes.length <= MAX_SNAPSHOT_BYTES && !toFileContent(bytes, path).isBinary;
-      if (snapshot) await writeFile(this.snapshotPath(workspacePath, path), bytes);
-      else await rm(this.snapshotPath(workspacePath, path), { force: true });
-      marks.set(path, { ...fingerprint, snapshot });
+      if (snapshot) await writeFile(snapshotPath(kept.directory, path), bytes);
+      else await rm(snapshotPath(kept.directory, path), { force: true });
+      kept.marks.set(path, { ...fingerprint, snapshot });
     }
-    await this.save(workspacePath, marks);
+    await this.save(workspacePath, kept);
   }
 
   async unmark(workspacePath: string, paths: string[]): Promise<void> {
-    const marks = await this.files.load(workspacePath);
-    const marked = paths.filter((path) => marks.has(path));
+    const kept = await this.files.load(workspacePath);
+    const marked = paths.filter((path) => kept.marks.has(path));
     if (marked.length === 0) return;
     for (const path of marked) {
-      marks.delete(path);
-      await rm(this.snapshotPath(workspacePath, path), { force: true });
+      kept.marks.delete(path);
+      await rm(snapshotPath(kept.directory, path), { force: true });
     }
-    await this.save(workspacePath, marks);
+    await this.save(workspacePath, kept);
   }
 
   async keepOnly(workspacePath: string, pendingPaths: string[]): Promise<void> {
     const pending = new Set(pendingPaths);
-    const marks = await this.files.load(workspacePath);
+    const { marks } = await this.files.load(workspacePath);
     await this.unmark(workspacePath, [...marks.keys()].filter((path) => !pending.has(path)));
   }
 
   async readSnapshot(workspacePath: string, path: string): Promise<FileContent> {
-    const stored = (await this.files.load(workspacePath)).get(path);
-    if (!stored?.snapshot) throw new Error(`No reviewed copy of ${path} was kept.`);
-    return toFileContent(await readFile(this.snapshotPath(workspacePath, path)), path);
+    const { directory, marks } = await this.files.load(workspacePath);
+    if (!marks.get(path)?.snapshot) throw new Error(`No reviewed copy of ${path} was kept.`);
+    return toFileContent(await readFile(snapshotPath(directory, path)), path);
   }
 
   /** Writes the marks as they are when the save's turn comes; without marks, the workspace's folder goes. */
-  private save(workspacePath: string, marks: Marks): Promise<void> {
+  private save(workspacePath: string, { directory, marks }: WorkspaceMarks): Promise<void> {
     return this.files.save(workspacePath, async () => {
       if (marks.size === 0) {
-        await rm(this.directory(workspacePath), { recursive: true, force: true });
+        await rm(directory, { recursive: true, force: true });
         return;
       }
-      await mkdir(this.directory(workspacePath), { recursive: true });
-      await writeFile(this.marksPath(workspacePath), JSON.stringify(Object.fromEntries(marks)));
+      await mkdir(directory, { recursive: true });
+      await writeFile(join(directory, MARKS_FILE), JSON.stringify(Object.fromEntries(marks)));
     });
   }
 
-  private directory(workspacePath: string): string {
-    return join(this.root, hashOf(workspacePath).slice(0, 16));
-  }
-
-  private marksPath(workspacePath: string): string {
-    return join(this.directory(workspacePath), 'marks.json');
-  }
-
-  private snapshotPath(workspacePath: string, path: string): string {
-    return join(this.directory(workspacePath), hashOf(path));
+  /**
+   * The workspace's folder: its GUID's, taking over the one kept by the workspace's path before; its path's hash when
+   * `cm` prints no GUID. When the GUID's folder exists already, it holds the marks and the path's goes (or stays until
+   * a later session, when it can't be removed). When the path's can't be moved (Windows refuses while a file in it is
+   * open), it is used for the session, and moved at the next.
+   */
+  private async findFolder(workspacePath: string): Promise<string> {
+    const byPath = join(this.root, hashOf(workspacePath).slice(0, 16));
+    const guid = await this.guidOf(workspacePath);
+    if (!guid) return byPath;
+    const byGuid = join(this.root, guid);
+    if (await pathExists(byGuid)) {
+      await this.folders.remove(byPath).catch(() => undefined);
+      return byGuid;
+    }
+    if (!(await pathExists(byPath))) return byGuid;
+    return this.folders.move(byPath, byGuid).then(
+      () => byGuid,
+      () => byPath,
+    );
   }
 }
+
+const MARKS_FILE = 'marks.json';
+
+function snapshotPath(directory: string, path: string): string {
+  return join(directory, hashOf(path));
+}
+
 
 /**
  * Whether a file still holds what was reviewed. One touched but holding the same contents is `refreshed` with its new

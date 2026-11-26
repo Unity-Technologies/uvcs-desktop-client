@@ -8,13 +8,14 @@ import type { Shelve } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
 import { shelveDiffMenu } from './shelveDiffMenu';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const ws = '/ws';
 const automatic = 'Automatic shelve created during switch operation (from br:7)';
 
 const shelve = (comment: string, owner = 'ana@example.com'): Shelve => ({
   id: 12,
-  guid: 'g',
+  guid: shelveGuidFor(1),
   comment,
   owner,
   date: '2026-09-27T10:00:00Z',

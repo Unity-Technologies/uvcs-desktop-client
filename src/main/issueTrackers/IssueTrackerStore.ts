@@ -1,15 +1,19 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { RepositoryTrackerBinding, TrackerConnection } from '@shared/domain/issueTrackers';
-import { sameRepository } from '@shared/issueTrackers/issueReferences';
+import type { BindingKeptBySpec, RepositoryTrackerBinding, TrackerConnection } from '@shared/domain/issueTrackers';
+import { repositoryKey } from '@shared/domain/repository';
+import { parseRepositoryGuid, type RepositoryGuid } from '@shared/domain/stableIds';
 import { replaceFileSync } from '../files/replaceFileSync';
 
 /** A connection as it is kept: its credential's state is the secrets' to say. */
 export type StoredConnection = Omit<TrackerConnection, 'credential'>;
 
+/** A binding as it is kept: by the repository's GUID, or by its spec when made before (`BindingKeptBySpec`). */
+type StoredBinding = RepositoryTrackerBinding | BindingKeptBySpec;
+
 interface StoredTrackers {
   connections: StoredConnection[];
-  bindings: RepositoryTrackerBinding[];
+  bindings: StoredBinding[];
 }
 
 const EMPTY: StoredTrackers = { connections: [], bindings: [] };
@@ -28,8 +32,17 @@ export class IssueTrackerStore {
     return this.read().connections;
   }
 
+  /** The bindings kept by the repository's GUID. */
   bindings(): readonly RepositoryTrackerBinding[] {
-    return this.read().bindings;
+    return this.read().bindings.flatMap((binding) => {
+      const repository = parseRepositoryGuid(binding.repository);
+      return repository ? [{ ...binding, repository }] : [];
+    });
+  }
+
+  /** The bindings still kept by the repository's spec, until its GUID is known (`keepRepositoryByGuid`). */
+  bindingsKeptBySpec(): readonly BindingKeptBySpec[] {
+    return this.read().bindings.filter((binding) => !parseRepositoryGuid(binding.repository));
   }
 
   connection(id: string): StoredConnection | undefined {
@@ -51,19 +64,26 @@ export class IssueTrackerStore {
   /** Binds a repository, replacing any binding it had: one tracker per repository. */
   bind(binding: RepositoryTrackerBinding): void {
     const { connections, bindings } = this.read();
-    this.write({ connections, bindings: [...bindings.filter((kept) => !sameRepository(kept.repository, binding.repository)), binding] });
+    this.write({ connections, bindings: [...bindings.filter((kept) => kept.repository !== binding.repository), binding] });
   }
 
-  unbind(repository: string): void {
+  unbind(repository: RepositoryGuid): void {
     const { connections, bindings } = this.read();
-    this.write({ connections, bindings: bindings.filter((kept) => !sameRepository(kept.repository, repository)) });
+    this.write({ connections, bindings: bindings.filter((kept) => kept.repository !== repository) });
   }
 
-  /** A repository renamed in the app keeps its tracker. */
-  renameRepository(from: string, to: string): void {
+  /**
+   * A binding kept by the repository's spec, however written (`repositoryKey`), before bindings were kept by its GUID,
+   * moves to its GUID once it is known; dropped when the GUID has one of its own. Whether a binding moved: nothing is written when none did.
+   */
+  keepRepositoryByGuid(spec: string, guid: RepositoryGuid): boolean {
     const { connections, bindings } = this.read();
-    if (!bindings.some((binding) => sameRepository(binding.repository, from))) return;
-    this.write({ connections, bindings: bindings.map((binding) => (sameRepository(binding.repository, from) ? { ...binding, repository: to } : binding)) });
+    const bySpec = this.bindingsKeptBySpec().find((binding) => repositoryKey(binding.repository) === repositoryKey(spec));
+    if (!bySpec) return false;
+    const others = bindings.filter((binding) => binding !== bySpec);
+    const byGuid = others.some((binding) => binding.repository === guid);
+    this.write({ connections, bindings: byGuid ? others : [...others, { ...bySpec, repository: guid }] });
+    return true;
   }
 
   private read(): StoredTrackers {

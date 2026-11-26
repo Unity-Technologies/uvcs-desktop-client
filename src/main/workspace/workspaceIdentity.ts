@@ -1,3 +1,4 @@
+import { parseWorkspaceGuid, type WorkspaceGuid } from '@shared/domain/stableIds';
 import type { WorkspaceKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from '../cm/CmClient';
 import { cmHeaderReaders, type HeaderReaders } from './WorkspaceHeaders';
@@ -23,4 +24,12 @@ export async function readWorkspaceIdentity(from: CmClient | HeaderReaders, work
     selector: status.selector,
     ...(kind ? { kind } : {}),
   };
+}
+
+/**
+ * The workspace's GUID, which a rename or a move keeps: from its names, which the workspace info shares
+ * (`WorkspaceHeaders`), a local read. Undefined when `cm` printed none.
+ */
+export async function readWorkspaceGuid(headers: HeaderReaders, workspacePath: string): Promise<WorkspaceGuid | undefined> {
+  return parseWorkspaceGuid((await headers.names(workspacePath)).guid);
 }

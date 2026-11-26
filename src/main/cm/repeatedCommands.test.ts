@@ -12,6 +12,12 @@ describe('isServerCommand', () => {
     expect(isServerCommand(['getworkspacefrompath', '/wk'])).toBe(false);
     expect(isServerCommand(['workspace', 'list'])).toBe(false);
   });
+
+  it("takes only an organization's config for a local read, not the rest of cm's config", () => {
+    expect(isServerCommand(['getconfig', 'organization', 'acme@unity', '--format={unityid}'])).toBe(false);
+    expect(isServerCommand(['getconfig', 'extensionworkingmode'])).toBe(true);
+    expect(isServerCommand(['getconfig', 'extensionprefix'])).toBe(true);
+  });
 });
 
 describe('needsSignIn', () => {

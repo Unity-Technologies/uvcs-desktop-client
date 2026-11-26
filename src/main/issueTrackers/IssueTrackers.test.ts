@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup } from '@shared/domain/issueTrackers';
 import type { GitHubApp } from '@shared/issueTrackers/signInMethods';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { IssueTrackers } from './IssueTrackers';
 import { IssueTrackerStore } from './IssueTrackerStore';
 import type { Wait } from './signIn/deviceFlow';
@@ -12,7 +13,11 @@ import { TrackerSecrets, type SecretCipher } from './TrackerSecrets';
 
 const TOKEN = `ghp_${'a'.repeat(36)}`;
 const FINE_GRAINED = `github_pat_${'B'.repeat(60)}`;
-const REPOSITORY = 'game@acme@unity';
+const REPOSITORY = repositoryGuidFor(1);
+const OTHER = repositoryGuidFor(2);
+const TOOLS = repositoryGuidFor(3);
+const ART = repositoryGuidFor(4);
+const RACER = repositoryGuidFor(5);
 const LINK = 'https://github.com/acme/game/issues/12';
 const GRAPHQL = 'POST https://api.github.com/graphql';
 
@@ -36,8 +41,9 @@ function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (se
   const announced: IssueTrackerSetup[] = [];
   const opened: string[] = [];
   let ids = 0;
+  const store = new IssueTrackerStore(join(folder, 'issue-trackers.json'));
   const engine = new IssueTrackers({
-    store: new IssueTrackerStore(join(folder, 'issue-trackers.json')),
+    store,
     secrets: new TrackerSecrets(join(folder, 'secrets.json'), cipher),
     http: tracker.http,
     changed: (setup) => announced.push(setup),
@@ -48,7 +54,7 @@ function trackers(answers: TrackerAnswers = {}, { consent = (() => false) as (se
     openExternal: (url) => opened.push(url),
     askHostConsent: consentAsync ?? (async (server, kind) => (consentWith ? consentWith(server, kind) : consent(server))),
   });
-  return { engine, tracker, announced, opened };
+  return { engine, tracker, announced, opened, store };
 }
 
 describe('IssueTrackers', () => {
@@ -118,7 +124,7 @@ describe('IssueTrackers', () => {
     const { engine } = trackers(ENTERPRISE, { consent: (server) => (asked.push(server), true) });
     const link = 'https://git.acme.com/tools/build/issues/9';
     expect((await engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN })).kind).toBe('signedIn');
-    expect((await engine.signInWithToken({ repository: 'other@acme@unity', link, token: TOKEN })).kind).toBe('signedIn');
+    expect((await engine.signInWithToken({ repository: OTHER, link, token: TOKEN })).kind).toBe('signedIn');
     expect(asked).toEqual(['https://git.acme.com']);
   });
 
@@ -128,7 +134,7 @@ describe('IssueTrackers', () => {
     const { engine, tracker } = trackers({}, { consentAsync: (server) => (asked.push(server), new Promise<boolean>((resolve) => (answer = resolve))) });
     const link = 'https://evil.example/a/b/issues/1';
     const first = engine.signInWithToken({ repository: REPOSITORY, link, token: TOKEN });
-    const second = engine.signInWithToken({ repository: 'other@acme@unity', link, token: TOKEN });
+    const second = engine.signInWithToken({ repository: OTHER, link, token: TOKEN });
     await new Promise((resolve) => setImmediate(resolve));
     answer(false);
     expect([await first, await second]).toEqual([
@@ -179,7 +185,7 @@ describe('IssueTrackers', () => {
   it('makes a connection per owner for a fine-grained token, never replacing another owner’s', async () => {
     const { engine } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: FINE_GRAINED });
-    await engine.signInWithToken({ repository: 'tools@acme@unity', link: 'https://github.com/Other/tools/issues/1', token: FINE_GRAINED });
+    await engine.signInWithToken({ repository: TOOLS, link: 'https://github.com/Other/tools/issues/1', token: FINE_GRAINED });
     expect(engine.setup().connections.map((connection) => connection.scope)).toEqual(['acme', 'other']);
   });
 
@@ -188,21 +194,21 @@ describe('IssueTrackers', () => {
     const user = (request: { headers: Record<string, string> }) => ({ json: request.headers.Authorization?.includes(OTHER) ? { login: 'ben-li', name: 'Ben Li' } : { login: 'ana-diaz', name: 'Ana Díaz' } });
     const { engine } = trackers({ ...SIGNED_IN, 'GET https://api.github.com/user': user });
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
-    await engine.signInWithToken({ repository: 'tools@acme@unity', link: LINK, token: OTHER });
+    await engine.signInWithToken({ repository: TOOLS, link: LINK, token: OTHER });
     expect(engine.setup().connections.map((connection) => [connection.id, connection.account.name])).toEqual([['id1', 'Ben Li']]);
     expect(engine.setup().bindings.map((binding) => binding.connectionId)).toEqual(['id1', 'id1']);
     // A fine-grained token reaches one owner: a sign-in apart from the classic one, which "Use a different account" can't promise to replace.
-    await engine.signInWithToken({ repository: 'art@acme@unity', link: LINK, token: FINE_GRAINED });
+    await engine.signInWithToken({ repository: ART, link: LINK, token: FINE_GRAINED });
     expect(engine.setup().connections.map((connection) => connection.scope)).toEqual(['*', 'acme']);
   });
 
   it('reuses a connection for a second repository, with no sign-in', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
-    const outcome = await engine.useConnection({ repository: 'racer@acme@unity', link: 'https://github.com/acme/game/issues/3', connectionId: 'id1' });
+    const outcome = await engine.useConnection({ repository: RACER, link: 'https://github.com/acme/game/issues/3', connectionId: 'id1' });
     expect(outcome.kind).toBe('signedIn');
     expect(tracker.lines().filter((line) => line.endsWith('/user'))).toHaveLength(1);
-    expect(engine.setup().bindings.map((binding) => binding.repository)).toEqual([REPOSITORY, 'racer@acme@unity']);
+    expect(engine.setup().bindings.map((binding) => binding.repository)).toEqual([REPOSITORY, RACER]);
   });
 
   it('adds a project of the same tracker to a binding', async () => {
@@ -340,18 +346,25 @@ describe('IssueTrackers', () => {
     expect(tracker.requests).toHaveLength(sent);
   });
 
-  it('moves a binding with its repository’s rename, and tells every window', async () => {
-    const { engine, announced } = trackers(SIGNED_IN);
+  it('moves a binding kept by the repository’s spec to its GUID once known, and tells every window', async () => {
+    const { engine, announced, store } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: TOKEN });
-    engine.repositoryRenamed(REPOSITORY, 'racer@acme@unity');
-    expect(announced.at(-1)!.bindings.map((binding) => binding.repository)).toEqual(['racer@acme@unity']);
+    const bySpec = { repository: 'racer@acme@unity' as typeof RACER, connectionId: 'id1', projects: ['acme/racer'] };
+    store.bind(bySpec);
+    const told = announced.length;
+
+    engine.keepRepositoryByGuid('Racer@ACME@unity', RACER);
+
+    expect(announced.at(-1)!.bindings).toEqual([{ repository: REPOSITORY, connectionId: 'id1', projects: ['acme/game'] }, { ...bySpec, repository: RACER }]);
+    engine.keepRepositoryByGuid('racer@acme@unity', RACER);
+    expect(announced).toHaveLength(told + 1);
   });
 
   it('binds nothing with a connection that doesn’t cover the link', async () => {
     const { engine, tracker } = trackers(SIGNED_IN);
     await engine.signInWithToken({ repository: REPOSITORY, link: LINK, token: FINE_GRAINED });
     const sent = tracker.requests.length;
-    expect(await engine.useConnection({ repository: 'tools@acme@unity', link: 'https://github.com/other/tools/issues/1', connectionId: 'id1' })).toEqual({
+    expect(await engine.useConnection({ repository: TOOLS, link: 'https://github.com/other/tools/issues/1', connectionId: 'id1' })).toEqual({
       kind: 'failed',
       failure: { reason: 'projectUnreadable', project: 'other/tools' },
     });

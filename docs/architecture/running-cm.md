@@ -67,7 +67,7 @@ Every command is logged and pushed to the window whose call ran it (`commandLogg
 
 A large production repository holds ~280k changesets, ~20k branches, thousands of labels, shelves and reviews,
 and many people use the same server. Every `cm` command other than local reads (`status`, `getworkspacefrompath`,
-`workspace list`, `profile list`, `version`...) is server work, so each one has to earn its place:
+`workspace list`, `profile list`, `getconfig organization`, `version`...) is server work, so each one has to earn its place:
 
 - **One command for N things**: never run a command per row, file, branch or id in a loop. Read everything a view
   needs in one command that returns N records (one `cm find` per list, one `cm ls` of every conflicting file:
@@ -175,7 +175,9 @@ and many people use the same server. Every `cm` command other than local reads (
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
   A changeset a list on screen holds is never asked for alone: it shows from the list and follows its re-reads, even
   while the list is stale (`changesetOnScreen`; a branch diff's list of changesets reads its list, not each
-  changeset). Not `IMMUTABLE_QUERY`: a changeset's comment can be edited.
+  changeset). Not `IMMUTABLE_QUERY`: a changeset's comment can be edited. A result that lasts only when its answer
+  says so takes `immutableOnceRead` instead: the review mode key is a GUID for good, and asked again when it fell
+  back to the place's path or spec (`isLastingReviewModeKey`).
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;

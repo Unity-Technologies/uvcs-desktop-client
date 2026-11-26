@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { repositoryGuidFor } from '../testing/stableIdsFor';
 import {
   repositorySettingsOf,
   serverSettingsOf,
+  withRepositoryKeptByGuid,
   withRepositorySettings,
   withRepositorySettingsAdded,
   withServerSettings,
@@ -9,27 +11,54 @@ import {
 } from './scopedSettings';
 
 const pin = { branch: 7, row: 2 };
+const GAME = repositoryGuidFor(1);
+const ART = repositoryGuidFor(2);
 
 describe('repository settings', () => {
-  it('are found however the spec is written', () => {
-    const byRepository = withRepositorySettings({}, 'Game@ssl://Host:8087', { syncRemote: 'game@cloud' });
-    expect(byRepository).toEqual({ 'game@host:8087': { syncRemote: 'game@cloud' } });
-    expect(repositorySettingsOf(byRepository, 'game@host:8087')).toEqual({ syncRemote: 'game@cloud' });
+  it('are kept by the repository’s GUID', () => {
+    const byRepository = withRepositorySettings({}, GAME, { syncRemote: 'game@cloud' });
+    expect(byRepository).toEqual({ [GAME]: { syncRemote: 'game@cloud' } });
+    expect(repositorySettingsOf(byRepository, GAME)).toEqual({ syncRemote: 'game@cloud' });
   });
 
   it('change one value and keep the repository’s others and every other repository’s', () => {
-    const before = { 'game@host': { syncRemote: 'game@cloud', branchPins: [pin] }, 'art@host': { explorerRulesOff: true } };
-    const after = withRepositorySettings(before, 'game@host', { explorerRulesOff: true });
-    expect(after).toEqual({ 'game@host': { syncRemote: 'game@cloud', branchPins: [pin], explorerRulesOff: true }, 'art@host': { explorerRulesOff: true } });
+    const before = { [GAME]: { syncRemote: 'game@cloud', branchPins: [pin] }, [ART]: { explorerRulesOff: true } };
+    const after = withRepositorySettings(before, GAME, { explorerRulesOff: true });
+    expect(after).toEqual({ [GAME]: { syncRemote: 'game@cloud', branchPins: [pin], explorerRulesOff: true }, [ART]: { explorerRulesOff: true } });
   });
 
   it('keep nothing for a value forgotten, turned back on or emptied, and drop a repository left with nothing', () => {
-    const before = { 'game@host': { syncRemote: 'game@cloud', branchPins: [pin], explorerRulesOff: true } };
-    expect(withRepositorySettings(before, 'game@host', { syncRemote: null, branchPins: [], explorerRulesOff: false })).toEqual({});
+    const before = { [GAME]: { syncRemote: 'game@cloud', branchPins: [pin], explorerRulesOff: true } };
+    expect(withRepositorySettings(before, GAME, { syncRemote: null, branchPins: [], explorerRulesOff: false })).toEqual({});
   });
 
-  it('are the same empty object for a repository with none, or none known yet', () => {
-    expect(repositorySettingsOf({}, 'game@host')).toBe(repositorySettingsOf({}, undefined));
+  it('are the same empty object for a repository with none, or whose GUID isn’t known', () => {
+    expect(repositorySettingsOf({}, GAME)).toBe(repositorySettingsOf({}, undefined));
+  });
+
+  it('read as none while they are kept by the repository’s spec', () => {
+    expect(repositorySettingsOf({ 'game@host': { explorerRulesOff: true } }, GAME)).toEqual({});
+  });
+});
+
+describe('repository settings kept by spec before', () => {
+  it('move under the GUID, however the spec is written, and leave every other repository’s', () => {
+    const before = { 'game@host:8087': { branchPins: [pin] }, [ART]: { explorerRulesOff: true } };
+
+    expect(withRepositoryKeptByGuid(before, 'Game@ssl://Host:8087', GAME)).toEqual({ [GAME]: { branchPins: [pin] }, [ART]: { explorerRulesOff: true } });
+  });
+
+  it('give way to what the GUID keeps already', () => {
+    const newer = { branch: 9, row: 1 };
+    const before = { 'game@host': { branchPins: [pin], explorerRulesOff: true }, [GAME]: { branchPins: [newer] } };
+
+    expect(withRepositoryKeptByGuid(before, 'game@host', GAME)).toEqual({ [GAME]: { branchPins: [newer], explorerRulesOff: true } });
+  });
+
+  it('change nothing when the spec kept nothing', () => {
+    const before = { [GAME]: { explorerRulesOff: true } };
+
+    expect(withRepositoryKeptByGuid(before, 'game@host', GAME)).toBe(before);
   });
 });
 

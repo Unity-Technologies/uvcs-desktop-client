@@ -1,3 +1,5 @@
+import type { RepositoryGuid } from './stableIds';
+
 /**
  * Issue trackers (docs/features/issue-trackers.md): a sign-in to a tracker (`TrackerConnection`), which repositories
  * use it (`RepositoryTrackerBinding`), and the issues read from it. No secret is ever part of these: the credential
@@ -55,17 +57,28 @@ export interface TrackerConnection {
 
 /** A repository that uses a tracker: its connection and the projects its comments name. */
 export interface RepositoryTrackerBinding {
-  /** The repository's spec as `cm` names it: `game@acme@unity`. */
-  repository: string;
+  /** The repository's GUID, which a rename keeps (ARCHITECTURE.md "Settings survive renames"). */
+  repository: RepositoryGuid;
   connectionId: string;
   /** Jira project keys (`VCS`), GitHub repositories (`acme/game`, lower case). */
   projects: string[];
 }
 
+/**
+ * A binding made before bindings were kept by the repository's GUID: by its spec (`game@acme@unity`), until the GUID is
+ * known (`IssueTrackerStore.keepRepositoryByGuid`).
+ */
+export type BindingKeptBySpec = Omit<RepositoryTrackerBinding, 'repository'> & { repository: string };
+
 /** What the windows know of the trackers: connections without their secrets, and bindings. */
 export interface IssueTrackerSetup {
   connections: TrackerConnection[];
   bindings: RepositoryTrackerBinding[];
+  /**
+   * Bindings still kept by spec: they count as trackers in use, so a window reads its repository's GUID, which moves
+   * them to it (`tracksAnyRepository`).
+   */
+  bindingsKeptBySpec: BindingKeptBySpec[];
   /** Credentials can't be kept on this computer (Linux without a keyring): they last until the app quits. */
   sessionOnly: boolean;
   /** The hosts GitHub's device flow can sign in to (`signInMethodsFor`): those an app is registered on. */

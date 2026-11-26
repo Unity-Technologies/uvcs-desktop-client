@@ -2,6 +2,7 @@ import type { ServerSessions } from '../accounts/ServerSessions';
 import type { SessionChecks } from '../accounts/SessionChecks';
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
+import type { RepositoryGuids } from '../cm/RepositoryGuids';
 import type { CmRuntime } from '../cmRuntime/CmRuntime';
 import type { DiagnosticWriter } from '../diagnostics/DiagnosticLog';
 import type { ProfileList } from '../cm/ProfileList';
@@ -11,6 +12,7 @@ import type { RevisionCat } from '../files/RevisionCat';
 import type { WorkspaceCopies } from '../files/WorkspaceCopies';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
+import type { OrganizationRenames } from '../settings/OrganizationRenames';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { AppIcons } from '../system/apps/AppIcons';
 import type { ExternalAppsCatalog } from '../system/apps/ExternalAppsCatalog';
@@ -52,6 +54,10 @@ export interface ServiceContext {
   cmRuntime: CmRuntime;
   /** Branch names by object id, kept while a window shows the workspace (`BranchNamesCache`). */
   branchNames: BranchNamesCache;
+  /** Every listing of a server's repositories, and the repositories' GUIDs it teaches (`RepositoryGuids`). */
+  repositoryGuids: RepositoryGuids;
+  /** What a Unity organization keeps, carried to its new name when its owners rename it (`OrganizationRenames`). */
+  organizationRenames: Pick<OrganizationRenames, 'listed' | 'follow'>;
   /** The issue trackers' engine: connections, bindings and issue reads (`IssueTrackers`). */
   issueTrackers: IssueTrackers;
   /** The log file a user sends with a bug report (`appLog`). */

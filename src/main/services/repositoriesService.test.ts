@@ -1,4 +1,15 @@
+import { createHash } from 'node:crypto';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseRepositoryGuid } from '@shared/domain/stableIds';
+import { listRepositories } from '../cm/listRepositories';
+import { repositoryIdOf } from '../cm/repositoryIdOf';
+import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
+import { DiffReviewStore } from '../review/DiffReviewStore';
+import { RepositoryGuids } from '../cm/RepositoryGuids';
+import { SettingsStore } from '../settings/SettingsStore';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -23,6 +34,16 @@ describe('servers', () => {
       { server: 'acme@cloud', user: 'ana', workingMode: 'SSOWorkingMode' },
     ]);
     expect(commands).toMatchObject([{ via: 'query', args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
+  });
+
+  it('has what an organization keeps follow it under the names the profiles list now', async () => {
+    const fake = fakeCmClient({ 'profile list': formatOutput(['acmestudio@unity', 'acmestudio@unity', 'ana', 'SSOWorkingMode']) });
+    const followed: string[][] = [];
+    const context = serviceContext(fake.cm, { organizationRenames: { listed: async (servers) => void followed.push([...servers]), follow: async () => undefined } });
+
+    await createRepositoriesService(context, profilesContext(fake.cm)).servers();
+
+    expect(followed).toEqual([['local', 'acmestudio@unity']]);
   });
 });
 
@@ -52,7 +73,7 @@ describe('repositories', () => {
     });
 
     expect(await service.list('racing@unity')).toEqual({
-      repositories: [{ id: '4', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
+      repositories: [{ id: '4', guid: '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
       projects: [{ name: 'Racing', guid: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f' }],
       deletedRepositories: [],
     });
@@ -114,12 +135,13 @@ describe('repositories', () => {
   });
 
   it('renames and deletes a repository by its spec', async () => {
-    const { service, lines } = repositories({ repository: '' });
+    const { service, lines } = repositories({ repository: '', 'repository list': formatOutput(['4', 'tools', 'acme@cloud', 'bob', 'VCS', '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61']) });
+    await service.list('acme@cloud');
 
     await service.rename('tools@acme@cloud', 'build-tools');
     await service.remove('tools@acme@cloud');
 
-    expect(lines()).toEqual(['repository rename tools@acme@cloud build-tools', 'repository delete tools@acme@cloud']);
+    expect(lines().slice(1)).toEqual(['repository rename tools@acme@cloud build-tools', 'repository delete tools@acme@cloud']);
   });
 
   describe('restore', () => {
@@ -146,11 +168,150 @@ describe('repositories', () => {
     });
   });
 
-  it('tells a rename by the repository’s spec before and after, so its issue tracker follows it', async () => {
-    const fake = fakeCmClient({ 'repository rename': '' });
-    const renames: string[][] = [];
-    const service = createRepositoriesService(serviceContext(fake.cm), profilesContext(fake.cm), (from, to) => renames.push([from, to]));
-    await service.rename('tools@acme@cloud', 'build-tools');
-    expect(renames).toEqual([['tools@acme@cloud', 'build-tools@acme@cloud']]);
+  it('keeps a repository renamed here known by its new name, with the GUID it had, without listing its server again', async () => {
+    const { cm, lines } = fakeCmClient({
+      'repository list': formatOutput(['4', 'tools', 'acme@cloud', 'bob', 'VCS', '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61']),
+      'repository rename': '',
+    });
+    const context = serviceContext(cm);
+    const renaming = createRepositoriesService(context, profilesContext(cm));
+    await renaming.list('acme@cloud');
+
+    await renaming.rename('tools@acme@cloud', 'build-tools');
+
+    expect(await context.repositoryGuids.guidOf('acme@cloud', 'build-tools')).toBe('5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61');
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), 'repository rename tools@acme@cloud build-tools']);
+  });
+});
+
+describe('guidOf', () => {
+  const GAME = parseRepositoryGuid('0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d')!;
+  const listed = (name: string) => formatOutput(['2', name, 'acme@cloud', 'ana', 'VCS', GAME]);
+
+  /** The server's listing is each one in turn, then the last again; the clock moves only when the test says. */
+  function lookups(...listings: string[]) {
+    let calls = 0;
+    const fake = fakeCmClient({
+      'repository list': () => listings[Math.min(calls++, listings.length - 1)]!,
+      'repository acme@cloud': '',
+      'repository rename': '',
+      // A workspace of `game` renamed to `racer` still names it `game`, which cm still takes; no other name answers.
+      ls: ({ args }) => (args.includes('--tree=cs:0@game@acme@cloud') ? formatOutput(['2']) : cmFails("The specified repository couldn't be found: tools.")),
+    });
+    const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-guids-')), 'settings.json'));
+    const clock = { now: 0 };
+    const repositoryGuids = new RepositoryGuids({ list: (server) => listRepositories(fake.cm, server), idOf: (spec, server) => repositoryIdOf(fake.cm, spec, server), now: () => clock.now });
+    /** The bindings moved to a GUID (`IssueTrackers.keepRepositoryByGuid`, tested with the trackers). */
+    const trackersKept: string[][] = [];
+    const issueTrackers = { keepRepositoryByGuid: (spec: string, guid: string) => void trackersKept.push([spec, guid]) } as unknown as IssueTrackers;
+    const reviewsFolder = mkdtempSync(join(tmpdir(), 'uvcs-diff-reviews-'));
+    const diffReviews = new DiffReviewStore(reviewsFolder);
+    const context = serviceContext(fake.cm, { settings, repositoryGuids, issueTrackers, diffReviews });
+    return { ...fake, settings, clock, trackersKept, diffReviews, reviewsFolder, service: createRepositoriesService(context, profilesContext(fake.cm)) };
+  }
+
+  it('costs no command for a repository whose server the home screen listed', async () => {
+    const { service, lines } = lookups(listed('game'));
+    await service.list('acme@cloud');
+
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('lists the server once for a repository no listing taught, and for nothing else', async () => {
+    const { service, commands } = lookups(listed('game'));
+
+    expect(await service.guidOf('Game@ACME@cloud')).toBe(GAME);
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(commands).toMatchObject([{ via: 'execute', args: ['repository', 'list', 'ACME@cloud', expect.any(String)] }]);
+  });
+
+  it('answers null for a spec that names no server, without asking cm', async () => {
+    const { service, lines } = lookups(listed('game'));
+
+    expect(await service.guidOf('game')).toBeNull();
+    expect(lines()).toEqual([]);
+  });
+
+  it('moves what was kept by the repository’s spec under its GUID, the first time it is known', async () => {
+    const { service, settings, trackersKept, diffReviews, reviewsFolder } = lookups(listed('game'));
+    // The review marks of its diffs, in the file named for its spec as the app wrote it before.
+    writeFileSync(join(reviewsFolder, `${createHash('sha1').update('game@acme@cloud').digest('hex').slice(0, 16)}.json`), JSON.stringify({ 'cs:4': { usedAt: 1, marks: { 'a.ts': 10 } } }));
+    settings.addWindowSettings({ repositorySettings: { 'game@acme@cloud': { explorerRulesOff: true } }, serverSettings: {}, changesetColors: { users: [] } });
+    settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
+
+    await service.guidOf('game@acme@cloud');
+
+    expect(settings.get().repositorySettings).toEqual({ [GAME]: { explorerRulesOff: true } });
+    expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+    expect(trackersKept).toEqual([['game@acme@cloud', GAME]]);
+    expect(await diffReviews.marks(GAME, 'cs:4')).toEqual([{ path: 'a.ts', revisionId: 10 }]);
+  });
+
+  it('finds a repository renamed elsewhere by its new name, with the GUID what was kept for it is kept by', async () => {
+    const { service, settings, clock } = lookups(listed('game'), listed('racer'));
+    await service.guidOf('game@acme@cloud');
+    settings.updateRepositorySettings(GAME, { branchPins: [{ branch: 4, row: 1 }] });
+    clock.now += 61_000;
+
+    const lookedUp = await service.guidOf('racer@acme@cloud');
+
+    expect(lookedUp).toBe(GAME);
+    expect(settings.get().repositorySettings[lookedUp!]).toEqual({ branchPins: [{ branch: 4, row: 1 }] });
+  });
+
+  it('finds a repository created here, however recent the last listing', async () => {
+    const { service, lines } = lookups(formatOutput(), listed('game'));
+    await service.list('acme@cloud');
+
+    await service.create('acme@cloud', 'game');
+
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(lines().filter((line) => line.startsWith('repository list'))).toHaveLength(2);
+  });
+
+  it('finds a repository renamed elsewhere by the old name its workspaces keep, with one listing and one cm ls', async () => {
+    const { service, lines } = lookups(listed('racer'));
+
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), `ls / --tree=cs:0@game@acme@cloud --format={repid}\u001e`]);
+  });
+
+  it('moves what was kept by the old spec under the GUID, when a workspace still names the repository by it', async () => {
+    const { service, settings, trackersKept } = lookups(listed('racer'));
+    settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
+
+    await service.guidOf('game@acme@cloud');
+
+    expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+    expect(trackersKept).toEqual([['game@acme@cloud', GAME]]);
+  });
+
+  it('asks nothing more for a name no repository goes by, within the minute', async () => {
+    const { service, lines } = lookups(listed('game'));
+
+    expect(await service.guidOf('tools@acme@cloud')).toBeNull();
+    expect(await service.guidOf('tools@acme@cloud')).toBeNull();
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), expect.stringMatching(/^ls \/ --tree=cs:0@tools@acme@cloud/)]);
+  });
+
+  it('moves what was still kept by the old spec under the GUID before renaming, listing nothing more', async () => {
+    const { service, settings, trackersKept, lines } = lookups(listed('game'));
+    await service.list('acme@cloud');
+    settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
+
+    await service.rename('game@acme@cloud', 'racer');
+
+    expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+    expect(trackersKept).toEqual([['game@acme@cloud', GAME]]);
+    expect(await service.guidOf('racer@acme@cloud')).toBe(GAME);
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), 'repository rename game@acme@cloud racer']);
+  });
+
+  it('rejects when the server can’t be listed', async () => {
+    const fake = fakeCmClient({ 'repository list': cmFails('Unable to connect to acme@cloud') });
+    const service = createRepositoriesService(serviceContext(fake.cm), profilesContext(fake.cm));
+
+    await expect(service.guidOf('game@acme@cloud')).rejects.toThrow('Unable to connect');
   });
 });

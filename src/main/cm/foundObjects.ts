@@ -8,6 +8,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
 import type { Shelve } from '@shared/domain/shelve';
 import { repositorySpec } from '@shared/domain/specs';
+import { parseShelveGuid } from '@shared/domain/stableIds';
 import { integerValue, type RecordLayout } from './formatRecords';
 
 /** How one kind of object is read with `cm find`: the object, the fields printed of each, and what a record becomes. */
@@ -77,13 +78,16 @@ export const FOUND_LABELS = foundObjects(
 export const FOUND_SHELVES = foundObjects(
   'shelve',
   ['shelveid', 'guid', 'comment', 'owner', 'date', 'parent', 'repname', 'repserver'],
-  (value): Shelve => ({
-    id: integerValue(value('shelveid')),
-    guid: value('guid'),
-    comment: value('comment').trim(),
-    owner: value('owner'),
-    date: value('date'),
-    parentChangeset: integerValue(value('parent')),
-    repository: repositorySpec(value('repname'), value('repserver')),
-  }),
+  (value): Shelve => {
+    const guid = parseShelveGuid(value('guid'));
+    return {
+      id: integerValue(value('shelveid')),
+      ...(guid && { guid }),
+      comment: value('comment').trim(),
+      owner: value('owner'),
+      date: value('date'),
+      parentChangeset: integerValue(value('parent')),
+      repository: repositorySpec(value('repname'), value('repserver')),
+    };
+  },
 );

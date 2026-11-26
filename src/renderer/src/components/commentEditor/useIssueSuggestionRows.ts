@@ -1,10 +1,10 @@
 import { queryOptions, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type { IssueRead, IssueSearch, IssueSearchAnswer } from '@shared/domain/issueTrackers';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { needsSignIn } from '@shared/issueTrackers/connections';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../api/client';
 import { SERVER_SEARCH_DELAY_MS } from '../../app/commands/usePaletteServerSearch';
-import { usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { issueKeys, issueQuery } from '../issues/issueQueries';
 import { usePlaceTracker } from '../issues/useIssueTrackers';
@@ -19,10 +19,10 @@ const NO_ROWS: SuggestionRow[] = [];
  * the same words again asks nothing while fresh (`issueSearchStaleTime`). Never read again on focus, a reconnect or a
  * failure: the next `#` does.
  */
-export function issueSearchQuery(repository: string, search: IssueSearch) {
+export function issueSearchQuery(repository: RepositoryGuid | undefined, search: IssueSearch) {
   return queryOptions({
     queryKey: [...issueKeys.searches, repository, search.words ?? ''] as const,
-    queryFn: () => api.issueTrackers.searchIssues(repository, search),
+    queryFn: () => api.issueTrackers.searchIssues(repository!, search),
     staleTime: (query) => issueSearchStaleTime(query.state.data, Date.now()),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -37,11 +37,12 @@ export function issueSearchQuery(repository: string, search: IssueSearch) {
  * picked issue to its chip, so it shows read at once.
  */
 export function useIssueSuggestionRows(typed: string | null): { rows: SuggestionRow[]; picked: (suggestion: Suggestion) => void } {
+  // The tracker names its repository: a place with none reads no GUID here (`tracksAnyRepository`).
   const tracker = usePlaceTracker();
-  const repository = usePlaceRepository() ?? '';
+  const repository = tracker?.repository;
   const queryClient = useQueryClient();
   const settled = useDebouncedValue(typed ?? '', SERVER_SEARCH_DELAY_MS);
-  const open = typed !== null && tracker !== null && repository !== '';
+  const open = typed !== null && tracker !== null && repository !== undefined;
   const signInNeeded = tracker !== null && needsSignIn(tracker.connection);
   const asking = open && !signInNeeded;
   const reads = open ? issueSuggestionReads(tracker.reader, typed, settled) : { words: null, key: null };

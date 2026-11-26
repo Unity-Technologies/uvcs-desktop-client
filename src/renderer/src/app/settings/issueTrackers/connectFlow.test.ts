@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
-import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInForView, connectsWithSignIn, connectStage, pickedSignInShown, repositoryTrackerView, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink, type SignInStep } from './connectFlow';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
+import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInForView, connectsWithSignIn, connectStage, pickedSignInShown, repositoryTrackerView, issueTrackerPaneView, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink, type SignInStep } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
+const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'j', projects: ['VCS'] }], bindingsKeptBySpec: [], sessionOnly: false, deviceFlowHosts });
 
 describe('linkReadBack', () => {
   it('reads a link back in parts too: the kind for a badge, the host, the project', () => {
@@ -63,14 +64,14 @@ describe('signInStepFor', () => {
 
 describe('connectedTrackerOf', () => {
   it('names the repository’s tracker, projects and account', () => {
-    expect(connectedTrackerOf(setup([jira]), 'game@acme@unity')).toEqual({ connection: jira, projectKeys: ['VCS'] });
-    expect(connectedTrackerOf(setup([jira]), 'other@acme@unity')).toBeNull();
+    expect(connectedTrackerOf(setup([jira]), repositoryGuidFor(1))).toEqual({ connection: jira, projectKeys: ['VCS'] });
+    expect(connectedTrackerOf(setup([jira]), repositoryGuidFor(5))).toBeNull();
   });
 
   it('asks to sign in again when the credential stopped working, and says a session-only one lasts until quitting', () => {
-    expect(connectedTrackerOf(setup([{ ...jira, credential: 'refused' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'Jira stopped accepting this sign-in.' });
-    expect(connectedTrackerOf(setup([{ ...jira, credential: 'missing' }]), 'game@acme@unity')).toMatchObject({ signInAgain: 'This computer no longer has the Jira sign-in.' });
-    expect(connectedTrackerOf(setup([{ ...jira, credential: 'session' }]), 'game@acme@unity')).toMatchObject({ sessionOnly: 'Kept until you quit: this computer has no keyring.' });
+    expect(connectedTrackerOf(setup([{ ...jira, credential: 'refused' }]), repositoryGuidFor(1))).toMatchObject({ signInAgain: 'Jira stopped accepting this sign-in.' });
+    expect(connectedTrackerOf(setup([{ ...jira, credential: 'missing' }]), repositoryGuidFor(1))).toMatchObject({ signInAgain: 'This computer no longer has the Jira sign-in.' });
+    expect(connectedTrackerOf(setup([{ ...jira, credential: 'session' }]), repositoryGuidFor(1))).toMatchObject({ sessionOnly: 'Kept until you quit: this computer has no keyring.' });
   });
 });
 
@@ -167,7 +168,7 @@ describe('the token step’s words and readiness', () => {
   it('keeps a sign-in’s failure on screen once the sign-in, kept though its project couldn’t be read, turns the step into using it', () => {
     const failure = { reason: 'projectUnreadable', project: 'acme/game', installPage: 'https://github.com/apps/acme-desktop/installations/new' } as const;
     const useIt: SignInStep = { kind: 'useConnection', connection: { ...jira, kind: 'github', server: 'https://github.com' }, words: '' };
-    expect(signInForView(useIt, 'game@acme@unity', false, failure)).toMatchObject({ kind: 'useConnection', failure });
+    expect(signInForView(useIt, repositoryGuidFor(1), false, failure)).toMatchObject({ kind: 'useConnection', failure });
     expect(signInForView(useIt, undefined, false, failure)).toMatchObject({ kind: 'alreadySignedIn', failure });
     expect(signInForView(useIt, undefined, false, null)).toMatchObject({ kind: 'alreadySignedIn', failure: null });
   });
@@ -220,7 +221,7 @@ describe('signInAgainView', () => {
 
 describe('signInRows', () => {
   it('lists each sign-in with its tracker, account and how it stands, marking the one this repository uses', () => {
-    const rows = signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]), 'game@acme@unity');
+    const rows = signInRows(setup([jira, { ...jira, id: 'r', credential: 'refused' }]), repositoryGuidFor(1));
     expect(rows.map((row) => row.detail)).toEqual(['acme.atlassian.net · This repository', 'acme.atlassian.net']);
     expect(rows.map(({ id, title, account, host, status, needsAttention, usedHere, signOut }) => ({ id, title, account, host, status, needsAttention, usedHere, signOut }))).toEqual([
       { id: 'j', title: 'Jira at acme.atlassian.net', account: 'Ana Díaz', host: 'acme.atlassian.net', status: { tone: 'positive', label: 'Signed in' }, needsAttention: false, usedHere: true, signOut: 'Sign out of acme.atlassian.net' },
@@ -241,10 +242,10 @@ describe('signInRows', () => {
   });
 
   it('says the window’s repository is one of those that lose their tracker', () => {
-    const [here] = signInRows(setup([jira]), 'game@acme@unity');
+    const [here] = signInRows(setup([jira]), repositoryGuidFor(1));
     expect(here!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in, and this repository goes back to showing issues as plain text.');
-    const shared = { ...setup([jira]), bindings: [...setup([jira]).bindings, { repository: 'tools@acme@unity', connectionId: 'j', projects: ['VCS'] }] };
-    expect(signInRows(shared, 'game@acme@unity')[0]!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in, and this repository and 1 other using it go back to showing issues as plain text.');
+    const shared = { ...setup([jira]), bindings: [...setup([jira]).bindings, { repository: repositoryGuidFor(2), connectionId: 'j', projects: ['VCS'] }] };
+    expect(signInRows(shared, repositoryGuidFor(1))[0]!.signOutQuestion.message).toBe('This computer forgets the Jira sign-in, and this repository and 1 other using it go back to showing issues as plain text.');
   });
 });
 
@@ -263,7 +264,7 @@ describe('the sign-ins Connect offers first', () => {
   });
 
   it('marks the one the window’s repository uses, when it changes its tracker', () => {
-    expect(usableSignIns(setup([jira]), 'game@acme@unity').map((row) => row.detail)).toEqual(['acme.atlassian.net · This repository']);
+    expect(usableSignIns(setup([jira]), repositoryGuidFor(1)).map((row) => row.detail)).toEqual(['acme.atlassian.net · This repository']);
   });
 
   it('says which sign-in was picked until a link to another server is pasted', () => {
@@ -279,6 +280,29 @@ describe('the sign-ins Connect offers first', () => {
     expect(connectsWithSignIn(null, true, { kind: 'useConnection', connection: jira, words: '' })).toBe(true);
     expect(connectsWithSignIn('j', true, { kind: 'signIn', methods: ['token'], trackerName: 'GitHub' })).toBe(false);
     expect(connectsWithSignIn(null, false, null)).toBe(false);
+  });
+});
+
+describe('issueTrackerPaneView', () => {
+  const GAME = repositoryGuidFor(1);
+  const read = { setupRead: true, inPlace: true, spec: 'game@acme@unity' };
+
+  it('shows the repository’s tracker by its GUID once both are read', () => {
+    expect(issueTrackerPaneView({ ...read, guid: { data: GAME, error: null } })).toEqual({ kind: 'repository', guid: GAME });
+  });
+
+  it('waits for the trackers and the repository’s GUID', () => {
+    expect(issueTrackerPaneView({ ...read, guid: { error: null } })).toEqual({ kind: 'reading' });
+    expect(issueTrackerPaneView({ ...read, setupRead: false, guid: { data: GAME, error: null } })).toEqual({ kind: 'reading' });
+  });
+
+  it('says why when the repository’s GUID can’t be read: its server out of reach, or no repository by its name', () => {
+    expect(issueTrackerPaneView({ ...read, guid: { error: new Error('Unable to connect to acme@unity') } })).toEqual({ kind: 'guidUnread', reason: 'Unable to connect to acme@unity' });
+    expect(issueTrackerPaneView({ ...read, guid: { data: null, error: null } })).toEqual({ kind: 'guidUnread', reason: "Couldn't find game@acme@unity on its server. It may have been deleted, or you may no longer have access to it." });
+  });
+
+  it('shows the sign-ins alone in a window with no repository', () => {
+    expect(issueTrackerPaneView({ setupRead: true, inPlace: false, spec: undefined, guid: { error: null } })).toEqual({ kind: 'signInsAlone' });
   });
 });
 

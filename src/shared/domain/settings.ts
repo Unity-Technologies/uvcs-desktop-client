@@ -5,6 +5,7 @@ import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { RepositorySettings, ServerSettings } from './scopedSettings';
+import type { RepositoryGuid } from './stableIds';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -24,6 +25,11 @@ export interface SavedWindow {
   workspacePath?: string;
   /** The repository it explored without a workspace (`repositoryPlace`). */
   repository?: string;
+  /**
+   * That repository's GUID, when a listing taught it: the window reopens on the name it goes by now, renamed anywhere
+   * (`WorkspaceWindows.openFirst`).
+   */
+  repositoryGuid?: RepositoryGuid;
   bounds: SavedWindowBounds;
   fullScreen: boolean;
   /** The view it showed (a renderer `ViewId`): saved only by a restart to install an update, which nobody chose. */
@@ -44,8 +50,9 @@ export interface AppSettings {
    */
   recentComments: string[];
   /**
-   * Recent check-in comments of each repository, newest first, by `repositoryKey`; the repository checked in to last
-   * comes first (`withRecentComment`).
+   * Recent check-in comments of each repository, newest first, by its GUID (those kept before by its spec, under its
+   * `repositoryKey`, until its GUID is known: `withRecentCommentsKeptByGuid`); the repository checked in to last comes
+   * first (`withRecentComment`).
    */
   recentCommentsByRepository: Record<string, string[]>;
   /** Automatically refresh pending changes when files change on disk. */
@@ -97,7 +104,8 @@ export interface AppSettings {
   favoriteOrganizations: string[];
   /**
    * What the user built up or chose in each repository (Branch Explorer rules and moved branches, the sync remote), by
-   * `repositoryKey`, changed one repository at a time by the main process (`updateRepositorySettings`).
+   * its GUID (`RepositorySettingsByKey`), changed one repository at a time by the main process
+   * (`updateRepositorySettings`).
    */
   repositorySettings: Record<string, RepositorySettings>;
   /** What the user chose for each server (the home screen's project), by `serverKey`, changed one at a time (`updateServerSettings`). */

@@ -10,6 +10,7 @@ import { cachedShelve } from '../../features/shelves/cachedShelve';
 import { folderMissingQuery } from '../workspace/useWorkspace';
 import { openPageWindowFromAddress } from './openPageWindowFromAddress';
 import { usePageWindow } from './pageWindowStore';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 afterEach(() => {
   useSession.setState({ place: null, workspacePath: null });
@@ -42,7 +43,7 @@ describe('openPageWindowFromAddress', () => {
   });
 
   it('starts with the row of what its page shows as its window had read it, without reading it again', () => {
-    const shelve = { id: 4, guid: 'g4', comment: 'Wip', owner: 'ana', date: '2026-10-01T10:00:00Z', parentChangeset: 9, repository: 'game@local' };
+    const shelve = { id: 4, guid: shelveGuidFor(4), comment: 'Wip', owner: 'ana', date: '2026-10-01T10:00:00Z', parentChangeset: 9, repository: 'game@local' };
     const page: Page = { kind: 'diff', title: 'Shelve 4', target: { kind: 'shelve', shelveId: 4 } };
 
     openPageWindowFromAddress(addressOf(pageWindowQuery(workspacePlace('/work/game'), page, { readAt: 1_700_000_000_000, shelve })));

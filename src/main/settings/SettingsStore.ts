@@ -3,8 +3,9 @@ import { dirname } from 'node:path';
 import { withFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { storedGravatarChoice } from '@shared/domain/gravatarChoice';
 import { storedCmChoice } from '@shared/domain/storedCmChoice';
-import { withRecentComment } from '@shared/domain/recentComments';
+import { withRecentComment, withRecentCommentsKeptByGuid } from '@shared/domain/recentComments';
 import {
+  withRepositoryKeptByGuid,
   withRepositorySettings,
   withRepositorySettingsAdded,
   withServerSettings,
@@ -14,7 +15,9 @@ import {
   type ServerSettings,
 } from '@shared/domain/scopedSettings';
 import { DEFAULT_SETTINGS, type AppSettings, type WindowKeptSettings } from '@shared/domain/settings';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { replaceFileSync } from '../files/replaceFileSync';
+import { withoutIdAlone } from './organizationsKept';
 import { withRecentBranch } from './recentBranches';
 import { withoutRecentWorkspace, withRecentWorkspace } from './recentWorkspaces';
 
@@ -68,23 +71,37 @@ export class SettingsStore {
   }
 
   /** Puts a check-in's comment first among its repository's recent comments. */
-  rememberRecentComment(repository: string, comment: string): AppSettings {
+  rememberRecentComment(repository: RepositoryGuid, comment: string): AppSettings {
     return this.update(withRecentComment(this.settings, repository, comment));
   }
 
   /** Adds an organization to the favorites, or removes it. */
   setFavoriteOrganization(server: string, favorite: boolean): AppSettings {
-    return this.update({ favoriteOrganizations: withFavoriteOrganization(this.settings.favoriteOrganizations, server, favorite) });
+    const favoriteOrganizations = withFavoriteOrganization(this.settings.favoriteOrganizations, server, favorite);
+    return this.update({ favoriteOrganizations, serverSettings: withoutIdAlone({ favoriteOrganizations, serverSettings: this.settings.serverSettings }, server) });
   }
 
-  /** Changes one repository's settings (a spec, however written), keeping every other repository's. */
-  updateRepositorySettings(repository: string, changes: ScopedSettingsChange<RepositorySettings>): AppSettings {
+  /** Changes one repository's settings, keeping every other repository's. */
+  updateRepositorySettings(repository: RepositoryGuid, changes: ScopedSettingsChange<RepositorySettings>): AppSettings {
     return this.update({ repositorySettings: withRepositorySettings(this.settings.repositorySettings, repository, changes) });
+  }
+
+  /**
+   * Moves what was kept for the repository by its spec, before it was kept by its GUID, under its GUID: its settings
+   * and recent comments. Writes nothing when the spec kept nothing, as it does every time but the first.
+   */
+  keepRepositoryByGuid(spec: string, guid: RepositoryGuid): void {
+    const { repositorySettings, recentCommentsByRepository } = this.settings;
+    const settings = withRepositoryKeptByGuid(repositorySettings, spec, guid);
+    const comments = withRecentCommentsKeptByGuid(recentCommentsByRepository, spec, guid);
+    if (settings === repositorySettings && comments === recentCommentsByRepository) return;
+    this.update({ repositorySettings: settings, recentCommentsByRepository: comments });
   }
 
   /** Changes one server's settings, keeping every other server's. */
   updateServerSettings(server: string, changes: ScopedSettingsChange<ServerSettings>): AppSettings {
-    return this.update({ serverSettings: withServerSettings(this.settings.serverSettings, server, changes) });
+    const serverSettings = withServerSettings(this.settings.serverSettings, server, changes);
+    return this.update({ serverSettings: withoutIdAlone({ favoriteOrganizations: this.settings.favoriteOrganizations, serverSettings }, server) });
   }
 
   /**

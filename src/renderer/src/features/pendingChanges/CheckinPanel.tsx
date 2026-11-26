@@ -1,6 +1,7 @@
 import { ArrowDownToLine, GitMerge } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
+import type { RecentCommentsOffer } from '@shared/domain/recentComments';
 import { CommentField } from '../../components/commentEditor/CommentField';
 import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
 import { ChangeRequestsContext } from '../../components/commentEditor/changeRequestsContext';
@@ -16,7 +17,7 @@ import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type C
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { DescriptionFooter } from './DescriptionFooter';
-import { descriptionFooterButtons, descriptionHeightWith } from './descriptionFooterButtons';
+import { descriptionFooterButtons, descriptionHeightWith, recentCommentsMenuItems } from './descriptionFooterButtons';
 import { useBranchChangeRequests } from '../codeReviews/changeRequests/useChangeRequests';
 import { changeRequestsBranch, notYetNamed } from '../codeReviews/changeRequests/changeRequests';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
@@ -55,7 +56,10 @@ interface CheckinPanelProps {
   preparedChangelistNote: string | null;
   /** Review mode is on and every included change is reviewed. */
   allReviewed: boolean;
-  recentComments: string[];
+  /** What the Recent comments menu offers (`recentCommentsOffer`). */
+  recentComments: RecentCommentsOffer;
+  /** The Recent comments menu opened: its repository's GUID is read then, if it wasn't. */
+  onRecentCommentsOpen: () => void;
   /** Whether the button checks in or shelves: the caret beside it sets it, and so does a changelist's menu. */
   mode: CheckinMode;
   onModeChange: (mode: CheckinMode) => void;
@@ -80,6 +84,7 @@ export function CheckinPanel({
   preparedChangelistNote,
   allReviewed,
   recentComments,
+  onRecentCommentsOpen,
   mode,
   onModeChange: setMode,
   busy,
@@ -99,7 +104,7 @@ export function CheckinPanel({
   const branchRequests = useBranchChangeRequests(changeRequestsBranch(workingOn, mode), listedCount !== undefined);
   const offered = useMemo(() => notYetNamed(branchRequests.requests, `${summary}\n${description}`), [branchRequests.requests, summary, description]);
   const changeRequests = useMemo(() => ({ ...branchRequests, requests: offered }), [branchRequests, offered]);
-  const footerButtons = descriptionFooterButtons({ recentComments: recentComments.length, changeRequests: offered.length });
+  const footerButtons = descriptionFooterButtons({ recentComments: recentComments.offered, changeRequests: offered.length });
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
   const count = shelving ? shelvable.count : includedCount;
@@ -171,7 +176,8 @@ export function CheckinPanel({
             footer={
               <DescriptionFooter
                 buttons={footerButtons}
-                recentComments={recentComments}
+                recentComments={recentCommentsMenuItems(recentComments)}
+                onRecentCommentsOpen={onRecentCommentsOpen}
                 onRecentComment={(pick) => {
                   onMessageChange(pick.parts);
                   caretAfterPick.current = pick.caretIn;

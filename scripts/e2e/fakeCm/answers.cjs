@@ -66,6 +66,15 @@ function version() {
   return `${named || PINNED_CM_VERSION}\n`;
 }
 
+/** The ids of the Unity organizations the user signed in to, as `cm getconfig organization <org> --format={unityid}` prints them. */
+const ORGANIZATION_IDS = { [ORGANIZATION]: '1375943370549', [OTHER_ORGANIZATION]: '1375488836673' };
+
+function organizationId(args) {
+  const id = ORGANIZATION_IDS[args[0].toLowerCase()];
+  if (id === undefined) throw new CmRefusal(`Organization configuration not found for '${args[0]}'.`);
+  return `${id}\n`;
+}
+
 const COMMANDS = {
   version,
   checkconnection: () => 'Test connection executed successfully\n',
@@ -73,6 +82,8 @@ const COMMANDS = {
   // Without --format: the local setup check (`checkSetup`), which reads only whether it succeeds.
   'profile list': (args) => (args.some((arg) => arg.startsWith('--format=')) ? formatted(args, ACCOUNTS) : `${SERVER}\n`),
   'workspace list': (args) => formatted(args, WORKSPACES),
+  // A Unity organization's id, read once something is kept for it (`OrganizationRenames`).
+  'getconfig organization': organizationId,
   getworkspacefrompath: (args) => formatted(args, WORKSPACES),
   status: statusOutput,
   wi: workspaceInfo,

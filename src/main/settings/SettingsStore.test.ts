@@ -4,7 +4,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { recentCommentsFor } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
+import { parseOrganizationId } from '@shared/domain/stableIds';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { SettingsStore } from './SettingsStore';
+
+const GAME = repositoryGuidFor(1);
+const ART = repositoryGuidFor(2);
 
 function store(): { settings: SettingsStore; filePath: string } {
   const filePath = join(mkdtempSync(join(tmpdir(), 'uvcs-settings-')), 'settings.json');
@@ -67,12 +72,12 @@ describe('SettingsStore recent comments', () => {
     const changed: string[][] = [];
     settings.onChanged((_settings, changes) => changed.push(Object.keys(changes)));
 
-    settings.rememberRecentComment('game@local', 'Fix cs:4207');
-    settings.rememberRecentComment('art@local', 'New textures');
+    settings.rememberRecentComment(GAME, 'Fix cs:4207');
+    settings.rememberRecentComment(ART, 'New textures');
 
     const stored = new SettingsStore(filePath).get();
-    expect(recentCommentsFor(stored, 'game@local')).toEqual(['Fix cs:4207']);
-    expect(recentCommentsFor(stored, 'art@local')).toEqual(['New textures']);
+    expect(recentCommentsFor(stored, GAME)).toEqual(['Fix cs:4207']);
+    expect(recentCommentsFor(stored, ART)).toEqual(['New textures']);
     expect(changed).toEqual([['recentCommentsByRepository'], ['recentCommentsByRepository']]);
   });
 });
@@ -121,16 +126,16 @@ describe('SettingsStore reading its file', () => {
     const settings = new SettingsStore(filePath).get();
 
     expect(settings).toMatchObject({ recentComments: ['Older comment'], recentCommentsByRepository: {} });
-    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Older comment']);
+    expect(recentCommentsFor(settings, GAME)).toEqual(['Older comment']);
   });
 
   it('keeps the repositories checked in to last first across a restart, so the one left longest is forgotten first', () => {
     const { settings, filePath } = store();
-    settings.rememberRecentComment('game@local', 'In game');
-    settings.rememberRecentComment('art@local', 'In art');
-    settings.rememberRecentComment('game@local', 'Again in game');
+    settings.rememberRecentComment(GAME, 'In game');
+    settings.rememberRecentComment(ART, 'In art');
+    settings.rememberRecentComment(GAME, 'Again in game');
 
-    expect(Object.keys(new SettingsStore(filePath).get().recentCommentsByRepository)).toEqual(['game@local', 'art@local']);
+    expect(Object.keys(new SettingsStore(filePath).get().recentCommentsByRepository)).toEqual([GAME, ART]);
   });
 
   it('turns off Gravatar pictures saved on only by the old default, until the user chooses', () => {
@@ -182,11 +187,11 @@ describe('SettingsStore repository and server settings', () => {
 
   it('keep what every window changes in one repository, one value at a time, and write it to the file', () => {
     const { settings, filePath } = store();
-    settings.updateRepositorySettings('game@host', { branchPins: [pin] });
-    settings.updateRepositorySettings('Game@host', { explorerRulesOff: true });
-    settings.updateRepositorySettings('art@host', { syncRemote: 'art@cloud' });
+    settings.updateRepositorySettings(GAME, { branchPins: [pin] });
+    settings.updateRepositorySettings(GAME, { explorerRulesOff: true });
+    settings.updateRepositorySettings(ART, { syncRemote: 'art@cloud' });
 
-    const expected = { 'game@host': { branchPins: [pin], explorerRulesOff: true }, 'art@host': { syncRemote: 'art@cloud' } };
+    const expected = { [GAME]: { branchPins: [pin], explorerRulesOff: true }, [ART]: { syncRemote: 'art@cloud' } };
     expect(settings.get().repositorySettings).toEqual(expected);
     expect(JSON.parse(readFileSync(filePath, 'utf8')).repositorySettings).toEqual(expected);
   });
@@ -199,9 +204,30 @@ describe('SettingsStore repository and server settings', () => {
     expect(settings.get().serverSettings).toEqual({ 'beta@unity': { homeProject: 'Kart' } });
   });
 
+  it("forget an organization's id once it keeps nothing else, its project or its favorite gone", () => {
+    const { settings } = store();
+    const acme = parseOrganizationId('1375943370549')!;
+    settings.update({ favoriteOrganizations: ['beta@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: acme }, 'beta@unity': { organizationId: acme } } });
+
+    settings.updateServerSettings('acme@unity', { homeProject: null });
+    settings.setFavoriteOrganization('beta@unity', false);
+
+    expect(settings.get().serverSettings).toEqual({});
+  });
+
+  it("keep a favorite organization's id when its project goes", () => {
+    const { settings } = store();
+    const acme = parseOrganizationId('1375943370549')!;
+    settings.update({ favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing', organizationId: acme } } });
+
+    settings.updateServerSettings('acme@unity', { homeProject: null });
+
+    expect(settings.get().serverSettings).toEqual({ 'acme@unity': { organizationId: acme } });
+  });
+
   it('take what a window kept before only where nothing is kept yet, the same when two windows bring it', () => {
     const { settings } = store();
-    settings.updateRepositorySettings('game@host', { syncRemote: 'game@cloud' });
+    settings.addWindowSettings({ repositorySettings: { 'game@host': { syncRemote: 'game@cloud' } }, serverSettings: {}, changesetColors: { users: [] } });
     settings.update({ changesetColors: { users: [{ user: 'jane', hue: 1 }] } });
     const kept = {
       repositorySettings: { 'game@host': { syncRemote: 'old@cloud', branchPins: [pin] } },
@@ -214,6 +240,29 @@ describe('SettingsStore repository and server settings', () => {
     expect(settings.get().repositorySettings).toEqual({ 'game@host': { syncRemote: 'game@cloud', branchPins: [pin] } });
     expect(settings.get().serverSettings).toEqual({ 'acme@unity': { homeProject: 'Racing' } });
     expect(settings.get().changesetColors).toEqual({ users: [{ user: 'jane', hue: 1 }] });
+  });
+
+  it('move what was kept by a repository’s spec under its GUID once it is known: its settings and recent comments', () => {
+    const { settings, filePath } = store();
+    settings.addWindowSettings({ repositorySettings: { 'Game@host': { branchPins: [pin] } }, serverSettings: {}, changesetColors: { users: [] } });
+    settings.update({ recentCommentsByRepository: { 'game@host': ['Fix cs:4207'] } });
+
+    settings.keepRepositoryByGuid('game@HOST', GAME);
+
+    const stored = new SettingsStore(filePath).get();
+    expect(stored.repositorySettings).toEqual({ [GAME]: { branchPins: [pin] } });
+    expect(stored.recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+  });
+
+  it('write nothing when the GUID is known again and nothing is kept by the spec', () => {
+    const { settings } = store();
+    settings.updateRepositorySettings(GAME, { branchPins: [pin] });
+    const changed: string[][] = [];
+    settings.onChanged((_settings, changes) => changed.push(Object.keys(changes)));
+
+    settings.keepRepositoryByGuid('game@host', GAME);
+
+    expect(changed).toEqual([]);
   });
 
   it('take a window’s changeset colors while it has none', () => {

@@ -13,10 +13,12 @@ interface RepositoryPickerProps {
   /** Repositories that can't be picked, e.g. the source of a push. */
   exclude?: string;
   label?: string;
+  /** Nothing can be picked yet: what the pick is kept for isn't known. */
+  disabled?: boolean;
 }
 
 /** Picks a server, then one of its repositories. */
-export function RepositoryPicker({ value, onChange, exclude, label = 'Repository' }: RepositoryPickerProps) {
+export function RepositoryPicker({ value, onChange, exclude, label = 'Repository', disabled = false }: RepositoryPickerProps) {
   const [server, setServer] = useState(() => (value ? splitRepositorySpec(value).server : 'local'));
   const { data: repositories, isLoading, error } = useRepositories(server);
   const choices = (repositories ?? []).filter((repository) => repository.spec !== exclude);
@@ -27,7 +29,7 @@ export function RepositoryPicker({ value, onChange, exclude, label = 'Repository
       <SelectField
         label={label}
         value={value && splitRepositorySpec(value).server === server ? value : ''}
-        disabled={isLoading || Boolean(error)}
+        disabled={disabled || isLoading || Boolean(error)}
         error={error?.message}
         onChange={(event) => {
           const picked = choices.find((repository) => repository.spec === event.target.value);

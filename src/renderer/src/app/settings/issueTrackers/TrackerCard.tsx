@@ -1,4 +1,5 @@
 import { MoreHorizontal } from 'lucide-react';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { api } from '../../../api/client';
 import { SEPARATOR, type MenuEntry } from '../../../lib/actions';
 import { Avatar } from '../../../ui/Avatar';
@@ -17,7 +18,7 @@ import { useBoundProjects } from './useBoundProjects';
 import styles from './IssueTrackerPane.module.css';
 
 interface TrackerCardProps {
-  repository: string;
+  repository: RepositoryGuid;
   connected: ConnectedTracker;
   /** "Change tracker…": back to Connect, to replace it (a repository has one tracker). */
   onChange: () => void;

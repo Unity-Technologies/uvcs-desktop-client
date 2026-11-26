@@ -18,12 +18,13 @@ import { queryClient } from '../queryClient';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { branchResult, changesetResult, codeReviewResultDetail, exactCodeReviewResult, exactShelveResult, fileResult, labelResult, shelveResult, type ResultContext } from './objectResults';
 import { whereTheWindowIs } from '../../testing/operationOutcome';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const change: PendingChange = { path: 'src/app.ts', kinds: ['changed'], itemType: 'file', size: 1, lastModified: '2026-01-01T00:00:00Z' };
 const branch: Branch = { id: 3, name: '/main/task', guid: 'g', parent: '/main', comment: '', owner: 'ana', date: '2026-01-01T00:00:00Z', headChangeset: 5, repository: 'repo@server' };
 const label: Label = { id: 7, name: 'v1.0', changeset: 5, branch: '/main', comment: '', owner: 'ana', date: '2026-01-01T00:00:00Z', repository: 'repo@server' };
 const changeset = (comment: string): Changeset => ({ id: 12, comment, guid: 'c', branch: '/main', owner: 'ana', date: '2026-01-01T00:00:00Z', parent: 11, repository: 'repo@server' });
-const shelve = (comment: string): Shelve => ({ id: 4, comment, guid: 's', owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
+const shelve = (comment: string): Shelve => ({ id: 4, comment, guid: shelveGuidFor(4), owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
 
 function contextFor(term: string, changes: PendingChange[] = []): ResultContext {
   return { place: workspacePlace('/ws'), workspaceKind: undefined, term, currentBranch: '/main', loadedChangeset: 1, changelists: [], changeAt: (path) => changes.find((candidate) => candidate.path === path) };

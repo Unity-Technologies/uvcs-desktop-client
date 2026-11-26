@@ -72,6 +72,13 @@ describe('found objects', () => {
     ]);
   });
 
+  it("reads a shelve's GUID in lower case, and none from a field that holds none", () => {
+    const [read, empty] = recordsIn(recordsOutput(FOUND_SHELVES, { shelveid: 9, guid: 'C7558622-B4F1-49EB-9F76-639AF4D70002' }, { shelveid: 10, guid: '' }), FOUND_SHELVES);
+
+    expect(read?.guid).toBe('c7558622-b4f1-49eb-9f76-639af4d70002');
+    expect(empty).not.toHaveProperty('guid');
+  });
+
   it('reads the branches of a big repository in one pass: a few reads of each character, whatever the size', () => {
     const branches = Array.from({ length: 5_000 }, (_, id) => ({ id, name: `/main/task${id}`, parent: '/main', comment: `comment ${id}`, repname: 'game', repserver: 'local' }));
     const output = recordsOutput(FOUND_BRANCHES, ...branches);

@@ -1,4 +1,5 @@
 import type { UvcsApi } from '@shared/api';
+import { workspacePlace } from '@shared/domain/place';
 import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
 import { ProfileList } from '../cm/ProfileList';
 import { homedir } from 'node:os';
@@ -52,7 +53,8 @@ import type { AppsContext, BranchNamesContext, ProfilesContext, ServiceContext, 
 export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
   const tellKeptAside = (workspacePath: string, files: KeptAsideFile[]) => sendEventToCaller('filesKeptAside', { workspacePath, files });
-  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers, tellKeptAside) };
+  const knownBranchName = (workspacePath: string, branchId: number) => context.branchNames.knownName(workspacePlace(workspacePath), branchId);
+  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers, tellKeptAside, knownBranchName) };
   const naming: BranchNamesContext = { branchNames: context.branchNames };
   const apps = appsContext(context);
   const profiles: ProfilesContext = { profiles: new ProfileList(context.cm) };
@@ -79,7 +81,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     mergeTools: createMergeToolsService(context, apps),
     pendingChanges: createPendingChangesService(context, switching),
     permissions: createPermissionsService(context),
-    repositories: createRepositoriesService(context, profiles, (from, to) => context.issueTrackers.repositoryRenamed(from, to)),
+    repositories: createRepositoriesService(context, profiles),
     review: createReviewService(context),
     settings: createSettingsService(context),
     shelves: createShelvesService(context, switching),

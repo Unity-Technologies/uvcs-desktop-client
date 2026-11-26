@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { otherRepository, repositoryKey } from './repository';
+import { otherRepository, repositoryKey, repositorySpecParts } from './repository';
 
 describe('otherRepository', () => {
   it("names the xlinked repository an item lives in, not the workspace's own", () => {
@@ -31,5 +31,18 @@ describe('repositoryKey', () => {
 
   it('keeps a repository nested in a folder whole', () => {
     expect(repositoryKey('art/Textures@local')).toBe('art/textures@local');
+  });
+});
+
+describe('repositorySpecParts', () => {
+  it('splits a spec at its first @, as a name holds none', () => {
+    expect(repositorySpecParts('game@acme@unity')).toEqual({ name: 'game', server: 'acme@unity' });
+    expect(repositorySpecParts('Racing/Game@ssl://host:8088')).toEqual({ name: 'Racing/Game', server: 'ssl://host:8088' });
+  });
+
+  it('gives nothing for a spec that names no server or no name', () => {
+    expect(repositorySpecParts('game')).toBeUndefined();
+    expect(repositorySpecParts('game@')).toBeUndefined();
+    expect(repositorySpecParts('@local')).toBeUndefined();
   });
 });

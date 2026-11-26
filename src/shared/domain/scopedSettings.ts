@@ -1,10 +1,11 @@
 import type { BranchPin, ExplorerRule } from './branchExplorerSettings';
 import { repositoryKey, serverKey } from './repository';
+import type { OrganizationId, RepositoryGuid } from './stableIds';
 
 // What the app keeps for one repository or one server, in its settings (`AppSettings.repositorySettings`,
-// `serverSettings`), by `repositoryKey` and `serverKey`. The main process changes one entry at a time
-// (`SettingsStore.updateRepositorySettings`), so windows working in other repositories meanwhile keep theirs
-// (ARCHITECTURE.md "Where a setting is kept").
+// `serverSettings`): a repository's by its GUID, which a rename keeps (ARCHITECTURE.md "Settings survive renames"), a
+// server's by `serverKey`. The main process changes one entry at a time (`SettingsStore.updateRepositorySettings`), so
+// windows working in other repositories meanwhile keep theirs (ARCHITECTURE.md "Where a setting is kept").
 
 /** What the user built up or chose in one repository. */
 export interface RepositorySettings {
@@ -18,18 +19,32 @@ export interface RepositorySettings {
   branchPins?: BranchPin[];
   /** The repository this one was last synced with, a spec. */
   syncRemote?: string;
+  /** The sync remote's GUID: it is found by it once its spec names no repository, or another one (`followedSpec`). */
+  syncRemoteGuid?: RepositoryGuid;
 }
 
 /** What the user chose for one server (`acme@unity`, `host:8087`). */
 export interface ServerSettings {
-  /** The project the home screen narrows this Unity organization's repositories to; none for all of them. */
+  /**
+   * The project the home screen narrows this Unity organization's repositories to, by its GUID (`ProjectGuid`), which a
+   * rename keeps; none for all of them. A name kept before, or by a link opened before the organization was listed,
+   * moves to the GUID once a listing holds it (`movedHomeProject`).
+   */
   homeProject?: string;
+  /**
+   * A Unity organization's id (`UnityOrganizationIds`): what its settings and favorite follow to the organization's new
+   * name when its owners rename it (`OrganizationRenames`). Kept by the main process only.
+   */
+  organizationId?: OrganizationId;
 }
 
 /** A change to a scope's settings: a value replaces the one kept, `null` forgets it. */
 export type ScopedSettingsChange<S> = { [K in keyof S]?: S[K] | null };
 
-/** Every repository's settings, a spec's under its `repositoryKey`. */
+/**
+ * Every repository's settings, under its GUID; those kept before by its spec, under its `repositoryKey`, until its GUID
+ * is known (`withRepositoryKeptByGuid`).
+ */
 export type RepositorySettingsByKey = Readonly<Record<string, RepositorySettings>>;
 
 /** Every server's settings, a server's under its `serverKey`. */
@@ -37,9 +52,9 @@ export type ServerSettingsByKey = Readonly<Record<string, ServerSettings>>;
 
 const NO_SETTINGS = {};
 
-/** The repository's settings, however its spec is written; the same empty object for one with none. */
-export function repositorySettingsOf(byRepository: RepositorySettingsByKey, repository: string | undefined): RepositorySettings {
-  return (repository === undefined ? undefined : byRepository[repositoryKey(repository)]) ?? NO_SETTINGS;
+/** The repository's settings; the same empty object for one with none, or whose GUID isn't known. */
+export function repositorySettingsOf(byRepository: RepositorySettingsByKey, repository: RepositoryGuid | undefined): RepositorySettings {
+  return (repository === undefined ? undefined : byRepository[repository]) ?? NO_SETTINGS;
 }
 
 /** The server's settings, however it is written; the same empty object for one with none. */
@@ -50,10 +65,20 @@ export function serverSettingsOf(byServer: ServerSettingsByKey, server: string |
 /** Every repository's settings with the changes made to `repository`'s. */
 export function withRepositorySettings(
   byRepository: RepositorySettingsByKey,
-  repository: string,
+  repository: RepositoryGuid,
   changes: ScopedSettingsChange<RepositorySettings>,
 ): Record<string, RepositorySettings> {
-  return withScopeChanged(byRepository, repositoryKey(repository), changes);
+  return withScopeChanged(byRepository, repository, changes);
+}
+
+/**
+ * Every repository's settings with what was kept by `spec` before (`repositoryKey`) moved under the repository's
+ * GUID, where the GUID's own win; the same object when nothing was kept by the spec.
+ */
+export function withRepositoryKeptByGuid(byRepository: Record<string, RepositorySettings>, spec: string, guid: RepositoryGuid): Record<string, RepositorySettings> {
+  const { [repositoryKey(spec)]: byName, ...others } = byRepository;
+  if (!byName) return byRepository;
+  return { ...others, [guid]: { ...byName, ...byRepository[guid] } };
 }
 
 /** Every server's settings with the changes made to `server`'s. */
@@ -62,9 +87,10 @@ export function withServerSettings(byServer: ServerSettingsByKey, server: string
 }
 
 /**
- * Every repository's settings with what another place kept for them (a window's storage, before these settings held
- * them) added where they keep nothing of their own yet: what is already here wins, so adding the same twice changes
- * nothing.
+ * Every repository's settings with what another place kept for them by their spec (a window's storage, before these
+ * settings held them) added where they keep nothing of their own yet: what is already here wins, so adding the same
+ * twice changes nothing. They stay under the spec's `repositoryKey` until the repository's GUID is known
+ * (`withRepositoryKeptByGuid`).
  */
 export function withRepositorySettingsAdded(byRepository: RepositorySettingsByKey, added: Readonly<Record<string, RepositorySettings>>): Record<string, RepositorySettings> {
   return withScopesAdded(byRepository, added, repositoryKey);

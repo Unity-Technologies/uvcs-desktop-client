@@ -27,7 +27,7 @@ function launch({ atLoad, atOpen = atLoad, namesAFolder = false, readsFail = fal
       warmUp: (cwd?: string) => void steps.push(`warm up ${cwd ?? 'the home folder'}`),
       showWhileOpening: (cwd: string) => void steps.push(`show ${cwd} while it opens`),
     },
-    windows: { firstWorkspace: () => firstWorkspace, openFirst: () => void steps.push('open the window') },
+    windows: { firstWorkspace: () => firstWorkspace, openFirst: async () => void steps.push('open the window') },
     early: {
       start: (method: string, args: unknown[]) => {
         if (failing) throw new Error('no such method');

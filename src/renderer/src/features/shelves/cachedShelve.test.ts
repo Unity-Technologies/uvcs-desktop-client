@@ -5,9 +5,10 @@ import type { Shelve } from '@shared/domain/shelve';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { cachedShelve } from './cachedShelve';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const ws = '/ws';
-const shelve = (id: number): Shelve => ({ id, guid: `g${id}`, comment: '', owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' });
+const shelve = (id: number): Shelve => ({ id, guid: shelveGuidFor(id), comment: '', owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' });
 
 beforeEach(() => queryClient.clear());
 

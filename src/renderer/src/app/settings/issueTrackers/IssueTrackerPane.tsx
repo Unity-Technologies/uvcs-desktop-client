@@ -1,11 +1,15 @@
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { workspacePathOf } from '@shared/domain/place';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
+import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { repositoryOfPlace } from '../../workspace/placeOrigin';
+import { repositoryGuidQuery } from '../../workspace/repositoryGuid';
 import { useSession } from '../../workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../../workspace/useWorkspace';
-import { connectedTrackerOf, repositoryTrackerView } from './connectFlow';
+import { connectedTrackerOf, issueTrackerPaneView, repositoryTrackerView } from './connectFlow';
 import { ConnectTracker, type ConnectStart } from './ConnectTracker';
 import { RepositoryStart } from './RepositoryStart';
 import { SignInsCard } from './SignInsCard';
@@ -21,21 +25,21 @@ import styles from './IssueTrackerPane.module.css';
 export function IssueTrackerPane() {
   const place = useSession((state) => state.place);
   const info = useWorkspaceInfoOf(place ? workspacePathOf(place) : null).data;
-  const repository = place ? repositoryOfPlace(place, info) : undefined;
+  const spec = place ? repositoryOfPlace(place, info) : undefined;
+  // What a repository uses is kept by its GUID (ARCHITECTURE.md "Settings survive renames").
+  const guid = useQuery({ ...repositoryGuidQuery(spec ?? ''), enabled: spec !== undefined });
   const setup = useIssueTrackerSetup();
-  if (!setup || (place && !repository)) return <CenteredSpinner />;
-  return (
-    <div className={styles.pane}>
-      {repository ? <RepositoryTracker repository={repository} /> : <SignInAlone />}
-    </div>
-  );
+  const view = issueTrackerPaneView({ setupRead: setup !== undefined, inPlace: place !== null, spec, guid });
+  if (view.kind === 'reading') return <CenteredSpinner />;
+  if (view.kind === 'guidUnread') return <EmptyState title="Couldn't read this repository" description={view.reason} />;
+  return <div className={styles.pane}>{view.kind === 'repository' ? <RepositoryTracker repository={view.guid} /> : <SignInAlone />}</div>;
 }
 
 /**
  * The repository's tracker: with none yet (or changing it), its starting card (`RepositoryStart`: a sign-in to use, or
  * one to add), then Connect from what was picked; once it has one, its card, and the sign-ins quietly under it.
  */
-function RepositoryTracker({ repository }: { repository: string }) {
+function RepositoryTracker({ repository }: { repository: RepositoryGuid }) {
   const setup = useIssueTrackerSetup();
   const connected = connectedTrackerOf(setup, repository);
   const [changing, setChanging] = useState(false);

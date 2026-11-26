@@ -163,7 +163,10 @@ xlinks: features/xlinks.md.
 A Unity Cloud organization's server has a name (`AcmeStudio@unity`) and an id form (`2398571046213@cloud`). The app
 never shows the id form, never compares it with a name and never passes it to `cm` (`fakeCmClient` fails a test that
 does: `namesOrganizationById`); it takes the name from an output `cm` already names it in, never by mapping ids
-itself. Where each name comes from, the two kinds of organizations, projects and deleted repositories:
+itself. An organization's own name can change; its id never does, and is the one thing settings record of it, never
+shown nor passed to `cm` ("Settings survive renames"). That id (`{unityid}`) is the same number as the id form, which
+the app never builds from it. Where each name comes from, the two kinds of organizations,
+projects and deleted repositories:
 architecture/cm-output.md "Unity organizations".
 
 ## No external tool opens by itself
@@ -299,16 +302,19 @@ the app's settings.
   kept for one repository, workspace or server. Every window reads them (`useSettings`) and follows the others' changes
   (`settingsChanged`); the main process writes them. They hold four scopes:
   - the whole app: Settings' choices, the changeset colors, the windows to reopen;
-  - a repository (`repositorySettings`, `RepositorySettings` by `repositoryKey`): the Branch Explorer's rules and moved
-    branches, whether its rules and changeset colors apply, the sync remote;
+  - a repository (`repositorySettings`, `RepositorySettings` by the repository's GUID: "Settings survive renames"): the
+    Branch Explorer's rules and moved branches, whether its rules and changeset colors apply, the sync remote; its
+    recent comments (`recentCommentsByRepository`), likewise;
   - a server (`serverSettings`, `ServerSettings` by `serverKey`): the home screen's project;
-  - a workspace: its recent branches (`recentBranchesByWorkspace`) and review mode (`reviewModeWorkspaces`).
+  - a workspace, by its GUID: its recent branches (`recentBranchesByWorkspace`), the changes it left on a switch
+    (`switchShelves`) and review mode (`reviewModeWorkspaces`, which keeps a repository explored without a workspace
+    by the repository's GUID).
   A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
   main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
-  `setFavoriteOrganization`), never written whole from a window's copy. A value of the whole app (a Settings choice, the
-  changeset colors) is written whole (`saveSettings`): every window follows `settingsChanged`, so its copy is current
-  but for a save still on its way. `scopedSettings.ts` keeps only what differs from
-  having nothing, so the file holds only what the user set.
+  `setFavoriteOrganization`, `review.setReviewMode`), never written whole from a window's copy. A value of the whole
+  app (a Settings choice, the changeset colors) is written whole (`saveSettings`): every window follows
+  `settingsChanged`, so its copy is current but for a save still on its way. `scopedSettings.ts` keeps only what
+  differs from having nothing, so the file holds only what the user set.
 - **The window's storage** (`localStorage`, zustand's `persist`): only how the views are laid out, what costs a click to
   set again: splitter widths, folds, sorting, view toggles, filters, the diff's layout. Every window keeps its own copy
   of such a store and writes all of it back on any change, so the last window to change it wins: right for a layout,
@@ -322,6 +328,74 @@ directly (`STORAGE_READERS`). What the window's storage kept before the settings
 `addWindowSettings`), which take it only where they hold nothing yet, and stays in the storage until they do. A value
 cleared meanwhile reads as nothing held, so a hand-over that failed and is tried again at the next start may bring it
 back.
+
+### Settings survive renames
+
+What the app keeps for an object is kept by what a rename never changes; a name changes, and what was kept by it is
+lost. A workspace by its GUID (`cm getworkspacefrompath --format={guid}`, a local read), a repository by its GUID
+(`{repguid}`), a Unity project and a shelve by their GUIDs, a Unity organization by its name with its id recorded
+(below). Each kind is a type of its own (`stableIds.ts`: `RepositoryGuid`, `WorkspaceGuid`, `BranchGuid`,
+`ProjectGuid`, `ShelveGuid`, `OrganizationId`), parsed where `cm` prints it and made only from text of its shape, so a
+name can't be passed where one is kept.
+
+A branch is kept by its object id (`br:37`, `byIdIn` in `settingsIdentity.ts`) inside what is kept per repository:
+the Branch Explorer's pins, and the changes a switch left (`switchShelves`); ids are per repository, as those are. Kept
+per workspace, the recent branches hold its GUID (`recentBranchesByWorkspace`), and a committed diff's review marks
+name a branch's diff by its GUID (`br:<BranchGuid>`, `diffReviewName`): the diff knows only the branch's name, so its
+id would cost the same `cm find branch` as its GUID, read only in review mode.
+
+- **A repository's GUID** is printed only by `cm repository list`, never by `cm status --header` or `cm find`, so
+  every listing of a server goes through `RepositoryGuids`, which keeps its names' GUIDs for the session: the home
+  screen's listing teaches them, and a name it doesn't know lists the server once more (a repository renamed or created
+  since), at most once a minute; one created or restored here lists it again at once (`added`). A listing that failed
+  answers the lookups of the next minute with its failure, so windows asking again don't list a server out of reach.
+  A replica on another server has a GUID of its own, and its own settings.
+- **A workspace keeps its repository's old name.** A workspace names its repository by the name it had when the
+  workspace was made, in `cm status --header`, `cm wi` and its selector, whatever renames came since, and `cm` still
+  takes that name (the server keeps it as an alias until another repository takes it). A name the listing doesn't
+  hold is looked up by the id of the repository `cm` takes it for: one `cm ls` of changeset 0's root
+  (`repositoryIdOf`), whose `{repid}` the listing holds with the GUID. The old name is kept for the session
+  (`RepositoryGuids` `formerNames`; a rename made here keeps it at once), and trusted only while a fresh listing
+  doesn't show the name, so a repository created under it later, here or elsewhere, takes it once the server is listed
+  again (at once for one created here: `added`); a name no repository goes by is asked again after a minute. Details: architecture/cm-output.md "A repository's GUID".
+- **The main process resolves, the renderer asks once.** A window reads its repository's GUID by its spec
+  (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus, and only
+  where something kept is needed: the Branch Explorer and Sync as they show, the issue tracker only when some
+  repository has one (`tracksAnyRepository`), recent comments as their menu opens or a check-in saves one, review
+  marks of a committed diff in review mode. That costs about one `cm repository list` per server per session (none
+  once the home screen listed it), one more for a repository created or renamed since, and one `cm ls` per name a
+  rename left behind: the price of a name that a rename made anywhere no longer loses, paid only where something is
+  kept. What is kept for the repository reads
+  as none until it's known, so nothing waits for it. What the user changes from what is shown
+  (the Branch Explorer's rules and moved branches, the sync remote) is offered only once it's known, and written under
+  it (`updateRepositorySettings` takes a `RepositoryGuid`): a change made from the empty copy shown meanwhile would
+  replace what is kept. A check-in's comment and a review mark, made from nothing kept, wait for it
+  (`repositoryGuidToWrite`), and when it can't be read the change is said to be unsaved, never dropped without a word. The main process and the API take what is kept by its GUID's
+  type (`RepositoryGuid`), so a spec can't be passed where a GUID is kept.
+- **A spec kept for later use** (the sync remote, a repository window reopened at launch) is kept with its GUID, and
+  followed to the name the repository goes by now (`RepositoryGuids.specNow`, `repositories.specNow`) from the same
+  listing. A repository window reopened at launch lists its server once as it reopens, beside the window's first
+  reads, which nothing waits for (`WorkspaceWindows.followRename`).
+- **What each setting is kept by** is written in `settingsIdentity.ts` (`APP_SETTINGS_IDENTITY`,
+  `REPOSITORY_SETTINGS_IDENTITY`, `SERVER_SETTINGS_IDENTITY`), one line per setting, which the type checker asks for
+  when a setting is added. A path or a name is kept only where nothing stable exists, and its line says why: the
+  folder a workspace opens from, a user (`cm` prints no id for one), a server of its own (its address). What is kept
+  outside the settings says so where it's kept: review marks of pending changes per workspace GUID (`ReviewStore`), of
+  committed diffs per repository GUID (`DiffReviewStore`), issue tracker bindings per repository GUID
+  (`RepositoryTrackerBinding`, `IssueTrackerStore`).
+- **What was kept by name before** moves to the object's GUID the first time the GUID is known, with no extra `cm`
+  call: a repository's settings, recent comments, issue tracker binding and review marks as its GUID is first read, or
+  before the app renames it (`repositoryGuidOf`, the one way from a spec to its GUID, which `repositories.guidOf` and review mode's key share:
+  `SettingsStore`, `IssueTrackerStore`, `DiffReviewStore` `keepRepositoryByGuid`), a branch diff's review marks as they are first read or marked (`formerDiffReviewName`).
+  What a window's storage hands over later by spec (`addWindowSettings`) goes under the GUID when a listing taught it.
+  What was kept for a repository never opened again stays where it was.
+- **A Unity organization** is kept by its name (`acme@unity`), which every list and `cm` use: its owners can change
+  it, and no other organization can ever take a name one had. So what it keeps (its favorite, its `ServerSettings`)
+  records its id (`OrganizationId`, `ServerSettings.organizationId`), and follows it to its new name
+  (`OrganizationRenames`, `organizationsKept.ts`). The id comes from `cm getconfig organization`, a local read, once
+  per organization for the session (`UnityOrganizationIds`): those that recorded one are read again each session, and
+  the others only when a recorded name stops answering its id. An id goes once its organization keeps nothing else.
+  Details: architecture/cm-output.md "Unity organizations".
 
 ## `cm` owns its files
 
@@ -370,7 +444,8 @@ that started it, until it finishes. Details: architecture/main-process.md "Windo
 
 The first frame is the window's final screen, themed, its data asked for before the first render; the first `cm`
 reads start as the main module loads, before Electron is ready (`readFirstScreenAhead`). Only the app's own `cm` not
-set up yet gates the first screen, and no server is asked at start-up. Measure with `scripts/perf/startup.mjs`. The
+set up yet gates the first screen, and nothing waits for a server (a repository window reopened at launch lists its
+server once as it reopens, which nothing waits for: "Settings survive renames"). Measure with `scripts/perf/startup.mjs`. The
 steps in order, and what was tried and dropped: architecture/main-process.md "Start-up".
 
 ## Renderer

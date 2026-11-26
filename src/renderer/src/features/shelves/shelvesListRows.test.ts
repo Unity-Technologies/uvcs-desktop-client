@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Shelve } from '@shared/domain/shelve';
 import { shelvesListRows } from './shelvesListRows';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const NOW = Date.parse('2026-09-27T12:00:00Z');
 
 const shelve = (id: number, comment = `Shelve ${id}`, owner = 'me'): Shelve => ({
   id,
-  guid: `g${id}`,
+  guid: shelveGuidFor(id),
   comment,
   owner,
   date: '2026-09-27T10:00:00Z',

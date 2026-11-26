@@ -31,6 +31,7 @@ function setUp() {
     onClosed: () => {},
     onCloseRequested: () => {},
     closeLeftBehind: () => {},
+    repositoryGuids: { knownGuidOf: () => undefined, specNow: async (spec) => spec },
   });
   const lookups: { answer: Promise<string | null>; resolve: (root: string | null) => void }[] = [];
   const findRoot = (): Promise<string | null> => {

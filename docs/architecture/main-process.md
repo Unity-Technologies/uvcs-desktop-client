@@ -153,9 +153,12 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
   focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
   per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
-  (`showInactive`). After a restart to install an update, which nobody chose, each also opens on the view it showed
-  (`Quitting.restartToInstall` saves `withViews`; the page reports each view it goes to, `windows.viewShown`, and reads
-  it back from its address, `startingViewIn`); a launch of the user's own starts on Changes. Where the app quits as
+  (`showInactive`). A repository explored without a workspace is saved with its GUID when a listing taught it, and its
+  window, opened at once on the saved name, is asked to open the name a rename made elsewhere gave it (`followRename`),
+  unless the user took it elsewhere meanwhile. After a restart to install an update, which nobody chose, each also
+  opens on the view it showed (`Quitting.restartToInstall` saves `withViews`; the page reports each view it goes to,
+  `windows.viewShown`, and reads it back from its address, `startingViewIn`); a launch of the user's own starts on
+  Changes. Where the app quits as
   its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
   saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
   window opens on the home screen. A new window asked to open a workspace
@@ -213,7 +216,8 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
-  without any. The server of the window's place is checked as
+  without any (one exception, which nothing waits for: a repository window reopened at launch lists its server to
+  follow a rename, ARCHITECTURE.md "Settings survive renames"). The server of the window's place is checked as
   it opens and as the window comes forward, `cm checkconnection <server>` (`accounts.checkSession`,
   `useWindowSessionCheck`; at most once every ten minutes per server app-wide, docs/features/accounts.md "Keeping
   sessions alive"): a workspace's once its info names it, a repository's explored without one from its spec

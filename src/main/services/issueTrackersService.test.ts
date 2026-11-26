@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type { WebContents } from 'electron';
 import { describe, expect, it } from 'vitest';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
 import { runForCaller } from '../ipc/caller';
 import { createIssueTrackersService } from './issueTrackersService';
@@ -27,7 +28,7 @@ function service() {
 }
 
 const start = (api: ReturnType<typeof service>['api'], window: FakeWindow) =>
-  runForCaller(window as unknown as WebContents, () => api.startDeviceSignIn({ repository: 'game@acme@unity', link: 'https://github.com/acme/game/issues/1' }));
+  runForCaller(window as unknown as WebContents, () => api.startDeviceSignIn({ repository: repositoryGuidFor(1), link: 'https://github.com/acme/game/issues/1' }));
 
 describe('the issue trackers service', () => {
   it('ends a window’s device flows when it closes, watching each window once', async () => {

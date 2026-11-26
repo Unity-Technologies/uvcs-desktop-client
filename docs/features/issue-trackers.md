@@ -197,12 +197,15 @@ way, every window reads its issues again (`connectionsToReread`).
 `RepositoryTrackerBinding`: the repository, the `connectionId`, and its `projects` (Jira project keys `VCS`, GitHub
 `owner/repo` in lower case). One tracker per repository; "Add a project" adds another of the same tracker.
 
-A repository is identified by its spec as `cm` names it (`name@server`, an organization's server by its name:
-ARCHITECTURE.md "Unity organizations"), its name compared exactly and its server as links compare servers
-(`sameRepository`, `sameServer`). The app reads no stable repository id for a place: `cm repository list
---format={repguid}` would be one more server command for every window opened, for a rename that seldom happens. A
-repository renamed in the app (`repositories.rename`) moves its binding with it (`IssueTrackers.repositoryRenamed`);
-renamed elsewhere, Settings offers the connection again in one click.
+A repository is identified by its GUID (ARCHITECTURE.md "Settings survive renames"), so its binding stays through a
+rename made anywhere: in the app, another client or `cm`. The window reads it once (`useRepositoryGuid`), and only when
+some repository uses a tracker (`tracksAnyRepository`), free when the home screen listed its server (ARCHITECTURE.md
+"Settings survive renames" says what it costs otherwise, and why that's accepted). The tracker found names its
+repository (`PlaceTracker.repository`), so the `#` issue list reads no GUID of its own. A binding made before bindings were kept by GUID holds the repository's spec
+(`BindingKeptBySpec`, held apart from the others: `IssueTrackerSetup.bindingsKeptBySpec`), counts as a tracker in use,
+and moves to its GUID the first time the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`, matched by
+`repositoryKey`). One whose repository was deleted never moves, and keeps every window reading its repository's GUID
+(one listing per server per session). While the GUID can't be read, the window's comments read no issue, and Settings says why.
 
 ### Where they're kept
 
