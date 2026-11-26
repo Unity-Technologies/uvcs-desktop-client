@@ -43,6 +43,14 @@ describe('branchRefsOf', () => {
 });
 
 describe('waitingOn', () => {
+  it("doesn't take another branch given the name of the one the changes were left on for it: their ids differ", () => {
+    // Left on /main/task1 (37), renamed since; another branch (50) took the name /main/task1.
+    const record = leftRecord(2, 'br:/main/task1');
+
+    expect(waitingOn(record, { spec: 'br:/main/task1', name: '/main/task1', objectRef: 'br:50' })).toBeUndefined();
+    expect(waitingOn(record, { spec: 'br:/main/task1', name: '/main/task1' })).toMatchObject({ shelveId: 2 });
+  });
+
   it('finds changes left on a branch renamed since by its id', () => {
     const at = { spec: 'br:/main/task1', name: '/main/task1', objectRef: 'br:37' };
 
@@ -59,6 +67,18 @@ describe('waitingOn', () => {
 });
 
 describe('followingRenames', () => {
+  it('never replaces the id a record holds with the id of a branch that took its name', () => {
+    const record = leftRecord(2, 'br:/main/task1');
+
+    expect(followingRenames(record, { spec: 'br:/main/task1', name: '/main/task1', objectRef: 'br:50' })).toBe(record);
+  });
+
+  it('fills an id the record lacks', () => {
+    const adopted = leftRecord(2, 'br:/main/task1', { source: { spec: 'br:/main/task1', name: '/main/task1', objectRef: '' } });
+
+    expect(followingRenames(adopted, { spec: 'br:/main/task1', name: '/main/task1', objectRef: 'br:37' }).source.objectRef).toBe('br:37');
+  });
+
   it('names where the changes were left as the branch is named now', () => {
     const at = { spec: 'br:/main/task1', name: '/main/task1', objectRef: 'br:37' };
 

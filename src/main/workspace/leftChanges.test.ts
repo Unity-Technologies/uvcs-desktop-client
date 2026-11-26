@@ -123,6 +123,16 @@ describe('changes left before a rename', () => {
     expect(lines().some((command) => command.startsWith('find branch'))).toBe(false);
   });
 
+  it('are not offered on another branch that took their branch name, and keep their id', async () => {
+    const { cm } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
+    // Left on /main/task1 (37), renamed since; the workspace is on branch 50, which took the name.
+    const records = recordsOf([leftRecord(2, 'br:/main/task1')]);
+    const finder = new LeftChangesFinder(cm, records, undefined, undefined, (_path, id) => (id === 37 ? '/main/task1-old' : undefined));
+
+    expect(await finder.find('/work', { name: '/main/task1', id: 50 })).toEqual([]);
+    expect(records.find({ shelveId: 2, repository: 'eco@local' })?.source.objectRef).toBe('br:37');
+  });
+
   it("aren't restored on arrival while no list read the branch under its new name: \"Welcome back\" offers them", async () => {
     const { cm, lines } = fakeCm(shelvesFound());
 
