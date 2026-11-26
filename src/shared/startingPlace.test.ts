@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from './domain/place';
 import { cmSetupIn, cmSetupQuery, pageWindowQuery, startingPageIn, startingPlaceIn, startingPlaceQuery, startingSeedIn, startingViewIn } from './startingPlace';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 /** The query as Electron's `loadFile(path, { query })` writes it into the page's address. */
 const search = (query: Record<string, string>): string => `?${new URLSearchParams(query)}`;
@@ -41,7 +42,7 @@ describe('startingPlace', () => {
 
   it("hands a page window the object its page shows, and nothing when there's none or it isn't one", () => {
     const page = { kind: 'diff', title: 'Shelve 4', target: { kind: 'shelve', shelveId: 4 } };
-    const shelve = { id: 4, guid: 'aaaaaaaa-0000-0000-0000-000000000004', owner: 'ana', date: '2026-10-01T10:00:00Z', comment: 'Ña & co?', parentChangeset: 9, repository: 'game@local' };
+    const shelve = { id: 4, guid: shelveGuidFor(4), owner: 'ana', date: '2026-10-01T10:00:00Z', comment: 'Ña & co?', parentChangeset: 9, repository: 'game@local' };
     const seed = { readAt: 1_700_000_000_000, shelve };
 
     expect(startingSeedIn(search(pageWindowQuery(workspacePlace('/wk'), page, seed)))).toEqual(seed);

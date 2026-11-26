@@ -1,6 +1,5 @@
 import type { KnownBranch } from '@shared/domain/branch';
 import type { Shelve } from '@shared/domain/shelve';
-import { parseShelveGuid } from '@shared/domain/stableIds';
 import type { LeftChanges, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { selectorPlace } from './switchSelectors';
@@ -102,7 +101,7 @@ function followingRename<End extends RecordEnd>(end: End, at: WorkspaceSpot): En
  * its GUID was learned finds none; its shelve is still offered as one another app left (`shelvesLeftOn`).
  */
 export function shelveOf(record: SwitchShelveRecord, shelves: Shelve[], repository: string): Shelve | undefined {
-  if (record.shelveGuid) return shelves.find((shelve) => parseShelveGuid(shelve.guid) === record.shelveGuid);
+  if (record.shelveGuid) return shelves.find((shelve) => shelve.guid === record.shelveGuid);
   return record.repository === repository ? shelves.find((shelve) => shelve.id === record.shelveId) : undefined;
 }
 
@@ -111,7 +110,7 @@ export function shelveOf(record: SwitchShelveRecord, shelves: Shelve[], reposito
  * it after a rename of the repository. The same record when nothing changes.
  */
 export function withShelve(record: SwitchShelveRecord, shelve: Shelve, repository: string): SwitchShelveRecord {
-  const shelveGuid = parseShelveGuid(shelve.guid) ?? record.shelveGuid;
+  const shelveGuid = shelve.guid ?? record.shelveGuid;
   if (record.shelveId === shelve.id && record.repository === repository && record.shelveGuid === shelveGuid) return record;
   return { ...record, shelveId: shelve.id, repository, ...(shelveGuid && { shelveGuid }) };
 }

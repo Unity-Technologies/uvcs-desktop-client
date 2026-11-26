@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isInPlace, matchingPlaces, organizationsOf, placeChoices, placeLabel, placeOf, samePlace, workspacesShown } from './workspacePlaces';
+import { projectGuidFor } from '@shared/testing/stableIdsFor';
 
 const GAME = { repository: 'Racing/Game@studio@unity' };
 const ART = { repository: 'Racing/Art@studio@unity' };
@@ -43,12 +44,12 @@ describe('placeChoices', () => {
   });
 
   it("colors a project by the GUID its organization's list, once read, gives it, and leaves the others without", () => {
-    const choices = placeChoices([GAME, EDITOR], new Map([['studio@unity', [{ name: 'Racing', guid: 'racing-guid' }]]]));
+    const choices = placeChoices([GAME, EDITOR], new Map([['studio@unity', [{ name: 'Racing', guid: projectGuidFor(1) }]]]));
 
     expect(choices.map((choice) => [choice.label, choice.guid])).toEqual([
       ['studio', undefined],
       ['Cloud Repositories', undefined],
-      ['Racing', 'racing-guid'],
+      ['Racing', projectGuidFor(1)],
     ]);
   });
 

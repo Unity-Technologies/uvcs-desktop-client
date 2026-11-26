@@ -11,8 +11,8 @@ const SHELVE_GUID = 'c7558622-b4f1-49eb-9f76-639af4d70002' as ShelveGuid;
 /** `leftRecord`'s changes, left on branch 37 while it was named /main/old. */
 const leftOnOldName = (): SwitchShelveRecord => leftRecord(2, 'br:/main/old');
 
-function shelve(id: number, guid: string): Shelve {
-  return { id, guid, comment: '', owner: 'me', date: '', parentChangeset: 1, repository: 'eco@local' };
+function shelve(id: number, guid: ShelveGuid | undefined): Shelve {
+  return { id, ...(guid && { guid }), comment: '', owner: 'me', date: '', parentChangeset: 1, repository: 'eco@local' };
 }
 
 describe('workspaceSpot', () => {
@@ -104,7 +104,7 @@ describe('shelveOf', () => {
     const record = leftRecord(2, 'br:/main/task1', { repository: 'old@local', shelveGuid: SHELVE_GUID });
 
     expect(shelveOf(record, [shelve(2, SHELVE_GUID)], 'eco@local')?.id).toBe(2);
-    expect(shelveOf(record, [shelve(2, 'c7558622-b4f1-49eb-9f76-639af4d70009')], 'eco@local')).toBeUndefined();
+    expect(shelveOf(record, [shelve(2, 'c7558622-b4f1-49eb-9f76-639af4d70009' as ShelveGuid)], 'eco@local')).toBeUndefined();
   });
 
   it('finds it by its number in the repository the record names, until its GUID is known', () => {
@@ -132,7 +132,7 @@ describe('withShelve', () => {
   });
 
   it("learns the shelve's GUID and the repository's name now", () => {
-    expect(withShelve(leftRecord(2, 'br:/main/task1', { repository: 'old@local' }), shelve(2, SHELVE_GUID.toUpperCase()), 'eco@local')).toMatchObject({
+    expect(withShelve(leftRecord(2, 'br:/main/task1', { repository: 'old@local' }), shelve(2, SHELVE_GUID), 'eco@local')).toMatchObject({
       repository: 'eco@local',
       shelveGuid: SHELVE_GUID,
     });
@@ -143,6 +143,6 @@ describe('withShelve', () => {
     const unknown = leftRecord(2, 'br:/main/task1');
 
     expect(withShelve(known, shelve(2, SHELVE_GUID), 'eco@local')).toBe(known);
-    expect(withShelve(unknown, shelve(2, ''), 'eco@local')).toBe(unknown);
+    expect(withShelve(unknown, shelve(2, undefined), 'eco@local')).toBe(unknown);
   });
 });

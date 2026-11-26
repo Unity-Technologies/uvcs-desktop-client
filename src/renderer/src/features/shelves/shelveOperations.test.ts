@@ -21,6 +21,7 @@ import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { cachedShelve } from './cachedShelve';
 import { applyShelve, deleteShelve, editShelveComment, saveShelveComment, shelveAway } from './shelveOperations';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const ws = '/ws';
 const PARTIAL_WORKSPACE: WorkspaceInfo = { name: 'ws', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 5, kind: 'partial' };
@@ -241,7 +242,7 @@ describe('editShelveComment', () => {
   });
 
   it("shows the saved comment at once wherever the shelve is read from a list, as its diff's header and menu do", async () => {
-    const listed = (id: number, comment: string): Shelve => ({ id, guid: `g${id}`, comment, owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' });
+    const listed = (id: number, comment: string): Shelve => ({ id, guid: shelveGuidFor(id), comment, owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' });
     queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', { owners: ['me'] }), [listed(12, 'Old comment'), listed(13, 'Other')]);
     queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', 'handedOver', 12), [listed(12, 'Old comment')]);
     fakeApi.answer('shelves.editComment', () => undefined);
@@ -254,7 +255,7 @@ describe('editShelveComment', () => {
   });
 
   it('keeps the listed comment when the save fails', async () => {
-    queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', {}), [{ id: 12, guid: 'g', comment: 'Old comment', owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' }]);
+    queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', {}), [{ id: 12, guid: shelveGuidFor(12), comment: 'Old comment', owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' }]);
     fakeApi.answer('shelves.editComment', () => {
       throw commandFailure('offline');
     });

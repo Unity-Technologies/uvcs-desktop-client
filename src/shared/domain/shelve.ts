@@ -1,6 +1,9 @@
+import type { ShelveGuid } from './stableIds';
+
 export interface Shelve {
   id: number;
-  guid: string;
+  /** What changes left on a switch find their shelve by (`leftChangesRecords`); none only where `cm` printed no GUID. */
+  guid?: ShelveGuid;
   comment: string;
   owner: string;
   date: string;
