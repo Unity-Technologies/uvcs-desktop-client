@@ -17,7 +17,8 @@ is missing, say so in your report as a finding.
 
 ## How to review
 
-1. Read `CLAUDE.md` and `docs/ARCHITECTURE.md`, then the feature docs of the areas the diff touches. They are the bar.
+1. Read `CLAUDE.md` and `docs/ARCHITECTURE.md`, then the `docs/architecture/` docs of the layers the diff touches
+   and the feature docs of its areas. They are the bar.
 2. Read the whole change (`git fetch origin main` first): `git -C <folder> log --oneline origin/main..HEAD` and `git -C <folder> diff origin/main...HEAD`.
    Then read the code around it, not just the hunks: callers, siblings, tests.
 3. Don't run anything: not `npm run typecheck`, `npm test`, `npm run e2e`, a build or the app. The author already ran
@@ -49,6 +50,12 @@ is missing, say so in your report as a finding.
   taking it from a pure, tested `.ts` module is a must-fix (CLAUDE.md "Tests are the quality gate"). Presentational
   conditionals (`open &&`, a class from a prop) are fine; decisions the change doesn't touch are a note at most.
 - **Docs**: what `docs/` says is still true; a new rule is written in one place and named so it can be grepped.
+- **A rule a static test could keep**: propose one only when you clearly see it pays off. The rule is one many
+  changes could break (this change broke it, or nearly did, and the next one could), the test reads the sources
+  simply, runs in milliseconds and stays easy to keep, and it would catch many cases, not one. Check
+  `docs/rules-the-tests-enforce.md` first: extending a test there beats a new one. A rare case, a rule that needs
+  judgment, or a test that would cost time on every run is not proposed: the suite must stay small and fast, and
+  most reviews propose none.
 - **Release note**: the note the author gives you follows the `release-notes`
   skill (`.claude/skills/release-notes/SKILL.md`): a kind that fits what users get, a short title and a description
   a user who never saw the change understands, in the app's words, never the code's; or `None:` only where users
@@ -77,6 +84,8 @@ Lead with a one-line verdict: **ready for a pull request**, or **needs changes**
 - **must-fix**: wrong behavior, a broken rule of CLAUDE.md, missing tests or validation, a ripple left unhandled.
 - **should-fix**: makes the code harder to read or change, an inconsistency, a doc left untrue.
 - **nit**: optional polish. Keep these few.
+- **static test** (rare): the rule, what the test would read and refuse, the cases it would catch, and why it's
+  worth its cost. The author decides whether it goes in this pull request or one of its own.
 
 Each finding: `file:line`, what is wrong, a concrete case where it shows, and the fix you suggest. Only report what
 you verified in the code; say "unsure" where you are. End with a short list of what you checked and found sound, so
