@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { SignInFailure } from '@shared/domain/issueTrackers';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
@@ -19,7 +20,7 @@ export function UseConnection(props: {
   link: RecognizedLink;
   linkText: string;
   step: Extract<SignInStep, { kind: 'useConnection' }>;
-  repository: string;
+  repository: RepositoryGuid;
   picked: boolean;
   /** The sign-in's own failure, from the step before (a project it couldn't read), until Connect tries again. */
   failure: SignInFailure | null;

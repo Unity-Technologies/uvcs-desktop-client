@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { diffReviewName, diffReviewStatusOf, reviewedRevisionToCompare } from './diffReview';
+import { branchGuidFor } from '@shared/testing/stableIdsFor';
+import { diffReviewName, diffReviewStatusOf, formerDiffReviewName, reviewedRevisionToCompare } from './diffReview';
 
 const entry = (path: string, revisionId: number, itemType: DiffEntry['itemType'] = 'file'): DiffEntry => ({
   status: 'changed',
@@ -18,11 +19,18 @@ const marks = new Map([
 ]);
 
 describe('diff review', () => {
-  it('names each kind of diff, a branch without its head', () => {
-    expect(diffReviewName({ kind: 'changeset', changesetId: 42 })).toBe('cs:42');
-    expect(diffReviewName({ kind: 'branch', branch: '/main/task' })).toBe('br:/main/task');
-    expect(diffReviewName({ kind: 'shelve', shelveId: 3 })).toBe('sh:3');
-    expect(diffReviewName({ kind: 'range', fromSpec: 'cs:1', toSpec: 'cs:5' })).toBe('cs:1..cs:5');
+  it('names each kind of diff, a branch by its GUID without its head', () => {
+    const task = branchGuidFor(1);
+    expect(diffReviewName({ kind: 'changeset', changesetId: 42 }, undefined)).toBe('cs:42');
+    expect(diffReviewName({ kind: 'branch', branch: '/main/task' }, task)).toBe(`br:${task}`);
+    expect(diffReviewName({ kind: 'shelve', shelveId: 3 }, undefined)).toBe('sh:3');
+    expect(diffReviewName({ kind: 'range', fromSpec: 'cs:1', toSpec: 'cs:5' }, undefined)).toBe('cs:1..cs:5');
+  });
+
+  it('names no branch diff while its GUID isn’t known, and the one its marks were kept by before', () => {
+    expect(diffReviewName({ kind: 'branch', branch: '/main/task' }, undefined)).toBeUndefined();
+    expect(formerDiffReviewName({ kind: 'branch', branch: '/main/task' })).toBe('br:/main/task');
+    expect(formerDiffReviewName({ kind: 'changeset', changesetId: 42 })).toBeUndefined();
   });
 
   it('tells a file changed since its review by its revision', () => {

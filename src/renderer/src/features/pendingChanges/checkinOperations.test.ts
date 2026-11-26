@@ -18,6 +18,9 @@ import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { CheckinResult, PendingChange } from '@shared/domain/pendingChanges';
 import { recentCommentsFor, withRecentComment } from '@shared/domain/recentComments';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import { repositoryKey } from '@shared/domain/repository';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
@@ -33,6 +36,10 @@ import { checkinChanges, shelveChanges } from './checkinOperations';
 import { useSuccessMomentStore } from './successMoment';
 
 const ws = '/ws';
+const GAME = repositoryGuidFor(1);
+const ART = repositoryGuidFor(2);
+/** Each repository's GUID by its spec's key, as the main process answers it (`repositories.guidOf`). */
+const GUIDS: Record<string, RepositoryGuid> = { 'game@local': GAME, 'racer@local': GAME, 'art@local': ART };
 const REJECTED = "MERGE_NEEDED A merge is needed from changeset 'cs:43@rep:game@repserver:local' to changeset 'cs:41@rep:game@repserver:local' in order to checkin.";
 
 const change = (path: string, kinds: PendingChange['kinds'] = ['checkedOut', 'changed']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified: '' });
@@ -73,7 +80,8 @@ let settings: AppSettings;
 function answerSettings(overrides: Partial<AppSettings> = {}): void {
   settings = { ...DEFAULT_SETTINGS, ...overrides };
   queryClient.setQueryData(queryKeys.settings, settings);
-  fakeApi.answer('settings.rememberRecentComment', (repository: string, comment: string) => (settings = { ...settings, ...withRecentComment(settings, repository, comment) }));
+  fakeApi.answer('settings.rememberRecentComment', (repository: RepositoryGuid, comment: string) => (settings = { ...settings, ...withRecentComment(settings, repository, comment) }));
+  fakeApi.answer('repositories.guidOf', (repository: string) => GUIDS[repositoryKey(repository)] ?? null);
 }
 
 /** The repository each workspace works on, as Changes has already read it in the workspace's info (`cm wi`). */
@@ -104,7 +112,7 @@ describe('checkinChanges', () => {
     expect(fakeApi.argsOf('pendingChanges.checkin')[0]!.slice(0, 2)).toEqual([ws, { paths: ['src/a.ts', 'src/b.ts'], comment: 'Add login\n\nDetails', addsPrivate: false }]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Checked in cs:44 on main', action: 'View' }]);
     expect(useSuccessMomentStore.getState().moments[ws]).toMatchObject({ verb: 'Checked in', changesetId: 44, detail: 'Add login' });
-    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Add login\n\nDetails']);
+    expect(recentCommentsFor(settings, GAME)).toEqual(['Add login\n\nDetails']);
   });
 
   it('shows no toast when told to be quiet: the empty Changes tells it', async () => {
@@ -138,9 +146,34 @@ describe('checkinChanges', () => {
     await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  Fix cs:4207 ' });
     await checkinChanges({ workspacePath: '/game-2', ...sending([change('a.ts')]), comment: 'Merge br:/main/task' });
 
-    expect(recentCommentsFor(settings, 'game@local')).toEqual(['Merge br:/main/task', 'Fix cs:4207']);
-    expect(recentCommentsFor(settings, 'art@local')).toEqual(['Older comment']);
+    expect(recentCommentsFor(settings, GAME)).toEqual(['Merge br:/main/task', 'Fix cs:4207']);
+    expect(recentCommentsFor(settings, ART)).toEqual(['Older comment']);
     expect(settings.recentComments).toEqual(['Older comment']);
+    expect(fakeApi.argsOf('repositories.guidOf')).toHaveLength(1);
+  });
+
+  it('keeps offering the comments once the repository is renamed anywhere, as they are kept by its GUID', async () => {
+    answerCheckins(created(44), created(45));
+    answerSettings();
+
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'Fix cs:4207' });
+    knowRepositories({ [ws]: 'racer@local' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'Merge br:/main/task' });
+
+    expect(recentCommentsFor(settings, GAME)).toEqual(['Merge br:/main/task', 'Fix cs:4207']);
+  });
+
+  it('still reports the changeset when the repository’s GUID can’t be read, and says the comment wasn’t saved', async () => {
+    answerCheckins(created(44));
+    answerSettings();
+    fakeApi.answer('repositories.guidOf', () => {
+      throw new Error('Unable to connect to local');
+    });
+
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true })).toBe(true);
+
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't save the settings", detail: 'Unable to connect to local' }]);
+    expect(fakeApi.argsOf('settings.rememberRecentComment')).toEqual([]);
   });
 
   it('still reports the changeset when the store cannot remember the comment, and says so', async () => {
@@ -237,7 +270,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'Mine' })).toBe(true);
 
     expect(dialogs.asked).toEqual([{ incoming: incoming(), overlapping: [], needsReview: false, rejected: true }]);
-    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.rememberRecentComment']);
+    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'repositories.guidOf', 'settings.rememberRecentComment']);
     const [first, second] = fakeApi.argsOf('pendingChanges.checkin');
     expect(second![1]).toEqual(first![1]);
     expect(shownToasts().some((toast) => toast.kind === 'error')).toBe(false);

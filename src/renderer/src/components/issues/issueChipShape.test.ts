@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Issue, IssueRead, IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueTrackers';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { issueCard, issueChipShape, issueUrlToOpen } from './issueChipShape';
 import { connectionsToReread, issueStaleTime, ISSUE_FRESH_MS } from './issueQueries';
 import { placeTrackerOf } from './placeTracker';
@@ -79,7 +80,7 @@ describe('issueStaleTime', () => {
 });
 
 const connection: TrackerConnection = { id: 'c1', kind: 'jiraCloud', server: 'https://x.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const setup = (connections: TrackerConnection[]): IssueTrackerSetup => ({ connections, bindings: [{ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts: [] });
+const setup = (connections: TrackerConnection[]): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts: [] });
 
 describe('connectionsToReread', () => {
   it('reads a connection’s issues again when its sign-in changed, not when nothing did', () => {
@@ -92,13 +93,13 @@ describe('connectionsToReread', () => {
 describe('placeTrackerOf', () => {
   it('builds a repository’s reader once per setup, whatever reads it', () => {
     const read = setup([connection]);
-    expect(placeTrackerOf(read, 'game@acme@unity')).toBe(placeTrackerOf(read, 'game@acme@unity'));
-    expect(placeTrackerOf(setup([connection]), 'game@acme@unity')).not.toBe(placeTrackerOf(read, 'game@acme@unity'));
+    expect(placeTrackerOf(read, repositoryGuidFor(1))).toBe(placeTrackerOf(read, repositoryGuidFor(1)));
+    expect(placeTrackerOf(setup([connection]), repositoryGuidFor(1))).not.toBe(placeTrackerOf(read, repositoryGuidFor(1)));
   });
 
   it('finds the place’s repository’s tracker, and none for another repository or before the setup is read', () => {
-    expect(placeTrackerOf(setup([connection]), 'game@acme@unity')?.connection.id).toBe('c1');
-    expect(placeTrackerOf(setup([connection]), 'other@acme@unity')).toBeNull();
-    expect(placeTrackerOf(undefined, 'game@acme@unity')).toBeNull();
+    expect(placeTrackerOf(setup([connection]), repositoryGuidFor(1))?.connection.id).toBe('c1');
+    expect(placeTrackerOf(setup([connection]), repositoryGuidFor(5))).toBeNull();
+    expect(placeTrackerOf(undefined, repositoryGuidFor(1))).toBeNull();
   });
 });

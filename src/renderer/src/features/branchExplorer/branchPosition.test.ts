@@ -5,6 +5,7 @@ import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { branchPositionEntries, branchPositionsOf, moveBranches, resetAllPositions, type BranchPositions } from './branchPosition';
 import type { BranchPins } from '@shared/domain/branchExplorerSettings';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { branch, changeset } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 
@@ -102,16 +103,16 @@ describe('branchPositionEntries', () => {
 });
 
 describe('branchPositionsOf', () => {
-  it('has no positions while the repository is not known, so nothing can be moved and lost', () => {
+  it('has no positions while the repository’s GUID is not known, so nothing moved replaces the pins kept', () => {
     expect(branchPositionsOf(undefined, [], () => {})).toBeNull();
   });
 
   it("saves the moves in the repository's own pins", () => {
     const saved: [string, BranchPins][] = [];
     const pins: BranchPins = [{ branch: 3, row: 1 }];
-    const positions = branchPositionsOf('game@local', [], (repository, next) => saved.push([repository, next]))!;
+    const positions = branchPositionsOf(repositoryGuidFor(1), [], (repository, next) => saved.push([repository, next]))!;
     positions.setPins(pins);
-    expect(saved).toEqual([['game@local', pins]]);
+    expect(saved).toEqual([[repositoryGuidFor(1), pins]]);
   });
 });
 

@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import type { SignInOutcome } from '@shared/domain/issueTrackers';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
 import { TextField } from '../../../ui/TextField';
@@ -24,7 +25,7 @@ export interface ConnectStart {
 
 interface ConnectTrackerProps {
   /** None in a window with no repository: the sign-in alone, kept for any repository to use. */
-  repository?: string;
+  repository?: RepositoryGuid;
   start: ConnectStart;
   onConnected: (outcome: SignedIn) => void;
   /** Back: to where Connect was started from (the repository's card, the sign-ins). */

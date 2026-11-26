@@ -1,8 +1,11 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { formatOutput, WORKSPACE_GUID, WORKSPACE_NAMES } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
-import { memorySettings } from '../settings/testing/memorySettings';
+import { SettingsStore } from '../settings/SettingsStore';
 import { createReviewService } from './reviewService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -13,7 +16,8 @@ const LISTED = formatOutput(['1', 'game', 'acme@cloud', 'ana', 'VCS', GAME]);
 
 function review(answers: Record<string, CmAnswer>, reviewModeWorkspaces: string[] = []) {
   const fake = fakeCmClient(answers);
-  const settings = memorySettings({ reviewModeWorkspaces });
+  const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'review-service-')), 'settings.json'));
+  if (reviewModeWorkspaces.length > 0) settings.update({ reviewModeWorkspaces });
   return { ...fake, settings, service: createReviewService(serviceContext(fake.cm, { settings })) };
 }
 
@@ -89,5 +93,16 @@ describe('setReviewMode', () => {
     await service.setReviewMode(workspacePlace('/work'), false);
     expect(settings.get().reviewModeWorkspaces).toEqual(['/other']);
     expect(writes).toEqual([{ reviewModeWorkspaces: ['/other'] }]);
+  });
+});
+
+describe('a repository’s review mode key', () => {
+  it('is read the one way a spec becomes a GUID, which moves what the repository kept by its spec', async () => {
+    const { service, settings } = review({ 'repository list': LISTED });
+    settings.addWindowSettings({ repositorySettings: { 'game@acme@cloud': { explorerRulesOff: true } }, serverSettings: {}, changesetColors: { users: [] } });
+
+    await service.reviewModeKey(repositoryPlace('game@acme@cloud'));
+
+    expect(settings.get().repositorySettings).toEqual({ [GAME]: { explorerRulesOff: true } });
   });
 });

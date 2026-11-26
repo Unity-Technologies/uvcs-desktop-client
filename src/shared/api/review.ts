@@ -1,6 +1,7 @@
 import type { Place } from '../domain/place';
 import type { DiffReviewMark, ReviewMark } from '../domain/review';
 import type { AppSettings } from '../domain/settings';
+import type { RepositoryGuid } from '../domain/stableIds';
 
 /** Review marks of a workspace's pending changes, checked against the files on disk. */
 export interface ReviewApi {
@@ -22,8 +23,11 @@ export interface ReviewApi {
   unmark(workspacePath: string, paths: string[]): Promise<void>;
   /** Forgets the marks of every path not in `pendingPaths`: checked in, undone or gone. */
   keepOnly(workspacePath: string, pendingPaths: string[]): Promise<void>;
-  /** Review marks of a committed diff, named like `cs:42` or `br:/main/task`, in a repository. */
-  diffMarks(repository: string, diff: string): Promise<DiffReviewMark[]>;
-  markDiff(repository: string, diff: string, marks: DiffReviewMark[]): Promise<void>;
-  unmarkDiff(repository: string, diff: string, paths: string[]): Promise<void>;
+  /**
+   * Review marks of a committed diff, named like `cs:42` or `br:<branch GUID>`, in a repository (its GUID).
+   * `formerDiff`: the name its marks were kept by before (`br:/main/task`), which move under `diff` while it has none.
+   */
+  diffMarks(repository: RepositoryGuid, diff: string, formerDiff?: string): Promise<DiffReviewMark[]>;
+  markDiff(repository: RepositoryGuid, diff: string, marks: DiffReviewMark[], formerDiff?: string): Promise<void>;
+  unmarkDiff(repository: RepositoryGuid, diff: string, paths: string[], formerDiff?: string): Promise<void>;
 }

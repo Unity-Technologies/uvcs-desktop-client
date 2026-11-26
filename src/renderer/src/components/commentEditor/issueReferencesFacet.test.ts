@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
 import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { editorState } from './commentEditorTesting';
 import { issueReferencesChanged, withIssueReferences } from './issueReferencesFacet';
 import { referencesIn } from './liveMarks';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraCloud', server: 'https://x.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const reader = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira);
+const reader = issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }, jira);
 
 describe('the editor’s issue chips', () => {
   it('reads the place’s issue keys as references, with a tracker', () => {

@@ -1,10 +1,17 @@
 import type { RepositoryGuid } from './stableIds';
 
+/**
+ * How long a listing of a server answers a repository it doesn't hold as unknown, before a lookup lists the server
+ * again (`RepositoryGuids`): a repository just made is found within a minute, and a name nobody can see costs a listing
+ * a minute at most.
+ */
+export const REPOSITORY_LISTING_FRESH_MS = 60_000;
+
 export interface RepositorySummary {
   id: string;
   /**
-   * What the app keeps the repository's settings by: it stays through a rename (`RepositoryGuids`). None from a `cm`
-   * that prints no `{repguid}`.
+   * What the app keeps the repository's settings by: it stays through a rename (`RepositoryGuids`). Every `cm` the app
+   * runs prints it; none only where what it printed isn't a GUID.
    */
   guid?: RepositoryGuid;
   name: string;
@@ -65,6 +72,15 @@ export function repositoryKey(repositorySpec: string): string {
   const at = repositorySpec.indexOf('@');
   if (at === -1) return repositorySpec.toLowerCase();
   return `${repositorySpec.slice(0, at).toLowerCase()}@${serverKey(repositorySpec.slice(at + 1))}`;
+}
+
+/**
+ * A repository spec's name and server (`game@acme@unity` → `game`, `acme@unity`): its name holds no `@`, so the server
+ * is everything after the first one. None for a spec that names no server.
+ */
+export function repositorySpecParts(repositorySpec: string): { name: string; server: string } | undefined {
+  const at = repositorySpec.indexOf('@');
+  return at <= 0 || at === repositorySpec.length - 1 ? undefined : { name: repositorySpec.slice(0, at), server: repositorySpec.slice(at + 1) };
 }
 
 /**

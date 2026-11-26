@@ -1,3 +1,4 @@
+import type { RepositoryGuid } from '../domain/stableIds';
 import type { BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerSetup, SignInFailure, SignInOutcome } from '../domain/issueTrackers';
 
 /**
@@ -5,8 +6,8 @@ import type { BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSe
  * to the link's project; or, from a window with no repository, for the sign-in alone, which any repository can use.
  */
 export interface LinkSignIn {
-  /** The repository's spec, as `cm` names it; none for a sign-in alone. */
-  repository?: string;
+  /** The repository's GUID (`repositories.guidOf`); none for a sign-in alone. */
+  repository?: RepositoryGuid;
   /** A link to any issue of the tracker: it names the server and the project. */
   link: string;
   /** Jira Cloud's account email, which its token goes with. */
@@ -14,7 +15,7 @@ export interface LinkSignIn {
 }
 
 /** A link's sign-in for a repository. */
-export type RepositorySignIn = LinkSignIn & { repository: string };
+export type RepositorySignIn = LinkSignIn & { repository: RepositoryGuid };
 
 /** Whose token page: a link's tracker, or a connection's (signing in again). */
 export type TokenPageTarget = { link: string } | { connectionId: string };
@@ -53,11 +54,11 @@ export interface IssueTrackersApi {
   /** Adds the link's project to the repository's binding. */
   addProject(request: RepositorySignIn): Promise<SignInOutcome>;
   /** Takes a project off the repository's binding; its last one stays (Disconnect removes the binding). */
-  removeProject(repository: string, project: string): Promise<void>;
+  removeProject(repository: RepositoryGuid, project: string): Promise<void>;
   /** The repository's bound projects with their names and counts, as Settings shows them: one proof per project. */
-  readProjects(repository: string): Promise<BoundProjectsAnswer>;
+  readProjects(repository: RepositoryGuid): Promise<BoundProjectsAnswer>;
   /** The repository stops using its tracker; the connection stays for others. */
-  disconnect(repository: string): Promise<void>;
+  disconnect(repository: RepositoryGuid): Promise<void>;
   /** Removes a connection, its credential and its bindings. */
   signOut(connectionId: string): Promise<void>;
 
@@ -67,5 +68,5 @@ export interface IssueTrackersApi {
    * The repository's issues a `#` search finds, of its connection (`IssueSearch`), in one request. A window's newer
    * search for the repository replaces its running one, which answers `superseded`.
    */
-  searchIssues(repository: string, search: IssueSearch): Promise<IssueSearchAnswer>;
+  searchIssues(repository: RepositoryGuid, search: IssueSearch): Promise<IssueSearchAnswer>;
 }

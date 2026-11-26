@@ -1,4 +1,5 @@
 import { ChevronLeft } from 'lucide-react';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
 import { AddSignInMenu } from './AddSignInMenu';
@@ -18,7 +19,7 @@ import tileStyles from './SignInTiles.module.css';
  * "Add a sign-in" in the header offers the trackers. Above them, the tracker the branch comments link to, in one click
  * with its link filled in. Each starts Connect at its link step; changing a tracker already connected adds Back.
  */
-export function RepositoryStart({ repository, onStart, onCancel }: { repository: string; onStart: (start: ConnectStart) => void; onCancel?: () => void }) {
+export function RepositoryStart({ repository, onStart, onCancel }: { repository: RepositoryGuid; onStart: (start: ConnectStart) => void; onCancel?: () => void }) {
   const signIns = usableSignIns(useIssueTrackerSetup(), repository);
   const suggestion = useSuggestedLink();
   const words = REPOSITORY_START_WORDS;

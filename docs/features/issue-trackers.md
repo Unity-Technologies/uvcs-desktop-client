@@ -197,12 +197,12 @@ way, every window reads its issues again (`connectionsToReread`).
 `RepositoryTrackerBinding`: the repository, the `connectionId`, and its `projects` (Jira project keys `VCS`, GitHub
 `owner/repo` in lower case). One tracker per repository; "Add a project" adds another of the same tracker.
 
-A repository is identified by its spec as `cm` names it (`name@server`, an organization's server by its name:
-ARCHITECTURE.md "Unity organizations"), its name compared exactly and its server as links compare servers
-(`sameRepository`, `sameServer`). The app reads no stable repository id for a place: `cm repository list
---format={repguid}` would be one more server command for every window opened, for a rename that seldom happens. A
-repository renamed in the app (`repositories.rename`) moves its binding with it (`IssueTrackers.repositoryRenamed`);
-renamed elsewhere, Settings offers the connection again in one click.
+A repository is identified by its GUID (ARCHITECTURE.md "Settings survive renames"), so its binding stays through a
+rename made anywhere: in the app, another client or `cm`. The window reads it once (`useRepositoryGuid`), and only when
+some repository uses a tracker (`tracksAnyRepository`): one `cm repository list` per server per session at most, free
+when the home screen listed it (ARCHITECTURE.md "Settings survive renames" says why that's accepted). A binding made before bindings were kept by GUID holds the repository's spec, and
+moves to its GUID the first time the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`, matched by
+`repositoryKey`). While the GUID can't be read, the window's comments read no issue, and Settings says why.
 
 ### Where they're kept
 

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { workspacePlace } from '@shared/domain/place';
 import type { Changelist, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import { recentCommentsFor } from '@shared/domain/recentComments';
+import { recentCommentsOffer } from '@shared/domain/recentComments';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -15,6 +15,7 @@ import { FileTreeFoldingContext } from '../../components/fileTreeFolding';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
+import { useRepositoryGuid } from '../../app/workspace/repositoryGuid';
 import { branchWorkedOn } from '../../components/workingObject';
 import { singleSelection } from '../../lib/selection';
 import { shownRowsOf, withMetas } from '../../lib/unityMetaPairs';
@@ -95,6 +96,9 @@ const LIST_WIDTH_KEY = 'pendingChangesList';
 export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothingPending, review, readAt }: PendingChangesPanesProps) {
   const incomingSummary = useKnownIncomingSummary();
   const settings = useSettings();
+  // Recent comments are kept by the repository's GUID, read as their menu first opens (or by a check-in), not on sight.
+  const [recentCommentsOpened, setRecentCommentsOpened] = useState(false);
+  const repositoryGuid = useRepositoryGuid(workspace?.repository, { read: recentCommentsOpened });
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
   const layout = useFileListViewStore((state) => state.layout);
   const groupByStatus = useFileListViewStore((state) => state.groupByStatus);
@@ -337,7 +341,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               behindDescription={behind && behindDescription(behind)}
               preparedChangelistNote={preparedNote}
               allReviewed={allReviewed}
-              recentComments={recentCommentsFor(settings, workspace?.repository)}
+              recentComments={recentCommentsOffer(settings, repositoryGuid)}
+              onRecentCommentsOpen={() => setRecentCommentsOpened(true)}
               mode={checkinMode}
               onModeChange={setCheckinMode}
               busy={submit.busy}

@@ -1138,9 +1138,12 @@ renamed or moved keeps them; a folder kept by the hash of the workspace's path, 
 its marks are read, or goes when the GUID's folder exists already (at a later start, when it can't be removed yet).
 One that can't be moved (Windows refuses while a file in it is open) is used for the session and moved at the next. Marks of paths that leave the pending changes are
 dropped. Committed diffs (changeset, branch, shelve, range, code review) keep marks too, in
-`main/review/DiffReviewStore`: per repository, by the diff's name (`cs:42`, `br:/main/task`, `sh:3`) and the revision
-reviewed, so a branch's file is changed since its review once another revision shows; the least recently reviewed
-diffs are forgotten. `features/review` holds the shared list pieces.
+`main/review/DiffReviewStore`: per repository, by its GUID (`<guid>.json`), by the diff's name (`cs:42`,
+`br:<branch GUID>`, `sh:3`: `diffReviewName`) and the revision reviewed, so a branch's file is changed since its review
+once another revision shows, and a rename of the repository or the branch made anywhere keeps them; the least recently
+reviewed diffs are forgotten. A branch's GUID is read only in review mode, where the marks show (`branchQuery`, one
+light `cm find` shared with every view of the branch); marks kept by its name before (`br:/main/task`) move under it as
+they're first read or marked (`formerDiffReviewName`). `features/review` holds the shared list pieces.
 
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the
 marks. It is kept by the workspace's GUID, or the repository's for a repository explored without one

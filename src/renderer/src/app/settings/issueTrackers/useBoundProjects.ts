@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { api } from '../../../api/client';
 
 /** How long Settings keeps the projects' names and counts: they change slowly, and each read asks every project. */
@@ -10,7 +11,7 @@ const PROJECTS_FRESH_MS = 5 * 60_000;
  * and while the sign-in works: keyed by the connection, its credential's state and the projects, so another tracker,
  * a sign-in renewed, or a project added or removed, reads them again. Never on focus or a timer.
  */
-export function useBoundProjects(repository: string, connection: Pick<TrackerConnection, 'id' | 'credential'>, projects: readonly string[], enabled: boolean) {
+export function useBoundProjects(repository: RepositoryGuid, connection: Pick<TrackerConnection, 'id' | 'credential'>, projects: readonly string[], enabled: boolean) {
   return useQuery({
     queryKey: ['trackerProjects', repository, connection.id, connection.credential, projects.join('\n')],
     queryFn: () => api.issueTrackers.readProjects(repository),

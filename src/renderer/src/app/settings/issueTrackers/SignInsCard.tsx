@@ -1,3 +1,4 @@
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { useIssueTrackerSetup } from '../../../components/issues/useIssueTrackers';
 import { Button } from '../../../ui/Button';
 import { askToSignOut } from './askToSignOut';
@@ -15,7 +16,7 @@ import tileStyles from './SignInTiles.module.css';
  * header's "Add a sign-in" offers the trackers in a menu, and that says when there's none yet; under a repository's
  * connected tracker, a quiet section with a small title.
  */
-export function SignInsCard({ repository, onAdd }: { repository?: string; onAdd?: (choice: TrackerChoice) => void }) {
+export function SignInsCard({ repository, onAdd }: { repository?: RepositoryGuid; onAdd?: (choice: TrackerChoice) => void }) {
   const rows = signInRows(useIssueTrackerSetup(), repository);
   const tiles = (
     <ul className={tileStyles.tiles}>

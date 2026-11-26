@@ -7,9 +7,9 @@ export type DescriptionFooterButton = { kind: 'recentComments'; tip: string } | 
  * open ones the comment doesn't name yet, `notYetNamed`), with their count. None at all: no footer, and the description
  * is as it always was.
  */
-export function descriptionFooterButtons({ recentComments, changeRequests }: { recentComments: number; changeRequests: number }): DescriptionFooterButton[] {
+export function descriptionFooterButtons({ recentComments, changeRequests }: { recentComments: boolean; changeRequests: number }): DescriptionFooterButton[] {
   return [
-    ...(recentComments > 0 ? [{ kind: 'recentComments' as const, tip: 'Recent comments' }] : []),
+    ...(recentComments ? [{ kind: 'recentComments' as const, tip: 'Recent comments' }] : []),
     ...(changeRequests > 0
       ? [{ kind: 'changeRequests' as const, tip: 'Change requests to apply', count: changeRequests, label: `${changeRequests} change ${changeRequests === 1 ? 'request' : 'requests'} to apply` }]
       : []),

@@ -40,7 +40,7 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   pendingChanges: 'namesNoObject',
   warnOnEmptyComment: 'namesNoObject',
   recentComments: 'namesNoObject',
-  recentCommentsByRepository: { byName: 'Not yet: kept by the repository’s spec.' },
+  recentCommentsByRepository: 'repositoryGuid',
   autoRefresh: 'namesNoObject',
   cmChoice: 'namesNoObject',
   cmDeclinedUpdateFor: 'namesNoObject',
@@ -55,7 +55,7 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   notifyOnIncoming: 'namesNoObject',
   homeAccount: { byName: 'A Unity account is the user cm signs in with, a server account its server: cm has no other id for either.' },
   favoriteOrganizations: { organizationFollowedById: 'A cloud organization (`acme@cloud`), which cm gives no id, by its name alone.' },
-  repositorySettings: { byName: 'Not yet: kept by the repository’s spec.' },
+  repositorySettings: 'repositoryGuid',
   serverSettings: { organizationFollowedById: 'A cloud organization by its name alone, as cm gives it no id; a server of its own by its address, which has no other id.' },
   changesetColors: { byName: 'cm prints no id for a user, only the owner of what they made.' },
   mergeTool: 'namesNoObject',
@@ -70,7 +70,7 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   zoomLevel: 'namesNoObject',
   windowBounds: 'namesNoObject',
   pageWindowBounds: 'namesNoObject',
-  openWindows: { byPath: 'Not yet: a workspace by its folder, which reopening it takes; a repository explored without one by its spec.' },
+  openWindows: { byPath: 'A workspace by its folder, which reopening it takes; a repository explored without one by its spec, followed by its GUID once renamed.' },
   legacySettingsImported: 'namesNoObject',
   legacyMergeToolsImported: 'namesNoObject',
   legacyToolsImported: 'namesNoObject',
@@ -81,7 +81,8 @@ export const REPOSITORY_SETTINGS_IDENTITY: { readonly [Setting in keyof Required
   explorerRulesOff: 'namesNoObject',
   changesetColorsOff: 'namesNoObject',
   branchPins: { byIdIn: 'repository', because: 'The Branch Explorer draws branches by their number, which a rename keeps.' },
-  syncRemote: { byName: 'Not yet: the remote repository by its spec.' },
+  syncRemote: { byName: 'The spec sync takes, kept with syncRemoteGuid: once its name names the remote no more, the GUID finds it.' },
+  syncRemoteGuid: 'repositoryGuid',
 };
 
 export const SERVER_SETTINGS_IDENTITY: { readonly [Setting in keyof Required<ServerSettings>]: SettingIdentity } = {

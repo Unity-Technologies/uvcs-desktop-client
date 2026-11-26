@@ -302,8 +302,9 @@ the app's settings.
   kept for one repository, workspace or server. Every window reads them (`useSettings`) and follows the others' changes
   (`settingsChanged`); the main process writes them. They hold four scopes:
   - the whole app: Settings' choices, the changeset colors, the windows to reopen;
-  - a repository (`repositorySettings`, `RepositorySettings` by `repositoryKey`): the Branch Explorer's rules and moved
-    branches, whether its rules and changeset colors apply, the sync remote;
+  - a repository (`repositorySettings`, `RepositorySettings` by the repository's GUID: "Settings survive renames"): the
+    Branch Explorer's rules and moved branches, whether its rules and changeset colors apply, the sync remote; its
+    recent comments (`recentCommentsByRepository`), likewise;
   - a server (`serverSettings`, `ServerSettings` by `serverKey`): the home screen's project;
   - a workspace, by its GUID: its recent branches (`recentBranchesByWorkspace`), the changes it left on a switch
     (`switchShelves`) and review mode (`reviewModeWorkspaces`, which keeps a repository explored without a workspace
@@ -339,13 +340,34 @@ be passed where one is kept.
 - **A repository's GUID** is printed only by `cm repository list`, never by `cm status --header` or `cm find`, so
   every listing of a server goes through `RepositoryGuids`, which keeps its names' GUIDs for the session: the home
   screen's listing teaches them, and a name it doesn't know lists the server once more (a repository renamed or created
-  since), at most once a minute. A replica on another server has a GUID of its own, and its own settings.
+  since), at most once a minute; one created or restored here lists it again at once (`added`). A listing that failed
+  answers the lookups of the next minute with its failure, so windows asking again don't list a server out of reach. A replica on another
+  server has a GUID of its own, and its own settings.
+- **The main process resolves, the renderer asks once.** A window reads its repository's GUID by its spec
+  (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus, and only
+  where something kept is needed: the Branch Explorer and Sync as they show, the issue tracker only when some
+  repository has one (`tracksAnyRepository`), recent comments as their menu opens or a check-in saves one. That costs
+  at most one `cm repository list` per server per session, none once the home screen listed it: the price of a name
+  that a rename made anywhere no longer loses, paid only where something is kept. What is kept for the repository reads
+  as none until it's known, so nothing waits for it. What the user changes from what is shown
+  (the Branch Explorer's rules and moved branches, the sync remote) is offered only once it's known, and written under
+  it (`updateRepositorySettings` takes a `RepositoryGuid`): a change made from the empty copy shown meanwhile would
+  replace what is kept. A check-in's comment and a review mark, made from nothing kept, wait for it
+  (`repositoryGuidToWrite`), and when it can't be read the change is said to be unsaved, never dropped without a word. The main process and the API take what is kept by its GUID's
+  type (`RepositoryGuid`), so a spec can't be passed where a GUID is kept.
+- **A spec kept for later use** (the sync remote, a repository window reopened at launch) is kept with its GUID, and
+  followed to the name the repository goes by now (`RepositoryGuids.specNow`, `repositories.specNow`) from the same
+  listing.
 - **What each setting is kept by** is written in `settingsIdentity.ts` (`APP_SETTINGS_IDENTITY`,
   `REPOSITORY_SETTINGS_IDENTITY`, `SERVER_SETTINGS_IDENTITY`), one line per setting, which the type checker asks for
   when a setting is added. A path or a name is kept only where nothing stable exists, and its line says why: the
   folder a workspace opens from, a user (`cm` prints no id for one), a server of its own (its address).
 - **What was kept by name before** moves to the object's GUID the first time the GUID is known, with no extra `cm`
-  call.
+  call: a repository's settings, recent comments, issue tracker binding and review marks as its GUID is first read
+  (`repositoryGuidOf`, the one way from a spec to its GUID, which `repositories.guidOf` and review mode's key share:
+  `SettingsStore`, `IssueTrackerStore`, `DiffReviewStore` `keepRepositoryByGuid`), a branch diff's review marks as they are first read or marked (`formerDiffReviewName`).
+  What a window's storage hands over later by spec (`addWindowSettings`) goes under the GUID when a listing taught it.
+  What was kept for a repository never opened again stays where it was.
 - **A Unity organization** is kept by its name (`acme@unity`), which every list and `cm` use: its owners can change
   it, and no other organization can ever take a name one had. So what it keeps (its favorite, its `ServerSettings`)
   records its id (`OrganizationId`, `ServerSettings.organizationId`), and follows it to its new name

@@ -1,4 +1,5 @@
 import type { IssueTrackerKind, IssueTrackerSetup, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { coveringConnection, needsSignIn, ownerOf } from '@shared/issueTrackers/connections';
 import { isGitHubCloud } from '@shared/issueTrackers/grammars/github';
 import { bindingOf } from '@shared/issueTrackers/issueReferences';
@@ -6,6 +7,7 @@ import { signInMethodsFor } from '@shared/issueTrackers/signInMethods';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { pluralize } from '../../../lib/text';
+import { repositoryNotFound } from '../../workspace/repositoryNotFound';
 import { choiceOf, type TrackerChoice } from './trackerChoices';
 import type { ConnectStage } from './trackerCardContent';
 
@@ -144,7 +146,7 @@ export function signInMethodShown(methods: readonly SignInMethodKind[], tokenCho
 
 /** What the sign-in step for a link shows, and the failure under it (`SignInFor`). */
 export type SignInForView =
-  | { kind: 'useConnection'; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: string; failure: SignInFailure | null }
+  | { kind: 'useConnection'; step: Extract<SignInStep, { kind: 'useConnection' }>; repository: RepositoryGuid; failure: SignInFailure | null }
   | { kind: 'alreadySignedIn'; step: Extract<SignInStep, { kind: 'useConnection' }>; failure: SignInFailure | null }
   | { kind: 'signIn'; step: Extract<SignInStep, { kind: 'signIn' }>; method: 'deviceCode' | 'token'; failure: SignInFailure | null };
 
@@ -153,7 +155,7 @@ export type SignInForView =
  * repository) or into "already signed in" (with none): its failure stays on screen across that turn. The token step
  * words its own failures, so a sign-in shows one only under the device flow.
  */
-export function signInForView(step: SignInStep, repository: string | undefined, tokenChosen: boolean, failure: SignInFailure | null): SignInForView {
+export function signInForView(step: SignInStep, repository: RepositoryGuid | undefined, tokenChosen: boolean, failure: SignInFailure | null): SignInForView {
   if (step.kind === 'useConnection') return repository ? { kind: 'useConnection', step, repository, failure } : { kind: 'alreadySignedIn', step, failure };
   const method = signInMethodShown(step.methods, tokenChosen);
   return { kind: 'signIn', step, method, failure: method === 'deviceCode' ? failure : null };
@@ -227,7 +229,7 @@ export interface SignInRow {
   signOutQuestion: { title: string; message: string; confirmLabel: string };
 }
 
-export function signInRows(setup: IssueTrackerSetup | undefined, repository?: string): SignInRow[] {
+export function signInRows(setup: IssueTrackerSetup | undefined, repository?: RepositoryGuid): SignInRow[] {
   const here = setup && repository ? bindingOf(setup.bindings, repository)?.connectionId : undefined;
   return (setup?.connections ?? []).map((connection) => {
     const signInNeeded = needsSignIn(connection);
@@ -266,7 +268,7 @@ function losingTrackers(used: number, usedHere: boolean): string {
  * The sign-ins Connect offers first for a repository ("Use a sign-in you already have"): those that work. One needing
  * signing in again goes through its tracker's card like any other.
  */
-export function usableSignIns(setup: IssueTrackerSetup | undefined, repository?: string): SignInRow[] {
+export function usableSignIns(setup: IssueTrackerSetup | undefined, repository?: RepositoryGuid): SignInRow[] {
   return signInRows(setup, repository).filter((row) => !row.needsAttention);
 }
 
@@ -298,12 +300,31 @@ export function repositoryTrackerView<Start, Connected>(state: { start: Start | 
   return { kind: 'connected', connected: state.connected };
 }
 
+/**
+ * What Settings › Issue tracker shows: the sign-ins alone in a window with no repository; in one with a repository,
+ * its tracker by the repository's GUID once read (`repositoryGuidQuery`), or why it can't be.
+ */
+export type IssueTrackerPaneView = { kind: 'reading' } | { kind: 'signInsAlone' } | { kind: 'repository'; guid: RepositoryGuid } | { kind: 'guidUnread'; reason: string };
+
+export function issueTrackerPaneView(state: {
+  setupRead: boolean;
+  /** The window's repository, a spec; none in a window with no place, or while its workspace's info is read. */
+  spec: string | undefined;
+  inPlace: boolean;
+  guid: { data?: RepositoryGuid | null; error: Error | null };
+}): IssueTrackerPaneView {
+  if (state.inPlace && state.guid.error) return { kind: 'guidUnread', reason: state.guid.error.message };
+  if (state.inPlace && state.guid.data === null) return { kind: 'guidUnread', reason: repositoryNotFound(state.spec ?? '') };
+  if (!state.setupRead || (state.inPlace && !state.guid.data)) return { kind: 'reading' };
+  return state.inPlace && state.guid.data ? { kind: 'repository', guid: state.guid.data } : { kind: 'signInsAlone' };
+}
+
 /** Connect's step: the link until one reads back, then signing in (`connectSteps`). */
 export function connectStage(read: LinkReadBack): ConnectStage {
   return read.kind === 'read' ? 'signIn' : 'link';
 }
 
-export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, repository: string | undefined): ConnectedTracker | null {
+export function connectedTrackerOf(setup: IssueTrackerSetup | undefined, repository: RepositoryGuid | undefined): ConnectedTracker | null {
   if (!setup || !repository) return null;
   const binding = bindingOf(setup.bindings, repository);
   const connection = binding && setup.connections.find((kept) => kept.id === binding.connectionId);

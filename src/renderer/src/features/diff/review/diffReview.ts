@@ -1,24 +1,31 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import type { BranchGuid } from '@shared/domain/stableIds';
 import type { ReviewStatusOf } from '../../review/reviewStatus';
 
 /** Path → the revision reviewed. */
 export type DiffReviewMarks = ReadonlyMap<string, number>;
 
 /**
- * What the marks of a diff are kept under. A branch is named without its head, so its marks survive new changesets
- * and tell which files changed since their review.
+ * What the marks of a diff are kept under. A branch is named by its GUID, without its head, so its marks survive a
+ * rename made anywhere and new changesets, and tell which files changed since their review: none while its GUID
+ * isn't known.
  */
-export function diffReviewName(target: DiffTarget): string {
+export function diffReviewName(target: DiffTarget, branchGuid: BranchGuid | undefined): string | undefined {
   switch (target.kind) {
     case 'changeset':
       return `cs:${target.changesetId}`;
     case 'branch':
-      return `br:${target.branch}`;
+      return branchGuid && `br:${branchGuid}`;
     case 'shelve':
       return `sh:${target.shelveId}`;
     case 'range':
       return `${target.fromSpec}..${target.toSpec}`;
   }
+}
+
+/** What a diff's marks were kept under before: a branch's by its name, until they move under its GUID. */
+export function formerDiffReviewName(target: DiffTarget): string | undefined {
+  return target.kind === 'branch' ? `br:${target.branch}` : undefined;
 }
 
 /** A file in a diff is reviewed while the diff shows the revision that was reviewed; another one changed since. */

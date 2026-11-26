@@ -65,7 +65,7 @@ export function openFirstWindow({ cm, windows, early, settings, commandLog, cmRe
   const workspacePath = windows.firstWorkspace();
   const readNow = readAhead === null || readAhead.workspacePath !== workspacePath;
   if (readNow && cmReady()) readScreenOf(workspacePath, { cm, early, settings });
-  windows.openFirst();
+  void windows.openFirst();
   early.expireUntaken();
   commandLog.windowsOpened();
 }

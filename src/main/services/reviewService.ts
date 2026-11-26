@@ -3,12 +3,14 @@ import { placeId } from '@shared/domain/place';
 import { movedReviewMode, withReviewMode } from '@shared/domain/reviewModePlaces';
 import { reviewModeKeyOf, type PlaceGuids } from '../review/reviewModeKey';
 import { readWorkspaceGuid } from '../workspace/workspaceIdentity';
+import { repositoryGuidOf } from './repositoryGuidOf';
 import type { ServiceContext } from './ServiceContext';
 
-export function createReviewService({ reviews, diffReviews, settings, headers, repositoryGuids }: ServiceContext): ReviewApi {
+export function createReviewService(context: ServiceContext): ReviewApi {
+  const { reviews, diffReviews, settings, headers } = context;
   const guids: PlaceGuids = {
     workspace: (workspacePath) => readWorkspaceGuid(headers, workspacePath),
-    repository: (server, name) => repositoryGuids.guidOf(server, name),
+    repository: (repositorySpec) => repositoryGuidOf(context, repositorySpec),
   };
 
   return {
@@ -30,8 +32,8 @@ export function createReviewService({ reviews, diffReviews, settings, headers, r
     mark: (workspacePath, paths) => reviews.mark(workspacePath, paths),
     unmark: (workspacePath, paths) => reviews.unmark(workspacePath, paths),
     keepOnly: (workspacePath, pendingPaths) => reviews.keepOnly(workspacePath, pendingPaths),
-    diffMarks: (repository, diff) => diffReviews.marks(repository, diff),
-    markDiff: (repository, diff, marks) => diffReviews.mark(repository, diff, marks),
-    unmarkDiff: (repository, diff, paths) => diffReviews.unmark(repository, diff, paths),
+    diffMarks: (repository, diff, formerDiff) => diffReviews.marks(repository, diff, formerDiff),
+    markDiff: (repository, diff, marks, formerDiff) => diffReviews.mark(repository, diff, marks, formerDiff),
+    unmarkDiff: (repository, diff, paths, formerDiff) => diffReviews.unmark(repository, diff, paths, formerDiff),
   };
 }

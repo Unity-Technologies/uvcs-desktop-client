@@ -5,6 +5,7 @@ import { liveMarksOf, type LiveMark } from './liveMarks';
 import { withIssueReferences } from './issueReferencesFacet';
 import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 
 const FOCUSED = { revealsSelection: true };
 
@@ -111,7 +112,7 @@ describe('liveMarksOf', () => {
   describe('references', () => {
     it('draws a bare address of a bound project’s issue as its chip, as the shown comment does', () => {
       const jira: TrackerConnection = { id: 'c1', kind: 'jiraDataCenter', server: 'https://jira.acme.com', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-      const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira));
+      const tracked = withIssueReferences(issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }, jira));
       const marksIn = (written: string) => {
         const state = editorState(written, tracked);
         return liveMarksOf(state, FOCUSED).map((mark) => shown(mark, state.doc.toString()));

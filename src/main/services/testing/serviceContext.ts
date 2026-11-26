@@ -1,4 +1,9 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ServerSessions } from '../../accounts/ServerSessions';
+import type { IssueTrackers } from '../../issueTrackers/IssueTrackers';
+import { DiffReviewStore } from '../../review/DiffReviewStore';
 import { SessionChecks } from '../../accounts/SessionChecks';
 import { checkConnection } from '../../cm/connectionCheck';
 import { RepositoryTrees } from '../../unity/RepositoryTrees';
@@ -24,7 +29,11 @@ export function serviceContext(cm: CmClient, parts: Partial<ServiceContext> = {}
   );
   // Nothing downloads in a service's test unless it says so: the trees list through its fake `cm`.
   const downloads = { read: () => Promise.reject(new Error('Nothing downloads here')) };
-  return { cm, operations, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), diagnosticLog: { write: () => undefined }, signIns: signInContext(cm), repositoryGuids: new RepositoryGuids((server) => listRepositories(cm, server)), organizationRenames: { listed: async () => undefined, follow: async () => undefined }, ...parts } as ServiceContext;
+  // What a repository kept by spec is moved by when its GUID is first known (`repositoryGuidOf`): a store of review marks
+  // in the run's temp folder, and no issue tracker unless the test says so.
+  const diffReviews = new DiffReviewStore(mkdtempSync(join(tmpdir(), 'diff-reviews-')));
+  const issueTrackers = { keepRepositoryByGuid: () => undefined } as unknown as IssueTrackers;
+  return { cm, operations, diffReviews, issueTrackers, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), diagnosticLog: { write: () => undefined }, signIns: signInContext(cm), repositoryGuids: new RepositoryGuids((server) => listRepositories(cm, server)), organizationRenames: { listed: async () => undefined, follow: async () => undefined }, ...parts } as ServiceContext;
 }
 
 /** The servers' sign-in state, checked with `cm checkconnection` through the test's `cm`. */

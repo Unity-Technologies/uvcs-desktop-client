@@ -1,3 +1,5 @@
+import type { RepositoryGuid } from './stableIds';
+
 /**
  * Issue trackers (docs/features/issue-trackers.md): a sign-in to a tracker (`TrackerConnection`), which repositories
  * use it (`RepositoryTrackerBinding`), and the issues read from it. No secret is ever part of these: the credential
@@ -55,8 +57,11 @@ export interface TrackerConnection {
 
 /** A repository that uses a tracker: its connection and the projects its comments name. */
 export interface RepositoryTrackerBinding {
-  /** The repository's spec as `cm` names it: `game@acme@unity`. */
-  repository: string;
+  /**
+   * The repository's GUID, which a rename keeps (ARCHITECTURE.md "Settings survive renames"). One bound before it was
+   * kept by its GUID holds its spec (`game@acme@unity`) until the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`).
+   */
+  repository: RepositoryGuid;
   connectionId: string;
   /** Jira project keys (`VCS`), GitHub repositories (`acme/game`, lower case). */
   projects: string[];

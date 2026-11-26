@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { SavedWindow } from '@shared/domain/settings';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
@@ -34,8 +36,11 @@ beforeEach(() => {
   vi.mocked(createMainWindow).mockClear();
 });
 
-/** The windows, with each page saying which workspace it shows (`shows`). */
-function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] = []) {
+/**
+ * The windows, with each page saying which workspace it shows (`shows`). `repositories`: each repository's GUID by its
+ * spec as a listing taught it, and the spec a GUID goes by now (by default, its saved one).
+ */
+function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] = [], repositories: { known?: Record<string, RepositoryGuid>; specNow?: (spec: string, guid: RepositoryGuid) => Promise<string> } = {}) {
   const shown = new Map<number, string>();
   const onWindowsChanged = vi.fn();
   const onClosed = vi.fn();
@@ -57,6 +62,10 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
     onRepositoryLeft,
     onCloseRequested,
     closeLeftBehind,
+    repositoryGuids: {
+      knownGuidOf: (server, name) => repositories.known?.[`${name}@${server}`],
+      specNow: repositories.specNow ?? (async (spec) => spec),
+    },
   });
   const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath === undefined ? undefined : workspacePlace(workspacePath)) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
@@ -179,6 +188,51 @@ describe('a repository explored without a workspace', () => {
     expect(relaunched.windows.firstWorkspace()).toBeUndefined();
     relaunched.windows.openFirst();
     expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.place)).toEqual([GAME_REPOSITORY]);
+  });
+
+  it('is saved with its GUID, when a listing taught it, and reopens on the name a rename made elsewhere gave it', async () => {
+    const guid = repositoryGuidFor(1);
+    const { windows, settings, open } = setUp([], [], { known: { 'game@local': guid } });
+    windows.repositoryShown(open().webContents.id, 'game@local');
+
+    windows.saveSession({ withViews: false });
+    expect(settings.get().openWindows.map(({ repository, repositoryGuid }) => ({ repository, repositoryGuid }))).toEqual([{ repository: 'game@local', repositoryGuid: guid }]);
+
+    fakeElectron.reset();
+    fakeElectron.app.ready = true;
+    const relaunched = setUp([], settings.get().openWindows, { specNow: async () => 'racer@local' });
+    await relaunched.windows.openFirst();
+    const [window] = fakeElectron.windows();
+
+    expect(window!.webContents.sent).toEqual([[EVENT_CHANNEL, 'workspaceOpenRequested', {}]]);
+    expect(relaunched.windows.takeRequested(window!.webContents.id)).toEqual(repositoryPlace('racer@local'));
+  });
+
+  it('leaves a window reopened on it alone once the user went elsewhere before the server said it was renamed', async () => {
+    const saved: SavedWindow = { repository: 'game@local', repositoryGuid: repositoryGuidFor(1), bounds: { x: 0, y: 0, width: 800, height: 600, maximized: false }, fullScreen: false };
+    let answer: (spec: string) => void = () => undefined;
+    const { windows, shows } = setUp([], [saved], { specNow: () => new Promise((resolve) => (answer = resolve)) });
+    const reopened = windows.openFirst();
+    const [window] = fakeElectron.windows();
+    windows.takeRequested(window!.webContents.id);
+    shows(window!, GAME);
+
+    answer('racer@local');
+    await reopened;
+
+    expect(window!.webContents.sent).toEqual([]);
+    expect(windows.takeRequested(window!.webContents.id)).toBeNull();
+  });
+
+  it('reopens on the name it was saved with while that one still names it, or its server is out of reach', async () => {
+    const guid = repositoryGuidFor(1);
+    const saved: SavedWindow = { repository: 'game@local', repositoryGuid: guid, bounds: { x: 0, y: 0, width: 800, height: 600, maximized: false }, fullScreen: false };
+    const { windows } = setUp([], [saved], { specNow: () => Promise.reject(new Error('Unable to connect to local')) });
+    await windows.openFirst();
+    const [window] = fakeElectron.windows();
+
+    expect(window!.webContents.sent).toEqual([]);
+    expect(windows.takeRequested(window!.webContents.id)).toEqual(repositoryPlace('game@local'));
   });
 
   it('is explored no more by a window that made a workspace of it', () => {

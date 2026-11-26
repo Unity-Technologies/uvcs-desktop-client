@@ -8,6 +8,7 @@ import { liveMarksOf } from './liveMarks';
 import { isDismissed, pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
 import { withIssueReferences } from './issueReferencesFacet';
 import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 
 const queryAt = (written: string) => suggestionQueryAt(editorState(written));
 
@@ -24,7 +25,7 @@ describe('suggestionQueryAt', () => {
 
   it('opens the issue list after `#` only where the place has a tracker', () => {
     const jira = { id: 'c1', kind: 'jiraCloud' as const, server: 'https://acme.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token' as const, access: 'read' as const, credential: 'kept' as const };
-    const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira));
+    const tracked = withIssueReferences(issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }, jira));
     const issueAt = (text: string) => suggestionQueryAt(editorState(text, tracked));
     expect(issueAt('Fixes #‸')).toEqual({ kind: 'issue', from: 6, to: 7, text: '' });
     expect(issueAt('Fixes #VCS-12‸')).toMatchObject({ kind: 'issue', text: 'VCS-12' });
@@ -38,7 +39,7 @@ describe('suggestionQueryAt', () => {
 
   it('opens nothing for a heading, a second `#`, or a `#` inside a word', () => {
     const jira = { id: 'c1', kind: 'jiraCloud' as const, server: 'https://acme.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token' as const, access: 'read' as const, credential: 'kept' as const };
-    const tracked = withIssueReferences(issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira));
+    const tracked = withIssueReferences(issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }, jira));
     const issueAt = (text: string) => suggestionQueryAt(editorState(text, tracked));
     expect(issueAt('# ‸')).toBeNull();
     expect(issueAt('# Title‸')).toBeNull();

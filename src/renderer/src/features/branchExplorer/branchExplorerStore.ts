@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import type { BranchPins, ExplorerRule, UserColors } from '@shared/domain/branchExplorerSettings';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { navigation } from '../../app/navigation/navigationStore';
 import { updateRepositorySettings, useRepositorySettings } from '../../app/settings/useScopedSettings';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
@@ -80,23 +81,27 @@ export function showInBranchExplorer(target: RevealTarget): void {
   navigation.goToView('branchExplorer');
 }
 
+// What the Branch Explorer keeps per repository, by the repository's GUID: read as none while the window reads it, and
+// written only under it, so a change made from what the window shows never replaces what is kept with an empty copy
+// (ARCHITECTURE.md "Settings survive renames").
+
 /** The advanced filters and formats of `repository` (none while it isn't known yet), the same array until they change. */
-export function useExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
+export function useExplorerRules(repository: RepositoryGuid | undefined): readonly ExplorerRule[] {
   return explorerRulesOf(useRepositorySettings(repository));
 }
 
 /** Whether the rules of `repository` apply. */
-export function useExplorerRulesOn(repository: string | undefined): boolean {
+export function useExplorerRulesOn(repository: RepositoryGuid | undefined): boolean {
   return !useRepositorySettings(repository).explorerRulesOff;
 }
 
 /** The rules the graph applies in `repository`: none while they're turned off. */
-export function useAppliedExplorerRules(repository: string | undefined): readonly ExplorerRule[] {
+export function useAppliedExplorerRules(repository: RepositoryGuid | undefined): readonly ExplorerRule[] {
   return appliedExplorerRulesOf(useRepositorySettings(repository));
 }
 
 /** Whether the changeset colors apply in `repository`. */
-export function useUserColorsOn(repository: string | undefined): boolean {
+export function useUserColorsOn(repository: RepositoryGuid | undefined): boolean {
   return !useRepositorySettings(repository).changesetColorsOff;
 }
 
@@ -106,33 +111,33 @@ export function useUserColors(): UserColors {
 }
 
 /** The changeset colors the graph applies in `repository`: none while they're turned off there. */
-export function useAppliedUserColors(repository: string | undefined): UserColors {
+export function useAppliedUserColors(repository: RepositoryGuid | undefined): UserColors {
   return appliedUserColorsOf(useUserColors(), useRepositorySettings(repository));
 }
 
 /** The branches moved in `repository` (none while it isn't known yet), the same array until they change. */
-export function useBranchPins(repository: string | undefined): BranchPins {
+export function useBranchPins(repository: RepositoryGuid | undefined): BranchPins {
   return branchPinsOf(useRepositorySettings(repository));
 }
 
-export function setExplorerRules(repository: string, rules: ExplorerRule[]): void {
-  void updateRepositorySettings(repository, { explorerRules: rules });
+export function setExplorerRules(repository: RepositoryGuid, rules: ExplorerRule[]): Promise<void> {
+  return updateRepositorySettings(repository, { explorerRules: rules });
 }
 
-export function setExplorerRulesOn(repository: string, on: boolean): void {
-  void updateRepositorySettings(repository, { explorerRulesOff: !on });
+export function setExplorerRulesOn(repository: RepositoryGuid, on: boolean): Promise<void> {
+  return updateRepositorySettings(repository, { explorerRulesOff: !on });
 }
 
 export function setUserColors(colors: UserColors): void {
   void saveSettings({ changesetColors: colors });
 }
 
-export function setUserColorsOn(repository: string, on: boolean): void {
-  void updateRepositorySettings(repository, { changesetColorsOff: !on });
+export function setUserColorsOn(repository: RepositoryGuid, on: boolean): Promise<void> {
+  return updateRepositorySettings(repository, { changesetColorsOff: !on });
 }
 
-export function setBranchPins(repository: string, pins: BranchPins): void {
-  void updateRepositorySettings(repository, { branchPins: [...pins] });
+export function setBranchPins(repository: RepositoryGuid, pins: BranchPins): Promise<void> {
+  return updateRepositorySettings(repository, { branchPins: [...pins] });
 }
 
 /** The display options alone, the same object until one of them changes. */

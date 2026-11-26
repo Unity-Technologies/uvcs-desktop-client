@@ -5,7 +5,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SettingsGroup } from '../../app/settings/SettingsGroup';
-import { usePlaceRepository } from '../../app/workspace/useWorkspace';
+import { usePlaceRepositoryGuid } from '../../app/workspace/repositoryGuid';
 import {
   setExplorerRules,
   setExplorerRulesOn,
@@ -90,9 +90,9 @@ function BranchExplorerOptionsDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** The rules of the window's repository: each repository keeps its own. */
+/** The rules of the window's repository: each repository keeps its own, by its GUID, shown once it's read. */
 function RepositoryRules() {
-  const repository = usePlaceRepository();
+  const repository = usePlaceRepositoryGuid();
   const rules = useExplorerRules(repository);
   const on = useExplorerRulesOn(repository);
   const applied = useAppliedExplorerRules(repository);
@@ -113,7 +113,7 @@ function RepositoryRules() {
  * the history on screen.
  */
 function ChangesetColors() {
-  const repository = usePlaceRepository();
+  const repository = usePlaceRepositoryGuid();
   const { data } = useBranchExplorerData();
   const colors = useUserColors();
   const on = useUserColorsOn(repository);

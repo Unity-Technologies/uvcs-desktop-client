@@ -1,6 +1,7 @@
 import { Plus, X } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 import type { BoundProjectsAnswer, IssueTrackerKind } from '@shared/domain/issueTrackers';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
@@ -14,7 +15,7 @@ import { projectRows, projectsExplained, projectsSectionWords } from './trackerC
 import styles from './IssueTrackerPane.module.css';
 
 interface ProjectsSectionProps {
-  repository: string;
+  repository: RepositoryGuid;
   kind: IssueTrackerKind;
   projects: readonly string[];
   answer: BoundProjectsAnswer | undefined;
@@ -53,7 +54,7 @@ export function ProjectsSection({ repository, kind, projects, answer }: Projects
  * "Add a project": a quiet button that opens a row of its own, a full-width field for a link to an issue of the
  * other project, read back as the user pastes, and Add or Cancel.
  */
-function AddProject({ repository, kind, words }: { repository: string; kind: IssueTrackerKind; words: ReturnType<typeof projectsSectionWords> }) {
+function AddProject({ repository, kind, words }: { repository: RepositoryGuid; kind: IssueTrackerKind; words: ReturnType<typeof projectsSectionWords> }) {
   const [adding, setAdding] = useState(false);
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);

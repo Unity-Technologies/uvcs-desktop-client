@@ -1,5 +1,5 @@
 import type { IssueTrackerKind, RepositoryTrackerBinding, TrackerConnection } from '../domain/issueTrackers';
-import { sameServer } from '../links/linkSegments';
+import type { RepositoryGuid } from '../domain/stableIds';
 import { githubKeyParts } from './grammars/github';
 import { JIRA_KEY } from './grammars/jiraKeys';
 import { TRACKER_GRAMMARS } from './trackerGrammars';
@@ -71,15 +71,7 @@ export function issueReferenceReader(binding: RepositoryTrackerBinding, connecti
   };
 }
 
-/** The binding of `repository`: its name exactly, its server as links match servers (`sameServer`). */
-export function bindingOf(bindings: readonly RepositoryTrackerBinding[], repository: string): RepositoryTrackerBinding | undefined {
-  return bindings.find((binding) => sameRepository(binding.repository, repository));
-}
-
-/** `game@acme@unity` and `game@ACME@unity`, `game@ssl://host:8088` and `game@host:8088`: one repository. */
-export function sameRepository(a: string, b: string): boolean {
-  const at = (spec: string) => spec.indexOf('@');
-  const [nameA, serverA] = at(a) < 0 ? [a, ''] : [a.slice(0, at(a)), a.slice(at(a) + 1)];
-  const [nameB, serverB] = at(b) < 0 ? [b, ''] : [b.slice(0, at(b)), b.slice(at(b) + 1)];
-  return nameA === nameB && sameServer(serverA, serverB);
+/** The binding of `repository`, by its GUID. */
+export function bindingOf(bindings: readonly RepositoryTrackerBinding[], repository: RepositoryGuid): RepositoryTrackerBinding | undefined {
+  return bindings.find((binding) => binding.repository === repository);
 }

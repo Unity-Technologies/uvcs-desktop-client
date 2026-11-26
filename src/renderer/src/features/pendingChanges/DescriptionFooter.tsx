@@ -10,6 +10,8 @@ interface DescriptionFooterProps {
   /** What it shows (`descriptionFooterButtons`). */
   buttons: readonly DescriptionFooterButton[];
   recentComments: readonly string[];
+  /** The recent comments' menu opened. */
+  onRecentCommentsOpen: () => void;
   /** A recent comment picked: its parts go in the summary and the description. */
   onRecentComment: (pick: ReturnType<typeof recentCommentPick>) => void;
   /** Where the caret goes once the recent comments' menu closes, after a pick. */
@@ -22,7 +24,7 @@ interface DescriptionFooterProps {
  * The check-in description's footer (`descriptionFooterButtons`): quiet icon buttons at its bottom-left, apart by
  * hairlines; nothing at all when it has none.
  */
-export function DescriptionFooter({ buttons, recentComments, onRecentComment, onRecentMenuClosed, onChangeRequests }: DescriptionFooterProps) {
+export function DescriptionFooter({ buttons, recentComments, onRecentCommentsOpen, onRecentComment, onRecentMenuClosed, onChangeRequests }: DescriptionFooterProps) {
   if (buttons.length === 0) return null;
   return (
     <div className={styles.descriptionFooter} role="toolbar" aria-label="Description">
@@ -32,6 +34,7 @@ export function DescriptionFooter({ buttons, recentComments, onRecentComment, on
           {button.kind === 'recentComments' ? (
             <ActionDropdownMenu
               entries={recentComments.map((recent, entry) => ({ id: `recent.${entry}`, label: recentCommentLabel(recent), run: () => onRecentComment(recentCommentPick(recent)) }))}
+              onOpenChange={(open) => open && onRecentCommentsOpen()}
               onCloseAutoFocus={onRecentMenuClosed}
             >
               <FooterButton tip={button.tip} aria-label={button.tip}>
