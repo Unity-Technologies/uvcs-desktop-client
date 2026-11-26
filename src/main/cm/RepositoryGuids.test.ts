@@ -282,6 +282,19 @@ describe('RepositoryGuids', () => {
       expect(lines()).toHaveLength(2);
     });
 
+    it('rejects when the id can’t be read, and asks again at the next lookup', async () => {
+      let fails = true;
+      const fake = fakeCmClient({
+        'repository list': listed(['racer', GAME]),
+        ls: () => (fails ? cmFails('Unable to connect to acme@cloud') : formatOutput([1])),
+      });
+      const guids = new RepositoryGuids({ list: (server) => listRepositories(fake.cm, server), idOf: (spec, server) => repositoryIdOf(fake.cm, spec, server) });
+
+      await expect(guids.guidOf('acme@cloud', 'game')).rejects.toThrow('Unable to connect');
+      fails = false;
+      expect(await guids.guidOf('acme@cloud', 'game')).toBe(GAME);
+    });
+
     it('follows a spec kept by the old name to the new one, without reading the id', async () => {
       const { guids, idReads } = guidsWithIds({ 'game@acme@cloud': 1 }, listed(['racer', GAME]));
 
