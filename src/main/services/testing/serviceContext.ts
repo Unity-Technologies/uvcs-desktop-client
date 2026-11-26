@@ -3,6 +3,8 @@ import { SessionChecks } from '../../accounts/SessionChecks';
 import { checkConnection } from '../../cm/connectionCheck';
 import { RepositoryTrees } from '../../unity/RepositoryTrees';
 import type { CmClient } from '../../cm/CmClient';
+import { listRepositories } from '../../cm/listRepositories';
+import { RepositoryGuids } from '../../cm/RepositoryGuids';
 import { RevisionCat } from '../../files/RevisionCat';
 import { WorkspaceCopies } from '../../files/WorkspaceCopies';
 import { OperationTracker } from '../../operations/OperationTracker';
@@ -22,7 +24,7 @@ export function serviceContext(cm: CmClient, parts: Partial<ServiceContext> = {}
   );
   // Nothing downloads in a service's test unless it says so: the trees list through its fake `cm`.
   const downloads = { read: () => Promise.reject(new Error('Nothing downloads here')) };
-  return { cm, operations, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), diagnosticLog: { write: () => undefined }, signIns: signInContext(cm), ...parts } as ServiceContext;
+  return { cm, operations, repositoryTrees: new RepositoryTrees({ cm, downloads }), workspaceCopies: new WorkspaceCopies({ cm }), revisionCat: new RevisionCat({ cm }), handedOverDiffs: new HandedOverDiffs(), headers: new WorkspaceHeaders(cmHeaderReaders(cm)), diagnosticLog: { write: () => undefined }, signIns: signInContext(cm), repositoryGuids: new RepositoryGuids((server) => listRepositories(cm, server)), ...parts } as ServiceContext;
 }
 
 /** The servers' sign-in state, checked with `cm checkconnection` through the test's `cm`. */

@@ -52,7 +52,7 @@ describe('repositories', () => {
     });
 
     expect(await service.list('racing@unity')).toEqual({
-      repositories: [{ id: '4', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
+      repositories: [{ id: '4', guid: '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
       projects: [{ name: 'Racing', guid: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f' }],
       deletedRepositories: [],
     });
@@ -152,5 +152,20 @@ describe('repositories', () => {
     const service = createRepositoriesService(serviceContext(fake.cm), profilesContext(fake.cm), (from, to) => renames.push([from, to]));
     await service.rename('tools@acme@cloud', 'build-tools');
     expect(renames).toEqual([['tools@acme@cloud', 'build-tools@acme@cloud']]);
+  });
+
+  it('keeps a repository renamed here known by its new name, with the GUID it had, without listing its server again', async () => {
+    const { cm, lines } = fakeCmClient({
+      'repository list': formatOutput(['4', 'tools', 'acme@cloud', 'bob', 'VCS', '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61']),
+      'repository rename': '',
+    });
+    const context = serviceContext(cm);
+    const renaming = createRepositoriesService(context, profilesContext(cm));
+    await renaming.list('acme@cloud');
+
+    await renaming.rename('tools@acme@cloud', 'build-tools');
+
+    expect(await context.repositoryGuids.guidOf('acme@cloud', 'build-tools')).toBe('5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61');
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), 'repository rename tools@acme@cloud build-tools']);
   });
 });

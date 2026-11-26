@@ -323,6 +323,25 @@ directly (`STORAGE_READERS`). What the window's storage kept before the settings
 cleared meanwhile reads as nothing held, so a hand-over that failed and is tried again at the next start may bring it
 back.
 
+### Settings survive renames
+
+What the app keeps for an object is kept by what a rename never changes; a name changes, and what was kept by it is
+lost. A workspace by its GUID (`cm getworkspacefrompath --format={guid}`, a local read), a repository by its GUID
+(`{repguid}`), a branch by its GUID, a Unity project by its GUID. Each kind is a type of its own (`stableIds.ts`:
+`RepositoryGuid`, `WorkspaceGuid`, `BranchGuid`, `ProjectGuid`), made only from text shaped as a GUID, so a name can't
+be passed where one is kept.
+
+- **A repository's GUID** is printed only by `cm repository list`, never by `cm status --header` or `cm find`, so
+  every listing of a server goes through `RepositoryGuids`, which keeps its names' GUIDs for the session: the home
+  screen's listing teaches them, and a name it doesn't know lists the server once more (a repository renamed or created
+  since), at most once a minute. A replica on another server has a GUID of its own, and its own settings.
+- **What each setting is kept by** is written in `settingsIdentity.ts` (`APP_SETTINGS_IDENTITY`,
+  `REPOSITORY_SETTINGS_IDENTITY`, `SERVER_SETTINGS_IDENTITY`), one line per setting, which the type checker asks for
+  when a setting is added. A path or a name is kept only where nothing stable exists, and its line says why: the
+  folder a workspace opens from, a user (`cm` prints no id for one), a server of its own (its address).
+- **What was kept by name before** moves to the object's GUID the first time the GUID is known, with no extra `cm`
+  call.
+
 ## `cm` owns its files
 
 The app asks `cm`, never reads what `cm` keeps for itself, whose format is `cm`'s to change: a workspace's metadata

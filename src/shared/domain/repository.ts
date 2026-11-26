@@ -1,5 +1,12 @@
+import type { RepositoryGuid } from './stableIds';
+
 export interface RepositorySummary {
   id: string;
+  /**
+   * What the app keeps the repository's settings by: it stays through a rename (`RepositoryGuids`). None from a `cm`
+   * that prints no `{repguid}`.
+   */
+  guid?: RepositoryGuid;
   name: string;
   server: string;
   owner: string;

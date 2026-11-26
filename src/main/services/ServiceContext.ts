@@ -2,6 +2,7 @@ import type { ServerSessions } from '../accounts/ServerSessions';
 import type { SessionChecks } from '../accounts/SessionChecks';
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
+import type { RepositoryGuids } from '../cm/RepositoryGuids';
 import type { CmRuntime } from '../cmRuntime/CmRuntime';
 import type { DiagnosticWriter } from '../diagnostics/DiagnosticLog';
 import type { ProfileList } from '../cm/ProfileList';
@@ -52,6 +53,8 @@ export interface ServiceContext {
   cmRuntime: CmRuntime;
   /** Branch names by object id, kept while a window shows the workspace (`BranchNamesCache`). */
   branchNames: BranchNamesCache;
+  /** Every listing of a server's repositories, and the repositories' GUIDs it teaches (`RepositoryGuids`). */
+  repositoryGuids: RepositoryGuids;
   /** The issue trackers' engine: connections, bindings and issue reads (`IssueTrackers`). */
   issueTrackers: IssueTrackers;
   /** The log file a user sends with a bug report (`appLog`). */
