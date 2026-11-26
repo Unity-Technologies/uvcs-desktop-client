@@ -301,7 +301,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `renderer/src/detailsPanelsHide.test.ts`                  | every details panel has the header button that hides it (`DetailsToggleButton`) |
 | `renderer/src/detailsPanelsShowAttributesInSection.test.ts` | every details panel shows attributes in its Attributes section (`AttributesDetailsSection`), never as chips in its header |
 | `renderer/src/splittersRemembered.test.ts`               | every splitter remembers where it was dragged, under a key of its own (`RememberedSplitPane`) |
-| `renderer/src/windowStorageHoldsLayoutOnly.test.ts`      | the window's storage holds only layout (`LAYOUT_STORES`), never a map of repositories, workspaces or servers: those are settings |
+| `renderer/src/windowStorageHoldsLayoutOnly.test.ts`      | the window's storage holds only layout (`LAYOUT_STORES`), and only maps keyed by something of the window (`KEYED_MAPS`): places are settings |
 | `renderer/src/listViewsRefresh.test.ts`                   | every list view (`ObjectListView`) has the Refresh button in its header (`ViewRefreshButton`) |
 | `renderer/src/placesCoveredBySignIn.test.ts`              | every window showing a place's views or pages covers them with the sign-in screen (`SignInCover`) |
 | `renderer/src/rowActionsEverywhere.test.ts`               | every list driven from its filter whose results have actions (`isRowMenuKey`) shows the "…" (`RowActionsButton`) and opens it on a right click |
@@ -353,10 +353,10 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
   Desktop client's config, only imports well-known values once, on the first run (`importLegacySettings`;
   ARCHITECTURE.md "Own config"). Nor does it read `cm`'s own files (`.plastic/`, the config folder): it asks `cm`
   (ARCHITECTURE.md "`cm` owns its files").
-- **Where a setting is kept**: what the user chose or built up, and anything kept per repository, workspace or server,
-  goes in the app's settings (`AppSettings`, `RepositorySettings`, `ServerSettings`), changed one value at a time by
-  the main process; the window's storage (`localStorage`) holds only how the views are laid out (ARCHITECTURE.md
-  "Where a setting is kept").
+- **Where a setting is kept**: what costs a click to set again (a width, a fold, a sort, a filter, a view or diff
+  option) stays in the window's storage (`localStorage`); what the user built up, Settings' choices, and anything kept
+  per repository, workspace or server go in the app's settings (`AppSettings`, `RepositorySettings`, `ServerSettings`),
+  changed one value at a time by the main process (ARCHITECTURE.md "Where a setting is kept").
 - **Dependencies**: every package is a `devDependency`, because electron-vite bundles what the app runs into `out/`
   (`electron-builder.yml` ships no `node_modules`). Prefer none: a new one must do what a small module can't.
 - **Generated, never edited**: `out/`, `dist/`, `*.tsbuildinfo`, `node_modules/`.

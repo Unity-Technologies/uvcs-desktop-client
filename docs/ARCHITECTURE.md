@@ -584,7 +584,7 @@ by name, and never passes it to `cm`.
   (`svgPathOf`), so its license ships in the third-party notices with the rest. A repository there is named after its
   project, the part before the first `/` (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`,
   `nameWithProject`), which New repository builds from the project picked and Rename keeps (`repositoryRename`).
-  The Repositories view filters by project (`ProjectFilter`, remembered per organization: `useProjectPickStore`) and
+  The Repositories view filters by project (`ProjectFilter`, remembered per organization: `ServerSettings.homeProject`, `updateServerSettings`) and
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
   names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
   app doesn't call: it shows the organization's name as `cm` takes it.
@@ -780,10 +780,13 @@ official client created (its automatic shelves, offered as left changes). Its di
 
 ## Where a setting is kept
 
-Two stores, chosen by what losing a value would cost:
+Two stores, chosen by what losing a value would cost. The test: a value that costs a click to set again (a width, a
+fold, a sort, a view toggle, a filter, a diff option) stays in the window; a value the user built up (rules, moved
+branches, colors, a list of favorites), Settings' choices, and anything kept per repository, workspace or server go to
+the app's settings.
 
-- **The app's settings** (`settings.json`, `AppSettings`): what the user chose or built up, and anything kept for one
-  repository, workspace or server. Every window reads them (`useSettings`) and follows the others' changes
+- **The app's settings** (`settings.json`, `AppSettings`): what the user built up or chose in Settings, and anything
+  kept for one repository, workspace or server. Every window reads them (`useSettings`) and follows the others' changes
   (`settingsChanged`); the main process writes them. They hold four scopes:
   - the whole app: Settings' choices, the changeset colors, the windows to reopen;
   - a repository (`repositorySettings`, `RepositorySettings` by `repositoryKey`): the Branch Explorer's rules and moved
@@ -792,7 +795,9 @@ Two stores, chosen by what losing a value would cost:
   - a workspace: its recent branches (`recentBranchesByWorkspace`) and review mode (`reviewModeWorkspaces`).
   A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
   main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
-  `setFavoriteOrganization`), never written whole from a window's copy. `scopedSettings.ts` keeps only what differs from
+  `setFavoriteOrganization`), never written whole from a window's copy. A value of the whole app (a Settings choice, the
+  changeset colors) is written whole (`saveSettings`): every window follows `settingsChanged`, so its copy is current
+  but for a save still on its way. `scopedSettings.ts` keeps only what differs from
   having nothing, so the file holds only what the user set.
 - **The window's storage** (`localStorage`, zustand's `persist`): only how the views are laid out, what costs a click to
   set again: splitter widths, folds, sorting, view toggles, filters, the diff's layout. Every window keeps its own copy
@@ -800,10 +805,13 @@ Two stores, chosen by what losing a value would cost:
   wrong for a map of places, where one window's write drops what another added.
 
 `windowStorageHoldsLayoutOnly.test.ts` holds every stored store to a list (`LAYOUT_STORES`) that says why it's layout,
-refuses one keeping a map by repository, workspace or server, and names the few sources that reach the storage
+names every map such a store keeps and what it's keyed by (`KEYED_MAPS`), refuses one named for a repository,
+workspace or server, and names the few sources that reach the storage
 directly (`STORAGE_READERS`). What the window's storage kept before the settings held it (the Branch Explorer's version
 2, the old sync and home stores) is handed to the settings at the next start (`bringStoredWindowSettings`,
-`addWindowSettings`), which take it only where they hold nothing yet, and stays in the storage until they do.
+`addWindowSettings`), which take it only where they hold nothing yet, and stays in the storage until they do. A value
+cleared meanwhile reads as nothing held, so a hand-over that failed and is tried again at the next start may bring it
+back.
 
 ## `cm` owns its files
 
