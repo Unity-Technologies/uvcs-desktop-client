@@ -50,6 +50,11 @@ export class BranchNamesCache {
     return names;
   }
 
+  /** The branch's name as a list already read it, without asking the server: undefined when none did lately. */
+  knownName(place: Place, id: number): string | undefined {
+    return this.nameOf(place, id);
+  }
+
   /**
    * No window shows the place anymore (`WorkspaceWatchers` `stopped`): its names go, megabytes on a repository of
    * 20,000 branches, and a read under way keeps none.

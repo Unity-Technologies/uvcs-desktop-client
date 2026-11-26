@@ -32,6 +32,17 @@ describe('BranchNamesCache', () => {
     expect(await cache.resolve(workspacePlace('/wk'), [1])).toEqual(new Map([[1, '/main/tâche-日本-🌿']]));
   });
 
+  it('tells a name a list already read without reading one, until it is old', () => {
+    const { cache, reads, oneReads, advance } = setup();
+    cache.remember(workspacePlace('/wk'), [{ id: 37, name: '/main/renamed' }]);
+
+    expect(cache.knownName(workspacePlace('/wk'), 37)).toBe('/main/renamed');
+    expect(cache.knownName(workspacePlace('/wk'), 1)).toBeUndefined();
+    advance(10 * 60_000);
+    expect(cache.knownName(workspacePlace('/wk'), 37)).toBeUndefined();
+    expect([...reads, ...oneReads]).toEqual([]);
+  });
+
   it('reads every branch name once, when an id is unknown', async () => {
     const { cache, reads } = setup();
     expect(await cache.resolve(workspacePlace('/wk'), [1, 2])).toEqual(new Map([[1, '/main/b1'], [2, '/main/b2']]));
