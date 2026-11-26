@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRepositoryGuid } from './stableIds';
+import { parseOrganizationId, parseRepositoryGuid } from './stableIds';
 
 describe('parseRepositoryGuid', () => {
   it('reads a GUID as cm prints it', () => {
@@ -14,5 +14,18 @@ describe('parseRepositoryGuid', () => {
     expect(parseRepositoryGuid('game')).toBeUndefined();
     expect(parseRepositoryGuid('5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61@acme@unity')).toBeUndefined();
     expect(parseRepositoryGuid('')).toBeUndefined();
+  });
+});
+
+describe('parseOrganizationId', () => {
+  it('reads the id cm prints for a Unity organization', () => {
+    expect(parseOrganizationId('1375943370549\r\n')).toBe('1375943370549');
+  });
+
+  it('takes no -1 (no Unity organization), name or empty field', () => {
+    expect(parseOrganizationId('-1')).toBeUndefined();
+    expect(parseOrganizationId('acme')).toBeUndefined();
+    expect(parseOrganizationId('1375943370549@cloud')).toBeUndefined();
+    expect(parseOrganizationId('')).toBeUndefined();
   });
 });
