@@ -1,10 +1,13 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { withRepositorySettingsAdded } from '@shared/domain/scopedSettings';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { fakeApi } from '../../testing/fakeWindow';
+import { newRule } from '../../features/branchExplorer/model/explorerRules';
 import { BRANCH_EXPLORER_KEPT_KEY, bringStoredWindowSettings, HOME_PROJECT_PICKS_KEY, keptInStorage, SYNC_TARGETS_KEY } from './windowKeptSettings';
 
 const pin = { branch: 4, row: 1 };
+const rule = newRule('include', 'r1');
 
 function storing(items: Record<string, unknown>): Storage {
   localStorage.clear();
@@ -16,6 +19,7 @@ describe('keptInStorage', () => {
   it('reads the Branch Explorer’s, the sync remotes and the home projects as the settings keep them', () => {
     const storage = storing({
       [BRANCH_EXPLORER_KEPT_KEY]: {
+        rulesByRepository: { 'game@host': [rule] },
         rulesOff: { 'game@host': true },
         userColorsOff: { 'art@host': true },
         userColors: { users: [{ user: 'ana', hue: 120 }] },
@@ -27,7 +31,7 @@ describe('keptInStorage', () => {
 
     expect(keptInStorage(storage)).toEqual({
       repositorySettings: {
-        'game@host': { explorerRulesOff: true, branchPins: [pin], syncRemote: 'game@cloud' },
+        'game@host': { explorerRules: [rule], explorerRulesOff: true, branchPins: [pin], syncRemote: 'game@cloud' },
         'art@host': { changesetColorsOff: true },
       },
       serverSettings: { 'acme@unity': { homeProject: 'Racing' } },
@@ -39,6 +43,13 @@ describe('keptInStorage', () => {
     expect(keptInStorage(storing({}))).toBeNull();
     localStorage.setItem(SYNC_TARGETS_KEY, '{not json');
     expect(keptInStorage(localStorage)).toEqual({ repositorySettings: {}, serverSettings: {}, changesetColors: { users: [] } });
+  });
+});
+
+describe('what the storage kept, once the settings take it', () => {
+  it('lands every repository\u2019s rules under its key, however its spec was written', () => {
+    const kept = keptInStorage(storing({ [BRANCH_EXPLORER_KEPT_KEY]: { rulesByRepository: { 'Game@ssl://Host:8087': [rule] } } }))!;
+    expect(withRepositorySettingsAdded({}, kept.repositorySettings)).toEqual({ 'game@host:8087': { explorerRules: [rule] } });
   });
 });
 
