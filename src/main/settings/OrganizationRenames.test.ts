@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
-import { parseOrganizationId } from '@shared/domain/stableIds';
+import { parseOrganizationId, type OrganizationId } from '@shared/domain/stableIds';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { UnityOrganizationIds } from '../cm/UnityOrganizationIds';
 import { OrganizationRenames } from './OrganizationRenames';
@@ -59,4 +59,17 @@ describe('OrganizationRenames', () => {
     expect(writes()).toBe(0);
   });
 
+  it('keeps a change a window made while the ids were read', async () => {
+    let answer: (id: OrganizationId) => void = () => undefined;
+    let current: AppSettings = { ...DEFAULT_SETTINGS, favoriteOrganizations: ['acme@unity'] };
+    const store = { get: () => current, update: (changes: Partial<AppSettings>) => (current = { ...current, ...changes }) };
+    const renames = new OrganizationRenames(store, { idOf: () => new Promise<OrganizationId>((resolve) => (answer = resolve)) });
+
+    const following = renames.follow(['acme@unity']);
+    store.update({ serverSettings: { 'arcade@unity': { homeProject: 'Kart' } } });
+    answer(ACME);
+    await following;
+
+    expect(current.serverSettings).toEqual({ 'arcade@unity': { homeProject: 'Kart' }, 'acme@unity': { organizationId: ACME } });
+  });
 });
