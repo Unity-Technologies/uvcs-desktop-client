@@ -116,6 +116,12 @@ describe('shelveOf', () => {
 });
 
 describe('withShelve', () => {
+  it('takes the number of the shelve found by its GUID', () => {
+    const record = leftRecord(2, 'br:/main/task1', { shelveGuid: SHELVE_GUID });
+
+    expect(withShelve(record, shelve(7, SHELVE_GUID), 'eco@local')).toMatchObject({ shelveId: 7, shelveGuid: SHELVE_GUID });
+  });
+
   it("learns the shelve's GUID and the repository's name now", () => {
     expect(withShelve(leftRecord(2, 'br:/main/task1', { repository: 'old@local' }), shelve(2, SHELVE_GUID.toUpperCase()), 'eco@local')).toMatchObject({
       repository: 'eco@local',
