@@ -204,7 +204,8 @@ some repository uses a tracker (`tracksAnyRepository`), free when the home scree
 repository (`PlaceTracker.repository`), so the `#` issue list reads no GUID of its own. A binding made before bindings were kept by GUID holds the repository's spec
 (`BindingKeptBySpec`, held apart from the others: `IssueTrackerSetup.bindingsKeptBySpec`), counts as a tracker in use,
 and moves to its GUID the first time the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`, matched by
-`repositoryKey`). While the GUID can't be read, the window's comments read no issue, and Settings says why.
+`repositoryKey`). One whose repository was deleted never moves, and keeps every window reading its repository's GUID
+(one listing per server per session). While the GUID can't be read, the window's comments read no issue, and Settings says why.
 
 ### Where they're kept
 

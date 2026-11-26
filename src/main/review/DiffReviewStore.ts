@@ -93,7 +93,6 @@ export class DiffReviewStore {
   }
 }
 
-
 /** Moves the marks kept under `formerDiff` to `diff` while it keeps none; whether it did. */
 function movedFromFormerName(marks: RepositoryMarks, diff: string, formerDiff: string | undefined): boolean {
   if (formerDiff === undefined || marks[diff] || !marks[formerDiff]) return false;
