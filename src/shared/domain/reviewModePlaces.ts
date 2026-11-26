@@ -1,3 +1,5 @@
+import { placeId, type Place } from './place';
+
 // The places with review mode on (`AppSettings.reviewModeWorkspaces`), each by the key the main process keeps it by:
 // its workspace's or repository's GUID (`reviewModeKeyOf`), or its `placeId` when `cm` can't tell one.
 
@@ -7,6 +9,14 @@
  */
 export function needsReviewModeKey(places: readonly string[]): boolean {
   return places.length > 0;
+}
+
+/**
+ * Whether `key` is the place's for good: its GUID never changes. The place's `placeId`, kept while no GUID could be
+ * told (a `cm` that failed, a server that couldn't be listed), is asked for again.
+ */
+export function isLastingReviewModeKey(place: Place, key: string | undefined): boolean {
+  return key !== undefined && key !== placeId(place);
 }
 
 /** Whether review mode is on for the place of `key`; off while the key isn't known yet. */

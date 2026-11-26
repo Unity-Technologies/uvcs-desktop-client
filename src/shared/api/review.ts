@@ -12,9 +12,10 @@ export interface ReviewApi {
   reviewModeKey(place: Place): Promise<string>;
   /**
    * Turns review mode on or off for the place, by its key (`reviewModeKey`), changing the stored list in one write.
-   * Turning it on is taking the offer, so the hint never shows again. Resolves to the settings saved.
+   * Turning it on is taking the offer, so the hint never shows again. Resolves to the settings saved and the key used,
+   * which a window that kept another (its `placeId`, while no GUID could be told) follows.
    */
-  setReviewMode(place: Place, on: boolean): Promise<AppSettings>;
+  setReviewMode(place: Place, on: boolean): Promise<{ settings: AppSettings; key: string }>;
   marks(workspacePath: string): Promise<ReviewMark[]>;
   /** Marks the files as reviewed as they are now, replacing earlier marks. */
   mark(workspacePath: string, paths: string[]): Promise<void>;

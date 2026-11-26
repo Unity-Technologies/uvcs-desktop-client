@@ -24,7 +24,7 @@ export function createReviewService({ reviews, diffReviews, settings, headers, r
       // From the stored list, in one write: another window's change, or the move above, is never written over.
       const stored = settings.get().reviewModeWorkspaces;
       const places = movedReviewMode(stored, placeId(place), key) ?? stored;
-      return settings.update({ reviewModeWorkspaces: withReviewMode(places, key, on), ...(on && { reviewModeHintDone: true }) });
+      return { settings: settings.update({ reviewModeWorkspaces: withReviewMode(places, key, on), ...(on && { reviewModeHintDone: true }) }), key };
     },
     marks: (workspacePath) => reviews.marks(workspacePath),
     mark: (workspacePath, paths) => reviews.mark(workspacePath, paths),
