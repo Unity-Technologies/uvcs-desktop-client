@@ -1,10 +1,12 @@
-import { mkdtempSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseRepositoryGuid } from '@shared/domain/stableIds';
 import { listRepositories } from '../cm/listRepositories';
 import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
+import { DiffReviewStore } from '../review/DiffReviewStore';
 import { RepositoryGuids } from '../cm/RepositoryGuids';
 import { SettingsStore } from '../settings/SettingsStore';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
@@ -184,8 +186,10 @@ describe('guidOf', () => {
     /** The bindings moved to a GUID (`IssueTrackers.keepRepositoryByGuid`, tested with the trackers). */
     const trackersKept: string[][] = [];
     const issueTrackers = { keepRepositoryByGuid: (spec: string, guid: string) => void trackersKept.push([spec, guid]) } as unknown as IssueTrackers;
-    const context = serviceContext(fake.cm, { settings, repositoryGuids, issueTrackers });
-    return { ...fake, settings, clock, trackersKept, service: createRepositoriesService(context, profilesContext(fake.cm)) };
+    const reviewsFolder = mkdtempSync(join(tmpdir(), 'uvcs-diff-reviews-'));
+    const diffReviews = new DiffReviewStore(reviewsFolder);
+    const context = serviceContext(fake.cm, { settings, repositoryGuids, issueTrackers, diffReviews });
+    return { ...fake, settings, clock, trackersKept, diffReviews, reviewsFolder, service: createRepositoriesService(context, profilesContext(fake.cm)) };
   }
 
   it('costs no command for a repository whose server the home screen listed', async () => {
@@ -212,7 +216,9 @@ describe('guidOf', () => {
   });
 
   it('moves what was kept by the repository’s spec under its GUID, the first time it is known', async () => {
-    const { service, settings, trackersKept } = lookups(listed('game'));
+    const { service, settings, trackersKept, diffReviews, reviewsFolder } = lookups(listed('game'));
+    // The review marks of its diffs, in the file named for its spec as the app wrote it before.
+    writeFileSync(join(reviewsFolder, `${createHash('sha1').update('game@acme@cloud').digest('hex').slice(0, 16)}.json`), JSON.stringify({ 'cs:4': { usedAt: 1, marks: { 'a.ts': 10 } } }));
     settings.addWindowSettings({ repositorySettings: { 'game@acme@cloud': { explorerRulesOff: true } }, serverSettings: {}, changesetColors: { users: [] } });
     settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
 
@@ -221,6 +227,7 @@ describe('guidOf', () => {
     expect(settings.get().repositorySettings).toEqual({ [GAME]: { explorerRulesOff: true } });
     expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
     expect(trackersKept).toEqual([['game@acme@cloud', GAME]]);
+    expect(await diffReviews.marks(GAME, 'cs:4')).toEqual([{ path: 'a.ts', revisionId: 10 }]);
   });
 
   it('finds a repository renamed elsewhere by its new name, with the GUID what was kept for it is kept by', async () => {

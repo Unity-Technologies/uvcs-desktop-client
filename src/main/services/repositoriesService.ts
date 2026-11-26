@@ -8,7 +8,7 @@ import type { ProfilesContext, ServiceContext } from './ServiceContext';
  * The listings go through `RepositoryGuids`, which keeps the repositories' GUIDs that what the app keeps for a
  * repository is kept by, and follows a rename made here at once.
  */
-export function createRepositoriesService({ cm, repositoryGuids, settings, issueTrackers }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
+export function createRepositoriesService({ cm, repositoryGuids, settings, issueTrackers, diffReviews }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
   async function servers() {
     return serverProfiles(await profiles.read());
   }
@@ -25,7 +25,7 @@ export function createRepositoriesService({ cm, repositoryGuids, settings, issue
     const parts = repositorySpecParts(repositorySpec);
     const guid = parts && (await repositoryGuids.guidOf(parts.server, parts.name));
     if (!guid) return null;
-    keepByGuid(repositorySpec, guid);
+    await keepByGuid(repositorySpec, guid);
     return guid;
   }
 
@@ -33,10 +33,15 @@ export function createRepositoriesService({ cm, repositoryGuids, settings, issue
     return repositoryGuids.specNow(repositorySpec, guid);
   }
 
-  /** What the app kept for the repository by its spec, before it kept it by its GUID, moves under its GUID. */
-  function keepByGuid(repositorySpec: string, guid: RepositoryGuid): void {
+  /**
+   * What the app kept for the repository by its spec, before it kept it by its GUID, moves under its GUID: its
+   * settings, recent comments, issue tracker and review marks. Done before the GUID is answered, so nothing reads
+   * by the GUID before it holds them.
+   */
+  async function keepByGuid(repositorySpec: string, guid: RepositoryGuid): Promise<void> {
     settings.keepRepositoryByGuid(repositorySpec, guid);
     issueTrackers.keepRepositoryByGuid(repositorySpec, guid);
+    await diffReviews.keepRepositoryByGuid(repositorySpec, guid);
   }
 
   async function create(server: string, name: string): Promise<string> {
