@@ -215,14 +215,34 @@ describe('RepositoryGuids', () => {
       expect([listings(), idReads()]).toEqual([[expect.stringMatching(/^repository list acme@cloud/)], [`ls / --tree=cs:0@game@acme@cloud --format={repid}\u001e`]]);
     });
 
-    it('remembers the old name for the session, so it costs nothing again, even once the listing is old', async () => {
-      const { guids, lines, clock } = guidsWithIds({ 'game@acme@cloud': 1 }, listed(['racer', GAME]));
+    it('remembers the old name for the session, so it reads the id only once, trusting it again after a listing that shows no repository took it', async () => {
+      const { guids, listings, idReads, clock } = guidsWithIds({ 'game@acme@cloud': 1 }, listed(['racer', GAME]));
       await guids.guidOf('acme@cloud', 'game');
+      expect(guids.knownGuidOf('acme@cloud', 'game')).toBe(GAME);
       clock.now += 3_600_000;
 
+      expect(guids.knownGuidOf('acme@cloud', 'game')).toBeUndefined();
       expect(await guids.guidOf('acme@cloud', 'Game')).toBe(GAME);
-      expect(guids.knownGuidOf('acme@cloud', 'game')).toBe(GAME);
-      expect(lines()).toHaveLength(2);
+      expect([listings(), idReads()].map((lines) => lines.length)).toEqual([2, 1]);
+    });
+
+    it('gives the old name of a repository renamed here to a repository created here under it', async () => {
+      const { guids } = guidsOf(listed(['game', GAME]), listed(['racer', GAME], ['game', TOOLS]));
+      await guids.list('acme@cloud');
+      guids.renamed('acme@cloud', 'game', 'racer');
+
+      guids.added('acme@cloud');
+
+      expect(guids.knownGuidOf('acme@cloud', 'game')).toBeUndefined();
+      expect(await guids.guidOf('acme@cloud', 'game')).toBe(TOOLS);
+    });
+
+    it('gives an old name to the repository that took it elsewhere, once the listing is old', async () => {
+      const { guids, clock } = guidsWithIds({ 'game@acme@cloud': 1 }, listed(['racer', GAME]), listed(['racer', GAME], ['game', TOOLS]));
+      await guids.guidOf('acme@cloud', 'game');
+      clock.now += 61_000;
+
+      expect(await guids.guidOf('acme@cloud', 'game')).toBe(TOOLS);
     });
 
     it('reads the id once for lookups asking at once', async () => {
