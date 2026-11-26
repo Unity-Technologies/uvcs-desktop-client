@@ -115,6 +115,24 @@ describe('shelveOf', () => {
   });
 });
 
+describe('shelveOf, for a record stored before shelve GUIDs, whose repository was renamed since', () => {
+  const stored = leftRecord(2, 'br:/main/task1', { repository: 'old@local' });
+
+  it('finds the shelve of its number whose automatic comment names where the changes were left', () => {
+    const leftThere = { ...shelve(2, SHELVE_GUID), comment: 'Automatic shelve created during switch operation (from br:37)' };
+
+    expect(shelveOf(stored, [leftThere], 'eco@local')).toBe(leftThere);
+  });
+
+  it('takes no shelve whose comment names another place, nor any when the record knows no place', () => {
+    const elsewhere = { ...shelve(2, SHELVE_GUID), comment: 'Automatic shelve created during switch operation (from br:4)' };
+    const unknownPlace = leftRecord(2, 'br:/main/task1', { repository: 'old@local', source: { spec: 'br:/main/task1', name: '/main/task1', objectRef: '' } });
+
+    expect(shelveOf(stored, [elsewhere], 'eco@local')).toBeUndefined();
+    expect(shelveOf(unknownPlace, [{ ...shelve(2, SHELVE_GUID), comment: 'Automatic shelve created during switch operation (from )' }], 'eco@local')).toBeUndefined();
+  });
+});
+
 describe('withShelve', () => {
   it('takes the number of the shelve found by its GUID', () => {
     const record = leftRecord(2, 'br:/main/task1', { shelveGuid: SHELVE_GUID });
