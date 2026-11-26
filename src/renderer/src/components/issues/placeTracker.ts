@@ -2,10 +2,11 @@ import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueT
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { bindingOf, issueReferenceReader, type IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
 
-/** A place's tracker: how its comments read issues, and the connection that reads them. */
+/** A place's tracker: how its comments read issues, the connection that reads them, and the repository it's bound to. */
 export interface PlaceTracker {
   reader: IssueReferenceReader;
   connection: TrackerConnection;
+  repository: RepositoryGuid;
 }
 
 /**
@@ -35,5 +36,5 @@ function buildPlaceTracker(setup: IssueTrackerSetup, repository: RepositoryGuid)
   const binding = bindingOf(setup.bindings, repository);
   const connection = binding && setup.connections.find((kept) => kept.id === binding.connectionId);
   if (!binding || !connection) return null;
-  return { reader: issueReferenceReader(binding, connection), connection };
+  return { reader: issueReferenceReader(binding, connection), connection, repository };
 }

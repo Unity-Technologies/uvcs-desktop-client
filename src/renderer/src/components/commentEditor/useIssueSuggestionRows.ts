@@ -5,7 +5,6 @@ import { needsSignIn } from '@shared/issueTrackers/connections';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../api/client';
 import { SERVER_SEARCH_DELAY_MS } from '../../app/commands/usePaletteServerSearch';
-import { usePlaceRepositoryGuid } from '../../app/workspace/repositoryGuid';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { issueKeys, issueQuery } from '../issues/issueQueries';
 import { usePlaceTracker } from '../issues/useIssueTrackers';
@@ -38,8 +37,9 @@ export function issueSearchQuery(repository: RepositoryGuid | undefined, search:
  * picked issue to its chip, so it shows read at once.
  */
 export function useIssueSuggestionRows(typed: string | null): { rows: SuggestionRow[]; picked: (suggestion: Suggestion) => void } {
+  // The tracker names its repository: a place with none reads no GUID here (`tracksAnyRepository`).
   const tracker = usePlaceTracker();
-  const repository = usePlaceRepositoryGuid();
+  const repository = tracker?.repository;
   const queryClient = useQueryClient();
   const settled = useDebouncedValue(typed ?? '', SERVER_SEARCH_DELAY_MS);
   const open = typed !== null && tracker !== null && repository !== undefined;
