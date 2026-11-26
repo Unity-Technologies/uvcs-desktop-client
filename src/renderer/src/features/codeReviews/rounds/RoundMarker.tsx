@@ -1,10 +1,10 @@
-import { ChevronRight } from 'lucide-react';
 import { FoldedComment } from '../../../components/FoldedComment';
 import { ReferenceChip } from '../../../components/comments/ReferenceChip';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import { REVIEW_STATUS_ICONS } from '../reviewStatusIcons';
+import { FoldableLine } from '../conversation/FoldableLine';
 import type { ReviewRound } from './reviewRounds';
-import { roundLineComment } from './roundFolds';
+import { roundLineComment, roundVerdictOf } from './roundFolds';
 import { roundText } from './roundText';
 import conversation from '../conversation/ReviewConversation.module.css';
 import styles from './ReviewRounds.module.css';
@@ -13,11 +13,11 @@ import styles from './ReviewRounds.module.css';
 const ROUND_COMMENT_LINES = 4;
 
 /**
- * Where a closed round starts, as one more event on the timeline: its mark on the rail is the status that closed it
- * (Reviewed's thumbs-up, Rework required's flag, in their colors), then what the round was. Folded, what the reviewer
- * said with that status shows under the line, with the changeset it was given at, so the verdict and its words read at a
- * glance; a click shows what the round held under the line, the status's own event at its end (which then names the
- * changeset), and folds it back.
+ * Where a closed round starts, as one more event on the timeline. Folded, it is the verdict: its mark on the rail is the
+ * status that closed it (Reviewed's thumbs-up, Rework required's flag, in their colors), and what the reviewer said with
+ * it shows under the line, with the changeset it was given at and when. A click anywhere on the line unfolds what the
+ * round held under it, the line then a heading (whose review, what it settled) and the status's own event at its end
+ * the verdict, and folds it back.
  */
 export function RoundMarker({
   round,
@@ -33,20 +33,22 @@ export function RoundMarker({
   open: boolean;
   onToggle: () => void;
 }) {
+  // Folded, the line is the verdict: its status's mark in its color, and its time. Unfolded, it heads what the round
+  // held: the same mark in gray and no time, as the status's own event at its end shows them once in color (both in
+  // color read as a second review; another picture, as noise).
   const Mark = REVIEW_STATUS_ICONS[round.status];
   const { bold, rest, changeset, counts, label, dotBeforeTime } = roundText(round, user, roundCount, open);
   const comment = roundLineComment(round, open);
+  const verdict = roundVerdictOf(round, open);
   return (
-    <div className={conversation.event} data-icon={round.status}>
+    <div className={conversation.event} data-icon={verdict.colorOf}>
       <span className={conversation.eventIcon}>
         <Mark size={14} aria-hidden />
       </span>
       <div className={conversation.eventBody}>
-        {/* The whole line folds the round: its button lies over it, under the changeset and the time, which have their
-            own card and tooltip (a link can't sit inside a button). The button carries the line's words; the words
-            drawn are for the eye, and say themselves whole in the line's tooltip when cut off. */}
-        <div className={styles.roundLine} data-tip={label} data-tip-overflow="">
-          <button type="button" className={styles.roundToggle} aria-expanded={open} aria-label={label} onClick={onToggle} />
+        {/* The chevron carries the line's words; the words drawn are for the eye, and say themselves whole in the
+            line's tooltip when cut off. */}
+        <FoldableLine className={styles.roundLine} open={open} onToggle={onToggle} label={label} tip={label}>
           <span className={styles.roundText} aria-hidden>
             <b>{bold}</b>
             {rest}
@@ -66,9 +68,8 @@ export function RoundMarker({
               ·
             </span>
           )}
-          <RelativeTime date={round.date} />
-          <ChevronRight size={14} className={styles.chevron} aria-hidden />
-        </div>
+          {verdict.date !== undefined && <RelativeTime date={verdict.date} />}
+        </FoldableLine>
         {comment && (
           <div className={`${conversation.eventComment} ${conversation.markdown}`}>
             <FoldedComment titleClassName="" description={comment} titleLines={1} descriptionLines={ROUND_COMMENT_LINES} />

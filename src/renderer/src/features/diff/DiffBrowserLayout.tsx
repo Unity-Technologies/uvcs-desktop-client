@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
-import { SplitPane } from '../../ui/SplitPane';
+import { RememberedSplitPane } from '../../components/RememberedSplitPane';
 import { Stowable } from '../../ui/Stowable';
 import { useKeptElement } from '../../lib/useKeptElement';
 import styles from './DiffBrowserLayout.module.css';
+import { DIFF_FILES_WIDTH, diffFilesWidthKey } from './diffFilesWidth';
 
 /** Where a `DiffBrowser` draws its list of files and its diff. */
 export interface DiffBrowserSlots {
@@ -24,18 +25,17 @@ interface DiffBrowserLayoutProps {
    * window isn't the dialog's to lay out (its files would also hide while the page's diff is expanded behind it).
    */
   expandable?: boolean;
+  /** Shown in a dialog: its files keep a width of their own, a dialog being narrower than a page (`diffFilesWidthKey`). */
+  inDialog?: boolean;
 }
 
 /**
  * The files of a diff in a column beside the diff of one, laid out apart from what draws them: a `DiffBrowser` is
  * mounted again for each target (each changeset of a branch, stepping through them), while this layout, the widths
- * dragged and what's above the files stay, so the changesets keep their focus, scroll and filter as they're stepped.
+ * dragged (remembered: `diffFilesWidthKey`) and what's above the files stay, so the changesets keep their focus, scroll and filter as they're stepped.
  * Only the diff's column holds what changes height from one target to the next (`aboveDiff`): the lists never move.
  */
-/** The list of files' width beside a diff, until it's dragged. */
-export const FILES_WIDTH = 340;
-
-export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable = true }: DiffBrowserLayoutProps) {
+export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable = true, inDialog = false }: DiffBrowserLayoutProps) {
   const [files, setFiles] = useKeptElement<HTMLElement>();
   const [diff, setDiff] = useKeptElement<HTMLElement>();
   const diffExpanded = useDiffExpanded() && expandable;
@@ -44,10 +44,9 @@ export function DiffBrowserLayout({ aboveFiles, aboveDiff, children, expandable 
 
   return (
     <ExpandableDiffContext.Provider value={expandable}>
-      <SplitPane
-        initialSize={FILES_WIDTH}
-        minSize={220}
-        maxSize={640}
+      <RememberedSplitPane
+        widthKey={diffFilesWidthKey(inDialog)}
+        widthLimits={DIFF_FILES_WIDTH}
         // Expanded, the files stay mounted out of sight: stepping past the last change still goes on to the next file.
         stowed={diffExpanded ? 'first' : undefined}
         // A list above the files that comes or goes (a branch read again gains its second changeset) moves the files'

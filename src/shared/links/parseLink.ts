@@ -5,11 +5,12 @@ import { specLink } from './specLink';
 
 /**
  * What reading a link found: the link, or why it can't be opened. `unknown` is a link this version can read but names
- * something it doesn't know (a page a newer version added): the app may need an update.
+ * something it doesn't know: a page a newer version added, or a typo. Which one can't be told, so it carries no detail
+ * and its dialog only offers to check for updates (`linkProblemWords`).
  */
 export type LinkReading = { link: Link } | { problem: LinkProblem };
 
-export type LinkProblem = { kind: 'notALink' } | { kind: 'malformed' | 'unknown'; detail: string };
+export type LinkProblem = { kind: 'notALink' | 'unknown' } | { kind: 'malformed'; detail: string };
 
 /** Longer than any link a person or an agent writes: what is past it is not a link. */
 export const MAX_LINK_LENGTH = 8192;
@@ -77,7 +78,7 @@ function readRepositoryLink(body: string): LinkReading {
   // The older links wrote a `/` in a repository's name as it is (`repos/game/art/changesets/…`): the name runs to the
   // first word a link reads after it.
   const nameEnd = segments.findIndex((segment, index) => index > 1 && (OBJECT_WORDS.has(segment) || segment === '-' || segment === 'path'));
-  if (nameEnd === -1 && segments.length > 2) return unknown(`It names "${decodeSegment(segments[2]!) ?? segments[2]}" in the repository.`);
+  if (nameEnd === -1 && segments.length > 2) return UNKNOWN;
   // A `/` in a repository's name is written `%2F` (a nested repository): it's the one part a `/` may decode in.
   const nameSegments = decodedAll(segments.slice(1, nameEnd === -1 ? undefined : nameEnd), { slashes: true });
   if (!nameSegments) return malformed('Its repository name is not valid.');
@@ -88,7 +89,7 @@ function readRepositoryLink(body: string): LinkReading {
 /** `…/projects/<project>`: a Unity organization's repositories in that project. */
 function readProjectLink(server: string, segments: readonly string[]): LinkReading {
   if (segments.length === 0) return malformed('It names no project.');
-  if (segments.length > 1) return unknown(`It names "${decodeSegment(segments[1]!) ?? segments[1]}" in the project.`);
+  if (segments.length > 1) return UNKNOWN;
   const [project] = decodedAll(segments, { slashes: true }) ?? [];
   return project ? { link: { kind: 'server', server, project } } : malformed('Its project name is not valid.');
 }
@@ -169,7 +170,7 @@ function readAfterObject(link: RepositoryLink, segments: readonly string[]): Lin
   if (rest.length === 0 && (word === 'diff' || (link.object?.kind === 'codeReview' && /^(?:reviewchanges|conversation)$/i.test(word)))) return { link };
   // The older links' `/branches/<branch>/path/<path>`, `/changesets/<n>/path/<path>`: the item as it was there.
   if (word === 'path') return withPathOf(rest, (path) => ({ link: { ...link, page: { kind: 'browse', path } } }));
-  if (word !== '-') return unknown(`It names "${decodeSegment(word) ?? word}" after the ${objectNoun(link.object!)}.`);
+  if (word !== '-') return UNKNOWN;
   return withPage(link, readObjectPage(rest, link.object!));
 }
 
@@ -182,12 +183,12 @@ function readPlacePage(segments: readonly string[], place: 'repository' | 'works
   const path = pathIn(rest);
   if (path === null) return malformed('Its path is not valid.');
   if (isLinkView(word)) {
-    if (rest.length > 0 && word !== 'files' && word !== 'changes') return unknown(`It names an item in ${word}.`);
+    if (rest.length > 0 && word !== 'files' && word !== 'changes') return UNKNOWN;
     return { page: rest.length > 0 ? { kind: 'view', view: word, path } : { kind: 'view', view: word } };
   }
   if (word === 'browse' && place === 'repository') return { page: { kind: 'browse', path } };
   if ((word === 'history' || word === 'annotate') && rest.length > 0) return { page: { kind: word, path } };
-  return unknown(`It names a page "${decodeSegment(word) ?? word}".`);
+  return UNKNOWN;
 }
 
 /** Which pages each object has (docs/features/deep-links.md): a shelve and a range only their diff's files, a review its comments too. */
@@ -204,11 +205,11 @@ const OBJECT_PAGES: Record<LinkObject['kind'], ReadonlySet<string>> = {
 function readObjectPage(segments: readonly string[], object: LinkObject): PageReading {
   const [word = '', ...rest] = segments;
   if (!word) return malformed('It names no page after "-".');
-  if (!OBJECT_PAGES[object.kind].has(word)) return unknown(`It names a page "${decodeSegment(word) ?? word}" of a ${objectNoun(object)}.`);
+  if (!OBJECT_PAGES[object.kind].has(word)) return UNKNOWN;
   if (word === 'comments') return readReviewComment(rest);
   const path = pathIn(rest);
   if (path === null) return malformed('Its path is not valid.');
-  if (word === 'branch-explorer') return rest.length === 0 ? { page: { kind: 'view', view: 'branch-explorer' } } : unknown('It names an item in the Branch Explorer.');
+  if (word === 'branch-explorer') return rest.length === 0 ? { page: { kind: 'view', view: 'branch-explorer' } } : UNKNOWN;
   if (word === 'browse') return { page: { kind: 'browse', path } };
   if (rest.length === 0) return malformed(`Its ${word} page names no file.`);
   return { page: word === 'files' ? { kind: 'diffFile', path } : { kind: word as 'history' | 'annotate', path } };
@@ -280,24 +281,9 @@ function isLinkView(word: string): word is LinkView {
   return (LINK_VIEWS as readonly string[]).includes(word);
 }
 
-function objectNoun(object: LinkObject): string {
-  switch (object.kind) {
-    case 'changeset':
-    case 'changesetRange':
-      return 'changeset';
-    case 'labelRange':
-      return 'label';
-    case 'codeReview':
-      return 'code review';
-    default:
-      return object.kind;
-  }
-}
-
 function malformed(detail: string): { problem: LinkProblem } {
   return { problem: { kind: 'malformed', detail } };
 }
 
-function unknown(detail: string): { problem: LinkProblem } {
-  return { problem: { kind: 'unknown', detail } };
-}
+/** A link naming what this version doesn't know (`LinkProblem`). */
+const UNKNOWN: Readonly<{ problem: LinkProblem }> = { problem: { kind: 'unknown' } };

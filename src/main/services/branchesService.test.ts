@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
+import { NO_BRANCH_NAME_READS } from '../cm/testing/branchNameReads';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_BRANCHES } from '../cm/foundObjects';
 import { branchesFound, formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
@@ -40,9 +41,7 @@ const OTHER_TASK1 = { ...branchRecord(40, '/main/fix/task1', '2026-09-28T10:00:0
 
 function branches(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  const branchNames = new BranchNamesCache(async () => {
-    throw new Error('The list read answers every name.');
-  });
+  const branchNames = new BranchNamesCache(NO_BRANCH_NAME_READS);
   return { ...fake, branchNames, service: createBranchesService(serviceContext(fake.cm), { branchNames }) };
 }
 
@@ -132,30 +131,39 @@ describe('branch list', () => {
 });
 
 describe('one branch by name', () => {
-  it('finds a branch by its last name part among visible and hidden ones, and picks the one with the full name', async () => {
-    const { service, lines } = branches({
+  it('finds a visible branch by its last name part with one quick query, and picks the one with the full name', async () => {
+    const { service, commands } = branches({
       'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1, OTHER_TASK1), ''),
     });
 
     const branch = await service.get(IN_WORKSPACE, '/main/fix/task1');
 
-    expect(lines()).toEqual([
-      foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc"),
-      foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'true' order by date desc"),
+    expect(commands).toMatchObject([
+      { via: 'query', args: findQueryArgs(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc"), readsRecords: true },
     ]);
     expect(branch).toMatchObject({ id: 40, name: '/main/fix/task1' });
   });
 
-  it('finds a hidden branch, flagged as such', async () => {
-    const { service } = branches({ 'find branch': visibleOrHidden('', recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
+  it('looks among hidden branches only once no visible one has the full name, and flags the one found', async () => {
+    const { service, lines } = branches({
+      'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1), recordsOutput(FOUND_BRANCHES, { ...OLD_HIDDEN, name: '/main/fix/task1' })),
+    });
 
-    expect(await service.get(IN_WORKSPACE, '/main/old')).toMatchObject({ id: 21, isHidden: true });
+    expect(await service.get(IN_WORKSPACE, '/main/fix/task1')).toMatchObject({ id: 21, isHidden: true });
+    expect(lines()).toEqual([
+      foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc"),
+      foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'true' order by date desc"),
+    ]);
   });
 
-  it("answers null for a branch that doesn't exist", async () => {
-    const { service } = branches({ 'find branch': '' });
+  it("answers null for a branch that doesn't exist, once both the visible and the hidden ones were looked at", async () => {
+    const { service, lines } = branches({ 'find branch': '' });
 
     expect(await service.get(IN_WORKSPACE, '/main/gone')).toBeNull();
+    expect(lines()).toEqual([
+      foundLine(FOUND_BRANCHES, "where name = 'gone' and hidden = 'false' order by date desc"),
+      foundLine(FOUND_BRANCHES, "where name = 'gone' and hidden = 'true' order by date desc"),
+    ]);
   });
 
   it('looks a name holding a quote up with a wildcard in its place, and returns only the branch of that very name', async () => {
@@ -283,7 +291,7 @@ describe('recent branches', () => {
     const fake = fakeCmClient({ getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID]) });
     const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-settings-')), 'settings.json'));
     const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
-    const service = createBranchesService(serviceContext(fake.cm, { settings, headers }), { branchNames: new BranchNamesCache(async () => []) });
+    const service = createBranchesService(serviceContext(fake.cm, { settings, headers }), { branchNames: new BranchNamesCache(NO_BRANCH_NAME_READS) });
     return { ...fake, settings, headers, service };
   }
 

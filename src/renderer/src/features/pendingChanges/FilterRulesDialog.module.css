@@ -1,0 +1,6 @@
+/* Rules are paths and patterns: a monospaced font shows each character, and the field scrolls past twelve lines. */
+.rules {
+  font-family: var(--font-mono);
+  white-space: pre;
+  overflow: auto;
+}

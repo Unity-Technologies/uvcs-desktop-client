@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { updateCardOf } from './updateCardStatus';
+import { installedCmNoteOf, updateCardOf, waitingCardOf } from './updateCardStatus';
 
 describe('updateCardOf', () => {
   it('shows an update downloading, even one no one asked for', () => {
@@ -15,7 +15,7 @@ describe('updateCardOf', () => {
   });
 
   it('keeps showing an update waiting for an operation to install, even a version put off', () => {
-    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart' } as const;
+    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'operation' } as const;
 
     expect(updateCardOf(waiting, '1.2.0', false)).toEqual(waiting);
   });
@@ -31,5 +31,40 @@ describe('updateCardOf', () => {
     expect(updateCardOf(ready, null, true)).toBeNull();
     expect(updateCardOf({ state: 'downloading', version: '1.2.0', percent: 30 }, null, true)).toBeNull();
     expect(updateCardOf(ready, null, false)).toBe(ready);
+  });
+});
+
+describe('installedCmNoteOf', () => {
+  it('says nothing when the update needs nothing of the installed one', () => {
+    expect(installedCmNoteOf(undefined)).toBeNull();
+  });
+
+  it('says the update updates the installed one too, naming both versions', () => {
+    expect(installedCmNoteOf({ installedVersion: '11.0.16.10659', neededVersion: '11.0.16.10700', by: 'installer' })).toEqual({
+      text: 'This update also updates the Unity Version Control installed on this computer.',
+      versions: 'Installed: 11.0.16.10659 · Needed: 11.0.16.10700 or later',
+    });
+  });
+
+  it('on Linux, says the command comes after the restart', () => {
+    expect(installedCmNoteOf({ installedVersion: '11.0.16.10659', neededVersion: '11.0.16.10700', by: 'command' })?.text).toBe(
+      'After the restart, the app shows the command that updates the Unity Version Control installed on this computer.',
+    );
+  });
+});
+
+describe('waitingCardOf', () => {
+  it('waits for an operation to finish', () => {
+    expect(waitingCardOf({ state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'operation' })).toEqual({
+      title: 'Unity Version Control 1.2.0 installs once the operation finishes.',
+      text: null,
+    });
+  });
+
+  it('waits for the installed one’s installer, which may ask for permission, then restarts', () => {
+    expect(waitingCardOf({ state: 'waitingToInstall', version: '1.2.0', install: 'restart', waitingFor: 'installedCm' })).toEqual({
+      title: 'Updating the Unity Version Control installed on this computer…',
+      text: 'Your computer may ask for permission. Then the app restarts into version 1.2.0.',
+    });
   });
 });

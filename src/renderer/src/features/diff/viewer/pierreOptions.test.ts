@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PIERRE_SURFACE_CSS, pierreDiffOptions, pierreSnippetDiffOptions, WORD_MARKS } from './pierreOptions';
+import { CARET_HELD_ATTRIBUTE, PIERRE_SURFACE_CSS, pierreDiffOptions, pierreSnippetDiffOptions, SNIPPET_FOLDS_OVER, WORD_MARKS } from './pierreOptions';
 
 const css = pierreDiffOptions({ theme: 'light', layout: 'split', collapseUnchanged: true, wrapLines: false }).unsafeCSS ?? '';
 
@@ -10,6 +10,22 @@ describe('PIERRE_SURFACE_CSS: how code reads in every diff', () => {
 
   it('leaves the line height to Pierre: its virtualizer counts on 20px lines', () => {
     expect(PIERRE_SURFACE_CSS).not.toContain('--diffs-line-height');
+  });
+
+  it("keeps the editor's caret drawn, still, while the code's menu holds the focus", () => {
+    const held = PIERRE_SURFACE_CSS.slice(PIERRE_SURFACE_CSS.indexOf(`:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{`));
+    expect(held).toMatch(/^[^}]*visibility:visible/);
+    expect(held).toMatch(/^[^}]*animation:none/);
+  });
+
+  it("holds the caret with important rules: Pierre layers the CSS it's given (`@layer unsafe`), and not its own that hides it", () => {
+    const held = PIERRE_SURFACE_CSS.slice(PIERRE_SURFACE_CSS.indexOf(`:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{`));
+    expect(held).toMatch(/^[^}]*visibility:visible\s*!important/);
+    expect(held).toMatch(/^[^}]*animation:none\s*!important/);
+  });
+
+  it("draws the editor's caret in its own color (`--editor-caret`), not the code theme's blue", () => {
+    expect(PIERRE_SURFACE_CSS).toContain('--diffs-bg-caret-override:var(--editor-caret)');
   });
 });
 
@@ -46,8 +62,8 @@ describe('pierreSnippetDiffOptions: a few lines of diff in a comment', () => {
     expect(options).toMatchObject({ theme: 'pierre-dark', themeType: 'dark', diffStyle: 'unified', diffIndicators: 'bars', ...WORD_MARKS });
   });
 
-  it('shows every line, numbered, with no header, scrolling long lines sideways', () => {
-    expect(options).toMatchObject({ expandUnchanged: true, disableFileHeader: true, overflow: 'scroll' });
+  it('shows every line but a long run of unchanged ones, numbered, with no header, scrolling long lines sideways', () => {
+    expect(options).toMatchObject({ expandUnchanged: false, collapsedContextThreshold: SNIPPET_FOLDS_OVER, disableFileHeader: true, overflow: 'scroll' });
     expect(options.disableLineNumbers).toBeFalsy();
   });
 

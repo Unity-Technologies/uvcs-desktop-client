@@ -35,4 +35,10 @@ describe('readTipAttributes', () => {
   it('needs both paths for a move', () => {
     expect(readTipAttributes(element({ 'data-tip': '', 'data-tip-move-from': 'src/lib/A.cs' }))).toBeNull();
   });
+
+  it('opens on top of its element only when it asks for above', () => {
+    expect(readTipAttributes(element({ 'data-tip': 'Pin', 'data-tip-side': 'above' }))?.side).toBe('above');
+    expect(readTipAttributes(element({ 'data-tip': 'Pin' }))).not.toHaveProperty('side');
+    expect(readTipAttributes(element({ 'data-tip': 'Pin', 'data-tip-side': 'left' }))).not.toHaveProperty('side');
+  });
 });

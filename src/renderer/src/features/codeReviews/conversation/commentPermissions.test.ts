@@ -31,27 +31,15 @@ describe('canEditStatusComment', () => {
 });
 
 describe('canDeleteComment', () => {
-  it("lets the author delete a thread's first comment only while nobody replied", () => {
-    const [alone, answered] = threadsOf([comment(1), comment(2), comment(3, { parentId: 2, author: 'bob@acme.com' })]);
-
-    expect(canDeleteComment(alone!.root, alone!, 'ana@acme.com')).toBe(true);
-    expect(canDeleteComment(answered!.root, answered!, 'ana@acme.com')).toBe(false);
-  });
-
-  it('keeps a reply that someone answered from being deleted, wherever it is in the thread', () => {
-    const [thread] = threadsOf([comment(1), comment(2, { parentId: 1 }), comment(3, { parentId: 2, author: 'bob@acme.com' })]);
-    const [answered, answer] = thread!.replies;
-
-    expect(canDeleteComment(answered!, thread!, 'ana@acme.com')).toBe(false);
-    expect(canDeleteComment(answer!, thread!, 'bob@acme.com')).toBe(true);
-  });
-
-  it('lets the author delete a reply, and nobody else', () => {
+  it('lets only the author delete a comment, answered or not: its replies go with it (`commentsDeletedWith`)', () => {
     const [thread] = threadsOf([comment(1), comment(2, { parentId: 1, author: 'bob@acme.com' })]);
     const [answer] = thread!.replies;
 
-    expect(canDeleteComment(answer!, thread!, 'bob@acme.com')).toBe(true);
-    expect(canDeleteComment(answer!, thread!, 'ana@acme.com')).toBe(false);
+    expect(canDeleteComment(thread!.root, 'Ana@Acme.com')).toBe(true);
+    expect(canDeleteComment(thread!.root, 'bob@acme.com')).toBe(false);
+    expect(canDeleteComment(answer!, 'bob@acme.com')).toBe(true);
+    expect(canDeleteComment(answer!, 'ana@acme.com')).toBe(false);
+    expect(canDeleteComment(answer!, undefined)).toBe(false);
   });
 });
 

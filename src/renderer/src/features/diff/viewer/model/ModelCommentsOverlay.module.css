@@ -1,0 +1,52 @@
+/* Over the canvas, under the stage's floating controls and pills. Only the bubbles and the card take the pointer: the
+   model under it turns and pans. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* One per version, over its pane alone (`clipTo`): in Split a bubble near the divider is cut there, never drawn over
+   the other version. */
+.sideLayer {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Off its pane or behind the camera: hidden at once. */
+.bubble[data-off-screen] {
+  visibility: hidden;
+}
+
+/* Fading behind the model and back eases in, rather than snapping once the view settles (`SETTLE_MS`). Only opacity
+   and scale move: the position (`translate`) follows the model every frame and must never lag. */
+.bubble {
+  /* Scaled about its tip, so the tip stays on the point while it shrinks or grows back. */
+  transform-origin: 0 100%;
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    scale var(--duration-normal) var(--ease-out);
+}
+
+/* Something else is drawn in front of its point: faded and smaller, still there to click, its tip where it was. */
+.bubble[data-behind]:not(:hover, :focus-visible, [data-selected], [data-writing]) {
+  opacity: 0.45;
+  scale: 0.75;
+}
+
+/* The opened pin's card, over everything on the stage but its controls' column, which it keeps clear of
+   (`pinCardPlacement`): the swipe's divider, the take bar and the changes panel would otherwise draw over it. */
+.cardLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cardLayer > [data-off-screen] {
+  visibility: hidden;
+}

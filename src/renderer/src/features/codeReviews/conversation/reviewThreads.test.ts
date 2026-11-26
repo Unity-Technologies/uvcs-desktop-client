@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewComment, ReviewEvent } from '@shared/domain/reviewConversation';
 import { foldReviewerChanges, openThreads, threadsOf, timelineOf, type TimelineItem } from './reviewThreads';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00+01:00`, text: `Comment ${id}`, kind: 'general', anchor: { kind: 'review' }, ...fields };

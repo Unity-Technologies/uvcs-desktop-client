@@ -18,12 +18,18 @@ type QueryKey = readonly unknown[];
 
 /**
  * How a local view (`LOCAL_AREAS`) is kept fresh: while the watcher sees every change and reports it (auto refresh
- * on), window focus doesn't re-read it; `.plastic` rewrites refresh the workspace info even without auto refresh, so
- * views mounting don't need to read it again.
+ * on), window focus doesn't re-read it; otherwise (a partial or broken watch, auto refresh off) coming back to the
+ * window always re-reads what shows, however fresh, as an edit the watcher didn't see may be waiting. `.plastic`
+ * rewrites refresh the workspace info even without auto refresh, so views mounting don't need to read it again. Other
+ * local views keep the client's `staleTime` (30 s); never set it to `undefined`, which TanStack merges over the default
+ * as no staleness.
  */
 export function localQueryDefaults(area: (typeof LOCAL_AREAS)[number], autoRefresh: boolean, coverage: WatchCoverage) {
   const watched = autoRefresh && coverage === 'full';
-  return { refetchOnWindowFocus: !watched, staleTime: area === 'info' && coverage === 'full' ? Infinity : undefined };
+  return {
+    refetchOnWindowFocus: watched ? false : ('always' as const),
+    ...(area === 'info' && coverage === 'full' ? { staleTime: Infinity } : {}),
+  };
 }
 
 /** The queries of one workspace that `affected` picks, as refresh filters. */

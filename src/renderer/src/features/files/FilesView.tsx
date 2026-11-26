@@ -27,7 +27,7 @@ import { useCutItems } from './cutItemsStore';
 import { directoryListingQuery } from './directoryListing';
 import { CutHint } from './CutHint';
 import { openItem } from './fileOperations';
-import { useFilesViewStore, useRevealRequest } from './filesViewStore';
+import { FILES_DETAILS_KEY, useFilesViewStore, useRevealRequest } from './filesViewStore';
 import { FileTreeSkeleton, FileTreeTable } from './FileTreeTable';
 import { FILE_TREE_WIDTH } from './fileTreeWidth';
 import { ancestorsOf, buildFileTreeRows } from './fileTreeRows';
@@ -102,13 +102,16 @@ export function FilesView() {
   const header = (
     <ViewHeader
       title="Files"
-      detailsToggle={<DetailsToggleButton detailsKey="filesTree" />}
+      detailsToggle={<DetailsToggleButton detailsKey={FILES_DETAILS_KEY} />}
       subtitle={workspacePath}
       actions={
         <>
           <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={() => openGoToFile()} />
           {showsChooseDownloadsButton(workspace?.kind) && (
-            <IconButton icon={<FolderDown size={14} />} label="Choose what to download…" onClick={() => openChooseDownloads(workspacePath)} />
+            // Labeled, not an icon: in a partial workspace choosing what to download is how its files get there.
+            <Button icon={<FolderDown size={14} />} onClick={() => openChooseDownloads(workspacePath)}>
+              Choose what to download…
+            </Button>
           )}
           <IconButton icon={<RefreshCw size={14} />} label="Refresh" shortcut={hotkey('refresh')} onClick={() => void invalidateWorkspace(workspacePath)} />
         </>
@@ -125,7 +128,7 @@ export function FilesView() {
     <>
       <Stowable stowed={diffExpanded}>{header}</Stowable>
       <ListWithDetails
-        detailsKey="filesTree"
+        detailsKey={FILES_DETAILS_KEY}
         widthLimits={FILE_TREE_WIDTH}
         sized="list"
         diffInDetails

@@ -20,7 +20,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { branchResult, changesetResult, codeReviewResult, labelResult, shelveResult, type ResultContext } from '../app/commands/objectResults';
-import { deletedRepositoryMenu, missingWorkspaceMenu, repositoryMenu, workspaceMenu } from '../app/home/homeMenus';
+import { deletedRepositoryMenu, missingWorkspaceMenu, organizationMenu, repositoryMenu, workspaceMenu } from '../app/home/homeMenus';
 import { currentWorkspaceMenu } from '../app/shell/currentWorkspaceMenu';
 import { attributeTypeMenu } from '../features/attributes/attributeTypeMenu';
 import { graphMenu } from '../features/branchExplorer/graphMenu';
@@ -245,6 +245,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   repository: () => repositoryMenu({ id: '1', name: 'game', server: 'local', owner: '', spec: repository }, () => {}),
   deletedRepository: () => deletedRepositoryMenu({ id: '8', name: 'game', server: 'local', owner: '', spec: 'd1e2f3a4@local', deleted: true }),
+  organization: () => organizationMenu('acme@unity', false),
+  favoriteOrganization: () => organizationMenu('acme@unity', true),
   currentWorkspace: () => currentWorkspaceMenu(ws, { name: 'game', kind: 'partial' }),
   graphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, graphContext),
   graphBranch: () => graphMenu({ kind: 'branch', lane }, graphContext),
@@ -314,10 +316,10 @@ const LINE_MENUS: Record<string, () => MenuEntry[]> = {
 const textActions = Object.fromEntries(['undo', 'redo', 'cut', 'copy', 'paste', 'delete', 'selectAll', 'goToLine', 'find', 'replace', 'compareWithClipboard'].map((name) => [name, () => {}])) as unknown as CodeMenuActions;
 /** Menus of code, the text typed into or read (`codeMenu`): their Copy copies the text selected, not an object's names. */
 const TEXT_MENUS: Record<string, () => MenuEntry[]> = {
-  typedText: () => codeMenu({ editable: true, selectedText: true, selectedCode: true, canUndo: true, canRedo: true, canSelectAll: true }, textActions),
-  readText: () => codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: false }, textActions),
+  typedText: () => codeMenu({ editable: true, selectedText: true, selectedCode: true, canUndo: true, canRedo: true, canSelectAll: true, canFind: true }, textActions),
+  readText: () => codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: false, canFind: true }, textActions),
   committedDiffText: () =>
-    codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true }, textActions, lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
+    codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true, canFind: true }, textActions, lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
 };
 /** A review comment's menu (`commentMenu`), its author's: every entry it offers, its Copy submenu as every object's. */
 const reviewComment = { id: 1, guid: 'g1', author: 'jane@example.com', date: '', text: 'Nice', kind: 'general', anchor: { kind: 'review' } } as const;
@@ -508,12 +510,13 @@ describe('text', () => {
 
   it("reads, in a committed diff, as the code's menu with the lines' entries at the end of their groups", () => {
     expect(topEntries(TEXT_MENUS.committedDiffText!()).map((entry) => entry.label)).toEqual([
+      'Find',
       'Go to line…',
       'Compare with clipboard',
-      'Annotate at these lines',
+      'Annotate at lines 40–52',
       'Copy',
       'Copy link to lines 40–52',
-      'Copy lines',
+      'Copy lines 40–52',
       'Select all',
     ]);
   });
@@ -649,7 +652,7 @@ describe('one menu per object, the same everywhere', () => {
     const inView = codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector);
     const { target: _named, ...asSearched } = branchReview;
     expectOnlyAdds(graphMenu({ kind: 'codeReview', review: asSearched }, graphContext), inView);
-    // The one exception (ARCHITECTURE.md "Menus"): the palette's searches don't name a branch, so it can't switch to it.
+    // The one exception (docs/architecture/renderer.md "Menus"): the palette's searches don't name a branch, so it can't switch to it.
     expectOnlyAdds(codeReviewResult(asSearched, resultContext).menu!(), withoutAction(inView, 'switch'));
     expectOnlyAdds(codeReviewResult(changesetReview, resultContext).menu!(), codeReviewMenu(workspacePlace(ws), [changesetReview], workspace.selector));
   });
@@ -678,6 +681,10 @@ describe('Copy', () => {
     ]);
   });
 
+  it('copies an organization as its name and link', async () => {
+    expect(await copiedBy(organizationMenu('acme@unity', false))).toEqual(['Organization name: acme', 'Organization link: uvcs://acme.unity']);
+  });
+
   it('copies a changeset as its number, spec, full spec, comment and GUID', async () => {
     expect(await copiedBy(changesetMenu({ workspaceKind: undefined, place: workspacePlace(ws) }, [changeset]))).toEqual([
       'Changeset number: 5',
@@ -693,9 +700,14 @@ describe('Copy', () => {
     expect(await copiedBy(labelMenu({ place: workspacePlace(ws), workspaceKind: undefined }, [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
   });
 
-  it.each(['reviewComment', 'openChangeRequest', 'appliedChangeRequest'])("copies a review's comment as its text and its link, which opens the review at it: %s", async (menu) => {
+  it("copies a review's comment as its text and its link, which opens the review at it", async () => {
     fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
-    expect(await copiedBy(COMMENT_MENUS[menu]!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
+    expect(await copiedBy(COMMENT_MENUS.reviewComment!())).toEqual(['Comment: Nice', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
+  });
+
+  it.each(['openChangeRequest', 'appliedChangeRequest'])('copies a change request as its text, its link and the GUID a check-in comment names it by: %s', async (menu) => {
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
+    expect(await copiedBy(COMMENT_MENUS[menu]!())).toEqual(['Comment: Nice', 'Comment GUID: g1', 'Comment link: uvcs://local/repos/game/code-reviews/41/-/comments/1']);
   });
 
   it('copies a deleted repository as its name alone: its spec names it by an id no link opens', async () => {

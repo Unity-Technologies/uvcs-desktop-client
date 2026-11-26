@@ -63,7 +63,7 @@ OS where an app is installed rather than guessing paths:
 ## Menus
 
 Opening in other apps is one group of every menu (`open`), first after what opens in the app (Home's "Open
-workspace", a history row's "Open diff of changeset"), a separator between them (ARCHITECTURE.md "Menus"). `openOnDiskEntries` gives every item on disk the same entries (`fileMenu`,
+workspace", a history row's "Open diff of changeset"), a separator between them (docs/architecture/renderer.md "Menus"). `openOnDiskEntries` gives every item on disk the same entries (`fileMenu`,
 `pendingChangeMenu`, the palette's files, `workspaceMenu`, `currentWorkspaceMenu`):
 
 - **A file**: "Open in <editor>", what Enter and a double-click do too (`openFile`); plain "Open", its default app,

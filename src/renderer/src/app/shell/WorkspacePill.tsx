@@ -35,7 +35,7 @@ export function WorkspacePill() {
         data-tip={tip?.text}
         data-tip-sub={tip?.sub}
         textMaxWidth={TEXT_MAX_WIDTH}
-        icon={<RepositoryAvatar repository={repository} label={name} size={24} />}
+        icon={<RepositoryAvatar repository={repository} label={name} size={24} workspaceKind={workspace?.kind} />}
         label={
           name === undefined ? (
             <SkeletonLine width={`${NAME_PLACEHOLDER_WIDTH}px`} />

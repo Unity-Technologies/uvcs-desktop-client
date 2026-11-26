@@ -120,12 +120,14 @@
   margin-left: var(--space-1);
 }
 
+/* A person is never a link (their card is what they show): their name in the color of the text around it, muted where
+   that is, so it never reads as one. */
 .person {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   max-width: 100%;
-  color: var(--accent-text);
+  color: inherit;
   font-weight: var(--weight-medium);
   white-space: nowrap;
   vertical-align: bottom;

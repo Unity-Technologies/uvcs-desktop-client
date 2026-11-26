@@ -117,11 +117,12 @@ the workspace only gives the page a window and a repository to read.
    workspace window for a page window), else the last one used, else a new one on the home screen. It comes forward
    and takes the link once (`windows.takeLink`, told by `linkRequested`).
 3. **The page reads it** (`openLink`, `parseLink`). A link it can't read says why in a dialog, never silently; one
-   naming a page this version doesn't know says the app may need an update and offers to check (`showLinkFailure`).
+   naming a page this version doesn't know says it isn't supported and offers to check for updates (`showLinkFailure`),
+   without claiming an update opens it: the app can't tell a page a newer version added from a typo.
 4. **A server link** opens on a home screen, never taking a window away from the workspace or repository it shows
    (`windows.openLinkAtHome`): this window's when it shows the home screen, else another window's, else a new one's.
    It shows the server's repositories (as the user's profiles name the server, `serverLinkPlace`), the project the
-   link names picked, or all of them for none (`useProjectPickStore`, `useHomeSection`). It reads nothing beyond the
+   link names picked, or all of them for none (`ServerSettings.homeProject`, `useHomeSection`). It reads nothing beyond the
    list the home screen reads anyway. A project the organization doesn't have shows all of them.
 5. **The workspace** (`linkDestination`, from the workspaces and their repositories the home screen reads, all local:
    `cm workspace list`, `cm wi`; `cm status` only for one `cm wi` names by an organization's id, and only when its
@@ -173,13 +174,16 @@ badges.
   - a quiet **"Copy link" chip** by the first of them, at the right end of its pane, as a change's "Revert change"
     sits (`LineLinkChip`, placed by `lineChipAnchor`); its tooltip says what it copies ("Copy link to lines 40–52 of
     Player.cs", `copyLinkLabel`) and the ⇧⌘C that copies it too;
-  - **a right-click on code**, which first selects the line clicked when it isn't selected (`rightClickSelection`,
-    `useLineTools`): wherever lines are selected for links (a committed diff, Annotate, a browsed or Files file), the
-    lines' entries join the code's menu (`lineMenuEntries`, through `useCodeMenu`; features/diff.md "The code's
-    menu"): "Annotate at this line" in a diff (the newer side's, `diffEntryAnnotation`), "Copy link to line 42" (⇧⌘C)
-    and "Copy line" (its text, `linesText`). Changes' code menu has no line entries: its lines are picked to discard
-    them, and no link names a pending change.
-  - Copied from either, the toast teaches the shortcut ("⇧⌘C copies it next time", `nextTimeHint`, `copyPageLink`).
+  - **a right-click on code**, which acts on the line clicked, or on the lines selected when it's one of them
+    (`rightClickedLines`, `useLineTools`), and selects nothing: the menu names the lines instead. Wherever lines are
+    selected for links (a committed diff, Annotate, a browsed or Files file), the lines' entries join the code's menu
+    (`lineMenuEntries`, through `useCodeMenu`; features/diff.md "The code's menu"): "Annotate at line 42" in a diff
+    (the newer side's, `diffEntryAnnotation`), "Copy link to line 42" (a link to those lines, though not selected:
+    `pageLinesTarget`; offered only where a link can name them) and "Copy line 42" (its text, `linesText`). Changes'
+    code menu has no line entries: its lines are picked to discard them, and no link names a pending change.
+  - Copied from either, the toast teaches the shortcut ("⇧⌘C copies it next time", `nextTimeHint`, `copyLinesLink`),
+    and the menu's entry shows it, only where ⇧⌘C copies the same: the lines selected. Lines right-clicked but not
+    selected copy their own link, while ⇧⌘C copies the selection, or the file.
   - Line numbers say how on hover ("Click to select · Shift+click a range", `lineNumberHint`), not while dragging.
 - **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy the most specific thing in front (`useCopyLinkCommand`,
   `linkToCopy`): the lines selected in the page when there are some (`pageLinkTarget`, as their chip), else the page's

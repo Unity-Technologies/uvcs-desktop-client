@@ -58,7 +58,6 @@ describe('refresh scopes', () => {
 
   it('refreshes repository views on new changesets, but not the disk or the incoming check itself', () => {
     expect(isAffectedByNewChangesets(key('branchExplorer', {}))).toBe(true);
-    expect(isAffectedByNewChangesets(key('incoming', 'changes'))).toBe(true);
     expect(isAffectedByNewChangesets(key('incoming', 'summary'))).toBe(false);
     expect(isAffectedByNewChangesets(key('pendingChanges'))).toBe(false);
     expect(isAffectedByNewChangesets(key('content', { kind: 'revision' }))).toBe(false);
@@ -269,9 +268,13 @@ describe('incoming changeset pages', () => {
     expect(isAffectedByChangesetMove(newest)).toBe(true);
   });
 
-  it('leave the incoming changes themselves to the refreshes', () => {
-    expect(isAffectedByNewChangesets(key('incoming', 'changes'))).toBe(true);
+  it('leave the incoming changes themselves to the refreshes of operations', () => {
     expect(isAffectedByCheckinOrUpdate(key('incoming', 'changes'))).toBe(true);
+  });
+
+  it('never read the incoming changes again on new changesets: the new head is a new key, and a partial check compares again itself', () => {
+    expect(isAffectedByNewChangesets(key('incoming', 'changes', { branch: '/main', loadedChangeset: 41, headChangeset: 43 }))).toBe(false);
+    expect(isAffectedByNewChangesets(key('incoming', 'changes', { branch: '/main', partial: true }))).toBe(false);
   });
 });
 

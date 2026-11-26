@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, DirectoryConflictResolution, MergePlan } from '@shared/domain/merge';
 import { layoutGroupedTree } from '../../lib/groupedPathTree';
-import { buildMergeItems, directoryConflictsInListOrder, fileStateOf, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, directoryConflictsInListOrder, fileStateOf, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem, MERGE_VIEW_OFFER } from './mergeItems';
 import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
 import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 
@@ -102,7 +102,7 @@ describe('merge items', () => {
     expect(decided).toEqual(waiting);
   });
 
-  it('starts on the first item waiting for the user in the order the list shows: directory conflicts first', () => {
+  it('goes after a run to the first item waiting for the user in the order the list shows: directory conflicts first', () => {
     // The directory conflict is /twin.txt, after /a.txt in path order, but its group comes first.
     const items = buildMergeItems(plan, [], [file]);
     expect(firstWaiting(items, mergeProgress([fileState(false)], twinResolutions()))?.path).toBe('twin.txt');
@@ -158,5 +158,11 @@ describe('a folder conflict that holds another conflict', () => {
   it("is what the folder row's menu acts on, alone, instead of everything the folder holds", () => {
     expect(mergeItemsActedOn(rows, new Set([folderRow.key]), items).map((item) => item.path)).toEqual(['src/shared']);
     expect(mergeItemsActedOn(rows, new Set([folderRow.key, items[1]!.key]), items)).toEqual(items);
+  });
+});
+
+describe('MERGE_VIEW_OFFER', () => {
+  it("offers no sort by date: the merge page's items have no dates", () => {
+    expect(MERGE_VIEW_OFFER).toEqual({ statusGroups: false, dates: false });
   });
 });

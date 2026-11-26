@@ -14,7 +14,7 @@ function thread(fields: Partial<ReviewComment> = {}): LineThread {
     date: '2026-11-06T10:00:00Z',
     text: 'Text',
     kind: 'changeRequest',
-    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', line: 4 },
+    anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', firstLine: 4, lastLine: 4 },
     ...fields,
   };
   return threadsOf([root])[0] as LineThread;

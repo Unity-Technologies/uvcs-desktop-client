@@ -7,34 +7,18 @@ import type { CommentFieldHandle } from '../../../components/commentEditor/comme
 import { useCommentDraftStore } from '../../../components/commentDraftStore';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
 import { Button } from '../../../ui/Button';
-import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { Tooltip } from '../../../ui/Tooltip';
 import { composerText } from '../conversation/composerText';
-import { refusalShown, suggestButtonOf, suggestRequestOutcome, withSuggestionInserted, type SuggestRefusal } from '../suggestions/suggestButton';
-import { commentedLines } from '../suggestions/suggestedChange';
+import { refusalShown, suggestButtonOf, suggestRequestOutcome, type SuggestRefusal } from '../suggestions/suggestButton';
 import { useReplacedLines } from '../suggestions/useReplacedLines';
+import { useSuggestionInsert } from '../suggestions/useSuggestionInsert';
 import { CommentComposer } from '../conversation/CommentComposer';
 import { addLineComment } from '../conversation/reviewCommentOperations';
-import { THREAD_KIND_ICONS } from '../conversation/ThreadKindIcon';
-import { threadKindName } from '../conversation/threadBadges';
 import { conversationReadAt, conversationReadSince } from '../conversation/useReviewConversation';
-import { focusOnRequest, LINE_COMMENT_KINDS, lineCommentLabel, lineCommentWords, type NewLineCommentSpot } from './newLineComment';
+import { focusOnRequest, lineCommentLabel, lineCommentWords, type NewLineCommentSpot } from './newLineComment';
 import { useNewLineCommentsStore } from './newLineCommentsStore';
+import { CommentKindSwitch } from './CommentKindSwitch';
 import styles from './NewLineCommentCard.module.css';
-
-const KIND_SEGMENTS = LINE_COMMENT_KINDS.map((kind) => {
-  const name = threadKindName({ kind });
-  const Icon = THREAD_KIND_ICONS[name];
-  return {
-    value: kind,
-    label: (
-      <>
-        <Icon size={12} aria-hidden />
-        {name}
-      </>
-    ),
-  };
-});
 
 interface NewLineCommentCardProps {
   spot: NewLineCommentSpot;
@@ -44,9 +28,9 @@ interface NewLineCommentCardProps {
 
 /**
  * A comment being written under a line of a review's diff: what it is (a change request, a question or a comment,
- * which can't change once posted), then the rich editor. Suggest change inserts a suggestion of the line at the caret
+ * which can't change once posted), then the rich editor. Suggest change inserts a suggestion of the lines at the caret
  * (docs/features/code-reviews.md "Suggested changes"), from the diff's own read of it, making the comment a change
- * request (`withSuggestionInserted`); opened from the code's "Suggest change on line 42" (`suggestRequest`), it's
+ * request (`withSuggestionInserted`); opened from the code's "Suggest change on lines 40–42" (`suggestRequest`), it's
  * inserted as the line is read. Sent at once, as every comment is, it stays, sending, until the conversation read again
  * holds it (`conversationReadSince`), so the line never shows nothing in between. Cancel or Esc drop it, asking first
  * once words were written. Focused only when opened (`focusRequest`).
@@ -70,26 +54,15 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
 
   const draftKey = commentDraftKey(placeId(place), 'reviewLineComment', spot.key);
   const text = composerText(useCommentDraftStore((state) => state.drafts[draftKey]), '');
-  // The lines the comment is on, which Suggest change fills the fence with: one today, a range once comments take them.
-  const lineText = useReplacedLines({ path: spot.path, revisionId: spot.comment.revisionId, ...commentedLines(spot.comment) });
-  const suggest = suggestButtonOf(lineText, text);
-  // The caret to put back once the text with the suggestion shows: the field takes a new text on its next render.
-  const [caretAfterInsert, setCaretAfterInsert] = useState<number | null>(null);
-  const insertSuggestion = (lines: readonly string[]): void => {
-    const at = field.current?.selection()?.head ?? text.length;
-    const inserted = withSuggestionInserted(text, at, lines);
-    useCommentDraftStore.getState().keep(draftKey, { summary: '', description: inserted.text });
-    setKind(spot.key, inserted.kind);
-    setCaretAfterInsert(inserted.caret);
-  };
+  // The lines the comment is on, which Suggest change fills the fence with.
+  const lineText = useReplacedLines({ path: spot.path, revisionId: spot.comment.revisionId, firstLine: spot.comment.firstLine, lastLine: spot.comment.lastLine });
+  const suggest = suggestButtonOf(lineText, text, spot.comment);
+  const insertFence = useSuggestionInsert(field, draftKey, text);
+  const insertSuggestion = (lines: readonly string[]): void => setKind(spot.key, insertFence(lines).kind);
   const suggestAtCaret = (): void => {
-    const outcome = suggestRequestOutcome(lineText, text);
+    const outcome = suggestRequestOutcome(lineText, text, spot.comment);
     if (outcome.kind === 'insert') insertSuggestion(outcome.lines);
   };
-  useEffect(() => {
-    if (caretAfterInsert === null) return;
-    if (field.current?.focusAtSelection({ anchor: caretAfterInsert, head: caretAfterInsert }) !== false) setCaretAfterInsert(null);
-  });
   const suggestSeq = useNewLineCommentsStore((state) => (state.suggestRequest?.key === spot.key ? state.suggestRequest.seq : null));
   const suggestTaken = useNewLineCommentsStore((state) => state.suggestTaken);
   // Kept apart from the store's request, which a second mount (StrictMode) still sees in its first render's values.
@@ -99,7 +72,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
   const refusedSuggestion = refusalShown(refusal, text);
   useEffect(() => {
     if (suggestSeq === null || suggestedFor.current === suggestSeq) return;
-    const outcome = suggestRequestOutcome(lineText, text);
+    const outcome = suggestRequestOutcome(lineText, text, spot.comment);
     if (outcome.kind === 'wait') return;
     suggestedFor.current = suggestSeq;
     suggestTaken(suggestSeq);
@@ -111,7 +84,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
     <CommentedFileContext.Provider value={spot.path}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <SegmentedControl small value={kind} segments={KIND_SEGMENTS} onChange={(picked) => setKind(spot.key, picked)} label="Comment kind" />
+          <CommentKindSwitch kind={kind} onChange={(picked) => setKind(spot.key, picked)} field={field} />
           <Tooltip content={suggest.tip}>
             <Button size="small" variant="ghost" className={styles.suggest} icon={<MessageSquareDiff size={14} aria-hidden />} disabled={!suggest.enabled} onClick={suggestAtCaret}>
               Suggest change
@@ -129,7 +102,7 @@ export function NewLineCommentCard({ spot, onSent }: NewLineCommentCardProps) {
             fieldClassName={styles.field}
             draftKey={draftKey}
             placeholder={words.placeholder}
-            label={lineCommentLabel({ side: spot.side, lineNumber: spot.comment.line })}
+            label={lineCommentLabel({ side: spot.side, firstLineNumber: spot.comment.firstLine, lineNumber: spot.comment.lastLine })}
             submitLabel={words.submit}
             autoFocus={mountedFor.current !== null}
             asksBeforeDiscarding

@@ -6,9 +6,10 @@ export type FileListLayout = 'list' | 'tree';
 
 /**
  * The order of the files of every list of changed files (`fileListOrder`): by path, folder by folder (the default);
- * by file name; by status, as the filter's chips are ordered; or by extension. Ties keep the path order.
+ * by file name; by status, as the filter's chips are ordered; by extension; or by date, the newest first, in the lists
+ * that have dates (`FileListFacts.dateOf`). Ties keep the path order.
  */
-export type FileListSort = 'path' | 'name' | 'status' | 'extension';
+export type FileListSort = 'path' | 'name' | 'status' | 'extension' | 'date';
 
 /** How every list of changed files shows them, chosen in any of them (`FileListViewMenu`). */
 export interface FileListView {

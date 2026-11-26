@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_QUICK_WRITE_PATHS, runsLong } from './longCommands';
+import { MAX_QUICK_COMMENT_DELETES, MAX_QUICK_WRITE_PATHS, runsLong } from './longCommands';
 
 const paths = (count: number): string[] => Array.from({ length: count }, (_, index) => `/ws/file${index}.txt`);
 
@@ -22,6 +22,13 @@ describe('runsLong', () => {
     expect(runsLong(['undo', ...paths(MAX_QUICK_WRITE_PATHS + 1), '--symlink'])).toBe(true);
     expect(runsLong(['checkout', ...paths(500)])).toBe(true);
     expect(runsLong(['changelist', 'default', 'add', ...paths(MAX_QUICK_WRITE_PATHS)])).toBe(true);
+  });
+
+  it('takes a delete of many review comments as long, a comment and a few replies as quick', () => {
+    const guids = (count: number): string[] => Array.from({ length: count }, (_, index) => `0000000${index}-aaaa-bbbb-cccc-dddddddddddd`);
+
+    expect(runsLong(['codereview', 'comment', 'delete', ...guids(MAX_QUICK_COMMENT_DELETES), '--repository=game@local'])).toBe(false);
+    expect(runsLong(['codereview', 'comment', 'delete', ...guids(MAX_QUICK_COMMENT_DELETES + 1), '--repository=game@local'])).toBe(true);
   });
 
   it('takes recursive writes as long', () => {

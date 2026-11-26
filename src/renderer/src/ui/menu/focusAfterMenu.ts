@@ -28,7 +28,7 @@ function dialogOpenedByAction(opener: Element | null | undefined): boolean {
  */
 function caretInField(): boolean {
   let active = document.activeElement;
-  // A field inside a shadow root (Pierre's editor, its search panel) leaves only its host as the document's.
+  // A field inside a shadow root (Pierre's editor) leaves only its host as the document's.
   while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
   return isTextEntry(active) && active.isConnected;
 }

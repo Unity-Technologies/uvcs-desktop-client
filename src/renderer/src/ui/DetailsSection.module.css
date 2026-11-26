@@ -60,3 +60,23 @@
     animation: none;
   }
 }
+
+/* A section's action at the right of its title ("Add", "New"): quiet until the pointer is on it or its menu is open. */
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.action:hover,
+.action[data-state='open'] {
+  background: var(--bg-hover);
+  color: var(--accent-text);
+}

@@ -8,7 +8,7 @@ import { checkpointOf, conversationBlocksOf, statusChangesetsOf, conversationLay
 // Dates as `cm find` prints them with `--dateformat=o`: a round trip, its offset the server's.
 const at = (day: number, hour: number, offset = '+01:00'): string => `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00${offset}`;
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Waves/WaveSpawner.cs', line: 43 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Waves/WaveSpawner.cs', firstLine: 43, lastLine: 43 } as const;
 
 function comment(id: number, date: string, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'vio', date, text: `Comment ${id}`, kind: 'general', anchor: { kind: 'review' }, ...fields };

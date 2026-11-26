@@ -1,6 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import { MoreHorizontal } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type Ref } from 'react';
+import { Highlight } from '../Highlight';
 import { shownItemCount, type NavLayout } from './navOverflow';
 import { navBadgeText, type NavBadge } from './navBadgeText';
 import { navItemTip } from './navItemTip';
@@ -77,7 +78,10 @@ export function NavItem(props: NavItemProps) {
       {...trigger}
     >
       <span className={styles.icon}>{icon}</span>
-      <span className={styles.label}>{shownLabel}</span>
+      {/* Marked where a surrounding `HighlightQuery` filters the sidebar (the home sidebar's organization filter). */}
+      <span className={styles.label}>
+        <Highlight text={shownLabel} />
+      </span>
       {detail && <span className={styles.detail}>{detail}</span>}
       {dot && <span className={styles.dot} />}
       {badge?.count ? <span className={styles.badge}>{navBadgeText(badge, rail)}</span> : null}

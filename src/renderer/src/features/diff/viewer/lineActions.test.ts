@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contextMenuSelection, copiedLinesWord, lineChipAnchor, lineNumberCellSelector, topRowOf, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickSelection } from './lineActions';
+import { contextMenuLines, copiedLinesWord, lineChipAnchor, lineNumberCellSelector, topRowOf, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickedLines } from './lineActions';
 
 const range = (start: number, end: number, side: 'additions' | 'deletions' = 'additions') => ({ start, side, end, endSide: side });
 
@@ -66,17 +66,17 @@ describe('lineUnderPointer', () => {
   });
 });
 
-describe('rightClickSelection', () => {
+describe('rightClickedLines', () => {
   const selected = range(40, 52);
 
-  it('keeps the selection a line inside it is right-clicked on', () => {
-    expect(rightClickSelection(selected, { side: 'additions', lineNumber: 45 })).toBe(selected);
+  it('acts on the selection when a line inside it is right-clicked', () => {
+    expect(rightClickedLines(selected, { side: 'additions', lineNumber: 45 })).toBe(selected);
   });
 
-  it('selects the line right-clicked outside it, or on the other side, or with nothing selected', () => {
-    expect(rightClickSelection(selected, { side: 'additions', lineNumber: 60 })).toEqual(range(60, 60));
-    expect(rightClickSelection(selected, { side: 'deletions', lineNumber: 45 })).toEqual(range(45, 45, 'deletions'));
-    expect(rightClickSelection(null, { side: 'additions', lineNumber: 3 })).toEqual(range(3, 3));
+  it('acts on the line right-clicked outside it, or on the other side, or with nothing selected', () => {
+    expect(rightClickedLines(selected, { side: 'additions', lineNumber: 60 })).toEqual(range(60, 60));
+    expect(rightClickedLines(selected, { side: 'deletions', lineNumber: 45 })).toEqual(range(45, 45, 'deletions'));
+    expect(rightClickedLines(null, { side: 'additions', lineNumber: 3 })).toEqual(range(3, 3));
   });
 });
 
@@ -94,18 +94,18 @@ describe('linesWords', () => {
   });
 });
 
-describe('contextMenuSelection', () => {
+describe('contextMenuLines', () => {
   const line = (lineNumber: number) => ({ side: 'additions', lineNumber }) as const;
   const range = { start: 40, side: 'additions', end: 42, endSide: 'additions' } as const;
 
-  it('keeps the selection when the line clicked is in it, else selects that line', () => {
-    expect(contextMenuSelection(range, line(41))).toBe(range);
-    expect(contextMenuSelection(range, line(50))).toEqual({ start: 50, side: 'additions', end: 50, endSide: 'additions' });
+  it('acts on the selection when the line clicked is in it, else on that line', () => {
+    expect(contextMenuLines(range, line(41))).toBe(range);
+    expect(contextMenuLines(range, line(50))).toEqual({ start: 50, side: 'additions', end: 50, endSide: 'additions' });
   });
 
   it('acts on the selection off any line, and opens no menu with none', () => {
-    expect(contextMenuSelection(range, null)).toBe(range);
-    expect(contextMenuSelection(null, null)).toBeNull();
+    expect(contextMenuLines(range, null)).toBe(range);
+    expect(contextMenuLines(null, null)).toBeNull();
   });
 });
 

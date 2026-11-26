@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { FAILED, READING, readValue, commentedLines, rangeWords, replacedLinesIn, suggestedChangeOf, suggestionBody, suggestionTitle } from './suggestedChange';
+import { FAILED, READING, readValue, viewsDiffer, replacedLinesIn, suggestedChangeOf, suggestionBody, suggestionTitle } from './suggestedChange';
 
-const ON_LINE: ReviewComment['anchor'] = { kind: 'line', revisionId: 42, itemId: 7, path: '/src/Player.cs', line: 3 };
+const ON_LINE: ReviewComment['anchor'] = { kind: 'line', revisionId: 42, itemId: 7, path: '/src/Player.cs', firstLine: 3, lastLine: 3 };
 const SUGGESTING = 'Use the constant\n```suggestion\n  speed = MAX_SPEED;\n```';
 
 describe('suggestedChangeOf', () => {
@@ -98,15 +98,18 @@ describe('suggestionTitle', () => {
   });
 });
 
-describe('commentedLines', () => {
-  it("is the one line cm names a comment by, today", () => {
-    expect(commentedLines({ line: 7 })).toEqual({ firstLine: 7, lastLine: 7 });
+describe('viewsDiffer', () => {
+  it('is false for a suggestion that keeps none of its lines: both views show every line removed, then added', () => {
+    expect(viewsDiffer({ replacedText: 'public class SwitchFlow\n', suggestedText: 'public class SwitchFlow2\n' })).toBe(false);
+    expect(viewsDiffer({ replacedText: 'a();\nb();\n', suggestedText: 'c();\n' })).toBe(false);
   });
-});
 
-describe('rangeWords', () => {
-  it('names one line or a range', () => {
-    expect(rangeWords({ firstLine: 7, lastLine: 7 })).toBe('Line 7');
-    expect(rangeWords({ firstLine: 7, lastLine: 9 })).toBe('Lines 7–9');
+  it('is true once it keeps a line, which the diff shows once and stacked twice', () => {
+    expect(viewsDiffer({ replacedText: '{\n    var s = A();\n}\n', suggestedText: '{\n    Shelve s = A();\n}\n' })).toBe(true);
+  });
+
+  it('counts no line in a text with none: a deletion, or lines that could not be read', () => {
+    expect(viewsDiffer({ replacedText: 'old();\n', suggestedText: '' })).toBe(false);
+    expect(viewsDiffer({ replacedText: '', suggestedText: 'new();\n' })).toBe(false);
   });
 });

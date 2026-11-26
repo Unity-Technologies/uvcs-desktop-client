@@ -44,10 +44,10 @@ describe('replacedThenSuggested', () => {
     expect(wordMarkedPairsOf(diff)).toEqual([]);
   });
 
-  it('keeps the changed words marked on a line edited in place', () => {
+  it("leaves Pierre no lines to pair, even on a line edited in place: the words are marked over the rows (`stackedWordMarks`)", () => {
     const diff = diffOf(['    public int frameRate = 30;'], ['    public int frameRate = 60;']);
     expect(rowsOf(diff)).toEqual(['-     public int frameRate = 30;', '+     public int frameRate = 60;']);
-    expect(wordMarkedPairsOf(diff)).toEqual([['public int frameRate = 30;', 'public int frameRate = 60;']]);
+    expect(wordMarkedPairsOf(diff)).toEqual([]);
   });
 
   it('reads a range as all its lines replaced, then all the lines suggested, the lines it keeps among them', () => {
@@ -59,10 +59,10 @@ describe('replacedThenSuggested', () => {
     expect(wordMarkedPairsOf(diff)).toEqual([]);
   });
 
-  it('marks the changed words of a range whose lines are each edited in place', () => {
+  it('stacks a range whose lines are each edited in place, too', () => {
     const diff = diffOf(['a = 1;', 'keep();', 'b = 2;'], ['a = 2;', 'keep();', 'b = 3;']);
     expect(rowsOf(diff)).toEqual(['- a = 1;', '- keep();', '- b = 2;', '+ a = 2;', '+ keep();', '+ b = 3;']);
-    expect(wordMarkedPairsOf(diff)).toEqual([['a = 1;', 'a = 2;'], ['keep();', 'keep();'], ['b = 2;', 'b = 3;']]);
+    expect(wordMarkedPairsOf(diff)).toEqual([]);
   });
 
   it("numbers both sides from the commented line, as the file's lines", () => {
@@ -84,6 +84,6 @@ describe('replacedThenSuggested', () => {
     expect(wrapped).toMatchObject({ unifiedLineCount: 3, splitLineCount: 3 });
     expect(wrapped.hunks[0]).toMatchObject({ unifiedLineCount: 3, splitLineCount: 3 });
     const edited = diffOf(['a = 1;', 'b = 2;'], ['a = 2;', 'b = 3;']);
-    expect(edited).toMatchObject({ unifiedLineCount: 4, splitLineCount: 2 });
+    expect(edited).toMatchObject({ unifiedLineCount: 4, splitLineCount: 4 });
   });
 });

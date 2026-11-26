@@ -1,5 +1,7 @@
 import { CODE_REVIEW_STATUSES, MERGE_REQUEST_STATES, type CodeReviewStatus, type MergeRequestState } from '@shared/domain/codeReview';
-import type { ReviewComment, ReviewCommentKind, ReviewConversation, ReviewEventChange } from '@shared/domain/reviewConversation';
+import type { ReviewComment, ReviewCommentAnchor, ReviewCommentKind, ReviewConversation, ReviewEventChange } from '@shared/domain/reviewConversation';
+import { commentedImageSpotOf, commentedLinesOf } from './commentLocation';
+import { commentedModelSpotOf } from './modelCommentLocation';
 import { foundObjects } from './foundObjects';
 import { integerValue } from './formatRecords';
 
@@ -17,19 +19,19 @@ export interface RawReviewComment {
   revisionId: number;
   itemId: number;
   path: string;
-  /** 1-based; -1 when the comment isn't on a line. */
-  line: number;
+  /** Where in the file, as the server stores it (`commentedLinesOf`, `commentedImageSpotOf`, `commentedModelSpotOf`): `-1` when it's on none. */
+  location: string;
   changesetId: number;
   appliedInChangeset: number;
 }
 
 /**
- * Every comment of a review in one `cm find`, with what places it (`{path}`, `{itemid}`, `{line}`, `{changeset}`) and
+ * Every comment of a review in one `cm find`, with what places it (`{path}`, `{itemid}`, `{location}`, `{changeset}`) and
  * what resolves it (`{parent}`, `{appliedinchangeset}`): its replies and its threads are read from the same list.
  */
 export const FOUND_REVIEW_COMMENTS = foundObjects(
   'changereviewcomment',
-  ['id', 'guid', 'owner', 'date', 'modifieddate', 'comment', 'type', 'parent', 'revisionid', 'itemid', 'path', 'line', 'changeset', 'appliedinchangeset'],
+  ['id', 'guid', 'owner', 'date', 'modifieddate', 'comment', 'type', 'parent', 'revisionid', 'itemid', 'path', 'location', 'changeset', 'appliedinchangeset'],
   (value): RawReviewComment => ({
     id: integerValue(value('id')),
     guid: value('guid'),
@@ -42,7 +44,7 @@ export const FOUND_REVIEW_COMMENTS = foundObjects(
     revisionId: integerValue(value('revisionid')),
     itemId: integerValue(value('itemid')),
     path: value('path'),
-    line: integerValue(value('line')),
+    location: value('location'),
     changesetId: integerValue(value('changeset')),
     appliedInChangeset: integerValue(value('appliedinchangeset')),
   }),
@@ -86,13 +88,25 @@ function commentOf(record: RawReviewComment): ReviewComment {
     text: record.text,
     kind: kindOf(record),
     ...(record.parentId >= 0 && { parentId: record.parentId }),
-    anchor:
-      record.revisionId >= 0 && record.line > 0
-        ? { kind: 'line', revisionId: record.revisionId, itemId: record.itemId, path: record.path, line: record.line }
-        : { kind: 'review' },
+    anchor: anchorOf(record),
     ...(record.changesetId >= 0 && { changesetId: record.changesetId }),
     ...(record.appliedInChangeset >= 0 && { appliedInChangeset: record.appliedInChangeset }),
   };
+}
+
+/**
+ * Where a comment is: on lines of a revision, on a spot of its image or its 3D model, or the whole review. A comment on a
+ * whole file, or on a location of a kind this app doesn't read, reads as the review's.
+ */
+function anchorOf(record: RawReviewComment): ReviewCommentAnchor {
+  if (record.revisionId < 0) return { kind: 'review' };
+  const revision = { revisionId: record.revisionId, itemId: record.itemId, path: record.path };
+  const lines = commentedLinesOf(record.location);
+  if (lines) return { kind: 'line', ...revision, ...lines };
+  const imageSpot = commentedImageSpotOf(record.location);
+  if (imageSpot) return { kind: 'image', ...revision, spot: imageSpot };
+  const modelSpot = commentedModelSpotOf(record.location);
+  return modelSpot ? { kind: 'model', ...revision, spot: modelSpot } : { kind: 'review' };
 }
 
 /** `{modifieddate}` prints the creation date for a comment never edited. */

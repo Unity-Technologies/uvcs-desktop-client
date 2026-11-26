@@ -4,6 +4,10 @@ A code review asks people to review a branch, a changeset or a shelve. A merge r
 server, with a destination branch and a state: what this doc says of reviews holds for both, and what is a merge
 request's alone (its states, the Merge requests view's State chip, its chips) is in docs/features/merge-requests.md.
 
+Sandboxes: `scripts/sandboxes/code-reviews.sh` (a review holding every kind of comment, on code, a deleted file and
+3D models; reviews of a changeset and a shelve) and `review-rounds.sh` (a review that went back and forth over
+rounds).
+
 Every review command relies on the `cm` the app runs, which is never older than its own (cm-runtime.md "Which cm
 runs"): with `--format`, a field an older `cm` didn't know would fail the whole command, and a subcommand it didn't
 know (`cm codereview subscription`) would be read as a review to create.
@@ -56,9 +60,11 @@ know (`cm codereview subscription`) would be read as a review to create.
   (`cm listusers --onlyusers` and `--onlygroups`, each read once and kept, `useMemberNames`): the reviewers checked
   first, then the groups, then the users, each by name (`offeredReviewers`), as the official client lists them. What
   changed applies as it closes (`pickChanges`, `changeReviewers`): one `cm codereview reviewer add <id> --users=a,b
-  --groups=g`, one `cm codereview reviewer remove <id> --users=c`. Under the pointer each reviewer can be removed, or,
-  once they gave a status, asked to review again (`canReRequest`, never the user themselves; `cm codereview review <id>
-  --re-request --users=a` or `--groups=g`, which puts them back to "Under review"). What the picker changes is worked
+  --groups=g`, one `cm codereview reviewer remove <id> --users=c`. Each reviewer's row always shows a quiet × to remove
+  them and, once they gave a status, a button to ask them to review again (`canReRequest`, never the
+  user themselves; `cm codereview review <id> --re-request --users=a` or `--groups=g`, which puts them back to "Under
+  review"); both name who they act on in their tooltips (`reviewerActionLabels`). Neither waits for the pointer: users
+  didn't find them when they did. What the picker changes is worked
   out against the reviewers as it opened (`ReviewerPick`, `pickChanges`), so someone another person added meanwhile
   isn't removed; the reviewers it opened with are a group or a user as "Groups" says (their type from `cm` where it
   was read, else the server's groups as it applies), and someone checked keeps the kind they were listed with
@@ -126,11 +132,14 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   can't ask for. A chip of its own, not a third choice of a reviewer menu ("Any reviewer, I'm a reviewer, Waiting for
   me", tried): it mixes the user's reviews and their rework, so it read as a filter of its own folded inside another.
   The sidebar counts the same reviews on **Merge requests** (`useWaitingForMeBadge`, `waitingBadge`), from the list the
-  view reads (`useCodeReviewsListFilter`: one query key, one `cm find review` in the time range), so the count shows as
-  the window opens. It reads that list once the first screen is in (the pending changes read, or failed; at once on a
-  repository, which reads none: `badgeReadsReviews`), so it never competes with the window's first reads, and rarely
+  view reads (`useCodeReviewsListFilter`: one `cm find review` in the time range, `reviewListSummariesQuery`), so the
+  count shows as the window opens. The count needs no branch name and reads none: only the view names the branches,
+  from that same read (`namedReviewListQuery`, `CodeReviewsApi.branchNames`), which may read every branch's name. It
+  reads that list once the first screen is in (the pending changes read, or failed; at once on a repository, which
+  reads none: `badgeReadsReviews`), so it never competes with the window's first reads, and rarely
   (`SLOW_CHANGING_QUERY`): a focus reads it again only while the view shows it; a write on a review and the Refresh
-  button do. Opening the view within its own staleness (thirty seconds) shows that list without reading it again. The
+  button do. Opening the view within its own staleness (thirty seconds) names that list without reading it again; a
+  refresh with both on screen reads it once, the view's read joining the count's. The
   read is bounded by the view's time range (the last three months unless the user chose another), so a user who chose
   Any time reads every review as each window opens: the count must agree with the view's Waiting for me. Counting only
   once the view was opened, as a sidebar read nothing, was tried: the count was missing until then, where the user
@@ -152,7 +161,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   most once (`BranchNamesCache`). The palette reads only the newest `NEWEST_CODE_REVIEWS` (`reviewSummariesQuery`);
   the branch chips read the reviews of the branches shown, in blocks (merge-requests.md "Reading the branches'
   reviews"). The palette finds an older review by its title (`cm find review … like`) or its number,
-  typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; ARCHITECTURE.md "Prefixes").
+  typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; docs/architecture/renderer.md "Prefixes").
 
 ## The review's page
 
@@ -216,7 +225,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 
 - One `cm find changereviewcomment "where reviewid = N order by date asc"` reads everything said on a review
   (`FOUND_REVIEW_COMMENTS`, `conversationOf`): the comments, each with its kind (`ReviewCommentKind`), the comment it
-  replies to (`{parent}`), where it is (`{revisionid}`, `{itemid}`, `{path}`, `{line}`, `{changeset}`), when it was
+  replies to (`{parent}`), where it is (`{revisionid}`, `{itemid}`, `{path}`, `{location}`, `{changeset}`), when it was
   edited (`{modifieddate}`, the creation date when never edited) and the changeset that applied a change request
   (`{appliedinchangeset}`). The server writes its own notes among them (`timeline`), their meaning in a prefix of the
   text: the description is the newest `[description]` one; the others are events (`ReviewEvent`): review requests
@@ -245,7 +254,9 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedBehaviorOf`, `placeInView`): from Open it glides, the page opened at it jumps at once, and either way
-  its card lands a fifth down the viewport, even when already on screen (ARCHITECTURE.md "Going to a thing"). It's unfolded, lit for a moment
+  its card lands a fifth down the viewport, even when already on screen (docs/architecture/renderer.md "Going to a thing"). It goes
+  there once the conversation is laid out for good (`conversationLaidOut`: read, and the review's changesets settled,
+  as they group the entries into rounds and move the threads below). It's unfolded, lit for a moment
   and ringed in the accent until another is gone to, as a thread selected in the code is (`threadMarkOf`: the card's
   `highlight` and `selected`); its Open entry keeps the Comments panel's accent bar. Each pick counts, so going to the
   thread already on screen, or to the same one again, lights it again: without it, a click on what's already in view
@@ -268,8 +279,10 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   outdated.
   The pill leads with the kind's icon (`THREAD_KIND_ICONS`, change request, question or comment), and its words say
   only where it stands (`threadBadges`), as the server counts open ones. The icon's own tooltip names the kind where the
-  words don't (`HeaderPill`'s `kindTip`): hovering the icon shows "Change request" or "Question", even on a pill that is
-  a link, whose tooltip, over the rest of it, says what a click shows. Beside "Comment" the icon is only drawn, with no
+  words don't (`HeaderPill`'s `kindTip`): hovering the icon shows "Change request 2c17a694" or "Question", even on a pill
+  that is a link, whose tooltip, over the rest of it, says what a click shows. A change request's adds its number, the
+  first eight digits of its GUID that `[apply-change:2c17a694]` names it by ("Applying change requests"), for whoever
+  applies it from a client that doesn't offer it; its menu copies it (Copy ▸ GUID). Beside "Comment" the icon is only drawn, with no
   tooltip and hidden from a screen reader, so the kind isn't said twice. Open and Comment pills have no tooltip of their
   own. Where it stands:
   a change request is **Open** until a changeset applies it (**Applied**, the pill a link to how it was applied, its
@@ -284,7 +297,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   settled pills' do. A settled
   thread starts folded to that line and its first words (`startsFolded`, `repliesText`), so what's open stands out; a
   click shows it whole (by keyboard, its fold toggle: the folded line is the pointer's way only, so it isn't a second
-  tab stop). Every card with a header band folds the same way from its chevron: open change requests and questions,
+  tab stop). Every card with a header band folds the same way from its chevron, and in the conversation from anywhere on the band ("Foldable lines"): open change requests and questions,
   which start whole, and plain comments on a line too (`foldsByHand`: how a card starts and whether it folds are
   apart; `threadCardFold`). Folded, in the conversation and in the code, its first comment's menu sits at the end of
   the folded line, under the pointer, where the comment shown whole has it (`FirstCommentMenu`): the same entries,
@@ -309,14 +322,33 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   (`reviewChipPage`, through `ChipOpenerContext`, which a page fills to open a chip first); anything else opens as every
   chip does (docs/features/rich-comments.md).
 - Writing: every comment is written in the rich editor (docs/features/rich-comments.md) through `CommentComposer`,
-  ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent; each text
-  reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only), delete
-  (`… comment delete`, asked first), discard a change request with a reply saying why (`… reply --discard`).
+  ⌘↵ sending it, its draft kept while the window lives (`useCommentDraftStore`) and cleared once sent or cancelled;
+  each text reaches `cm` in a file. Reply (`cm codereview comment reply`), edit (`… comment edit`, the text only),
+  delete (`… comment delete`, asked first, saying how many replies go with it: `deleteConfirmation`), discard a change
+  request with a reply saying why (`… reply --discard`).
+- Deleting a comment deletes every reply under it, at any depth and whoever wrote it (`commentsDeletedWith`): `cm`
+  deletes only the comments it's named, and a reply left behind would answer nothing (the official client leaves them).
+  One `cm codereview comment delete` names them all, each reply before what it answers, so a delete cut short (`cm`
+  reaching the server no more) leaves no reply whose comment is gone; a reply `cm` can't delete while it goes on (it
+  goes past one and fails at the end), or one written since the review was read, shows as a thread of its own
+  (`threadsOf`). `cm` asks the server twice per comment (finds it by its guid, deletes it), so a long thread runs in a
+  process of its own (`runsLong`: `MAX_QUICK_COMMENT_DELETES`), never a pooled shell.
+- A thread's reply box follows its drafts (`useAnswerBox`), wherever the thread shows (the conversation, a line, an
+  image, a model). A reply (or discard) left with words in it shows open with them when the thread shows again, a
+  settled thread unfolded for it (`answerShownOnReturn`, `initialThreadCardFold`); a box emptied before leaving shows
+  the "Reply…" prompt again. The same thread shows in both tabs, kept mounted: words written in one open the box in
+  the other, its card unfolded if folded, and a reply sent or cancelled in one closes it there, unless the focus is in
+  it, showing a discard still left if there is one (`nextAnswerBox`, `followDrafts`). The box follows each draft's
+  state (none, emptied, words: `answerDraftOf`), not its text, so typing renders no other card. Only a box opened by
+  hand ("Reply…", "Discard…") takes the focus. A draft in a folded round of the conversation stays hidden until the
+  round opens.
 - Who may do what (`commentPermissions`), as the official client allows it (the server only checks the permission
-  on what the review targets): only its author edits a comment; only its author deletes it, and a thread's first
-  comment only while nobody replied (`cm` would leave the replies answering nothing); anyone but who asked for it
+  on what the review targets): only its author edits a comment; only its author deletes a comment, and every reply
+  under it goes too, whoever wrote it (`canDeleteComment`, `commentsDeletedWith`); anyone but who asked for it
   discards an open change request. A comment's menu (`commentMenu`) offers what the user may do, and its text and
-  link to copy (Copy ▸ Comment, Link; see "Links to comments").
+  link to copy (Copy ▸ Comment, Link; see "Links to comments"); a change request's also its number, its GUID's first
+  eight digits as a check-in comment names it (Copy ▸ GUID, `reviewCommentCopyTexts`), never the whole GUID, which
+  nothing a person types takes.
 - **What a reviewer said with their status** is edited by that reviewer, in place in the timeline
   (`canEditStatusComment`, `statusCommentMenu`, `TimelineEventRow`), even when they said nothing; nobody deletes it,
   as the status would go with it. `cm codereview comment edit` writes the text as given and puts back only a
@@ -373,7 +405,9 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
   syntax, `changeRequestQueryAt`) opens **Change requests to apply**: the open ones of the reviews of the workspace's
   branch that the comment doesn't name yet (`notYetNamed`), the newest first; what's typed after `[apply-change:`
   filters them by their words, file, review, author or number, and a pick writes the whole `[apply-change:c0d1ce00]`
-  (`changeRequestSuggestions`). `cr:` stays a review's spec only: a request isn't a review, and mixing them under one
+  (`changeRequestSuggestions`). A row shows no number, which a pick writes for the user; its tooltip names it
+  ("Change request c0d1ce00") over the request's whole first line, which the row cuts. The official client led every
+  row with it, which buried the words people pick by. `cr:` stays a review's spec only: a request isn't a review, and mixing them under one
   prefix read as one. The discoverable door is the description's footer (docs/features/changes.md "The check-in's
   comment"): a quiet button with their count, there only while some are offered, which opens the same list at the
   description's caret, or at its end, and teaches `[apply` at the list's foot (`suggestionListHint`). It always opens:
@@ -421,13 +455,11 @@ hand ("Marked applied by hand" above) is for a request a check-in didn't name.
 A change request can suggest the code itself, as GitHub's suggested changes do: a fence whose language is `suggestion`,
 holding the lines that replace the commented ones. It is plain text in the comment (`suggestionOf`,
 `lib/reviewSuggestion.ts`), so the official client and the web show a code block, and no `cm` command or server field is
-involved. A suggestion replaces the lines its comment is on: one line today; a range once comments take ranges (`cm
-codereview comment add --line=A-B`, stored as a `lines:A-B` location, 0-based and inclusive). An empty fence deletes
-them, several lines replace them. Everything after the anchor takes a range (`LineRange`, `{ firstLine, lastLine }`, one
-line when they're equal): the block's removed rows, Suggest change's prefill, following the lines into the workspace's
-file (`suggestionTargetIn`, see "Applying a suggestion"), writing them (`withLinesReplaced`) and the reasons ("Lines
-13–15 changed…", `rangeWords`). The one place a comment's `{line}` becomes a range is `commentedLines`: supporting
-ranges changes only it.
+involved. A suggestion replaces the lines its comment is on, one or a range (see "Lines a comment is on"). An empty
+fence deletes them, several lines replace them. Everything takes the comment's `LineRange` (`{ firstLine, lastLine }`,
+one line when they're equal): the block's removed rows, Suggest change's prefill, following the lines into the
+workspace's file (`suggestionTargetIn`, see "Applying a suggestion"), writing them (`withLinesReplaced`) and the reasons
+("Lines 13–15 changed…", `rangeWords`).
 
 - **What counts** (`suggestionOf`, `suggestedChangeOf`): only a change request on a line holds one, as only those are
   applied (`[apply-change:…]`); a fence in a question or a comment is a code block. Only the comment's first such fence
@@ -442,22 +474,41 @@ ranges changes only it.
   request. While it's written, the fence's code is colored in the commented file's language, as the box shows it once
   sent (`commentedFileLanguage`, given by `CommentedFileContext` in a line comment, its replies and edits), from the
   moment the editor learns the file, not only once the code is typed into (`colorsRedrawn`). It's offered once per
-  comment, as only the first fence counts. The code's menu has **Suggest change on line 42** after "Comment on line 42"
+  comment, as only the first fence counts. The code's menu has **Suggest change on line 42** (or **on lines 40–42**, the
+  lines selected) after "Comment on line 42"
   (`LineAction.variant`), opening the comment with the fence in it (`useNewLineCommentsStore`'s `suggestRequest`); when
   it can't fill one (the line can't be read, a suggestion is there already), the card says why rather than opening
   without one (`suggestRequestOutcome`), until the comment changes (`refusalShown`). A fence a line of code would close
-  takes more backticks (`suggestionFence`). Not in a reply, which has no line of its own and is never a change request,
-  nor in an edit, whose composer is every comment's: the fence can be typed there, as it can anywhere.
+  takes more backticks (`suggestionFence`). Editing a change request on lines offers it too, in its header beside its menu
+  (`editOffersSuggestion`, `EditSuggestButton`), so a request posted without one can take one; disabled, saying so,
+  once the text suggests already. Not in a reply, which has no line of its own and is never a change request, nor in
+  the editor of a question or a plain comment, whose kind stays once posted: the fence can be typed there, a code
+  block.
 - **Reading** (`SuggestedChangeBlock`): in place of the fence, wherever the comment shows whole (the conversation, the
   cards in the code, How it was applied), a **Suggested change** box: the diff of the commented lines to the suggested
   ones (`suggestionBody`, `suggestionFileDiff`), drawn by Pierre as the code's diff is, so its colors, change bars and
-  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). It reads as GitHub's and
-  GitLab's suggestions do: every line replaced, then every line suggested, the lines it keeps among them, numbered as
-  the file's lines from the first one commented (`replacedThenSuggested`: one hunk starting there, in a diff kept
-  whole, as Pierre loads the full files of a partial one). The line diff alone would mix them: a line wrapped in a new
-  `if` became the `if` added above the line removed and added again, indented, which read as if the `if` were already
-  there. Words are marked only when the suggested lines take the replaced ones' places one for one (every change of
-  the line diff adds as many lines as it removes), as Pierre marks the n-th line removed against the n-th added. One
+  word marks (`30` → `60`) are the diff's own (`SuggestionDiff`, `pierreSnippetDiffOptions`). Two views, the user's
+  choice for every suggestion (`useSuggestionViewStore`, switched by the header's small **Stacked | Diff** control;
+  the box clicked stays where it is on screen while every suggestion resizes, `keepElementInPlace`; shown only when
+  the two differ, `viewsDiffer`: a suggestion keeping none of the lines it replaces, as most one-line ones, reads the
+  same both ways):
+  **stacked**, the default, as GitHub and GitLab show one: every line replaced, then every line suggested
+  (`replacedThenSuggested`), each line edited marked against the line it became as the line diff pairs them, whatever
+  lines the suggestion adds or removes (`stackedWordMarks`, drawn over the rows by `useWordMarks` in Pierre's own word
+  colors; Pierre's own marks are off there, as it pairs the n-th line removed with the n-th added, which marks the
+  wrong lines once the suggestion has another number of lines); and **as a diff**: the line diff of the two, the
+  lines kept shown once and untinted, only the lines changed removed and added, their words marked (`suggestionLineDiff`). Three
+  lines kept stay around each change (`SUGGESTION_CONTEXT_LINES`), and a run of more than ten kept lines folds behind
+  a bar that unfolds it (`SNIPPET_FOLDS_OVER`, Pierre's `collapsedContextThreshold`): a method whose first and last
+  lines change reads as its two changes, while a shorter run shows whole, as a bar to click there saves nothing.
+  Stacked never folds: it is the old block, then the new one. Stacked reads a heavy rewrite best, where a diff
+  interleaves pieces of both; the diff reads a few words changed in a longer range best, where stacked shows the lines kept twice. Both are
+  numbered as the file's lines from the first one commented, in a diff kept whole, as Pierre loads the full files of a
+  partial one. **Compare in a larger view**, beside it, opens the line diff in the code comparison dialog
+  (`openSuggestionComparison`, the moved code's, `openCodeComparisonDialog`), wide enough for the two side by side,
+  with the diff's own Split | Unified switch: a comment, as narrow as its thread, has no room for them. Its controls
+  are words and a diff icon (a page with + and −): icons alone read only once used, and an expand icon read as "make
+  the box bigger". One
   column, highlighted in the file's language (`syntaxLanguage`, once Pierre's shared highlighter has it:
   `useSyntaxHighlighter`), every line shown. A few lines, so drawn whole on the main thread: no workers, and no
   virtualizer, even inside the code's diff, whose own it would otherwise join. Inside a thread in the code, the box is
@@ -472,7 +523,9 @@ ranges changes only it.
   and only by a comment shown whole (a settled thread starts folded); a revision the workspace has loaded is read from
   the disk. While it's read, and while Pierre loads with the first box shown, a place as tall as its rows holds it;
   lines that can't be read leave the suggested lines alone, added. One-line previews (the Comments panel, Open, a
-  folded card) show the comment's first words, or the code's first line, as for any code block. Copying keeps the
+  folded card, the "Applies:" chip) show the comment's first words; one that opens with its suggestion reads
+  "Suggested change on lines 24–152" (`changeRequestLineText`, `suggestionNameOf`), as its first line of code (`{`, a
+  method's signature) names nothing. Copying keeps the
   fence as written. ## Applying a suggestion An open change request's Suggested change has a split button in its
   header (`SuggestionApplyButton`):
 - **Check in suggestion** asks for the check-in's comment (`CommentDialog`): "Apply suggestion from Ana", the request to
@@ -544,8 +597,8 @@ one read serves both), say what was checked in when (`reviewRounds`).
   font and gray, the link color and an underline under the pointer, a chip's card and its click (it opens in the
   review's Changes). A dot parts it from the time after it, whose number it would otherwise run into ("at 9 · 5
   minutes ago"). A chip's fill, and the link color at rest, read as badges and drew the eye from the verdict. The
-  round's line folds through a button laid over it (`.roundToggle`), since the changeset, a link, can't sit inside a
-  button; the time and the changeset sit above it with their own tooltip and card. Named only from the branch's own
+  round's line folds as every foldable line does ("Foldable lines", under "The conversation"); the changeset keeps its
+  own card and click. Named only from the branch's own
   changesets (`ownBranchChangesets`): the previous review's, kept on screen while this one's are read, would name
   another branch's. Nothing is written to the server and the status popover says nothing of it: the server has no
   field for it (its note of a status holds only the comment), and inferring it costs no read.
@@ -557,13 +610,17 @@ one read serves both), say what was checked in when (`reviewRounds`).
   Rework required by you · 5 requests applied, 2 questions answered" (`RoundMarker`, `roundText`), counting every thread
   started in it, as one more event. Rounds are numbered only among others (`roundName`, `roundCountOf`): a review's
   only round reads "**Reviewed** by Alvaro · 1 request applied", its status bold where the name would be, since a lone
-  "Round 1" hints at rounds that never came; a second round numbers both. Its mark on the rail is the status that
-  closed it (Reviewed's thumbs-up, Rework required's flag, in their colors), and while folded what the reviewer said
-  with it shows under the line, folded past
-  four lines (`roundLineComment`), so the verdict and its words read at a glance; a click on its line shows what it held
-  under it, at the timeline's own indent, ending with the status's own event, and folds it back. A round where nothing is open
-  starts folded, one with something open unfolded, and the round holding the thread the page goes to is always unfolded
-  (`roundIsOpen`, `roundHolding`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
+  "Round 1" hints at rounds that never came; a second round numbers both. Folded, the line is the verdict: its mark on the rail is the
+  status that closed it (Reviewed's thumbs-up, Rework required's flag, in their colors), with its time, and what the
+  reviewer said with it shows under the line, folded past
+  four lines (`roundLineComment`), so the verdict and its words read at a glance. A click on its line shows what it held
+  under it, at the timeline's own indent, ending with the status's own event, and folds it back. Unfolded, the line
+  heads what the round held, with no verdict and no time: "**Round 1** · Ana's review · 5 requests applied", a review's
+  only round "**Vio's review** · 1 request applied", the user's own "your review" (`roundText`), its mark the same
+  status in gray. The status's own event at its end says the verdict, in color, with its time: repeated on top, with a
+  time newer than the events under it, the round read as reviewed twice, its times out of order. A round where nothing is open
+  starts folded, one with something open unfolded, and the round holding the thread the page goes to unfolds, even
+  one folded by hand, a click on its line still folding it (`roundIsOpen`, `roundHolding`, `roundChoiceForgotten`). For a reviewer, the rounds are their own statuses'; for anyone else (the author), every
   reviewer's. Then, for a reviewer, the **New since your last review** line (`SinceLine`, `sinceText`): one more event on the
   rail, an accent dot breathing quietly (`--keyframes-heartbeat`, still under reduced motion), the words and their day,
   a hairline, and **See the changes →** at the end; the rail stays as it is (an accent segment read as a second rail).
@@ -571,6 +628,13 @@ one read serves both), say what was checked in when (`reviewRounds`).
   their last status; a thread of an earlier round settled since moves under it, when it settled: what they come back to
   check. The page opens scrolled to it once, unless it was opened at a thread (`opensAtSince`); a status set meanwhile
   moves the line, never the page.
+- **Foldable lines** (`FoldableLine`): a round's line, a batch of check-ins and a run of reviewer changes fold with a
+  click anywhere on them, their time and avatar too, while a link or a button inside (a changeset) keeps its own click
+  (`rowTakesClick`, `clickedOutsideControls`); their chevron always ends them, after the time, and is the way to fold by
+  keyboard, named by the line's words. A thread's band folds the same way in the conversation, its chevron leading, as a
+  file's header does; in the code only its chevron folds it, since a click on a card there picks the thread. The
+  chevron is the line's one tab stop. A chevron before the time, or a click that folded only on the chevron or the words, made lines that look alike
+  behave differently.
 - **The layout holds while the page is open** (`ConversationLayout`, `conversationLayoutOf`, `keptLayoutAfter`, kept
   by `useConversationLayout`): where each thread shows and whether each round starts folded are decided once, when
   who the user is, the conversation and the branch's changesets are read, each from the read the page started on
@@ -590,7 +654,7 @@ one read serves both), say what was checked in when (`reviewRounds`).
   (`TimelineEventRow`, `FoldedComment`), as a status can come with a wall of text.
 - **Check-ins** (`CheckinsEntry`, `CheckinsRow`): the branch's changesets checked in since the review was asked for,
   placed by date among what was said, one entry per run of one person's changesets with nothing said between them
-  ("Daniel checked in 3 changesets"), the words folding the list under them. They start
+  ("Daniel checked in 3 changesets"), its line folding the list under it. They start
   listed only under the "New since your last review" line, what a reviewer comes back to check; anywhere else folded to that line
   (`CheckinsEntry.startsOpen`): a long branch's first batch would push the conversation out of sight. Each changeset is named as a comment's chip names one (its icon and number,
   without the fill) with its comment's first line, and opens in Changes on it. Past five, the
@@ -644,8 +708,20 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   panel's Open/All shows, so the icon and the chip agree, and from the threads alone, as the list reads no file
   (gathered by file once per diff: a list of thousands of files reads each thread a few times). See in
   context's list marks the commented file the same way, with no chip (`commentedFileFlag`).
-- **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on a line of one revision of a file
-  (`{revisionid}`, `{line}`), found in the diff by its path or the path the file moved from. On the revision the
+- **Lines a comment is on.** One line or a range of them, of one revision (`ReviewCommentAnchor`, `LineRange`). `cm`
+  stores where a comment is as text, counted from 0 (`{location}`; `commentedLinesOf`): `11` is line 12, `lines:11-17`
+  lines 12 to 18 (written by `cm codereview comment add --line=12-18`; `lineOption`), `-1` no line (a comment on the
+  review, or on a whole file). `{line}` names a range's first line only, so it isn't read. A point or an area of an
+  image is `image:…` (see "Comments on images"). Any other location a client writes with `--location` (a point of a 3D
+  model), and a comment on a whole file, reads as a comment on the review for now. A thread on a range sits under its last line, as GitHub's do, and its
+  outline runs from its first (`PlacedThread.firstLine`, `LineBand.firstLineNumber`, `rangeBox`), on out of view when
+  an end is past the rows a big file renders (`LineBox.outside`, `renderedEdgeOf`); a folded region inside it unfolds
+  (`rangeLinesOf`). It names its lines as "lines 12–18" (`rangeWords`): its header, its marker, See in
+  context's title and views, an outdated thread's snippet (every line of it marked, the first ten of a longer one,
+  `snippetOf`), and a change request to apply (`Player.cs:12-18`). The Comments panel orders it by the line it sits
+  under. The needed `cm` is the one the app pins (docs/features/cm-runtime.md), so nothing checks its version.
+- **Where a thread goes** (`threadsOfFile`, `fileCommentsOf`). A comment is on lines of one revision of a file
+  (`{revisionid}`, `{location}`), found in the diff by its path or the path the file moved from. On the revision the
   diff's newer side shows, it sits under its line; on the one its older side shows (a file the review deletes, which
   `cm` comments on its last revision), under that line on the left. On an earlier version of the file (the reviewer
   commented at cs:8, the author checked in cs:9 and cs:10), that version and the newer side are read
@@ -653,7 +729,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   file's threads on earlier versions wait until every one is read or has failed, so a row placed never moves for
   another arriving, Pierre keeping rows by their place, `placeEarlier`; one whose read failed holds none of the
   others, and its threads are outdated, their line known though not their text; a purged one reads as empty), and
-  the line is followed into the newest version (`newerLineOf`, a line diff ignoring line ends): unchanged, the thread
+  the lines are followed into the newest version (`newerLineFinder` and `rangeIn`, a line diff ignoring line ends; a
+  range only while every line of it is there, unchanged and together): unchanged, the thread
   sits at its line there, tagged **Earlier version**; changed or gone, it is **outdated**, gathered above the code
   ("2 outdated comments", folded), each with the lines it was written on (`snippetOf`) (`earlierTagOf`). Why not the
   official client's banner (Revision with comments, Last in branch, Diff with head): most comments still sit on code
@@ -707,7 +784,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   shows each time the dialog opens: the review's own setting doesn't hide it there, nor does hiding it there change it.
   It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
   thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys
-  while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and
+  while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/architecture/renderer.md "Keyboard"), and
   closes if the window goes to another place, view or page: what its files' menus and lines open (History, Annotate)
   then shows, not behind it (`navigatedSince`). A dialog rather than a mode of the file's diff, so the review's diff
   stays as it was: "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment"
@@ -721,14 +798,17 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   so an open change request never hides behind the mode it was written in. A review of a
   changeset or a shelve has one mode. Files under an xlink are another repository's, and have none.
 - **Hidden.** The file header's comment button (`useReviewCommentsStore.inCode`, one setting for every review) hides the
-  threads from the code (its tooltip says which way it goes: Hide or Show comments in the code): each line holding some
+  threads from the code, and the pins from every image and model, in every file at once (its tooltip says only which way it
+  goes, Hide or Show comments, the same for code, images and models: `commentsToggleLabel`; "in every file" and "on the
+  model" read as more than a show-or-hide switch): each line holding some
   keeps a marker at its end (`LineMarkers`, `shownThreadRows`), showing who wrote there and how many comments there are,
   as a pull request's do (`markerPeople`, `markerCommentCount`), in the Open color while anything there is open
   (`markerIsOpen`). Its tooltip previews each thread there as plain text, its first words (cut at a word about 80
   characters in) over its kind, where it stands, who started it and its replies ("Question · Open · Borja · 1 reply"),
   three at most and then how many more (`markerTip`); not the line, which it's on, nor who wrote there, which its
   avatars show; a screen reader still hears the kind, the line and the people (`markerLabel`). A click opens that line's
-  threads, and going to a thread opens its line. The outdated ones hide too, and keep a marker of their own on the
+  threads, and going to a thread opens its line; hiding again closes every line opened (`openedAsCommentsToggle`), the
+  thread selected included. The outdated ones hide too, and keep a marker of their own on the
   code's first row (`outdatedMarkerOf`, `lineNumber: 0`; none while that row isn't rendered, `topRowOf`), so hiding
   comments never leaves a file looking as if no one commented on it: a clock, then who wrote and how many comments, as
   a line's marker beside it counts them; its tooltip says they're outdated, then previews them as a line's does. A click shows every one it marks; one gone to
@@ -751,8 +831,8 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
 - **The Comments panel**, beside the diff (`ReviewCommentsPanel`, hidden and shown by the diff header's button like any
   details panel, `DetailsToggleButton`, and closed by its own ×; on a review with no comments on its code it starts
   hidden, and so it does where the code beside it would be narrower than `MIN_READABLE_DIFF_WIDTH` (480 px; the tab's
-  width less the files' and the panel's, `diffWidthBesidePanel`, each side's half of it side by side), decided as the
-  changes first show, so a first comment doesn't open it, and the user's own choice is kept for the next review:
+  width less the files' as they were left, `pageDiffFilesWidthOf`, and the panel's, `diffWidthBesidePanel`, each
+  side's half of it side by side), decided as the changes first show, so a first comment doesn't open it, and the user's own choice is kept for the next review:
   `commentsPanelStartsHidden`, the details store's `startedHidden`, never saved), lists every thread on the code,
   **Open** or **All**, in the order a small sort button by its arrows chooses (`CommentsOrderMenu`, `CommentsOrder`,
   kept for every review in `useReviewCommentsStore.panelOrder`; `commentsPanelThreads`):
@@ -767,7 +847,9 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
     and a row goes there. Each thread is a row (`ThreadSummaryRow`, header place `fileGroup`): who started it, "line N"
     and its replies, then the conversation's pill (its kind's icon and its state, **Comment** for a plain one); its
     first words under them, as wide as the row. A line number in a column of its own read as an id, and the icon beside the words took their room. In a narrow
-    panel, who started it is cut first, then the replies, the line last. The one gone to has the accent bar on its left.
+    panel, who started it is cut first, then the replies, the line last; a place naming a model's part ("point on
+    Wheel", `writtenPlaceNamesPart`) can be long, so it's cut first instead, at most half the row. The one gone to has
+    the accent bar on its left.
   - **Newest first** and **Oldest first**: by the latest comment or reply in each thread, so a reply brings an old
     thread up; one list, as the conversation sums up a settled thread (`ThreadSummaryCard`; its file and line only name
     where it goes, cut short in turn, the folder first, then the line, the file's name last, and whole in a tooltip).
@@ -815,20 +897,36 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   chevron's click that folds it, which selects it too), and the panel brings its entry into view only when it's out of
   it (`listScrollTop`). Picking the thread already selected changes nothing, so the focus moving within a card moves no
   list. Under a filter that hides it, the panel marks nothing, and keeps its filter.
-- **Writing from the code.** A line of the revision the diff comments on takes a comment: the newer side's (context
+- **Writing from the code.** A line of the revision the diff comments on takes a comment, and so do the lines selected
+  in the gutter (a click on a number, Shift+click or a drag for a range, as for a link): the newer side's (context
   lines too), or a deleted file's, which `cm` comments on its last revision; never the older side of a changed file,
   nor a removed line in unified layout, which the reviewed revision doesn't hold (`lineCommentAt`). Files under an
-  xlink and directories take none, as they hold no thread (`isCommentable`); images, binaries and 3D models wait for
-  their viewers' own way in. Two ways in, both the diff's `lineAction`: a "+" by the line under the
-  pointer, lines with threads included (a new change request isn't always a reply), and "Comment on line 42" first in
-  the code's menu (on the last of the lines selected: `cm` names one line), "Suggest change on line 42" after it (see
-  "Suggested changes"). No key: a review's diff has no caret, so no
-  line is "current". The comment opens under the line (`NewLineCommentCard`), after the line's threads, the line
-  outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
+  xlink and directories take none, as they hold no thread (`isCommentable`); images take theirs on the image (see
+  "Comments on images"), and binaries and 3D models wait for
+  their viewers' own way in. Two ways in, both the diff's `lineAction` (`ChangedLines`): a "+" by the line under the
+  pointer, lines with threads included (a new change request isn't always a reply), on the lines selected when it's
+  one of them ("Comment on lines 40–52", `lineActionTargetAt`), and "Comment on line 42" first in the code's menu, on
+  the lines selected (`lineActionTarget`), "Suggest change on line 42" after it (see "Suggested changes"). The "+"
+  also drags, as GitHub's does (its tooltip says "Drag for a range", `lineActionTip`): pressed and moved over other
+  lines of its side, they're outlined in the accent with a "+" on the first and the last (`useLineActionDrag`,
+  `LineActionDragMarks`, `lineActionDrag.ts`), and released, the comment opens on all of them; released on its own
+  line, it's a click, and Esc drops it. No gutter selection while dragging, and no text selected: its fill across both panes was noise
+  for a comment. A line joining the two "+" was tried and dropped: it ran over the code's first letters. Once a
+  comment opens on lines selected, the selection lets go (`releasingSelection`): the comment's outline marks them,
+  and the selection's fill under its card was noise. Lines a comment is being written on take no other comment while it is
+  (`crossesCommentBeingWritten`): no "+" there, no menu entry, no drag or selection across them, as two comments being
+  written over the same code read as one. The same lines go back to the comment being written. A selection
+  across both sides of a unified diff is one line (`linkedLinesOf`), as its link is. No key: a review's diff has no
+  caret, so no line is "current". The comment opens under its last line (`NewLineCommentCard`), scrolled into view
+  and focused if it isn't in view (`openedSpotRow`: unfolding the lines a range crossed can push it far down), after the line's
+  threads, its lines outlined in the accent as the card is (`withNewLineCommentRows`, `withNewLineCommentBands`), never in a side panel
   as the official client's: it's written where it's read. Its kind comes first, as it can't change once posted: Change
   request (the default, `DEFAULT_LINE_COMMENT_KIND`), Question or Comment, the placeholder and the button following it
-  ("Request change", "Ask question", "Comment": `lineCommentWords`). ⌘↵ sends it at once, as every comment is (`cm
-  codereview comment add <id> --revision=revid:N --line=L --type=Change|Question|Comment`, and `--changeset=cs:N`
+  ("Request change", "Ask question", "Comment": `lineCommentWords`). A kind clicked gives the focus back to the text,
+  its caret where it was, so typing goes on; picked with keys (← →, Space or Enter), the focus stays on the switch, as in any
+  radio group (`focusFieldAfterPick`, `segmentPickOfClick`). The cards on an image and a model do the same, and a
+  model's "Point" or part too. ⌘↵ sends it at once, as every comment is (`cm
+  codereview comment add <id> --revision=revid:N --line=L|A-B --type=Change|Question|Comment`, and `--changeset=cs:N`
   on one changeset picked in the list, so it shows in that changeset's diff: `addLineCommentArgs`); its row then holds the new
   thread, opened even while comments are hidden (`openedOnSend`): the card stays, sending, until the conversation read
   again holds it (`conversationReadSince`, which waits for a read after the write, `conversationReadAt`, the one the
@@ -837,7 +935,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   text in `useCommentDraftStore`), so going to another file, mode or tab and back finds them under their lines:
   nothing asks to save one on the way, as the official client's Yes/No/Cancel did. One takes the focus only when
   opened (`focusRequest`, `focusOnRequest`): shown again as its file is, it leaves the focus where the user is (going
-  through the files). It's kept by its file and line number, not the revision: a branch's newest revision changes as
+  through the files). It's kept by its file and line numbers, not the revision: a branch's newest revision changes as
   its author checks in, and the comment stays at its line number, going on the revision and side shown then (a file
   deleted since, on its last revision: `newLineCommentsIn`). The code at that line may have changed meanwhile: the
   reviewer sees it before sending, and following the line through the change would need the versions read for every
@@ -849,3 +947,114 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   as its tabs do; never stacked, both tabs staying mounted as they were left, so Back leaves the review).
 - A line a thread is on is never hidden in a folded unchanged region: the diff unfolds it (`DiffAnnotations`,
   docs/features/diff.md "Rows under lines").
+
+## Comments on images
+
+An image of a review's diff takes comments on a point or an area of it, as code takes them on a line or a range
+(`ImageAnnotations`, given to the image viewer by `ReviewFileAnnotator` through `useReviewImageAnnotations`; the diff
+knows nothing of reviews, docs/features/diff.md "Comments on images").
+
+- **Where it's stored.** `cm codereview comment add --location=image:x,y` for a point, `image:x,y,w,h` for an area, on
+  the revision the diff comments on, as lines are (`addImageCommentArgs`, `imageLocationOption`, `spotCommentAt`).
+  `cm` stores the text as given and doesn't read it; every client reads it alike (`commentedImageSpotOf`): the image's
+  own pixels from its top-left corner, x right and y down; an SVG's numbers may have decimals; what follows a `;` is a
+  hint a client may ignore. The app writes whole pixels. `ReviewCommentAnchor`'s `image` kind holds it (`ImageSpot`);
+  a thread on a file, its lines, its image or its model, is a `FileThread`.
+- **Pins.** Each thread shows as a speech bubble holding the avatar of who started it, its tip on the point, or on the
+  top-left corner of the area it outlines (`reviewImagePinsOf`, `ImageCommentsOverlay`): who wrote there, as a line's
+  marker shows, the shape of a comment on a canvas as design tools draw it. Numbers were tried and dropped: an avatar
+  says more, and the Comments panel and the conversation name it "point" or "area" beside its file
+  (`writtenPlaceText`), its pixels only in the tooltip, rounded: "A 40 × 30 pixel area of the image at x 1, y 2"
+  (`writtenPlaceTip`). The bubble is always white with a soft shadow (`--image-pin-rim`, `--image-pin-shadow`), so it
+  reads over any image; where the thread stands is a mark on it, never a color the image could swallow: an
+  Open-colored dot while open, faded once settled, an accent ring around the avatar when selected (a state border,
+  then a bubble filled with the state's color, each vanished over an image of that color). Its tooltip opens above
+  it, a model's pin's too, its caret on the bubble wherever the cursor is on it (`data-tip-side`, `placeTooltip`):
+  under the bubble is what the comment is about, which the reader looks at while reading it. An area is drawn as the one dragged to write it: a 2 px line in its state's color over a faint wash of
+  that color, the same bright colors in both themes as the image is the same (`--image-area-settled`, `-waiting`,
+  `-selected`; the light theme's own state colors read as a heavy dark band over images), a thin dark rim each side of the line keeping it apart from an image of its own color
+  (`--image-area-rim`), so the image reads as it is (a 1.5 px line with a light halo was tried and read as a washed-out double
+  border over images), and it shows only while its
+  bubble is pointed at, its card open, or it's being written (its thread staying selected once the card closes
+  doesn't keep it), as design tools do: every area drawn at
+  once hid the image under their outlines. In every image mode, on the
+  side its revision shows (Split's After pane; Onion, Diffs and Swipe lay both over each other), gliding with the
+  zoom.
+- **A thread** opens beside its pin on a click, one at a time: the conversation's card as a line's thread shows it in
+  the code (`SpotThreadCard`, shared with a model's), its × closing it back to its pin. Esc closes it too, wherever the keyboard is in
+  the Changes tab (the Comments panel, the file list), not only on the stage: a command (`useLeaveCommentCommand`,
+  decided by `leaveCommentCommandOf`), so a field, a menu or a dialog keeps its own Esc and Expand Diff's Esc waits for
+  it. Only a viewer with a card open or a spot being marked registers it (`leaveCommentCommands`): every image and model
+  viewer in the app uses the same command id, and the commands keep one per id (`registeredCommands`), so an idle
+  viewer registered later would hide this one. Going to a comment leaves the keyboard where it was,
+  so N and P keep stepping from the panel. It goes right of the pin, else left, else
+  below or above it, whichever has room, never under the stage's controls, and over the pin and its area only when
+  nothing else has room (`cardPlacement`, `pinBounds`). Going to it from the Comments panel, the keys or the
+  conversation opens it and brings it into view at the zoom shown (`transformShowing`): the whole area when it fits, else its
+  corner with the bubble (`revealedRect`): the reviewer keeps the zoom
+  they chose.
+- **On an earlier version** (written on a revision neither side shows), a thread's pin goes at its spot on the side
+  comments go on, dashed, its card tagged "Earlier version" (`imageEarlierTagOf`): an image has no lines to follow, and
+  what's there may have changed. No "outdated" for images, nor See in context: a pixel comparison to tell whether the
+  spot changed is a later step.
+- **Writing.** The stage's comment button, or **C** (`imageComment`), turns the pointer into the pin's bubble with a
+  plus (`--cursor-add-comment`), the shape the button (`CommentPinIcon`), a comment being written and a posted one
+  share; a click marks a point, a drag an area, outlined as it's drawn (`spotOfGesture`, a
+  press off the image marks nothing), and the card opens beside it (`NewImageCommentCard`): its kind, then the editor,
+  as on lines, with no Suggest change. Esc (`imageCommentLeave`) or the button leaves the mode. Until it's sent, its bubble drags it
+  (`movedSpot`) and its area's corners reshape it (`resizedSpot`), kept within the image; it's kept while the window
+  lives (`useNewImageCommentsStore`), by file, named by a serial so moving it changes nothing else, on the revision shown, as one on lines is. Once posted it stays
+  where it was written: `cm codereview comment edit` changes a comment's text only.
+- **Hidden.** The header's comment button hides the pins, the one selected included, and the comments of every other file with them (see "Hidden" under
+  lines), to look at the image alone; one
+  gone to while they're hidden shows, as a line of code opens (`threadShownWhileHidden`).
+- **An SVG** shows as code or as the image it draws (docs/features/diff.md "Images written as text"): comments on its
+  lines are in its code, those on a point or an area in its image. Each view says how many the other holds ("2
+  comments are on the image", Show image: `otherRepresentationNotice`), and going to a comment shows the view it's on, for that
+  file only (`fileCommentsSummaryOf`, `RepresentationCommentsContext`; taken once, `askToTake`, and shown for that file alone,
+  `shownRepresentation`).
+- **Not yet**: EXIF orientation (a rotated JPEG's comments are in the pixels as shown, not as stored); an SVG's spots in
+  its own units (they're in the pixels it's drawn at, `decodedSize`, which an SVG declaring more than 16 MP, or no
+  size, is drawn at scaled: another client reading its viewBox's units would misplace them); and a pin moved once
+  posted (it needs `cm codereview comment edit` to take a location).
+
+## Comments on 3D models
+
+A 3D model of a review's diff takes comments on a point of its surface or on a whole part, as an image takes them on a
+point or an area (`ModelAnnotations`, given to the model viewer by `ReviewFileAnnotator` through
+`useReviewModelAnnotations`; the diff knows nothing of reviews, docs/features/model-diff.md "Comments on the model").
+
+- **Where it's stored.** `cm codereview comment add --location=model:x,y,z[;node=<path>][;local=x,y,z][;part][;view=dx,dy,dz,d]`
+  on the revision the diff comments on (`addModelCommentArgs`, `modelLocationOption`; the grammar is in
+  `modelCommentLocation.ts`). The point is in the file's own units and axes, so every client places it alike from the
+  file; the rest are hints a client may ignore: the part's names from the root down, the root itself (the file or its scene) not named, so `Car/Wheel` is a
+  top-level `Car`'s child (`node`, each percent-encoded), the point
+  in that part's space (`local`), the whole part (`part`), the camera it was written from (`view`). Past `cm`'s 1,024
+  characters the hints go, the camera first, then `local`, then the part (`modelLocation`); the point always stays.
+  Numbers keep eight significant digits, never an exponent (`locationNumber`). `ReviewCommentAnchor`'s `model` kind
+  holds it (`ModelSpot`); other clients read it as a comment on the file until they learn it.
+- **Pins** are the image's bubble (`PinBubble`, `reviewModelPinsOf`): who started it, an open dot, faded once settled,
+  ringed when selected. The Comments panel and the conversation name the place by its part, so comments on one model
+  read apart: "point on Wheel", or a whole part "on Wheel", the part alone (`writtenPlaceText`). The name is the last
+  of the location's `node` path; no file is read and no `cm` command runs.
+  With no `node` hint (another client's, or one past the length limit), an empty name, or a name an exporter gave
+  ("Mesh", "mesh_0", "Object_12", "polySurface3", Maya's "pCylinder3", Blender's "Cube.001"; a bare "Plane" reads as
+  written: `partNameSaysNothing`), it says only "point" or "part". The tooltip gives the part's whole path, empty names
+  left out: "A point on Car › Wheel", "The whole part Car › Wheel" (`writtenPlaceTip`). A comment on a part lights
+  the part up only on demand: its bubble pointed at or focused, its card open, or while it's written
+  (`litCommentPart`).
+- **On an earlier version** a pin shows on its part as the version shown has it (`local`), dashed and tagged "Earlier
+  version"; when that part is gone, at its point, the tag saying so by the part's name, "Wheel isn't in this version"
+  (`modelEarlierTagOf`). No earlier version is read.
+- **Writing.** The stage's comment button, or **C** (`modelComment`): a ring lies on the surface under the pointer
+  with the part's name beside the cursor, and with Shift held the whole part lights up instead (`hoveredPartOf`,
+  `hoverLabelOf`; docs/features/model-diff.md "Comments on the model"); a click marks a point (`spotOfHit`), a Shift-click the whole part
+  (`stageClickOf`), and the card
+  (`NewModelCommentCard`) offers its kind, then what it's about, "Point" or the part by its name (`modelCommentAboutOf`,
+  `spotAbout`), then the editor. Before it's sent its bubble drags along the surface. It's kept while the window lives
+  (`useNewModelCommentsStore`), named by a serial. A drag still turns the model: a box drawn in 3D would mean something
+  else from every angle, so a whole part is what an image's area is here.
+- **Going to it** glides the camera to the view its author had, else facing the point with part of the model around it
+  (`viewOfSpot`), and opens its card.
+- **Hidden.** The header's comment button hides the pins, the one selected included, and the comments of every other
+  file with them (see "Hidden" under lines); one gone to while they're hidden shows, as on an image. An OBJ shows as its code or its model: each view says how many comments the other holds.

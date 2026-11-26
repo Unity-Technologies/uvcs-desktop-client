@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { threadsOf } from '../conversation/reviewThreads';
-import { earlierRevisions, placeEarlier, reviewDiffViewOf, threadsOfFile, writtenIn, type LineThread, type ShownFile } from './fileThreads';
+import { earlierRevisions, imageThreadsOfFile, modelThreadsOfFile, placeEarlier, reviewDiffViewOf, threadsOfFile, writtenIn, type LineThread, type ShownFile } from './fileThreads';
 
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/task' };
 const CHANGESET_REVIEW: CodeReviewTarget = { kind: 'changeset', changesetId: 8 };
@@ -13,7 +13,7 @@ function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment
 }
 
 const onLine = (id: number, revisionId: number, line: number, fields: Partial<ReviewComment> = {}): ReviewComment =>
-  comment(id, { anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', line }, ...fields });
+  comment(id, { anchor: { kind: 'line', revisionId, itemId: 7, path: '/src/Player.cs', firstLine: line, lastLine: line }, ...fields });
 
 const PLAYER: ShownFile = { path: 'src/Player.cs', originalRevision: 10, modifiedRevision: 30 };
 
@@ -64,6 +64,12 @@ describe('threadsOfFile', () => {
     expect(earlier).toEqual([]);
   });
 
+  it('places a thread on a range of lines under its last, from its first', () => {
+    const range = onLine(1, 30, 12, { anchor: { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Player.cs', firstLine: 12, lastLine: 18 } });
+    const { placed } = threadsOfFile(threadsOf([range]), BRANCH, WHOLE, PLAYER);
+    expect(placed.map(({ side, firstLine, line }) => [side, firstLine, line])).toEqual([['additions', 12, 18]]);
+  });
+
   it('shows in a changeset\'s diff the change requests it applied, on the version they were written on', () => {
     // Written on the whole branch at revision 10, applied by changeset 12, whose diff shows 10 on its older side.
     const threads = threadsOf([onLine(1, 10, 3, { kind: 'changeRequest', appliedInChangeset: 12 }), onLine(2, 10, 4, { kind: 'changeRequest', appliedInChangeset: 13 })]);
@@ -92,7 +98,7 @@ describe('threadsOfFile', () => {
   it("leaves out other files' threads, the review's own comments and replies", () => {
     const threads = threadsOf([
       comment(1, { kind: 'general' }),
-      comment(2, { anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', line: 1 } }),
+      comment(2, { anchor: { kind: 'line', revisionId: 30, itemId: 9, path: '/src/Enemy.cs', firstLine: 1, lastLine: 1 } }),
       onLine(3, 30, 8),
       comment(4, { parentId: 3, kind: 'comment', anchor: { kind: 'review' } }),
     ]);
@@ -122,7 +128,7 @@ describe('placeEarlier', () => {
   const threads = threadsOf([onLine(1, 20, 5), onLine(2, 20, 9), onLine(3, 25, 1), onLine(4, 20, 9, { changesetId: 5 })]);
   const { earlier } = threadsOfFile(threads, BRANCH, WHOLE, PLAYER);
   // Line 5 of revision 20 is line 7 now; line 9 changed since.
-  const lineOf = (_text: string, thread: LineThread): { side: 'additions'; line: number } | null => (thread.root.anchor.line === 5 ? { side: 'additions', line: 7 } : null);
+  const lineOf = (_text: string, thread: LineThread): { side: 'additions'; firstLine: number; line: number } | null => (thread.root.anchor.firstLine === 5 ? { side: 'additions', firstLine: 7, line: 7 } : null);
   const writtenWhole = (thread: LineThread): boolean => thread.root.changesetId === undefined;
 
   it('places a thread whose line is unchanged since at its line now, saying where it was written', () => {
@@ -156,5 +162,53 @@ describe('earlierRevisions', () => {
   it('names each earlier version once', () => {
     const { earlier } = threadsOfFile(threadsOf([onLine(1, 20, 5), onLine(2, 20, 9), onLine(3, 25, 1)]), BRANCH, WHOLE, PLAYER);
     expect(earlierRevisions(earlier)).toEqual([20, 25]);
+  });
+});
+
+describe('modelThreadsOfFile', () => {
+  const CAR: ShownFile = { path: 'Art/Car.fbx', originalRevision: 10, modifiedRevision: 30 };
+  const onModel = (id: number, revisionId: number, path = '/Art/Car.fbx'): ReviewComment =>
+    comment(id, { anchor: { kind: 'model', revisionId, itemId: 7, path, spot: { point: { x: id, y: 0, z: 0 } } } });
+
+  it('places the threads on a revision a side shows at their spot, and leaves the rest earlier', () => {
+    const threads = threadsOf([onModel(1, 30), onModel(2, 10), onModel(3, 20), onLine(4, 30, 3)]);
+    const { placed, earlier } = modelThreadsOfFile(threads, BRANCH, WHOLE, CAR);
+    expect(placed.map(({ thread, side, spot }) => [thread.root.id, side, spot])).toEqual([
+      [1, 'additions', { point: { x: 1, y: 0, z: 0 } }],
+      [2, 'deletions', { point: { x: 2, y: 0, z: 0 } }],
+    ]);
+    expect(earlier.map(({ thread, revisionId }) => [thread.root.id, revisionId])).toEqual([[3, 20]]);
+  });
+
+  it('finds them on a model moved in the review by the path it had', () => {
+    const moved = { ...CAR, path: 'Art/Vehicles/Car.fbx', oldPath: 'Art/Car.fbx' };
+    expect(modelThreadsOfFile(threadsOf([onModel(1, 10)]), BRANCH, WHOLE, moved).placed).toHaveLength(1);
+  });
+});
+
+describe('imageThreadsOfFile', () => {
+  const HERO: ShownFile = { path: 'Art/Hero.png', originalRevision: 10, modifiedRevision: 30 };
+  const onImage = (id: number, revisionId: number, fields: Partial<ReviewComment> = {}): ReviewComment =>
+    comment(id, { anchor: { kind: 'image', revisionId, itemId: 7, path: '/Art/Hero.png', spot: { x: id, y: 2 } }, ...fields });
+
+  it('places the threads on a revision a side shows at their spot, and leaves the rest earlier', () => {
+    const threads = threadsOf([onImage(1, 30), onImage(2, 10), onImage(3, 20), onLine(4, 30, 3)]);
+    const { placed, earlier } = imageThreadsOfFile(threads, BRANCH, WHOLE, HERO);
+    expect(placed.map(({ thread, side, spot }) => [thread.root.id, side, spot])).toEqual([
+      [1, 'additions', { x: 1, y: 2 }],
+      [2, 'deletions', { x: 2, y: 2 }],
+    ]);
+    expect(earlier.map(({ thread, revisionId }) => [thread.root.id, revisionId])).toEqual([[3, 20]]);
+  });
+
+  it("shows in a changeset's diff only the threads written there, as on lines", () => {
+    const threads = threadsOf([onImage(1, 30, { changesetId: 12 }), onImage(2, 30, { changesetId: 13 })]);
+    const { placed } = imageThreadsOfFile(threads, BRANCH, { kind: 'changeset', changesetId: 12 }, HERO);
+    expect(placed.map(({ thread }) => thread.root.id)).toEqual([1]);
+  });
+
+  it('finds the threads of an image by the path it moved from', () => {
+    const threads = threadsOf([onImage(1, 30)]);
+    expect(imageThreadsOfFile(threads, BRANCH, WHOLE, { ...HERO, path: 'Art/Heroes/Hero.png', oldPath: 'Art/Hero.png' }).placed).toHaveLength(1);
   });
 });

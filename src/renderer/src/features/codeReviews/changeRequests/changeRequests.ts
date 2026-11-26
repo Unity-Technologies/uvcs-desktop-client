@@ -1,10 +1,10 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import type { ReviewConversation } from '@shared/domain/reviewConversation';
+import type { ChangeRequestThread, FileAnchor, LineRange, ReviewConversation } from '@shared/domain/reviewConversation';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { changeRequestsNamedIn } from '@shared/applyChange';
 import type { CheckinMode } from '../../pendingChanges/checkinButton';
 import type { ChipCard } from '../../../components/comments/chipContent';
-import { commentLineText } from '../../../lib/comments/commentText';
+import { changeRequestLineText } from '../suggestions/suggestionPreview';
 import { shortGuid } from '../../../lib/comments/commentReferences';
 import { displayName } from '../../../lib/userName';
 import { threadsOf, writtenOrder, type ThreadState } from '../conversation/reviewThreads';
@@ -24,8 +24,8 @@ export interface ReviewChangeRequest {
   author: string;
   date: string;
   text: string;
-  /** The file and line it was written on; none for one on the whole review. */
-  location?: { path: string; line: number };
+  /** The file it was written on, and its lines when on lines (not on an image); none for one on the whole review. */
+  location?: { path: string; lines?: LineRange };
   state: ChangeRequestState;
 }
 
@@ -48,7 +48,7 @@ export function changeRequestsOf(reviewId: number, conversation: ReviewConversat
         author: root.author,
         date: root.date,
         text: root.text,
-        ...(root.anchor.kind === 'line' && { location: { path: root.anchor.path, line: root.anchor.line } }),
+        ...(root.anchor.kind !== 'review' && { location: locationOf(root.anchor) }),
         state,
       },
     ];
@@ -146,32 +146,37 @@ export interface ChangeRequestChip {
   /** "Change request c0d1ce00": the card's. */
   title: string;
   card: ChipCard;
-  /** The review's thread it opens; none for a request the window hasn't read. */
-  opens?: { reviewId: number; threadId: number };
+  opens: ChangeRequestOpening;
 }
+
+/**
+ * What a click on the chip does: open the review's thread the window read, or find a request it hasn't read by its guid
+ * first (`ReviewCommentsApi.changeRequestThread`, one `cm find`, only then).
+ */
+export type ChangeRequestOpening = ({ kind: 'thread' } & ChangeRequestThread) | { kind: 'find'; guid: string };
 
 const LEAD = 'Applies:';
 
 /**
  * A change request's chip (docs/features/rich-comments.md, "How references show"): "Applies:" muted, then its first line,
  * and a card saying where it stands, its review, who asked and when. One the window hasn't read (`request` undefined)
- * reads "Applies: change request c0d1ce00" and opens nothing: a chip reads nothing of its own.
+ * reads "Applies: change request c0d1ce00": the chip reads nothing to show itself, and finds the request when clicked.
  */
 export function changeRequestChip(request: ReviewChangeRequest | undefined, guid: string, ago: (date: string) => string): ChangeRequestChip {
   const number = shortGuid(guid);
   const title = `Change request ${number}`;
   if (!request) {
     const label = `change request ${number}`;
-    return { lead: LEAD, label, name: `Applies ${label}`, title, card: { title, meta: [] } };
+    return { lead: LEAD, label, name: `Applies ${label}`, title, card: { title, meta: [] }, opens: { kind: 'find', guid } };
   }
-  const label = commentLineText(request.text) || title;
+  const label = changeRequestLineText(request.text, request.location?.lines) || title;
   return {
     lead: LEAD,
     label,
     name: `Applies change request: ${label}`,
     title,
     card: { comment: request.text, title, meta: [title, stateText(request.state), `Code review ${request.reviewId}`, displayName(request.author), ago(request.date)] },
-    opens: { reviewId: request.reviewId, threadId: request.commentId },
+    opens: { kind: 'thread', reviewId: request.reviewId, threadId: request.commentId },
   };
 }
 
@@ -184,4 +189,9 @@ function stateText(state: ChangeRequestState): string {
     case 'discarded':
       return 'Discarded';
   }
+}
+
+/** Where a change request on a file was written: the file, and its lines when it's on lines. */
+function locationOf(anchor: FileAnchor): NonNullable<ReviewChangeRequest['location']> {
+  return anchor.kind === 'line' ? { path: anchor.path, lines: { firstLine: anchor.firstLine, lastLine: anchor.lastLine } } : { path: anchor.path };
 }

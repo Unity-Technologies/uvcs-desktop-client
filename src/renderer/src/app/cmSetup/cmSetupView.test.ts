@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CmInstallFailure, CmRuntimeStatus } from '@shared/domain/cmRuntime';
 import { CM_SETUP_DOWNLOAD_SHARE } from '@shared/domain/cmRuntime';
-import { cmSetupViewOf, installedCmLabel, timeLeftText } from './cmSetupView';
+import { cmSetupViewOf, timeLeftText } from './cmSetupView';
 
 const MB = 1024 * 1024;
 
@@ -16,6 +16,10 @@ function failed(failure: CmInstallFailure, firstRun = true): CmRuntimeStatus {
 describe('cmSetupViewOf', () => {
   it('shows nothing once it’s ready', () => {
     expect(cmSetupViewOf({ kind: 'ready', source: 'managed' }, null)).toBeNull();
+  });
+
+  it('leaves the window to the update screen while the installed one is too old', () => {
+    expect(cmSetupViewOf({ kind: 'installedTooOld', installed: { path: '/usr/bin/cm', version: '11.0.16.9000' }, requiredVersion: '11.0.16.10659' }, null)).toBeNull();
   });
 
   it('sets up on the first run, and updates after one', () => {
@@ -65,8 +69,10 @@ describe('timeLeftText', () => {
   });
 });
 
-describe('installedCmLabel', () => {
-  it('names the installed one’s version', () => {
-    expect(installedCmLabel({ path: '/usr/bin/cm', version: '11.0.16.9000' })).toBe('Use the installed one (11.0.16.9000)');
+describe('cmSetupViewOf’s buttons on a failure', () => {
+  it('offers Try Again, and the installed one by its version when one is found', () => {
+    expect(cmSetupViewOf(failed('diskFull'), null)).toMatchObject({ tryAgainLabel: 'Try Again', useInstalledLabel: null });
+    const withInstalled: CmRuntimeStatus = { ...failed('diskFull'), installedCm: { path: '/usr/bin/cm', version: '11.0.16.10700' } } as CmRuntimeStatus;
+    expect(cmSetupViewOf(withInstalled, null)).toMatchObject({ useInstalledLabel: 'Use the Installed Version (11.0.16.10700)' });
   });
 });

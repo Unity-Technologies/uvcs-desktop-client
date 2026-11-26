@@ -50,6 +50,10 @@ reads a file otherwise:
   BoatAttack's `Renegade.fbx`): they show "Couldn't display this model", a known limit of the loader.
 - **A glTF that needs more than its bytes says so** (`gltfNeed`): a buffer in a `.bin` beside it, or Draco or meshopt
   compression, which the viewer has no decoder for (`modelReadFailureWords`).
+- **A skin leaning on a joint it hasn't is unreadable** (`leansPastSkeleton`, checked by `fromThreeObject`): a vertex
+  weighted to a joint index past its skin's joints, as a broken glTF export can write, would make three read a bone
+  that isn't there each time it draws, places or picks the mesh. It shows "Couldn't display this model" instead.
+  FBXLoader numbers the joints from the skin's own clusters, so a sound FBX can't carry one.
 
 Checked against Unity 6000.3's own import of six real exports (Blender's, a Z-up one among them): sizes and centres
 match to the centimetre; Unity's `Renderer.bounds` only differ where a node is rotated, as they box a box.
@@ -187,10 +191,13 @@ only what changes:
 - **Meshes drawn alike share their materials** (`SceneMaterials`): one clay material per slot name and emphasis (lit,
   faded, plain: `emphasisOf`), one wire material per emphasis, one heat and one ghost. A material each made three
   refresh every material's uniforms for every mesh, each frame. The look sets each shared material's color once.
-- **Picking reads the GPU** (`MeshPicker`): the side's meshes shown (solid or wireframe) are drawn into one float
+- **Picking reads the GPU** (`MeshPicker`): the side's meshes shown, whichever way they're drawn (solid, wireframe, or
+  Diffs' heat and ghost twins: `drawnTwinsOf`, `shownToPicking`), are drawn into one float
   pixel through the camera narrowed to the point under the pointer (`pickWindowAt`, three's `setViewOffset`, which
   culls every mesh whose bounds miss it), writing where the surface is and which mesh it is (`pickedAt`), deformed as
-  drawn. It picks the faces each slot's material draws (`facesOf`: a double-sided leaf card from behind too, and
+  drawn, and in a second pixel of the same draw the face's direction there, from how the point changes across the
+  pixel (`normalAt`; read back only when asked: the ring aiming a comment). The raycast takes the face's own, through
+  the normal matrix. It picks the faces each slot's material draws (`facesOf`: a double-sided leaf card from behind too, and
   any part from behind in the Wireframe modes, whose lines show from both sides), not its alpha clip: a hole cut in a card picks the card. Three's `Raycaster` tested every triangle on the main thread: 90 ms a wheel notch, click or pan on 3 million
   triangles; read so, 2.5 ms. Its program is compiled as the renderer starts (`prepare`), or the first pick of each
   model waited 100 ms for it. A GPU without float pixels to draw into (`EXT_color_buffer_float`) raycasts.
@@ -271,7 +278,8 @@ only what changes:
   following resizes). The shared framing stays: it is what lets sizes compare.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
-  - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
+  - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans; a press that stays put is a click
+    (`pressIsClick`). A pan moves what it grabbed exactly
     with the pointer: what was under it, else the model's centre (`workingDepth`); panning at the orbit target's depth
     crawled once the target was zoomed close in front of the model. Let go moving, either coasts a little
     (`ViewCoast`: the Branch Explorer's inertia, `SHORT_FLING` for a pan, the much softer `TURN_FLING` for a turn), and
@@ -350,6 +358,71 @@ only what changes:
   framing and fading nothing: a bone's dot marks where it rests, not where the take moves it. **The info strip**
   (`modelStats`): Tris, Verts, materials, bones, blendshapes, animations and size, "before → after" where they changed,
   both sizes in one unit.
+
+### Comments on the model
+
+A place may pin comments on the model and take what a click marks on it without the model diff knowing what they are
+(`ModelAnnotationsContext`, as `ImageAnnotationsContext` does for an image; a review's comments,
+docs/features/code-reviews.md "Comments on 3D models"). A `.meta` shown as its model takes none (`ModelMetaDiff`): its
+comment would sit on the `.meta`'s revision with a point in the model's space, which no other client could place.
+
+- **Pins** (`ModelPin`): a spot (`ModelSpot`: a point in the file's own space, and the part it's on with the point in
+  that part's space) on a version, drawn by `ModelCommentsOverlay` over the canvas in the bubble every pin shares
+  (`PinBubble`). Each is placed on its part as that version draws it now (`pinPlacesOf`, `placedSpot`: the part found
+  by its names as the file writes them, `nodeNamesOf`, which a glTF's loader renames apart, `ModelNode.fileName`;
+  same-named siblings told apart by the point, `nodeOfSpot`), so it follows the part to where another
+  version has it, and while a take plays. A point on a mesh a take reshapes (skinned, which its bones bend, or with
+  blendshapes, which it morphs) follows the surface, since the mesh's node stays where it is: the pin is anchored on the
+  mesh's triangle nearest its point at rest, by where in the triangle the point is (`skinAnchorOfSpot`, from `local`,
+  so comments written before follow too), and each frame is that mix of the triangle's three corners as drawn now
+  (`drawnAnchorPoint`, three's `getVertexPosition`): three vertices a pin, whatever the mesh's size. A triangle rather
+  than the nearest vertex: on a low-poly part the nearest corner can be far from the point, and an offset kept from it
+  turns wrong as the bones turn it. Rest meshes are kept per node and model (`restMeshesOn`), anchors per spot
+  (`skinAnchorOfSpot`): a part is placed at rest once for all its pins, and a comment dragged while it's written is the
+  only one anchored again. A part another version hasn't leaves the pin at its point (`partGone`). Where the point shows is projected as the version's pane
+  draws it (`ModelRenderer.screenProjectorOf`, `projectorOf`) after every frame drawn (`onFrameDrawn`): a turn, a
+  glide, a take, a resize move the bubbles without React rendering for each frame. Off its pane or behind the camera, a
+  bubble hides; each version's pins sit in a layer cut to where it shows (`ModelRenderer.paneRectOf`, `paneOnCanvas`:
+  its pane, or its side of Swipe's divider), so none is drawn over the other version. Once the view is still (`SETTLE_MS`), a pin whose point something else is drawn in front of, picked under its
+  tip (`hiddenBehind`), eases to faded and smaller, still there to click, and back once it's in view. The opened pin's
+  card sits beside it (`pinCardPlacement`), following it as the view moves, narrowed on a stage narrower than it; while
+  only a take moves the pin it holds still, so it doesn't wobble, until the pin would go under it or stray past `CARD_LEASH`
+  (`keptCardPlacement`). Off its pane it hides with its pin, the focus it held going to the stage (`setCardHidden`); the wheel over a card scrolls the card, never zooms (`isOnStageControl`).
+- **Marking a spot**: where the place takes comments (`takesModelComments`: the version it comments on shows), the
+  stage's first control and **C** (`modelComment`) turn the pointer into the comment cursor; a click marks the point
+  under it on that version (`ModelRenderer.pick` with `only`, `paneOfSideAt`: whichever version a swipe or the onion
+  shows there), a click on nothing marks nothing, and a drag still turns the model. A click marks a point; with Shift
+  held, the whole part (`stageClickOf`; a Shift press that stays put is a click, a Shift-drag still pans:
+  `pressIsClick`), as the comment button's tooltip, the shortcut's label and the hover's hint say. Shift, not Alt: many
+  Linux desktops take an Alt-click or Alt-drag to move the window. Meanwhile the pointer shows what a click marks on that
+  version: a ring lying on the surface at the point, the same size on screen at any distance and lifted a hair off it
+  (`setCommentAim`, `showCommentAim`, `aimRingPlacement`, `aimShownWhileCommenting`), and "Point on Wheel" beside the
+  cursor (the part's name as the comment's card will give it); or, with Shift held, the whole part lit up as a
+  comment's part is and "Whole Wheel" (in Diffs only the words: its colors say what changed, and by look a part lit
+  would compare as a change); pressing or letting go of Shift changes it at once, the pointer still
+  (`hoveredPartOf`, `hoverLabelOf`, `CommentHoverLabel`). The comment cursor is drawn up and to the right of its hot
+  spot, its tip on the ring's edge, so it covers nothing it marks (`--cursor-aim-comment`); with Shift, with no ring,
+  it marks the hot spot with a dot of its own, in the same place, so it never jumps (`--cursor-aim-part`).
+  A part is never lit while a click would mark a point, so the light never promises the whole part. Nothing shows over empty space, a pin, a card or
+  a button, nor while a button is held (`hoverPicks`: a drag turns the model). It shows in every mode: in Diffs by look
+  the ring is drawn after the versions are compared, so it never shows as a change (`aimRingPass`). It goes once
+  commenting stops or the pointer leaves the stage. It lights as soon as commenting starts with the pointer
+  over the model, and follows what moves under a still pointer (a turn's coast, a glide, flying, a take): each frame
+  drawn asks again. Picking reads the GPU, so it runs at most once a frame, and only when the pointer moved a pixel or
+  the model moved under it (`pickAgain`, `ModelRenderer.moves`: the camera, a pose, the layout, the size, the models;
+  a part lit up redraws without moving anything) (`useCommentHover`); what's lit is the part hovered with Shift held,
+  nothing while a point is aimed at, else a comment's (`litWhileCommenting`). What it writes is
+  `spotOfPick`/`spotOfHit`: the point where the part rests (a take playing moves the part, not where on it the comment
+  is; on a skinned mesh or one with blendshapes it reshapes the surface, so the hit is carried to rest by the same place on
+  the same triangle, `restPointOfHit`), the part's names and the point in its space, and the camera. A comment being written drags by its bubble along
+  the surface, picked again under the pointer. **Esc** (`modelCommentLeave`) stops, or closes the card open, wherever the keyboard is in the diff, as on an image (docs/features/code-reviews.md). Keys typed
+  in a card (F, 0, C) stay the card's (`keyTakenByText`).
+- **A part lit up**: a comment on a whole part lights its part (the view's own emphasis, the rest faded) while its
+  bubble is pointed at or focused, its card open, or it's being written (`litCommentPart`); never while Diffs by look
+  compares, where a part lit would compare as a change.
+- **Going to a pin** glides the camera (`ModelCameraControl.frameView`) to the view its author had, carried onto the
+  part as it is now, or, when the comment doesn't say, facing the point from the side its surface faces, as stepping to
+  a changed region does (`viewOfSpot`, `regionView`): the point in the middle, so its bubble shows.
 
 ## Beside the model: its `.bin` and its `.meta`
 

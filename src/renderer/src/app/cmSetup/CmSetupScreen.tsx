@@ -4,17 +4,18 @@ import { api } from '../../api/client';
 import { AppMark } from '../../components/AppMark';
 import { Button } from '../../ui/Button';
 import { useTheme } from '../settings/useTheme';
-import { DetailsDisclosure } from '../../ui/DetailsDisclosure';
-import { OutputBlock } from '../../ui/OutputBlock';
-import { cmSetupViewOf, installedCmLabel, type CmSetupView as View } from './cmSetupView';
+import { FoldedOutput } from '../../ui/FoldedOutput';
+import { cmSetupViewOf, type CmSetupView as View } from './cmSetupView';
 import { useCmRuntimeStore, useSecondsLeft } from './cmRuntimeStore';
+import { CmUpdateNeeded } from './CmUpdateNeeded';
 import { useRetryWhenOnline } from './useRetryWhenOnline';
 import styles from './CmSetupScreen.module.css';
 
 /**
  * The whole window while the app sets up its own Unity Version Control: on the first run, and when an update brought a
  * newer one it couldn't download ahead (docs/features/cm-runtime.md "The setup screen"). It asks nothing of the user;
- * the app's screens follow by themselves once it's done.
+ * the app's screens follow by themselves once it's done. It also asks to update the installed one when it's older than
+ * the app needs (`CmUpdateNeeded`).
  */
 export function CmSetupScreen() {
   // Root applies the theme once the app shows; until then, this screen does.
@@ -22,13 +23,14 @@ export function CmSetupScreen() {
   const status = useCmRuntimeStore((state) => state.status);
   const view = cmSetupViewOf(status, useSecondsLeft());
   useRetryWhenOnline(status);
-  if (!view) return null;
+  const body = status.kind === 'installedTooOld' ? <CmUpdateNeeded status={status} /> : view && (view.kind === 'progress' ? <Progress view={view} /> : <Failure view={view} />);
+  if (!body) return null;
   return (
     <div className={styles.screen}>
       <div className={styles.dragRegion} />
       <main className={styles.column}>
         <AppMark size={56} />
-        {view.kind === 'progress' ? <Progress view={view} /> : <Failure view={view} />}
+        {body}
       </main>
     </div>
   );
@@ -61,7 +63,6 @@ function Progress({ view }: { view: Extract<View, { kind: 'progress' }> }) {
 
 function Failure({ view }: { view: Extract<View, { kind: 'failed' }> }) {
   const [retrying, setRetrying] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const retry = async (): Promise<void> => {
     setRetrying(true);
     try {
@@ -76,15 +77,12 @@ function Failure({ view }: { view: Extract<View, { kind: 'failed' }> }) {
       <p className={styles.reason}>{view.reason}</p>
       <div className={styles.actions}>
         <Button variant="primary" icon={<RefreshCw size={14} className={retrying ? 'spinning' : undefined} />} onClick={() => void retry()} disabled={retrying}>
-          Try Again
+          {view.tryAgainLabel}
         </Button>
-        {view.installedCm && <Button onClick={() => void api.cmRuntime.use('installed')}>{installedCmLabel(view.installedCm)}</Button>}
+        {view.useInstalledLabel && <Button onClick={() => void api.cmRuntime.use('installed')}>{view.useInstalledLabel}</Button>}
       </div>
       <div className={styles.details}>
-        <DetailsDisclosure open={detailsOpen} onToggle={() => setDetailsOpen(!detailsOpen)}>
-          Details
-        </DetailsDisclosure>
-        {detailsOpen && <OutputBlock output={view.detail} />}
+        <FoldedOutput output={view.detail} />
       </div>
     </div>
   );

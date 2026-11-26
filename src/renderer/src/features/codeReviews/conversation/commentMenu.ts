@@ -10,7 +10,7 @@ import type { ReviewThread } from './reviewThreads';
 interface CommentMenuActions {
   edit: () => void;
   remove: () => void;
-  /** What Copy offers: its text and its link (`reviewCommentCopyTexts`). */
+  /** What Copy offers: its text and its link, and a change request's short GUID (`reviewCommentCopyTexts`). */
   copyTexts: CopyTexts;
   /** Where the thread is in the conversation, from its code (the Changes tab). */
   showInConversation?: () => void;
@@ -34,6 +34,6 @@ export function commentMenu(comment: ReviewComment, thread: ReviewThread, user: 
     isRoot && actions.showInConversation && menuAction('showInConversation', actions.showInConversation),
     canEditComment(comment, user) && menuAction('editComment', actions.edit),
     copySubmenu('Comment', actions.copyTexts),
-    canDeleteComment(comment, thread, user) && menuAction('delete', actions.remove),
+    canDeleteComment(comment, user) && menuAction('delete', actions.remove),
   ]);
 }

@@ -26,81 +26,80 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # `smoke`: also run the smoke test (scripts/e2e/README.md), the built app over a fake cm and a temp workspace,
-          # every view. Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth
-          # the upkeep for a smoke test; Windows arm64 too, as Windows x64 covers the same code. It runs in this job,
-          # not one of its own, so it reuses the job's install instead of paying for a runner, a checkout and an install.
-          - { name: macOS arm64, os: macos-latest, smoke: true }
-          - { name: Windows x64, os: windows-latest, smoke: true }
+          - { name: macOS arm64, os: macos-latest }
+          - { name: Windows x64, os: windows-latest }
           - { name: Windows arm64, os: windows-11-arm }
           - { name: Linux x64, os: ubuntu-latest }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # The Windows arm64 runner builds on C:, a network-attached virtual disk, and leaves a local NVMe SSD raw (no
-      # partition): `npm ci` of the cached packages takes about 3 minutes on C: and 30 s on that SSD. This formats it as
-      # a Dev Drive, copies the checkout onto it and points npm's cache and the temp folder at it; the later steps run in
-      # BUILD_DIR. A junction from the checkout folder was rejected: Vite then sees the project under two paths and the
-      # build fails. Runners without a raw disk skip it (Windows x64 builds on a separate D:). Timed: the tests take as
-      # long on any disk; 2 CPUs, not the disk, bound them.
-      - name: Build on the local SSD
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $raw = Get-Disk | Where-Object PartitionStyle -eq 'RAW' | Select-Object -First 1
-          if (-not $raw) {
-            'No unused local disk: building on the default one.'
-            exit 0
-          }
-          "Building on $($raw.FriendlyName)"
-          $volume = $raw | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -UseMaximumSize -AssignDriveLetter |
-            Format-Volume -DevDrive -Confirm:$false -Force
-          $drive = "$($volume.DriveLetter):"
-          foreach ($folder in 'npm-cache', 'temp') { New-Item -ItemType Directory "$drive\$folder" | Out-Null }
-          robocopy $env:GITHUB_WORKSPACE "$drive\workspace" /E /NFL /NDL /NJH /NJS /NP
-          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
-          "BUILD_DIR=$drive\workspace" >> $env:GITHUB_ENV
-          "npm_config_cache=$drive\npm-cache" >> $env:GITHUB_ENV
-          "TEMP=$drive\temp" >> $env:GITHUB_ENV
-          "TMP=$drive\temp" >> $env:GITHUB_ENV
-          exit 0
+      # Why each: in the action. The temp folder moves after the install, which needs more room than the disk in memory.
+      - uses: ./.github/actions/build-on-local-ssd
       - uses: ./.github/actions/install
         with:
           working-directory: ${{ env.BUILD_DIR || github.workspace }}
           reuse-node-modules: 'true'
-      # The macOS runner's disk now and then holds every write for seconds, once for over a minute, while reads go on:
-      # tests that were writing a temp file then timed out (three runs of forty in October 2026), the rest passed. The
-      # temp folder (the tests' own, `vitest.tempDirectory.ts`, and the smoke test's) moves to a 512 MB disk in memory,
-      # apart from the runner's: the tests write about 5 MB there, the smoke test its app's data and screenshots. APFS,
-      # as users' Macs have: names stay as written, NFC or NFD, where HFS+ would store them decomposed.
-      - name: Temp folder in memory
-        if: runner.os == 'macOS'
-        run: |
-          device=$(hdiutil attach -nomount ram://1048576 | tr -d '[:space:]')
-          diskutil erasevolume APFS UVCSTemp "$device"
-          echo "TMPDIR=/Volumes/UVCSTemp" >> "$GITHUB_ENV"
+      - uses: ./.github/actions/temp-in-memory
       # Once: tsc answers the same on every OS, and Linux's case-sensitive disk makes it the strictest about import paths.
       - if: runner.os == 'Linux'
         run: npm run typecheck
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
       - run: npm test
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
-      - if: ${{ !matrix.smoke }}
-        run: npm run build
+      - run: npm run build
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
-      # The smoke test over a development build (React's StrictMode), then over the production build.
-      - if: ${{ matrix.smoke }}
-        run: npm run e2e
+
+  # The smoke test (scripts/e2e/README.md): the built app over a fake cm and a temp workspace, every view. Its own jobs,
+  # one per build, run beside the tests rather than after them: in the build job, the tests then the two smoke runs
+  # took about 6 minutes on macOS, where these take 1 to 2.5 each, for one more install from the node_modules cache.
+  # Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth the upkeep for a
+  # smoke test; Windows arm64 too, as Windows x64 covers the same code.
+  smoke:
+    name: Smoke test, ${{ matrix.platform.name }}, ${{ matrix.build }} build
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { name: macOS arm64, os: macos-latest }
+          - { name: Windows x64, os: windows-latest }
+        # `development`: React's development build, whose StrictMode mounts every component twice (a bug only
+        # `npm run dev` shows); `production`: what ships.
+        build: [development, production]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/build-on-local-ssd
+      - uses: ./.github/actions/install
+        with:
+          working-directory: ${{ env.BUILD_DIR || github.workspace }}
+          reuse-node-modules: 'true'
+      - uses: ./.github/actions/temp-in-memory
+      - run: npm run e2e:${{ matrix.build }}
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
         env:
           # In the temp folder the steps above chose: on macOS the disk in memory, whose writes never stall.
           UVCS_E2E_SHOTS: ${{ env.TMPDIR || env.TEMP || runner.temp }}/uvcs-e2e-shots
       # A failed smoke test keeps its screenshots, the failed step's included: a run that fails now and then can be read
       # only from what it left.
-      - if: ${{ matrix.smoke && failure() }}
+      - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: smoke-screenshots-${{ matrix.name }}
+          name: smoke-screenshots-${{ matrix.platform.name }}-${{ matrix.build }}
           path: ${{ env.TMPDIR || env.TEMP || runner.temp }}/uvcs-e2e-shots
           if-no-files-found: ignore
           # A re-run of the job replaces the screenshots it kept, rather than failing on the name.
           overwrite: true
+
+  # The one check branch protection requires of this workflow (docs/features/updates.md "CI"): it fails unless every
+  # job passed, so a new or renamed job needs no change to the protection rules. `if: always()`, because a job skipped
+  # after a failure counts as passed for a required check; a skipped job here counts as failed.
+  ci-result:
+    name: CI result
+    needs: [build, smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "::error::A CI job failed, was cancelled or was skipped."
+          exit 1
+      - run: echo "Every CI job passed."

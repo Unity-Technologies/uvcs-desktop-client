@@ -1,3 +1,4 @@
+import type { LineRange } from '@shared/domain/reviewConversation';
 import { ChevronRight } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { pluralize } from '../../../lib/text';
@@ -6,7 +7,7 @@ import { earlierTagOf } from './earlierTag';
 import type { ContextView } from './commentContext';
 import { outdatedOpensFor } from './fileAnnotation';
 import type { EarlierThread, LineThread, VersionText } from './fileThreads';
-import { snippetOf } from './outdatedSnippet';
+import { snippetLabel, snippetOf } from './outdatedSnippet';
 import { cardFocusOf } from './threadSelection';
 import type { ReviewComments } from './reviewComments';
 import { hideLabel, type LineThreads } from './threadRows';
@@ -90,7 +91,7 @@ export function OutdatedThreads({ comments, outdated, focus, textOf, onHide, onS
       onSeeInContext={onSeeInContext}
       inCode={{
         earlier: earlierTagOf(thread, true),
-        snippet: <Snippet text={textOf(revisionId)} line={thread.root.anchor.line} />,
+        snippet: <Snippet text={textOf(revisionId)} lines={thread.root.anchor} />,
         showInConversation: () => comments.showInConversation(thread.root.id),
         seeInContext: onSeeInContext && (() => onSeeInContext(thread)),
         hide: onHide && { label: hideLabel(1), onHide: () => onHide(thread) },
@@ -140,13 +141,13 @@ function ThreadInRow({ comments, thread, focus, inCode, onSeeInContext }: Thread
   );
 }
 
-/** The lines an outdated thread was written on, the one it's on marked. */
-function Snippet({ text, line }: { text: VersionText; line: number }) {
-  const lines = typeof text === 'string' ? snippetOf(text, line) : [];
-  if (lines.length === 0) return null;
+/** The lines an outdated thread was written on, the ones it's on marked. */
+function Snippet({ text, lines }: { text: VersionText; lines: LineRange }) {
+  const shown = typeof text === 'string' ? snippetOf(text, lines) : [];
+  if (shown.length === 0) return null;
   return (
-    <pre className={styles.snippet} aria-label={`Line ${line} as it was`}>
-      {lines.map((snippetLine) => (
+    <pre className={styles.snippet} aria-label={snippetLabel(lines)}>
+      {shown.map((snippetLine) => (
         <span key={snippetLine.number} className={styles.snippetLine} data-commented={snippetLine.commented || undefined}>
           <span className={styles.snippetNumber}>{snippetLine.number}</span>
           <code>{snippetLine.text}</code>

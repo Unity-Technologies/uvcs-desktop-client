@@ -1,4 +1,5 @@
-import type { AppSettings } from '../domain/settings';
+import type { RepositorySettings, ScopedSettingsChange, ServerSettings } from '../domain/scopedSettings';
+import type { AppSettings, WindowKeptSettings } from '../domain/settings';
 
 export interface SettingsApi {
   get(): Promise<AppSettings>;
@@ -11,4 +12,12 @@ export interface SettingsApi {
    * place, so windows checking in to other repositories meanwhile keep theirs (`withRecentComment`).
    */
   rememberRecentComment(repository: string, comment: string): Promise<AppSettings>;
+  /** Adds an organization (its server, `acme@unity`) to the favorites, or removes it: changed in one place, as above. */
+  setFavoriteOrganization(server: string, favorite: boolean): Promise<AppSettings>;
+  /** Changes one repository's settings (a spec), keeping every other repository's: changed in one place, as above. */
+  updateRepositorySettings(repository: string, changes: ScopedSettingsChange<RepositorySettings>): Promise<AppSettings>;
+  /** Changes one server's settings, keeping every other server's: changed in one place, as above. */
+  updateServerSettings(server: string, changes: ScopedSettingsChange<ServerSettings>): Promise<AppSettings>;
+  /** Takes what the window's storage kept before the settings held it, where the settings keep nothing yet. */
+  addWindowSettings(kept: WindowKeptSettings): Promise<AppSettings>;
 }

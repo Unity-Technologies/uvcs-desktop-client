@@ -77,6 +77,22 @@ describe('SettingsStore recent comments', () => {
   });
 });
 
+describe('SettingsStore favorite organizations', () => {
+  it('keeps every window’s favorites when they change one after another', () => {
+    const { settings, filePath } = store();
+    settings.setFavoriteOrganization('acme@unity', true);
+    settings.setFavoriteOrganization('games@cloud', true);
+    settings.setFavoriteOrganization('acme@unity', false);
+
+    expect(settings.get().favoriteOrganizations).toEqual(['games@cloud']);
+    expect(JSON.parse(readFileSync(filePath, 'utf8')).favoriteOrganizations).toEqual(['games@cloud']);
+  });
+
+  it('starts with none', () => {
+    expect(store().settings.get().favoriteOrganizations).toEqual([]);
+  });
+});
+
 describe('SettingsStore reading its file', () => {
   it("keeps a file it can't read as settings aside, named for when, and starts from the defaults", () => {
     const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
@@ -145,5 +161,64 @@ describe('SettingsStore reading its file', () => {
     settings.update({ showGravatar: true, gravatarChoiceAsked: true });
 
     expect(new SettingsStore(filePath).get()).toMatchObject({ showGravatar: true, gravatarChoiceAsked: true });
+  });
+});
+
+describe('SettingsStore and the choice of cm', () => {
+  it('moves a file’s choice from before the automatic one to it once, and keeps the user’s choice after that', () => {
+    const { settings, filePath } = store();
+    writeFileSync(filePath, JSON.stringify({ ...DEFAULT_SETTINGS, cmChoice: 'managed', cmDeclinedUpdateFor: undefined }));
+    const migrated = new SettingsStore(filePath);
+    expect(migrated.get().cmChoice).toBe('automatic');
+
+    migrated.update({ cmChoice: 'managed' });
+    expect(new SettingsStore(filePath).get().cmChoice).toBe('managed');
+    expect(settings.get().cmChoice).toBe('automatic');
+  });
+});
+
+describe('SettingsStore repository and server settings', () => {
+  const pin = { branch: 7, row: 2 };
+
+  it('keep what every window changes in one repository, one value at a time, and write it to the file', () => {
+    const { settings, filePath } = store();
+    settings.updateRepositorySettings('game@host', { branchPins: [pin] });
+    settings.updateRepositorySettings('Game@host', { explorerRulesOff: true });
+    settings.updateRepositorySettings('art@host', { syncRemote: 'art@cloud' });
+
+    const expected = { 'game@host': { branchPins: [pin], explorerRulesOff: true }, 'art@host': { syncRemote: 'art@cloud' } };
+    expect(settings.get().repositorySettings).toEqual(expected);
+    expect(JSON.parse(readFileSync(filePath, 'utf8')).repositorySettings).toEqual(expected);
+  });
+
+  it('keep a server’s apart from every other server’s', () => {
+    const { settings } = store();
+    settings.updateServerSettings('acme@unity', { homeProject: 'Racing' });
+    settings.updateServerSettings('beta@unity', { homeProject: 'Kart' });
+    settings.updateServerSettings('acme@unity', { homeProject: null });
+    expect(settings.get().serverSettings).toEqual({ 'beta@unity': { homeProject: 'Kart' } });
+  });
+
+  it('take what a window kept before only where nothing is kept yet, the same when two windows bring it', () => {
+    const { settings } = store();
+    settings.updateRepositorySettings('game@host', { syncRemote: 'game@cloud' });
+    settings.update({ changesetColors: { users: [{ user: 'jane', hue: 1 }] } });
+    const kept = {
+      repositorySettings: { 'game@host': { syncRemote: 'old@cloud', branchPins: [pin] } },
+      serverSettings: { 'acme@unity': { homeProject: 'Racing' } },
+      changesetColors: { users: [{ user: 'old', hue: 2 }] },
+    };
+    settings.addWindowSettings(kept);
+    settings.addWindowSettings(kept);
+
+    expect(settings.get().repositorySettings).toEqual({ 'game@host': { syncRemote: 'game@cloud', branchPins: [pin] } });
+    expect(settings.get().serverSettings).toEqual({ 'acme@unity': { homeProject: 'Racing' } });
+    expect(settings.get().changesetColors).toEqual({ users: [{ user: 'jane', hue: 1 }] });
+  });
+
+  it('take a window’s changeset colors while it has none', () => {
+    const { settings } = store();
+    settings.addWindowSettings({ repositorySettings: {}, serverSettings: {}, changesetColors: { users: [{ user: 'old', hue: 2 }] } });
+    expect(settings.get().changesetColors).toEqual({ users: [{ user: 'old', hue: 2 }] });
   });
 });

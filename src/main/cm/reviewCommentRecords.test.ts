@@ -17,7 +17,7 @@ function printed(fields: Partial<Record<(typeof FOUND_REVIEW_COMMENTS.fields)[nu
     revisionid: -1,
     itemid: '',
     path: '',
-    line: '',
+    location: -1,
     changeset: -1,
     appliedinchangeset: -1,
     ...fields,
@@ -34,33 +34,79 @@ describe('conversationOf', () => {
   });
 
   it('places a comment on a line of a revision, with the item and its path', () => {
-    const { comments } = conversationIn(printed({ id: 46, guid: 'c1', comment: 'Shelve first.', type: 'change', revisionid: 29, itemid: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 }));
+    const { comments } = conversationIn(printed({ id: 46, guid: 'c1', comment: 'Shelve first.', type: 'change', revisionid: 29, itemid: 23, path: '/Assets/Scripts/SwitchFlow.cs', location: 10 }));
 
-    expect(comments[0]).toMatchObject({ kind: 'changeRequest', anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } });
+    expect(comments[0]).toMatchObject({ kind: 'changeRequest', anchor: { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } });
+  });
+
+  it('places a comment on a range of lines', () => {
+    const { comments } = conversationIn(printed({ id: 99, type: 'comment', revisionid: 29, itemid: 23, path: '/Assets/Scripts/SwitchFlow.cs', location: 'lines:2-5' }));
+
+    expect(comments[0]).toMatchObject({ kind: 'comment', anchor: { kind: 'line', revisionId: 29, firstLine: 3, lastLine: 6 } });
+  });
+
+  it('places a comment on a point or an area of an image', () => {
+    const { comments } = conversationIn(
+      printed({ id: 1, type: 'question', revisionid: 30, itemid: 24, path: '/Assets/Art/Hero.png', location: 'image:120,80' }),
+      printed({ id: 2, type: 'change', revisionid: 30, itemid: 24, path: '/Assets/Art/Hero.png', location: 'image:10,20,64,32' }),
+    );
+
+    expect(comments.map((comment) => comment.anchor)).toEqual([
+      { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Hero.png', spot: { x: 120, y: 80 } },
+      { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Hero.png', spot: { x: 10, y: 20, size: { width: 64, height: 32 } } },
+    ]);
+  });
+
+  it("reads a comment on a whole file, or on a location of a kind it doesn't read, as the review's", () => {
+    const { comments } = conversationIn(
+      printed({ id: 1, type: 'comment', revisionid: 29, itemid: 23, path: '/Assets/Scripts/SwitchFlow.cs', location: -1 }),
+      printed({ id: 2, type: 'comment', revisionid: 30, itemid: 24, path: '/Assets/Models/Hero.fbx', location: 'mesh:12' }),
+      printed({ id: 3, type: 'comment', revisionid: 30, itemid: 24, path: '/Assets/Models/Hero.fbx', location: 'model:1,2' }),
+    );
+
+    expect(comments.map((comment) => comment.anchor)).toEqual([{ kind: 'review' }, { kind: 'review' }, { kind: 'review' }]);
+  });
+
+  it('places a comment on a point or a part of a 3D model', () => {
+    const { comments } = conversationIn(
+      printed({ id: 1, type: 'question', revisionid: 30, itemid: 24, path: '/Assets/Models/Car.fbx', location: 'model:0.1,1.5,0' }),
+      printed({ id: 2, type: 'change', revisionid: 30, itemid: 24, path: '/Assets/Models/Car.fbx', location: 'model:1,0,2;node=Car/Wheel_FL;local=0,0,0.5;part' }),
+    );
+
+    expect(comments.map((comment) => comment.anchor)).toEqual([
+      { kind: 'model', revisionId: 30, itemId: 24, path: '/Assets/Models/Car.fbx', spot: { point: { x: 0.1, y: 1.5, z: 0 } } },
+      {
+        kind: 'model',
+        revisionId: 30,
+        itemId: 24,
+        path: '/Assets/Models/Car.fbx',
+        spot: { point: { x: 1, y: 0, z: 2 }, node: { path: ['Car', 'Wheel_FL'], local: { x: 0, y: 0, z: 0.5 } }, wholePart: true },
+      },
+    ]);
   });
 
   it('reads each kind cm prints', () => {
     const kinds = conversationIn(
       printed({ id: 1, type: 'conversation' }),
-      printed({ id: 2, type: 'comment', revisionid: 3, line: 1 }),
-      printed({ id: 3, type: 'change', revisionid: 3, line: 1 }),
-      printed({ id: 4, type: 'question', revisionid: 3, line: 1 }),
-      printed({ id: 5, type: 'discarded', parent: 3, revisionid: 3, line: 1 }),
+      printed({ id: 2, type: 'comment', revisionid: 3, location: 0 }),
+      printed({ id: 3, type: 'change', revisionid: 3, location: 0 }),
+      printed({ id: 4, type: 'question', revisionid: 3, location: 0 }),
+      printed({ id: 5, type: 'discarded', parent: 3, revisionid: 3, location: 0 }),
     ).comments.map((comment) => comment.kind);
 
     expect(kinds).toEqual(['general', 'comment', 'changeRequest', 'question', 'discard']);
   });
 
   it("reads a trigger's script comment as what it's on", () => {
-    const { comments } = conversationIn(printed({ id: 1, type: 'script' }), printed({ id: 2, type: 'script', revisionid: 3, line: 4 }));
+    const { comments } = conversationIn(printed({ id: 1, type: 'script' }), printed({ id: 2, type: 'script', revisionid: 3, location: 3 }));
 
     expect(comments.map((comment) => comment.kind)).toEqual(['general', 'comment']);
   });
 
   it('keeps who a reply answers, the changeset a comment was written in, and the one that applied a change request', () => {
     const { comments } = conversationIn(
-      printed({ id: 47, type: 'change', revisionid: 29, line: 14, appliedinchangeset: 4 }),
-      printed({ id: 56, type: 'comment', revisionid: 29, line: 12, changeset: 2 }),
+      printed({ id: 47, type: 'change', revisionid: 29, location: 13, appliedinchangeset: 4 }),
+      printed({ id: 56, type: 'comment', revisionid: 29, location: 11, changeset: 2 }),
       printed({ id: 45, type: 'comment', parent: 44 }),
     );
 

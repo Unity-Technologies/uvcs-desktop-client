@@ -52,8 +52,17 @@ class FakeSession {
     this.running.splice(index, 1)[0]!.finish({ output: command, exitCode: 0 });
   }
 
-  dispose(): void {
+  /** Settles once the test closes the session (`close`): a real one's process takes a moment to exit. */
+  closed: Promise<void> = Promise.resolve();
+  close = (): void => undefined;
+  dispose(): Promise<void> {
     this.disposed = true;
+    return this.closed;
+  }
+
+  /** From now on, a dispose settles only once the test calls `close`. */
+  closesLate(): void {
+    this.closed = new Promise((resolve) => (this.close = resolve));
   }
 }
 
@@ -265,6 +274,28 @@ describe('CmShellPool', () => {
     expect(fresh.flatMap((session) => session.ran)).toEqual(['find branch']);
     fresh.find((session) => session.ran.length > 0)!.finish('find branch');
     await expect(waiting).resolves.toMatchObject({ output: 'find branch' });
+  });
+
+  it('ends every session, settling once each process closed, keeping the shown directories, whose sessions start again when asked', async () => {
+    pool.show('/wk');
+    pool.warmUp('/home');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    await settle();
+    const before = [...FakeSession.created];
+
+    before.forEach((session) => session.closesLate());
+    let ended = false;
+    const ending = pool.endSessions().then(() => (ended = true));
+    expect(before.every((session) => session.disposed)).toBe(true);
+    await settle();
+    expect(ended).toBe(false);
+    before.forEach((session) => session.close());
+    await ending;
+    expect(pool.shownDirectory()).toBe('/wk');
+
+    pool.warmUpShown();
+    const fresh = FakeSession.created.filter((session) => !before.includes(session));
+    expect(fresh.map((session) => session.cwd)).toEqual(['/wk', '/wk']);
   });
 
   it("keeps a released workspace's sessions when a command comes before they are done", async () => {

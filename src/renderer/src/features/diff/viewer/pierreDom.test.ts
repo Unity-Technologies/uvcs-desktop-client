@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { changedLineType, editorHasFocusIn, lineRowSelector, numberCellSelector, pageTextSelection, rowUnderPointer } from './pierreDom';
+import { changedLineType, editorHasFocusIn, typedOutsideCode, lineRowSelector, numberCellSelector, pageTextSelection, rowUnderPointer, sideLineRowSelector } from './pierreDom';
 
 describe('pierreDom', () => {
   it('names a changed line by its type in Pierre’s rows', () => {
@@ -10,6 +10,16 @@ describe('pierreDom', () => {
   it('selects a changed line’s content row and its number cell', () => {
     expect(lineRowSelector({ side: 'deletions', lineNumber: 3 })).toBe('[data-line-type="change-deletion"][data-line="3"]');
     expect(numberCellSelector({ side: 'additions', lineNumber: 12 })).toBe('[data-line-type="change-addition"][data-column-number="12"]');
+  });
+
+  it('selects any line of a side, unchanged too: in its pane side by side, by the number it has there unified', () => {
+    expect(sideLineRowSelector({ side: 'additions', lineNumber: 7 })).toBe(
+      '[data-additions] [data-line="7"][data-line-type], [data-unified] [data-line="7"][data-line-type]:not([data-line-type="change-deletion"]), [data-file] [data-line="7"][data-line-type]',
+    );
+    // Unified, an unchanged line's row is numbered by the newer side, the older side's number beside it.
+    expect(sideLineRowSelector({ side: 'deletions', lineNumber: 7 })).toBe(
+      '[data-deletions] [data-line="7"][data-line-type], [data-unified] [data-line="7"][data-line-type][data-line-type="change-deletion"], [data-unified] [data-line-type^="context"][data-alt-line="7"]',
+    );
   });
 });
 
@@ -168,13 +178,32 @@ describe('pageTextSelection', () => {
   });
 });
 
+describe('typedOutsideCode', () => {
+  beforeEach(() => vi.stubGlobal('HTMLElement', FakeElement));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("is a field of the app's over the code: a review comment's text or input", () => {
+    const comment = new FakeElement('DIV');
+    comment.isContentEditable = true;
+    expect(typedOutsideCode(comment as unknown as EventTarget)).toBe(true);
+    expect(typedOutsideCode(new FakeElement('TEXTAREA') as unknown as EventTarget)).toBe(true);
+    expect(typedOutsideCode(new FakeElement('INPUT') as unknown as EventTarget)).toBe(true);
+  });
+
+  it("is never Pierre's own content, whose keys come from its host, nor the diff itself", () => {
+    expect(typedOutsideCode(new FakeElement('DIFFS-CONTAINER') as unknown as EventTarget)).toBe(false);
+    expect(typedOutsideCode(new FakeElement('DIV') as unknown as EventTarget)).toBe(false);
+    expect(typedOutsideCode(null)).toBe(false);
+  });
+});
+
 describe('editorHasFocusIn', () => {
   beforeEach(() => vi.stubGlobal('HTMLElement', FakeElement));
   afterEach(() => vi.unstubAllGlobals());
 
-  /** A diff whose shadow root has `focused` in focus, inside `panel` when given (Pierre's search panel). */
-  function focusedIn(focused: FakeElement | null, panel?: FakeElement): Element {
-    const root = new FakeShadowRoot('#shadow-root', {}, panel ? [panel] : focused ? [focused] : []);
+  /** A diff whose shadow root has `focused` in focus. */
+  function focusedIn(focused: FakeElement | null): Element {
+    const root = new FakeShadowRoot('#shadow-root', {}, focused ? [focused] : []);
     root.activeElement = focused;
     const host = new FakeElement('diffs-container');
     host.shadowRoot = root;
@@ -185,11 +214,6 @@ describe('editorHasFocusIn', () => {
     const content = new FakeElement('DIV');
     content.isContentEditable = true;
     expect(editorHasFocusIn(focusedIn(content))).toBe(true);
-  });
-
-  it("is the editor's search box too, whose keys are the editor's", () => {
-    const input = new FakeElement('INPUT');
-    expect(editorHasFocusIn(focusedIn(input, new FakeElement('DIV', { 'data-search-panel': '' }, [input])))).toBe(true);
   });
 
   it('is nothing else in the diff, nor a diff without focus', () => {

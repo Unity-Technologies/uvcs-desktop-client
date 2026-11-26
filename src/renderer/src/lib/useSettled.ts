@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { settleTimeout } from './settleTimeout';
 
 /** How long a selection has to stay put before its details ask `cm` for more. */
 export const SELECTION_SETTLE_MS = 300;
@@ -10,8 +11,7 @@ export const SELECTION_SETTLE_MS = 300;
 export function useSettled(delayMs = SELECTION_SETTLE_MS): boolean {
   const [settled, setSettled] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setSettled(true), delayMs);
-    return () => clearTimeout(timer);
+    return settleTimeout(() => setSettled(true), delayMs);
   }, [delayMs]);
   return settled;
 }
@@ -31,8 +31,7 @@ export function useSettledValue<T>(value: T, key: string, delayMs = SELECTION_SE
     const now = performance.now();
     const delay = settleDelay(now, lastChangeAt.current, delayMs);
     lastChangeAt.current = now;
-    const timer = setTimeout(() => setSettled({ key, value }), delay);
-    return () => clearTimeout(timer);
+    return settleTimeout(() => setSettled({ key, value }), delay);
     // Keyed by `key` alone: the value it names is taken as it was when the key changed.
   }, [key]);
 

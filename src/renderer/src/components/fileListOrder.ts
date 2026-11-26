@@ -8,16 +8,22 @@ import type { StatusTone } from './StatusBadge';
 export interface FileListFacts<T> {
   /** The file's own status, the one its row shows (`ownTone`). */
   toneOf: (item: T) => StatusTone;
+  /**
+   * When the file last changed, in milliseconds since the epoch; undefined for one without a date. A list without it
+   * (the merge page) has no dates, and keeps its path order when sorted by date.
+   */
+  dateOf?: (item: T) => number | undefined;
 }
 
 /**
  * How a list orders its files for a sort (`layoutPathItems`): undefined for the path order the items already come in.
  * By name compares the files' names as `comparePaths` compares a folder's (`file_2` before `file_10`); by extension,
- * files without one first; by status, in the chips' order (`toneRank`). Ties keep the path order. Each arranges a whole
- * list in buckets, one per name, extension or status, comparing only those (`bucketOrder`): a project's files share
- * names (`index.ts`, `README.md`, a `.prefab` in each scene), and a million changes compared one by one by name took 4 s.
+ * files without one first; by status, in the chips' order (`toneRank`); by date, the newest first, files without one
+ * last. Ties keep the path order. Each arranges a whole list in buckets, one per name, extension, status or date,
+ * comparing only those (`bucketOrder`): a project's files share names (`index.ts`, `README.md`, a `.prefab` in each
+ * scene), and a million changes compared one by one by name took 4 s.
  */
-export function fileListOrder<T extends { path: string }>(sort: FileListSort, { toneOf }: FileListFacts<T>): ItemOrder<T> | undefined {
+export function fileListOrder<T extends { path: string }>(sort: FileListSort, { toneOf, dateOf }: FileListFacts<T>): ItemOrder<T> | undefined {
   switch (sort) {
     case 'path':
       return undefined;
@@ -27,7 +33,18 @@ export function fileListOrder<T extends { path: string }>(sort: FileListSort, { 
       return bucketOrder((item: T) => extensionOf(item.path), compareNames);
     case 'status':
       return bucketOrder((item: T) => toneRank(toneOf(item)), (a, b) => a - b);
+    case 'date':
+      return dateOf && bucketOrder((item: T) => dateOf(item) ?? UNDATED, newestFirst);
   }
+}
+
+/** The date key of a file without a date: before every date, so last when the newest go first. */
+const UNDATED = Number.NEGATIVE_INFINITY;
+
+/** Compared, not subtracted: two undated keys would subtract to NaN. */
+function newestFirst(a: number, b: number): number {
+  if (a === b) return 0;
+  return a > b ? -1 : 1;
 }
 
 /** Two items compared by a key worked out once per item: a sort compares each item about log n times. */

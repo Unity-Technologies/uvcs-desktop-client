@@ -1,6 +1,6 @@
 import type { PageOf } from '../../../app/navigation/pages';
-import { commentLineText } from '../../../lib/comments/commentText';
-import { anchorPath, isLineThread } from '../inline/fileThreads';
+import { anchorPath, isFileThread } from '../inline/fileThreads';
+import { commentLineTextOf } from '../suggestions/suggestionPreview';
 import type { ReviewThread } from './reviewThreads';
 import { commentLocationPage } from './threadBadges';
 
@@ -103,6 +103,15 @@ export function commentLightShown(shown: ShownCommentLight | undefined, light: C
   return { ...lit, seq: (shown?.seq ?? 0) + 1 };
 }
 
+/**
+ * Whether the conversation stands where it will stay, so going to a thread (or to where the reviewer left off) lands on
+ * it: read, and the review's changesets settled, as they group the entries into rounds and move every thread below.
+ * Going there as soon as the conversation is read left a review opened for the first time on other threads.
+ */
+export function conversationLaidOut({ read, changesetsSettled }: { read: boolean; changesetsSettled: boolean }): boolean {
+  return read && changesetsSettled;
+}
+
 /** The element the conversation brings into view for a pick: the thread's, or the reply's it goes to. */
 export function pickedElementId(pick: ThreadPick): string {
   return pick.replyId === undefined ? threadElementId(pick.threadId) : commentElementId(pick.replyId);
@@ -144,8 +153,8 @@ export function openItemsOf(reviewId: number, open: readonly ReviewThread[], pic
   return open.map((thread) => ({
     threadId: thread.root.id,
     thread,
-    text: commentLineText(thread.root.text),
+    text: commentLineTextOf(thread.root),
     current: pick?.threadId === thread.root.id,
-    inChanges: isLineThread(thread) ? { page: commentLocationPage(reviewId, thread.root), path: anchorPath(thread.root.anchor) } : undefined,
+    inChanges: isFileThread(thread) ? { page: commentLocationPage(reviewId, thread.root), path: anchorPath(thread.root.anchor) } : undefined,
   }));
 }

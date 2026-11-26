@@ -35,25 +35,36 @@ export interface DiffAnnotations {
 }
 
 /**
- * What a place does with one line of the diff (`DiffAnnotations.lineAction`): offered on the lines it takes, in the
- * button by the one under the pointer (`useLineActionButton`) and in the code's menu (`lineMenuEntries`).
+ * Lines of one side a place acts on: one line, or the lines selected, from `firstLineNumber` to `lineNumber`, the last
+ * (where a review's comment shows). One line is `firstLineNumber === lineNumber`.
+ */
+export interface ChangedLines extends ChangedLine {
+  firstLineNumber: number;
+}
+
+/**
+ * What a place does with lines of the diff (`DiffAnnotations.lineAction`): offered on the lines it takes, in the button
+ * by the one under the pointer (`useLineActionButton`; the lines selected when it's one of them) and in the code's menu
+ * (`lineMenuEntries`, on the lines selected).
  */
 export interface LineAction {
   /** The lines it takes: a review comments only on the revisions its diff names. */
-  offers: (line: ChangedLine) => boolean;
-  /** What it does to a line, as its button's tooltip and its menu entry say it ("Comment on line 42"). */
-  label: (line: ChangedLine) => string;
-  run: (line: ChangedLine) => void;
+  offers: (lines: ChangedLines) => boolean;
+  /** What it does to the lines, as its button's tooltip and its menu entry say it ("Comment on lines 40–42"). */
+  label: (lines: ChangedLines) => string;
+  run: (lines: ChangedLines) => void;
   /**
    * Another way to do it, after it in the code's menu only, the gutter's button staying the one: a review's "Suggest
-   * change on line 42", the comment opened with the line's suggestion in it.
+   * change on line 42", the comment opened with the lines' suggestion in it.
    */
-  variant?: { label: (line: ChangedLine) => string; run: (line: ChangedLine) => void };
+  variant?: { label: (lines: ChangedLines) => string; run: (lines: ChangedLines) => void };
 }
 
-/** A line a row or a marker is about. */
+/** A line a row or a marker is about, or lines: from `firstLineNumber` to `lineNumber`, the row's. */
 export interface LineBand extends ChangedLine {
   key: string;
+  /** The first of the lines, for a range; none for one line. */
+  firstLineNumber?: number;
   /** What it's about is the one gone to: outlined in the accent, as its card is. */
   selected: boolean;
 }
@@ -95,6 +106,15 @@ export function linesToReveal(hunks: readonly HunkSides[], rows: readonly Pick<D
   return [...lines].sort((a, b) => a - b);
 }
 
+/** The lines of each range a band outlines above its own (`firstLineNumber` on), as rows to unfold (`linesToReveal`). */
+export function rangeLinesOf(bands: readonly LineBand[]): Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[] {
+  return bands.flatMap((band) => {
+    if (band.firstLineNumber === undefined) return [];
+    const count = Math.max(0, band.lineNumber - band.firstLineNumber);
+    return Array.from({ length: count }, (_, index) => ({ side: band.side, lineNumber: band.firstLineNumber! + index, metadata: band.key }));
+  });
+}
+
 /** What names a set of rows, to tell a new one from the same rows built anew. */
 export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' | 'lineNumber' | 'metadata'>[]): string {
   return rows.map((row) => `${row.side}:${row.lineNumber}:${row.metadata}`).join('|');
@@ -103,6 +123,32 @@ export function rowsKey(rows: readonly Pick<DiffLineAnnotation<string>, 'side' |
 /** Where a line's outline is drawn (`LineBands`): its row, across its pane's code, from the gutter to the pane's end. */
 export function bandRect(box: LineBox): { top: number; left: number; width: number; height: number } {
   return { top: box.top, left: box.contentLeft, width: box.paneRight - box.contentLeft, height: box.bottom - box.top };
+}
+
+/**
+ * The box a band's lines take, from its first line's (`first`, for a range) to its last's. A big file renders only the
+ * lines in view: an end beyond them (`LineBox.outside`) stands at the rendered rows' edge, so the outline runs on out
+ * of view; none when the whole range is beyond the same edge, or neither end was measured.
+ */
+export function rangeBox(first: LineBox | undefined, last: LineBox | undefined): LineBox | undefined {
+  if (!first || !last) {
+    const one = last ?? first;
+    return one && !one.outside ? one : undefined;
+  }
+  if (first.outside && first.outside === last.outside) return undefined;
+  return { top: first.top, bottom: last.bottom, contentLeft: last.contentLeft, paneRight: last.paneRight };
+}
+
+/** The lines a band measures (`useLineBoxes`): its own, and its first one's, for a range, under `firstLineKey`. */
+export function bandLines(bands: readonly LineBand[]): (ChangedLine & { key: string })[] {
+  return bands.flatMap((band) => [
+    { key: band.key, side: band.side, lineNumber: band.lineNumber },
+    ...(band.firstLineNumber === undefined ? [] : [{ key: firstLineKey(band.key), side: band.side, lineNumber: band.firstLineNumber }]),
+  ]);
+}
+
+export function firstLineKey(bandKey: string): string {
+  return `${bandKey}:first`;
 }
 
 /** The room between a line's marker and the right edge of its pane. */

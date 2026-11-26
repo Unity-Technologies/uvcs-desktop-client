@@ -23,7 +23,7 @@ import { indexCandidates, rankCandidates, type CandidateIndex } from '../../lib/
 import { indexPeople } from '../../lib/peopleIndex';
 import type { SuggestionKind } from './suggestionTriggers';
 
-/** How many suggestions a list shows: the best few, never everything (ARCHITECTURE.md "Big lists"). */
+/** How many suggestions a list shows: the best few, never everything (docs/architecture/lists.md "Big lists"). */
 export const SUGGESTION_LIMIT = 8;
 
 /** A row of the suggestion list, and what picking it writes. */
@@ -47,6 +47,11 @@ export interface Suggestion {
   issue?: Issue;
   /** What a pick writes in the comment, a space after it. */
   insert: string;
+  /**
+   * What hovering the row says, where the row can't show it: a change request's number ("Change request 2c17a694"),
+   * over its whole first line, which the row cuts.
+   */
+  tip?: { text: string; sub: string };
 }
 
 /**

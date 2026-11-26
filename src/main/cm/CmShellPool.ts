@@ -133,6 +133,22 @@ export class CmShellPool {
     }
   }
 
+  /**
+   * Ends every session now, keeping which directories windows show, for `warmUpShown`: the installed `cm` is about to be
+   * replaced, and its sessions hold its files open (`CmClient.hold`, which first lets their commands end). Settles once
+   * every session's process exited (`CmShellSession.dispose`).
+   */
+  async endSessions(): Promise<void> {
+    const ended = [...this.directories.values()].flatMap((directory) => this.disposeDirectory(directory));
+    this.directories.clear();
+    await Promise.all(ended);
+  }
+
+  /** Starts the sessions of the directories windows show: after `endSessions`, on the `cm` that replaced the one before. */
+  warmUpShown(): void {
+    for (const cwd of this.shown.keys()) this.warmUp(cwd);
+  }
+
   disposeAll(): void {
     [...this.shown.keys()].forEach((cwd) => this.forgetShown(cwd));
     for (const directory of this.directories.values()) this.disposeDirectory(directory);
@@ -197,15 +213,17 @@ export class CmShellPool {
     directory.idleTimer.unref();
   }
 
-  private disposeDirectory(directory: Directory): void {
+  /** Ends the directory's sessions; what each `dispose` returns settles once its process exited. */
+  private disposeDirectory(directory: Directory): Promise<void>[] {
     if (directory.idleTimer) clearTimeout(directory.idleTimer);
     directory.idleTimer = null;
-    directory.sessions.forEach((session) => session.dispose());
+    const ended = directory.sessions.map((session) => session.dispose());
     directory.waiting.splice(0).forEach((command) => command.reject(new Error('cm shell session was closed')));
+    return ended;
   }
 }
 
 /** Ends a session that no directory holds anymore once it has nothing to run; a disposed session takes no more. */
 function disposeWhenIdle(session: Session): void {
-  if (session.pendingCount === 0) session.dispose();
+  if (session.pendingCount === 0) void session.dispose();
 }

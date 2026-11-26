@@ -50,7 +50,8 @@ const DIFF_STATUS: Record<PartialIncomingItem['kind'], DiffStatus> = { changed: 
 
 /**
  * What the diff pane compares for an item: the revision the workspace loaded against the branch head's (nothing on the
- * side where the item doesn't exist). None for a directory, or before the workspace's repository is known.
+ * side where the item doesn't exist), in the repository its revisions belong to: the xlinked one for an item inside an
+ * xlink. None for a directory, or before the workspace's repository is known.
  */
 export function partialItemDiffEntry(item: PartialIncomingItem, repository: string | undefined): DiffEntry | null {
   if (item.isDirectory || !repository) return null;
@@ -61,7 +62,7 @@ export function partialItemDiffEntry(item: PartialIncomingItem, repository: stri
     itemType: 'file',
     baseRevisionId: item.loadedRevisionId ?? -1,
     revisionId: item.headRevisionId ?? -1,
-    repository,
+    repository: item.repository ?? repository,
   };
 }
 

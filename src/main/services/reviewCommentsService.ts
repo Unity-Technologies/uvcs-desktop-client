@@ -1,16 +1,19 @@
 import type { ReviewCommentsApi } from '@shared/api/reviewComments';
 import type { Place } from '@shared/domain/place';
 import type { BranchRef, ReviewConversation, ReviewEvent } from '@shared/domain/reviewConversation';
+import { changeRequestGuidCondition, changeRequestThreadOf, FOUND_CHANGE_REQUEST_THREADS } from '../cm/changeRequestThreads';
 import { cmPlace } from '../cm/cmPlace';
 import { findArgs } from '../cm/findQuery';
 import { layoutReader } from '../cm/formatRecords';
 import {
   addCommentArgs,
+  addImageCommentArgs,
+  addModelCommentArgs,
   addLineCommentArgs,
   applyChangeRequestArgs,
   descriptionArgs,
   editCommentArgs,
-  removeCommentArgs,
+  removeCommentsArgs,
   replyArgs,
   unapplyChangeRequestArgs,
 } from '../cm/reviewCommentArgs';
@@ -42,6 +45,18 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
       return withBranchesNamed(place, conversationOf(records));
     },
 
+    async changeRequestThread(place, guid) {
+      const condition = changeRequestGuidCondition(guid);
+      if (!condition) return null;
+      const at = cmPlace(place);
+      const records = await cm.queryRecords(
+        findArgs(FOUND_CHANGE_REQUEST_THREADS, {}, null, [condition, "type = 'change'"], at.repository),
+        layoutReader(FOUND_CHANGE_REQUEST_THREADS),
+        at.options,
+      );
+      return changeRequestThreadOf(records);
+    },
+
     async add(place, reviewId, text) {
       const at = cmPlace(place);
       await withTempFile(text, (textFile) => cm.query(addCommentArgs(reviewId, textFile, at), at.options));
@@ -50,6 +65,16 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
     async addOnLine(place, reviewId, comment, text) {
       const at = cmPlace(place);
       await withTempFile(text, (textFile) => cm.query(addLineCommentArgs(reviewId, comment, textFile, at), at.options));
+    },
+
+    async addOnImage(place, reviewId, comment, text) {
+      const at = cmPlace(place);
+      await withTempFile(text, (textFile) => cm.query(addImageCommentArgs(reviewId, comment, textFile, at), at.options));
+    },
+
+    async addOnModel(place, reviewId, comment, text) {
+      const at = cmPlace(place);
+      await withTempFile(text, (textFile) => cm.query(addModelCommentArgs(reviewId, comment, textFile, at), at.options));
     },
 
     async reply(place, commentGuid, text, options) {
@@ -67,9 +92,10 @@ export function createReviewCommentsService({ cm }: ServiceContext, { branchName
       await withTempFile(statusCommentText(status, text), (textFile) => cm.query(editCommentArgs(commentGuid, textFile, at), at.options));
     },
 
-    async remove(place, commentGuid) {
+    async remove(place, commentGuids) {
       const at = cmPlace(place);
-      await cm.query(removeCommentArgs(commentGuid, at), at.options);
+      // A long thread runs in a process of its own (`runsLong`: `MAX_QUICK_COMMENT_DELETES`).
+      await cm.query(removeCommentsArgs(commentGuids, at), at.options);
     },
 
     async markApplied(place, changeRequestGuid, changesetId) {

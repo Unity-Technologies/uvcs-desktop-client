@@ -37,7 +37,7 @@
   --row-height: 30px;
   --control-height: 28px;
   --topbar-height: 52px;
-  /* The top bar's pills (`ToolbarControl`), clear of its edges (ARCHITECTURE.md "Top bar"). */
+  /* The top bar's pills (`ToolbarControl`), clear of its edges (docs/architecture/renderer.md "Top bar"). */
   --topbar-control-height: 40px;
   /* What the Windows caption buttons take at the window's top right (they overlay the page there); 0 elsewhere. */
   --caption-buttons-width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
@@ -129,6 +129,33 @@
      blue tile (Atlassian's logo library). GitHub's mark is one color, the text's, so it takes no token. */
   --brand-jira-tile: #1868db;
   --brand-jira-mark: #ffffff;
+
+  /* What sets an image comment's bubble apart from the image under it (`ImageCommentsOverlay`), whatever its colors:
+     a thin white edge around its state's color, then a soft dark shadow, in both themes, as the image is the same in
+     both. A thin state border on the theme's surface vanished over an image of that color. */
+  --image-pin-rim: #ffffff;
+  --image-pin-shadow: rgba(0, 0, 0, 0.45);
+
+  /* The thin dark rim on both sides of an image comment's area line (`ImageCommentsOverlay`), in both themes, as the
+     image is the same in both: it keeps the line apart from an image of its own color, and fades into a dark one,
+     where the line reads alone. A light halo was tried and read as a washed-out double border. */
+  --image-area-rim: rgba(0, 0, 0, 0.3);
+  /* An area's line in each of its states, bright in both themes as the image is the same: the light theme's own state
+     colors, dark for text on white, turned into a heavy dark band beside the rim. Settled, waiting for an answer,
+     selected or being written. */
+  --image-area-settled: #d0d7de;
+  --image-area-waiting: #d29922;
+  --image-area-selected: #388bfd;
+
+  /* The pointer marking a comment's spot on an image (`ImageCommentsOverlay`): the bubble a comment is drawn as
+     (`CommentPinIcon`), a plus in it, its square tip the point marked. Light's accent fill with a white rim and plus, so
+     it reads over any image in either theme; a cursor's image can't read tokens, so its colors are written out here. */
+  --cursor-add-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></svg>") 2 22, crosshair;
+  /* The same, drawn up and to the right of its hot spot: aiming at a point of a model, the ring on the surface shows
+     there, clear of it. */
+  --cursor-aim-comment: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(8 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g></svg>") 5 27, crosshair;
+  /* The same with a dot on its hot spot: commenting on a whole part (Shift), with no ring to show the part aimed at. */
+  --cursor-aim-part: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(8 0)'><path d='M2 22V12A10 10 0 1 1 12 22Z' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/><path d='M12 8v8M8 12h8' fill='none' stroke='%23ffffff' stroke-width='2.25'/></g><circle cx='5' cy='27' r='2.5' fill='%230969da' stroke='%23ffffff' stroke-width='1.5'/></svg>") 5 27, crosshair;
 }
 
 :root,
@@ -154,6 +181,10 @@
   --danger-hover: #a40e26;
 
   --status-added: #1a7f37;
+  /* Branch Explorer merge links, a fixed color per kind (`GraphPalette.mergeLinks`): merges a green lighter than
+     --status-added, which looks heavy on a white graph, still 3:1 on it as a line; cherry picks violet. */
+  --graph-merge-link: #2ea043;
+  --graph-cherry-pick-link: #8250df;
   --status-changed: #9a6700;
   --status-deleted: #cf222e;
   --status-moved: #0e7c86;
@@ -230,6 +261,8 @@
   --bg-segment-checked: #ffffff;
   /* Text matching a search or filter; unlike the blue selection, it stays visible on selected rows. */
   --bg-match: rgba(255, 196, 0, 0.38);
+  /* The match a search in code shows now, among the others in --bg-match (`CodeFindBar`): orange, as Pierre's editor marks it. */
+  --bg-match-current: rgba(255, 150, 50, 0.6);
   --bg-code: #f6f8fa;
   /* Inline code in rich text (`Markdown`, the comment editor; never a one-line preview): a muted berry, calm enough
      for comments full of identifiers. The dark theme's is the same hue lightened; both read well above 4.5:1. */
@@ -246,6 +279,8 @@
   --text-primary: #1f2328;
   --text-secondary: #59636e;
   --text-tertiary: #687280;
+  /* The editor's caret: a gray softer than the text on light, as bright as the text on dark, as code editors draw it. */
+  --editor-caret: var(--text-secondary);
   --text-inverse: #ffffff;
   /* Code colored by kind (the command log's command lines, `commandLineTokens`): GitHub's code colors. */
   --syntax-command: #8250df;
@@ -323,6 +358,8 @@
   --danger-hover: #b62324;
 
   --status-added: #3fb950;
+  --graph-merge-link: #3fb950;
+  --graph-cherry-pick-link: #a371f7;
   --status-changed: #d29922;
   --status-deleted: #f85149;
   --status-moved: #39c5cf;
@@ -377,6 +414,7 @@
   --bg-input: #0d1117;
   --bg-segment-checked: #303844;
   --bg-match: rgba(210, 153, 34, 0.4);
+  --bg-match-current: rgba(255, 150, 50, 0.45);
   --bg-code: #0f141b;
   --text-code: #eab0d4;
   --border-subtle: #212830;
@@ -390,6 +428,7 @@
   --text-primary: #e6edf3;
   --text-secondary: #9198a1;
   --text-tertiary: #848d97;
+  --editor-caret: var(--text-primary);
   --text-inverse: #0d1117;
   --syntax-command: #d2a8ff;
   --syntax-option: #79c0ff;

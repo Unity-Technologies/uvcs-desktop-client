@@ -15,13 +15,8 @@ import { DetailsPanel } from '../../ui/DetailsPanel';
 import type { Property } from '../../ui/PropertyList';
 import { AttributesDetailsSection } from '../attributes/AttributesDetailsSection';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { openReview } from '../codeReviews/codeReviewOperations';
-import { asMergeRequest } from '../codeReviews/mergeRequestState';
-import { useBranchReview } from '../codeReviews/useBranchReviews';
-import { useSettled } from '../../lib/useSettled';
-import { MergeRequestSummaryCard } from '../codeReviews/MergeRequestSummaryCard';
-import { DetailsSection } from '../../ui/DetailsSection';
 import { BranchChip } from './BranchChip';
+import { MergeRequestDetailsSection } from './MergeRequestDetailsSection';
 import { diffBranch, saveBranchComment } from './branchOperations';
 
 interface BranchDetailsProps {
@@ -36,8 +31,6 @@ interface BranchDetailsProps {
 export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const place = usePlace();
-  // The review its chip shows, read with the branches in view (`useBranchReview`): a merge request gets a section.
-  const request = asMergeRequest(useBranchReview(branch.id, useSettled()) ?? undefined);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
 
   return (
@@ -81,11 +74,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
       ]}
       changes={<ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />}
     >
-      {request && (
-        <DetailsSection title="Merge request">
-          <MergeRequestSummaryCard request={request} onOpen={() => openReview(request)} />
-        </DetailsSection>
-      )}
+      <MergeRequestDetailsSection branch={branch} />
       <AttributesDetailsSection objectSpec={spec.branch(branch.name)} />
     </DetailsPanel>
   );

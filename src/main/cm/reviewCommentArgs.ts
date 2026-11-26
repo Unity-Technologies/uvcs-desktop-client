@@ -1,5 +1,7 @@
-import type { LineCommentKind, NewLineComment } from '@shared/domain/reviewConversation';
+import type { LineCommentKind, NewImageComment, NewLineComment, NewModelComment } from '@shared/domain/reviewConversation';
 import type { CmPlace } from './cmPlace';
+import { imageLocationOption, lineOption } from './commentLocation';
+import { modelLocationOption } from './modelCommentLocation';
 
 // Every text goes in a file: a comment holds lines, and a `cm shell` line can't carry quotes or line breaks.
 
@@ -9,11 +11,38 @@ export function addCommentArgs(reviewId: number, textFile: string, at: CmPlace):
 }
 
 /**
- * `cm codereview comment add` on a line: named by its revision rather than its path, which a file moved in the review
+ * `cm codereview comment add` on lines: named by its revision rather than its path, which a file moved in the review
  * doesn't pin to one revision. `cm` takes only a revision the diff comments on (the newer side's, a deleted file's
- * last one), its line from 1; `--changeset` puts it in that changeset's diff, one of a branch's changesets.
+ * last one), and one line or a range (`lineOption`); `--changeset` puts it in that changeset's diff, one of a branch's
+ * changesets.
  */
 export function addLineCommentArgs(reviewId: number, comment: NewLineComment, textFile: string, at: CmPlace): string[] {
+  return addFileCommentArgs(reviewId, comment, lineOption(comment), textFile, at);
+}
+
+/**
+ * `cm codereview comment add` on a point or an area of an image (`imageLocationOption`), which `cm` stores as written:
+ * on the revision, as for lines.
+ */
+export function addImageCommentArgs(reviewId: number, comment: NewImageComment, textFile: string, at: CmPlace): string[] {
+  return addFileCommentArgs(reviewId, comment, imageLocationOption(comment.spot), textFile, at);
+}
+
+/**
+ * `cm codereview comment add` on a point or a part of a 3D model (`modelLocationOption`), which `cm` stores as written:
+ * on the revision, as for lines.
+ */
+export function addModelCommentArgs(reviewId: number, comment: NewModelComment, textFile: string, at: CmPlace): string[] {
+  return addFileCommentArgs(reviewId, comment, modelLocationOption(comment.spot), textFile, at);
+}
+
+function addFileCommentArgs(
+  reviewId: number,
+  comment: Pick<NewLineComment, 'revisionId' | 'kind' | 'changesetId'>,
+  locationOption: string,
+  textFile: string,
+  at: CmPlace,
+): string[] {
   return [
     'codereview',
     'comment',
@@ -21,7 +50,7 @@ export function addLineCommentArgs(reviewId: number, comment: NewLineComment, te
     String(reviewId),
     `-commentsfile=${textFile}`,
     `--revision=revid:${comment.revisionId}`,
-    `--line=${comment.line}`,
+    locationOption,
     `--type=${CM_COMMENT_TYPES[comment.kind]}`,
     ...(comment.changesetId === undefined ? [] : [`--changeset=cs:${comment.changesetId}`]),
     ...at.repositoryOption,
@@ -41,8 +70,9 @@ export function editCommentArgs(commentGuid: string, textFile: string, at: CmPla
   return ['codereview', 'comment', 'edit', commentGuid, `-commentsfile=${textFile}`, ...at.repositoryOption];
 }
 
-export function removeCommentArgs(commentGuid: string, at: CmPlace): string[] {
-  return ['codereview', 'comment', 'delete', commentGuid, ...at.repositoryOption];
+/** `cm codereview comment delete`: every comment given, one after another, going on past one it can't delete. */
+export function removeCommentsArgs(commentGuids: readonly string[], at: CmPlace): string[] {
+  return ['codereview', 'comment', 'delete', ...commentGuids, ...at.repositoryOption];
 }
 
 /**

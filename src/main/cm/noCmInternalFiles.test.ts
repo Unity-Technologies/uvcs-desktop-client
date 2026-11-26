@@ -39,6 +39,10 @@ const ALLOWED: Record<string, Allowance> = {
   'main/watch/WorkspaceWatcher.ts': { fileSystem: [], why: 'watches .plastic for rewrites' },
   'main/files/listWorkspacePaths.ts': { fileSystem: ['readdir'], why: 'skips .plastic when listing the workspace’s own files' },
   'main/cm/setupCheck.ts': { fileSystem: [], why: 'tells cm’s “client.conf not found” error, what cm says without a configuration' },
+  'main/cmRuntime/officialUpdate/officialEdition.ts': {
+    fileSystem: [],
+    why: 'the edition marker next to the installed client tells which installer updates it, as the official client tells its own; checked for, never read, through an `exists` it is given',
+  },
   'main/system/draggedFolder.ts': {
     fileSystem: ['stat'],
     why: 'a .plastic folder tells, while a folder is dragged, that it is a workspace; the drop asks cm getworkspacefrompath',

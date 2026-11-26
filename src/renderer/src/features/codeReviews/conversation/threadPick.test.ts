@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ReviewComment } from '@shared/domain/reviewConversation';
-import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, openItemsOf, type CardLight, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
+import { cardLightOf, commentElementId, conversationLaidOut, commentLightShown, nextAnswerLight, openItemsOf, type CardLight, pickedBehaviorOf, pickedElementId, pickOnFocus, pickThread, threadElementId, threadMarkOf } from './threadPick';
 import { openThreads, threadsOf } from './reviewThreads';
 import { conversationFocus, pageAfterOpenPick } from '../reviewTab';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00+01:00`, text: `Comment ${id}`, kind: 'question', anchor: { kind: 'review' }, ...fields };
@@ -83,6 +83,14 @@ describe('threadMarkOf', () => {
 
   it('marks nothing before a thread is picked', () => {
     expect(threadMarkOf(7, undefined)).toEqual({ highlight: undefined, selected: false });
+  });
+});
+
+describe('conversationLaidOut', () => {
+  it('waits for the conversation and the review\'s changesets: they group the entries into rounds, moving every thread below', () => {
+    expect(conversationLaidOut({ read: false, changesetsSettled: true })).toBe(false);
+    expect(conversationLaidOut({ read: true, changesetsSettled: false })).toBe(false);
+    expect(conversationLaidOut({ read: true, changesetsSettled: true })).toBe(true);
   });
 });
 
@@ -195,6 +203,11 @@ describe('openItemsOf', () => {
     expect(items[0]!.text).toBe('Rename this');
   });
 
+  it('says a change request that opens with its suggestion as the lines it replaces', () => {
+    const suggestion = openThreads(threadsOf([comment(1, { kind: 'changeRequest', anchor: ON_LINE, text: '```suggestion\n{\n```' })]));
+    expect(openItemsOf(41, suggestion, undefined)[0]!.text).toMatch(/^Suggested change on line/);
+  });
+
   it('marks none current while the picked thread is no longer open', () => {
     expect(openItemsOf(41, open, pickThread(undefined, 9)).some((item) => item.current)).toBe(false);
   });
@@ -209,5 +222,17 @@ describe('openItemsOf', () => {
     expect(byChangeset!.inChanges?.page).toEqual({ kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Scripts/SwitchFlow.cs', focusThread: 3, focusChangeset: 4 });
     // On the whole review, it is in no file.
     expect(general!.inChanges).toBeUndefined();
+  });
+
+  it('shows one on a 3D model in Changes, at its pin', () => {
+    const anchor = { kind: 'model' as const, revisionId: 30, itemId: 24, path: '/Assets/Art/Car.fbx', spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Wheel_FL'] }, wholePart: true as const } };
+    const [onModel] = openItemsOf(41, openThreads(threadsOf([comment(5, { kind: 'question', anchor })])), undefined);
+    expect(onModel!.inChanges).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Car.fbx', focusThread: 5 }, path: 'Assets/Art/Car.fbx' });
+  });
+
+  it('shows one on an image in Changes, at its pin', () => {
+    const anchor = { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Banner.png', spot: { x: 1, y: 2 } } as const;
+    const [onImage] = openItemsOf(41, openThreads(threadsOf([comment(5, { kind: 'question', anchor })])), undefined);
+    expect(onImage!.inChanges).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Banner.png', focusThread: 5 }, path: 'Assets/Art/Banner.png' });
   });
 });

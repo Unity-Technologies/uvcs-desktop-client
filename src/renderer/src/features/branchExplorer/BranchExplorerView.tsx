@@ -17,7 +17,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useBranchReviews } from '../codeReviews/useBranchReviews';
 import { useBranchesNearView } from './useBranchesNearView';
-import { BRANCH_EXPLORER_DETAILS_KEY, useAppliedExplorerRules, useAppliedUserColors, useBranchExplorerPreferences, useBranchPins, useGraphViewOptions } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, setBranchPins, useAppliedExplorerRules, useAppliedUserColors, useBranchExplorerPreferences, useBranchPins, useGraphViewOptions } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights, type TimelineInputs } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -57,6 +57,7 @@ import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import { useCreatedBranchReveal } from './useCreatedBranchReveal';
 import { useGraphLayout } from './useGraphLayout';
+import { useFirstHitArrival } from './useFirstHitArrival';
 import { useGraphSearch } from './useGraphSearch';
 import { useOpeningView } from './useOpeningView';
 import { usePendingChangeset } from './usePendingChangeset';
@@ -79,7 +80,7 @@ export function BranchExplorerView() {
   const rules = useAppliedExplorerRules(placeRepository);
   const userColors = useAppliedUserColors(placeRepository);
   const pins = useBranchPins(placeRepository);
-  const positions = branchPositionsOf(placeRepository, pins, useBranchExplorerPreferences.getState().setPins);
+  const positions = branchPositionsOf(placeRepository, pins, setBranchPins);
   const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
@@ -237,6 +238,7 @@ export function BranchExplorerView() {
     const hit = search.step(direction, fullLayout, searchHits);
     if (hit) goToHit(hit);
   };
+  useFirstHitArrival(search, fullLayout, searchHits, goToHit);
 
   const menuFor = (target: GraphTarget | null) =>
     graphMenu(target, {

@@ -1,5 +1,10 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The destination's dialog renders the branch list; a test says which branch the user picked in it, or that they cancelled.
+vi.mock('./DestinationDialog', () => ({ pickDestination: vi.fn() }));
+
+import type { Branch } from '@shared/domain/branch';
 import { workspacePlace } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
@@ -7,7 +12,8 @@ import { queryClient } from '../../app/queryClient';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { codeReviewKey } from './codeReviewKey';
-import { setMergedBranchHidden, setMergeRequestDestination, setMergeRequestState } from './mergeRequestOperations';
+import { pickDestination } from './DestinationDialog';
+import { chooseMergeRequestDestination, setMergedBranchHidden, setMergeRequestDestination, setMergeRequestState } from './mergeRequestOperations';
 
 const ws = '/ws';
 const inWs = workspacePlace(ws);
@@ -77,6 +83,36 @@ describe("changing a merge request's destination", () => {
     await setMergeRequestDestination(inWs, request('Open'), '/main/gone');
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't change the destination", detail: "The specified branch /main/gone can't be found." }]);
+  });
+});
+
+describe("choosing a merge request's destination from its row's menu", () => {
+  const changeable = { destination: '/main', source: '/main/task1' };
+  const branch = (name: string): Branch => ({ id: 1, name, parent: '/main', comment: '', owner: 'bob', date: '', headChangeset: 3, guid: '', repository: 'game' });
+
+  it("asks in the page's branch list, starting on the request's destination, and shows the one picked in the row and its details at once", async () => {
+    queryClient.removeQueries({ queryKey: codeReviewKey(inWs, 48) });
+    queryClient.setQueryData(listKey, [request('Open', 48), request('Open', 44)]);
+    const refreshed = watchRefreshes(ws);
+    fakeApi.answer('codeReviews.setMergeRequestDestination', () => undefined);
+    vi.mocked(pickDestination).mockResolvedValueOnce(branch('/main/release'));
+
+    await chooseMergeRequestDestination(inWs, request('Open', 48), changeable);
+
+    expect(vi.mocked(pickDestination).mock.lastCall).toEqual([{ place: inWs, title: 'Review 48', changeable }]);
+    expect(fakeApi.argsOf('codeReviews.setMergeRequestDestination')).toEqual([[inWs, 48, '/main/release']]);
+    // The details panel shows the selected row as the list read it.
+    expect(listed()?.map((each) => each.mergeRequest?.destination)).toEqual(['/main/release', '/main']);
+    expect(refreshed()).toEqual(['codeReviews']);
+  });
+
+  it('changes nothing when the user picks the destination it has, or cancels', async () => {
+    vi.mocked(pickDestination).mockResolvedValueOnce(branch('/main'));
+    await chooseMergeRequestDestination(inWs, request('Open', 48), changeable);
+    vi.mocked(pickDestination).mockResolvedValueOnce(undefined);
+    await chooseMergeRequestDestination(inWs, request('Open', 48), changeable);
+
+    expect(fakeApi.argsOf('codeReviews.setMergeRequestDestination')).toEqual([]);
   });
 });
 

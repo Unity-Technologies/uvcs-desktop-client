@@ -34,6 +34,20 @@ export function isSkinned(mesh: PlaceableMesh): boolean {
 }
 
 /**
+ * Whether a vertex of a skinned mesh leans, with a weight, on a joint its skin hasn't (a broken export): three would
+ * read a bone that isn't there to draw it, place it or pick it, and fail. A joint named with no weight is never read.
+ */
+export function leansPastSkeleton(mesh: PlaceableMesh): boolean {
+  if (!isSkinned(mesh)) return false;
+  const joints = mesh.skin!.bones.length;
+  const { skinIndex, skinWeight } = mesh.attributes;
+  for (let influence = 0; influence < skinIndex!.length; influence++) {
+    if (skinIndex![influence]! >= joints && skinWeight![influence] !== 0) return true;
+  }
+  return false;
+}
+
+/**
  * Where the mesh is placed at rest, which a turn or a scale of the whole model turns or scales: its node's world, or,
  * skinned, the frame its top-most joint carries the bound mesh to (`joint's world × inverse bind × bind matrix`), so
  * whatever turns or scales the skeleton from above turns it, and a glTF's mesh node turned alone (it places nothing)

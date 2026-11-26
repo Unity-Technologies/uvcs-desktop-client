@@ -24,3 +24,8 @@
 .button:hover {
   background: var(--accent-fill-hover);
 }
+
+/* A drag's "+" on its first and last line (`LineActionDragMarks`): drawn as the button, never in the pointer's way. */
+.button[data-mark] {
+  pointer-events: none;
+}

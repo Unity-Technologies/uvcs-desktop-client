@@ -5,7 +5,7 @@ import { copyLinkLabel } from '../../../app/links/shownLink';
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { copyToClipboard } from '../../../ui/copyToClipboard';
-import { contextMenuSelection, copiedLinesWord, lineChipAnchor, linesText, lineUnderPointer, type CodeLayout } from './lineActions';
+import { contextMenuLines, copiedLinesWord, lineChipAnchor, linesText, lineUnderPointer, type CodeLayout } from './lineActions';
 import { LineLinkChip } from './LineLinkChip';
 import { LineLinksContext } from './lineLinks';
 import { linkedLinesOf } from './linkedLines';
@@ -17,10 +17,11 @@ import { rowUnderPointer } from './pierreDom';
 interface LineToolsOptions {
   /** The scrolling element around the code. */
   containerRef: RefObject<HTMLElement | null>;
+  /** The file shown (its repository path, as `DiffEntry.path`): a link to lines names it. */
+  path: string;
   layout: CodeLayout;
-  /** The lines selected and how to select others (`useLineLinks`). */
+  /** The lines selected (`useLineLinks`). */
   range: LineRange | null;
-  select: (range: LineRange | null) => void;
   /** Lines are selected here: off where the gutter picks lines to discard them (a workspace file's diff). */
   selectable: boolean;
   /** The place publishes the lines selected for links (`LineLinks`). */
@@ -33,10 +34,10 @@ interface LineToolsOptions {
 
 /**
  * What the lines selected offer: the "Copy link" chip by them, where a link names them, and the lines' entries in the
- * code's right-click menu (`lineMenuEntries`, joined by `useCodeMenu`), the right-click first selecting the line
- * clicked when it isn't selected.
+ * code's right-click menu (`lineMenuEntries`, joined by `useCodeMenu`), on the line right-clicked, or on the lines
+ * selected when it's one of them. The right-click leaves the selection as it was: the menu names its lines.
  */
-export function useLineTools({ containerRef, layout, range, select, selectable, publishes, textOf, lineAction }: LineToolsOptions): {
+export function useLineTools({ containerRef, path, layout, range, selectable, publishes, textOf, lineAction }: LineToolsOptions): {
   chip: ReactNode;
   menu: { enabled: boolean; pickLines: (event: MouseEvent) => FocusedLines | null; lineEntries: () => (GroupedEntry | false | undefined)[] };
 } {
@@ -46,14 +47,15 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
   const linkable = link.target !== null;
   const anchor = lineChipAnchor(range, linkable);
   const menuLines = useRef<FocusedLines | null>(null);
+  const menuOnSelection = useRef(false);
 
-  /** Selects the line right-clicked when it isn't selected; the lines the menu acts on, none off any line with none selected. */
+  /** The lines the menu acts on, none off any line with none selected. */
   const pickLines = (event: MouseEvent): FocusedLines | null => {
     const row = rowUnderPointer(event.nativeEvent.composedPath());
     const clicked = row && lineUnderPointer(row);
-    const selection = contextMenuSelection(range, clicked);
-    menuLines.current = linkedLinesOf(selection);
-    if (selection && selection !== range) select(selection);
+    const lines = contextMenuLines(range, clicked);
+    menuLines.current = linkedLinesOf(lines);
+    menuOnSelection.current = lines !== null && lines === range;
     return menuLines.current;
   };
 
@@ -61,9 +63,13 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
   const lineEntries = (): (GroupedEntry | false | undefined)[] => {
     const lines = menuLines.current;
     if (!lines) return [];
+    const onSelection = menuOnSelection.current;
+    const linesLink = link.linkToLines(path, lines);
     return lineMenuEntries({
       lines,
-      copyLink: linkable ? link.copy : undefined,
+      linesSelected: onSelection,
+      // The lines selected copy as ⇧⌘C does, their toast teaching it; others copy their own link.
+      copyLink: linesLink ? () => (onSelection ? link.copy() : link.copyLink(linesLink)) : undefined,
       copyLines: () => copyToClipboard(linesText(textOf(lines.side), lines), copiedLinesWord(lines)),
       annotate: annotateAt && (() => annotateAt(lines)),
       lineAction,

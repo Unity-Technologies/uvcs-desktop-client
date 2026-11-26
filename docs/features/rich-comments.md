@@ -41,7 +41,7 @@ before.
   The prefixes are `cm`'s own, read as `cm` reads them: lower case only (`CS:12` isn't one), the body up to the
   first `@`, then the repository with `rep:` and `repserver:` dropped. `cm` has no spec for a code
   review, so `cr:` is the app's, chosen to read like the others (`#311` was rejected: `#` is issues'). The
-  palette reads the same prefixes (`KIND_PREFIXES`, ARCHITECTURE.md "Prefixes"). `cm` has no end-of-token rule either (it takes one argument), so a comment's sentence punctuation and
+  palette reads the same prefixes (`KIND_PREFIXES`, docs/architecture/renderer.md "Prefixes"). `cm` has no end-of-token rule either (it takes one argument), so a comment's sentence punctuation and
   emphasis marks (`see cs:12.`, `(br:/main)`, `**cs:12**`) are left out of the reference (`TRAILING_PUNCTUATION`). A
   reference starts only after a space, a line's start, a bracket or an emphasis mark: `ana@acme.com`, `/a/cs:1`,
   `10:30:00` hold none.
@@ -71,11 +71,14 @@ before.
   Applied in changeset 7, Discarded), its review, who asked and when; a click opens the review at its thread
   (`conversationAt`). The editor's Markdown reader takes its brackets for a link's (`isChangeRequestReference` keeps
   them out of `excludedRanges` and `markLink`); micromark, with no definition for it, doesn't. Until the window read its
-  review's conversation it reads "Applies: change request c0d1ce00" and opens nothing.
-- A **person** is their avatar and name, their card the name `cm` knows them by; an **emoji** is itself, its name in
-  the tooltip.
-- Inside something clicked as a whole (a button, a picker's option: Incoming's list, the branch search, My shelves,
-  the changeset picker) a chip reads the same but is no link (`interactive={false}`), so the click stays the row's.
+  review's conversation it reads "Applies: change request c0d1ce00", and a click finds the request first
+  (`openChangeRequest`, "What a chip reads").
+- A **person** is their avatar and name in the color of the text around them (never a link, so never in the links'
+  accent), their card the name `cm` knows them by; an **emoji** is itself, its name in the tooltip.
+- Inside something clicked as a whole (a button, a picker's option: the branch search, My shelves, the changeset
+  picker, the review timeline's check-ins), a folded thread's line, the editor and a chip's own card, a chip reads the
+  same but is no link (`interactive={false}`), so the click goes to what holds it. Anywhere else it opens what it
+  names, the Branch Explorer's card over a changeset's comment included (`chipsAreLinks.test.ts` keeps the list).
 
 ## What a chip reads
 
@@ -118,8 +121,15 @@ before.
   `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't read it from art", no access or out of reach). The chip keeps "1201 art"
   either way. Kept as immutable though comments can be edited: a chip's summary of another repository's object is a
   reminder of what it points at, and the object's own page reads it fresh.
-- **A change request** reads nothing: the chip looks through the review conversations the window read
-  (`useCachedChangeRequest`: a review's page, the check-in's change requests to apply), and wakes as one is read.
+- **A change request** reads nothing to show itself: the chip looks through the review conversations the window read
+  (`useCachedChangeRequest`: a review's page, the check-in's change requests to apply), and wakes as one is read. A
+  click on one the window hasn't read (a changeset's comment, from its details) asks once,
+  `ReviewCommentsApi.changeRequestThread`: one `cm find changereviewcomment "where guid like 'c0d1ce00%' and type =
+  'change'"` (the server takes `like` on a guid; a whole guid is matched with `=`), printing `{id}`, `{reviewid}` and
+  `{type}` (`changeRequestThreadOf`), about a second on a large repository; a second click meanwhile asks nothing. It
+  asks the place's repository, as the chips the window read do. Text that names no request (`changeRequestGuidCondition`)
+  asks nothing. Then the review opens at the thread, as a merge request when it is one; a request not found says so
+  ("Change request c0d1ce00 not found").
 - A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review (its target's name read
   too) of another repository aren't read.
 
@@ -293,7 +303,11 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   (`focusModeSurfaces.test.ts`): a branch's once filled its panel edge to edge, its hints inside the text.
   A field in a popover (a status's comment) offers none (`isOwnFocusGroup`, `inPopover`): the popover is moved into
   place with a transform, which the fixed panel would follow, shrunk into it.
-  From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
+  The backdrop is the panel's sibling, wherever the panel is (`CommentFocusGroup`): one parent puts them in one
+  stacking context, so the panel stays above it whatever its ancestors do (a backdrop in the page's body was drawn
+  over it under a stacking context around the views); the smoke test checks the panel is what a press at its middle
+  reaches (`npm run e2e`).
+  From a dialog it lies above the dialog: the backdrop is in the dialog with the panel, so a click on it closes
   the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
   the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was
   dropped: the dialog grew too tall, or its field barely grew, by how much room its other fields left.
@@ -508,7 +522,7 @@ checked in both themes when it draws something.
     empty, and the caret waits at the description's end.
 20. **The Branch Explorer's card.** Hover the caption of a changeset whose title has references and whose comment is
     longer than the window (720 px tall): the title shows its chips, the card stops above the status bar, its bottom
-    edge in sight, and its body scrolls.
+    edge in sight, and its body scrolls. A click on a chip in its title opens what it names.
 21. **Two editors in a development build.** With the check-in's description holding chips, open Edit comment on a
     changeset with chips: the console shows no "Cannot update a component while rendering a different component".
 22. **Copying a shown comment.** In a details panel, drag over a whole comment with a list, bold and a chip, its title

@@ -20,7 +20,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import type { DiffBrowserSlots } from './DiffBrowserLayout';
-import { DIFF_ENTRY_FACTS, diffEntryTones } from './diffEntrySources';
+import { DIFF_ENTRY_FACTS, DIFF_VIEW_OFFER, diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
 import { pairedEntryAt, pairedFocus } from './diffFocus';
@@ -106,7 +106,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
     return markOf && withMetaMarks(markOf, pairs.metaOf);
   }, [entryFlag, targetKey, pairs]);
   const flag = useMemo(() => (entryFlag && flagMarkOf ? entryFlagChip(entryFlag, flagMarkOf) : undefined), [entryFlag, flagMarkOf]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag });
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} />, flag, viewOffer: DIFF_VIEW_OFFER });
   const markOf = useMemo(() => {
     if (!entryFlag || !flagMarkOf) return undefined;
     return (entry: DiffEntry) => {

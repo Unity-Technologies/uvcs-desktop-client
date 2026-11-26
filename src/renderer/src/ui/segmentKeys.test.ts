@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { segmentAfterKey } from './segmentKeys';
+import { segmentAfterKey, segmentPickOfClick } from './segmentKeys';
 
 describe('segmentAfterKey', () => {
   const values = ['mine', 'everyone', 'recent'];
@@ -18,5 +18,16 @@ describe('segmentAfterKey', () => {
   it('leaves other keys, ↑ and ↓ included, to the control around it', () => {
     expect(segmentAfterKey(values, 'mine', 'ArrowDown')).toBeNull();
     expect(segmentAfterKey(values, 'mine', 'Enter')).toBeNull();
+  });
+});
+
+describe('segmentPickOfClick', () => {
+  it('is the pointer for a click of the mouse, a pen or a touch, which counts its clicks', () => {
+    expect(segmentPickOfClick(1)).toBe('pointer');
+    expect(segmentPickOfClick(2)).toBe('pointer');
+  });
+
+  it('is keys for Space or Enter on a focused segment, whose click counts none', () => {
+    expect(segmentPickOfClick(0)).toBe('keys');
   });
 });

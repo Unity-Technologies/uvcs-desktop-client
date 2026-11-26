@@ -5,6 +5,7 @@ import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { SelectorChip } from '../../components/SelectorChip';
 import { ServerChip } from '../../components/ServerChip';
 import { WorkspaceKindChip } from '../../components/WorkspaceKindChip';
+import { shownWorkspaceKind } from '../../components/workspaceKindWords';
 import { splitRepositorySpec } from '../../lib/servers';
 import { Button } from '../../ui/Button';
 import { Highlight } from '../../ui/Highlight';
@@ -40,7 +41,7 @@ export function WorkspaceRow({ workspace, repository, repositoryName: knownName,
     <ActionContextMenu entries={menu}>
       <div className={styles.row} data-compact={compact} data-missing={missing}>
         <button className={styles.rowMain} data-workspace-row onClick={(event) => openIn(workspace.path, windowAskedBy(event, { missing }))}>
-          <RepositoryAvatar repository={repository ?? knownName} label={workspace.name} size={compact ? 24 : 32} className={styles.rowAvatar} />
+          <RepositoryAvatar repository={repository ?? knownName} label={workspace.name} size={compact ? 24 : 32} workspaceKind={shownWorkspaceKind(kind, missing)} className={styles.rowAvatar} />
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>
               <span className={styles.rowName}>

@@ -125,3 +125,13 @@ export function canReRequest(reviewer: CodeReviewer, user: string | undefined): 
 export function isAuthor(review: Pick<CodeReviewSummary, 'owner'>, user: string): boolean {
   return sameUser(user, review.owner);
 }
+
+/**
+ * What a reviewer's ask-again and remove buttons say in their tooltips and to a screen reader: each names who it acts
+ * on, since every row shows the same two buttons.
+ */
+export function reviewerActionLabels(reviewer: CodeReviewer, groups: ReviewerGroups): { askAgain: string; remove: string } {
+  const name = reviewerLabel(reviewer, groups);
+  const who = isGroup(reviewer, groups) ? `the ${name} group` : name;
+  return { askAgain: `Ask ${who} to review again`, remove: `Remove ${who} from the reviewers` };
+}

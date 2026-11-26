@@ -1,5 +1,7 @@
+import type { ReviewComment } from '@shared/domain/reviewConversation';
+import { shortGuid } from '../../../lib/comments/commentReferences';
 import type { ReviewThread } from './reviewThreads';
-import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenLineText, type ThreadBadges, type ThreadKindName } from './threadBadges';
+import { answerOf, appliedPillTip, locationText, repliesText, threadBadges, threadKindName, writtenPlaceNamesPart, writtenPlaceText, writtenPlaceTip, type ThreadBadges, type ThreadKindName } from './threadBadges';
 
 /**
  * Where a thread's card is: the conversation's timeline, the code of the Changes tab (`ThreadInCode`), or the Comments
@@ -33,14 +35,16 @@ export interface ThreadHeaderInput {
   inContext: boolean;
 }
 
-/** The file and line a header names: a link to it in Changes, or, on a card that goes there itself, text. */
+/** The file a header names, and where in it the thread was written: a link to it in Changes, or, on a card that goes there itself, text. */
 export interface HeaderLocation {
   folder: string;
   file: string;
-  /** "line 42", apart from the file: the line it was written on, which an outdated comment's no longer is. */
-  line: string;
+  /** "line 42", "area", apart from the file: where in it the thread was written, which an outdated comment's line no longer is. */
+  writtenPlace: string;
+  /** What hovering the place says it is (`writtenPlaceTip`): "The line it was written on". */
+  writtenPlaceTip: string;
   linked: boolean;
-  /** The text's tooltip, the whole path and line; a link's says where it goes, the path under it. */
+  /** The text's tooltip, the whole path and place; a link's says where it goes, the path under it. */
   tip: string;
   tipSub?: string;
 }
@@ -55,10 +59,11 @@ export interface HeaderLocation {
 export type HeaderPill = {
   kind: ThreadKindName;
   /**
-   * The kind's name, the icon's tooltip and what a screen reader says of it; null where the label names the kind
-   * already ("Comment"), so it isn't said twice: the icon is then only drawn.
+   * The kind's name, the icon's tooltip and what a screen reader says of it (`kindTipOf`): a change request's with the
+   * number a check-in comment applies it by, "Change request 2c17a694". Null where the label names the kind already
+   * ("Comment"), so it isn't said twice: the icon is then only drawn.
    */
-  kindTip: ThreadKindName | null;
+  kindTip: string | null;
   label: string;
   tone: PillTone;
 } &
@@ -75,17 +80,21 @@ export interface ThreadHeaderView {
   /** How many replies a folded thread has. */
   replies: string | null;
   /**
-   * Where the file is named already (under its name, in its code): the line it was written on, "line 42". In the code
-   * a thread can sit rows below its line, or away from it once outdated.
+   * Where the file is named already (under its name, in its code): where in it the thread was written, "line 42" or "point". In
+   * the code a thread can sit rows below its line, or away from it once outdated.
    */
-  line: string | null;
+  writtenPlace: string | null;
+  /** What hovering it says (`writtenPlaceTip`); null with no place. */
+  writtenPlaceTip: string | null;
+  /** Whether the place names a model's part (`writtenPlaceNamesPart`), which a narrow row cuts before who wrote it. */
+  writtenPlaceNamesPart: boolean;
   pill: HeaderPill | null;
   hides: boolean;
 }
 
 /** Whether a thread's card has a header band: one on a line, a change request, or a question. A plain review comment has none. */
 export function hasThreadHeader(thread: ReviewThread): boolean {
-  return thread.root.anchor.kind === 'line' || threadBadges(thread).kind !== undefined;
+  return thread.root.anchor.kind !== 'review' || threadBadges(thread).kind !== undefined;
 }
 
 /**
@@ -100,6 +109,8 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
   const badges = threadBadges(thread);
   const inCode = place === 'code';
   const underFile = place === 'fileGroup';
+  const anchor = thread.root.anchor.kind === 'review' ? null : thread.root.anchor;
+  const namesPlace = (underFile || inCode) && anchor !== null;
   return {
     foldToggle: foldable ? { expanded: !folded, label: folded ? 'Show the thread' : 'Fold the thread' } : null,
     // In the code, the thread is at its line: its location would name where the user already is. Under its file's
@@ -107,25 +118,36 @@ export function threadHeaderOf({ thread, place, folded, foldable, earlier, hides
     location: inCode || underFile ? null : locationOf(thread, place === 'panel'),
     earlierTag: inCode && earlier ? earlier : null,
     replies: folded ? (repliesText(thread) ?? null) : null,
-    line: (underFile || inCode) && thread.root.anchor.kind === 'line' ? writtenLineText(thread.root.anchor) : null,
+    writtenPlace: namesPlace ? writtenPlaceText(anchor) : null,
+    writtenPlaceTip: namesPlace ? writtenPlaceTip(anchor) : null,
+    writtenPlaceNamesPart: anchor !== null && writtenPlaceNamesPart(anchor),
     pill: pillOf(thread, badges, seesHowApplied, showsAnswer, inContext),
     hides: inCode && hides,
   };
 }
 
 function locationOf({ root }: ReviewThread, cardOpens: boolean): HeaderLocation | null {
-  if (root.anchor.kind !== 'line') return null;
+  if (root.anchor.kind === 'review') return null;
   const { folder, file } = locationText(root.anchor);
-  const line = writtenLineText(root.anchor);
+  const writtenPlace = writtenPlaceText(root.anchor);
+  const placeTip = writtenPlaceTip(root.anchor);
   // The panel's card goes to the thread: its file and line only name where, whole in the tooltip.
-  return cardOpens ? { folder, file, line, linked: false, tip: `${folder}${file}, ${line}` } : { folder, file, line, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
+  return cardOpens ? { folder, file, writtenPlace, writtenPlaceTip: placeTip, linked: false, tip: `${folder}${file}, ${writtenPlace}` } : { folder, file, writtenPlace, writtenPlaceTip: placeTip, linked: true, tip: 'Show in Changes', tipSub: `${folder}${file}` };
 }
 
 /** How the pill looks: the thread's kind (its icon) and where it stands, or, for a plain comment, that it is one. */
 function pillLook(thread: ReviewThread, badges: ThreadBadges): Pick<HeaderPill, 'kind' | 'kindTip' | 'label' | 'tone'> | null {
   const kind = threadKindName(thread.root);
   if (!badges.state) return hasThreadHeader(thread) ? { kind, kindTip: null, label: kind, tone: 'comment' } : null;
-  return { kind, kindTip: kind, ...badges.state };
+  return { kind, kindTip: kindTipOf(thread.root, kind), ...badges.state };
+}
+
+/**
+ * The kind as its icon's tooltip names it. A change request's adds its number, its guid's first eight digits, the one
+ * `[apply-change:2c17a694]` names it by, for whoever applies it from a client that doesn't offer it (the CLI).
+ */
+function kindTipOf(root: ReviewComment, kind: ThreadKindName): string {
+  return root.kind === 'changeRequest' ? `${kind} ${shortGuid(root.guid)}` : kind;
 }
 
 function pillOf(thread: ReviewThread, badges: ThreadBadges, seesHowApplied: boolean, showsAnswer: boolean, inContext: boolean): HeaderPill | null {

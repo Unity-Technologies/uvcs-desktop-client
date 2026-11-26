@@ -6,13 +6,17 @@ const { appendFileSync } = require('node:fs');
 const { createInterface } = require('node:readline');
 const { answer } = require('./answers.cjs');
 
-/** Every command, and whether it was known, goes to this file when set: what to teach the fake next. */
+/**
+ * Every command goes to this file when set, one JSON line each: its arguments, the folder it ran in, and whether the
+ * fake knew it (`known`: what to teach the fake next). The smoke test reads it (`readCommandLog`).
+ */
 const LOG_FILE = process.env.UVCS_FAKE_CM_LOG;
 
 function run(args) {
   const result = answer(args);
-  // A command `cm` refuses (a merge its rules don't allow) was answered: only one the fake doesn't know is an ERR.
-  if (LOG_FILE) appendFileSync(LOG_FILE, `${result.exitCode === 0 || result.refused ? 'ok ' : 'ERR'} ${args.join(' ')}\n`);
+  // A command `cm` refuses (a merge its rules don't allow) was answered: only one the fake doesn't know is unknown.
+  const known = result.exitCode === 0 || Boolean(result.refused);
+  if (LOG_FILE) appendFileSync(LOG_FILE, `${JSON.stringify({ args, cwd: process.cwd(), known })}\n`);
   return result;
 }
 

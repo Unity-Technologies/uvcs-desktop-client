@@ -1,0 +1,111 @@
+/* Over the viewport and the swipe divider, under the stage's floating controls and pills; the opened pin's card is in
+   the stage's own layer (`.cardLayer`, ImageDiffViewer). Only its marks take the pointer: the image under it pans. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.area {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* The world glides when the controls zoom (`PanZoom.animated`): the marks glide on the same curve, as one with it. */
+.overlay[data-gliding] .bubble,
+.overlay[data-gliding] .corner,
+.overlay[data-gliding] .area {
+  transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out);
+}
+
+/* The corners of an area being written on: small squares that reshape it, each with the cursor of its diagonal. */
+.corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid var(--accent);
+  border-radius: 2px;
+  background: var(--bg-surface-raised);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.corner[data-corner='topLeft'],
+.corner[data-corner='bottomRight'] {
+  cursor: nwse-resize;
+}
+
+.corner[data-corner='topRight'],
+.corner[data-corner='bottomLeft'] {
+  cursor: nesw-resize;
+}
+
+/* An area is drawn as the one dragged to write it (`.dragArea`): a whole-pixel line in its state's color over a faint
+   wash of the same color, so the image under it still reads as it is. Only its bubble shows until it's pointed
+   at, its card is open, or it's being written: every area drawn at once hid the image under their outlines. Its thread
+   staying selected once the card closes doesn't keep it drawn. */
+.area {
+  --area-color: var(--image-area-settled);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+/* One look for both, so the area doesn't change as the drag that drew it ends. A dark rim each side of the line keeps
+   it apart from an image of its own color (`--image-area-rim`). */
+.area,
+.dragArea {
+  border: 2px solid var(--area-color);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--area-color) 10%, transparent);
+  box-shadow:
+    0 0 0 1px var(--image-area-rim),
+    inset 0 0 0 1px var(--image-area-rim);
+}
+
+.area:has(+ .bubble:hover),
+.area:has(+ .bubble:focus-visible),
+.area[data-opened],
+.area[data-writing] {
+  opacity: 1;
+}
+
+.area[data-emphasized] {
+  --area-color: var(--image-area-waiting);
+}
+
+.area[data-earlier] {
+  border-style: dashed;
+}
+
+/* The area a comment is being written on stays drawn as it was dragged, so the reviewer sees what they're commenting. */
+.area[data-selected],
+.area[data-writing] {
+  --area-color: var(--image-area-selected);
+}
+
+/* While commenting, the whole viewport takes the pointer: a click marks a point, a drag an area. */
+.gesture {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: var(--cursor-add-comment);
+}
+
+.dragArea {
+  --area-color: var(--image-area-selected);
+  position: absolute;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay[data-gliding] .bubble,
+  .overlay[data-gliding] .corner,
+  .overlay[data-gliding] .area,
+  .area {
+    transition: none;
+  }
+}

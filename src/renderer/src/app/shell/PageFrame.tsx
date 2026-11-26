@@ -43,7 +43,8 @@ export function PageFrame({ page, view, previous }: PageFrameProps) {
   useBackButtons(goBack, shown);
 
   return (
-    <div className={styles.frame}>
+    // `data-page`: which page this is, for the smoke test to tell each kind was reached (scripts/e2e/smoke.mjs `PAGES`).
+    <div className={styles.frame} data-page={page.kind}>
       <Stowable stowed={diffExpanded}>
         <div className={styles.breadcrumb}>
           <Breadcrumb back={{ label: previousTitle ?? viewDefinition(view).label, onClick: goBack }} current={title} />

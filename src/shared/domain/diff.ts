@@ -20,6 +20,12 @@ export interface DiffEntry {
    */
   repository: string;
   /**
+   * When the revision on the right was made, ISO 8601 with its UTC offset: set only where the change made it (an added
+   * item, a content change), undefined for a deleted item, a pure move, a change of permissions alone or an xlink
+   * (`madeARevision`). A list of a diff's files sorts by it, newest first (`fileListOrder`).
+   */
+  date?: string;
+  /**
    * Set only on a changed item whose file permissions changed and whose content didn't: both sides are then the same
    * revision. An item whose content changed too is a plain change.
    */

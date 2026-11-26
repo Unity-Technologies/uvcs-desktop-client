@@ -3,7 +3,7 @@
 // the same region never needs manual re-alignment.
 
 import type { AnchorMode, Size } from './composedFrame';
-import { ImageLayer, SideChip, Viewport, World } from './stage';
+import { ImageLayer, SideChip, Viewport, World, type StageOverlay } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
 import styles from './SideBySideMode.module.css';
@@ -14,9 +14,11 @@ interface SideBySideModeProps {
   frame: Size;
   panZoom: PanZoom;
   anchor: AnchorMode;
+  /** What a place draws over each viewport, for the sides it shows (`ImageCommentsOverlay`). */
+  overlay?: StageOverlay;
 }
 
-export function SideBySideMode({ oldImage, newImage, frame, panZoom, anchor }: SideBySideModeProps) {
+export function SideBySideMode({ oldImage, newImage, frame, panZoom, anchor, overlay }: SideBySideModeProps) {
   return (
     <div className={styles.panes}>
       <Viewport panZoom={panZoom}>
@@ -24,12 +26,14 @@ export function SideBySideMode({ oldImage, newImage, frame, panZoom, anchor }: S
           <ImageLayer image={oldImage} frame={frame} side="old" anchor={anchor} />
         </World>
         <SideChip side="old" />
+        {overlay?.(['old'])}
       </Viewport>
       <Viewport panZoom={panZoom}>
         <World panZoom={panZoom} frame={frame}>
           <ImageLayer image={newImage} frame={frame} side="new" anchor={anchor} />
         </World>
         <SideChip side="new" corner="right" />
+        {overlay?.(['new'])}
       </Viewport>
     </div>
   );

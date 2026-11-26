@@ -83,11 +83,6 @@ function answeringChangeset(replies: readonly ReviewComment[], branchChangesets:
   return undefined;
 }
 
-/** Whether anyone replied to `comment` itself, in its thread. */
-export function hasReplies(comment: ReviewComment, thread: ReviewThread): boolean {
-  return thread.replies.some((reply) => reply.parentId === comment.id);
-}
-
 function threadState(root: ReviewComment, replies: readonly ReviewComment[], branchChangesets: ReadonlySet<number> | undefined): ThreadState {
   if (root.kind === 'changeRequest') {
     if (root.appliedInChangeset !== undefined) return { kind: 'applied', changesetId: root.appliedInChangeset };

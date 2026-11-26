@@ -12,6 +12,8 @@ export interface ReviewChip {
   stateText: boolean;
   /** A merge request's verdict after its pill (`listedVerdictOf`): whether it can merge, a check or a cross. */
   verdict?: MergeVerdict;
+  /** Whether the verdict's room stays at the end without one: chips in a column (the Branches view's) end on one line. */
+  verdictRoom: boolean;
   /** A code review's status, its badge. */
   status?: CodeReviewStatus;
   /** Whether the status is written beside its glyph ("In review"). */
@@ -27,9 +29,9 @@ export interface ReviewChip {
  * merge (`listedVerdictOf`: a check, a cross; none while it waits), as its card's discs say it section by section; what
  * decides it (the review's icon) shows on hover. Never its number: the branch already names the work
  * (merge-requests.md "Its number"). A code review shows its status. Narrow (`iconOnly`), the names go and the glyphs
- * stay.
+ * stay. In a column (`inColumn`), every chip keeps the verdict's room, a verdict or not.
  */
-export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): ReviewChip {
+export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean, { inColumn = false }: { inColumn?: boolean } = {}): ReviewChip {
   const { status } = review;
   const title = commentLineText(review.title);
   const request = asMergeRequest(review);
@@ -39,6 +41,7 @@ export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): Revi
       state,
       stateText: !iconOnly,
       verdict: listedVerdictOf(request),
+      verdictRoom: inColumn,
       statusText: false,
       hover: { kind: 'summary', request },
       label: `Open merge request: ${title}`,
@@ -46,6 +49,7 @@ export function reviewChipOf(review: CodeReviewSummary, iconOnly: boolean): Revi
   }
   return {
     stateText: false,
+    verdictRoom: inColumn,
     status,
     statusText: !iconOnly,
     hover: { kind: 'tip', tip: iconOnly ? `${status}: ${title}` : title, tipSub: `${codeReviewLine(review)} · click to open` },

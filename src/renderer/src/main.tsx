@@ -11,7 +11,10 @@ import { isSettingUpCm, useCmRuntimeStore } from './app/cmSetup/cmRuntimeStore';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openPageWindowFromAddress } from './app/pageWindow/openPageWindowFromAddress';
 import { openPlaceFromAddress } from './app/workspace/openPlaceFromAddress';
+import { bringStoredWindowSettings } from './app/settings/windowKeptSettings';
 import { exposePageZoom } from './app/shell/exposePageZoom';
+import { markReadsInFlight } from './app/markReadsInFlight';
+import { queryClient } from './app/queryClient';
 import { trackPointerReturnFocus } from './lib/inputModality';
 import { WINDOW_CHROME } from './lib/platform';
 import './styles/global.css';
@@ -28,9 +31,15 @@ setTimeout(() => {
 setTimeout(preloadCommentEditor, 2500);
 
 document.documentElement.dataset.chrome = WINDOW_CHROME;
+// Before `openPlaceFromAddress`, which drops the address's query, the zoom the window opened at with it.
 exposePageZoom();
+markReadsInFlight(queryClient);
 guardUnloading();
 trackPointerReturnFocus();
+// What this window's storage kept before the app's settings held it (the Branch Explorer's rules, moved branches and
+// colors, which its store put aside as the imports above read it; the sync remotes; the home projects), handed over
+// once, or at the next start when the settings can't take it now.
+void bringStoredWindowSettings();
 // A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.
 if (!openPageWindowFromAddress()) {
   openPlaceFromAddress();

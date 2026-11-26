@@ -17,6 +17,15 @@ export function cmStoreFolder(platform: NodeJS.Platform, env: NodeJS.ProcessEnv,
   return posix.join(env.XDG_DATA_HOME || posix.join(home, '.local', 'share'), 'unity-version-control', 'cm');
 }
 
+/**
+ * Where the installed one's installer downloads (docs/features/cm-runtime.md "Updating the installed one"): `update`,
+ * beside the store, so the Windows uninstaller removes it with it (`installer.nsh`), never roaming with the profile.
+ */
+export function officialUpdateFolder(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, home: string): string {
+  const path = platform === 'win32' ? win32 : posix;
+  return path.join(path.dirname(cmStoreFolder(platform, env, home)), 'update');
+}
+
 /** What the store holds for one version, by name: the folder `cm` runs from, and the two that only exist on the way to it. */
 export interface CmStoreEntries {
   /** `<version>`: the unpacked bundle, checked; `cm` is in its `client` folder. */
@@ -49,9 +58,11 @@ function versionOfEntry(name: string): string {
 /**
  * The entries of the store to delete: every version but the pinned one and the newest above it (one an update
  * downloaded to run, kept across restarts until it starts: docs/features/cm-runtime.md "Updates bring their cm"),
- * finished or not. Anything else in the folder is left alone.
+ * finished or not; every version when `pinned` is null, as the installed `cm` runs. Anything else in the folder is left
+ * alone.
  */
-export function storeEntriesToPrune(names: readonly string[], pinned: string): string[] {
+export function storeEntriesToPrune(names: readonly string[], pinned: string | null): string[] {
+  if (pinned === null) return names.filter((name) => VERSION_ENTRY.test(name)).sort();
   const versions = names.filter((name) => VERSION_ENTRY.test(name)).map(versionOfEntry);
   const newer = versions.filter((version) => compareCmVersions(version, pinned) > 0).sort(compareCmVersions);
   const keep = [pinned, ...newer.slice(-1)];

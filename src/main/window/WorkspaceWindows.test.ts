@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { SavedWindow } from '@shared/domain/settings';
@@ -10,7 +10,7 @@ import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
 import type { CmSetupStart } from '@shared/startingPlace';
 import { fakeElectron, type FakeWindow } from './testing/fakeElectron';
-import { WorkspaceWindows } from './WorkspaceWindows';
+import { focusWindow, WorkspaceWindows } from './WorkspaceWindows';
 
 vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeElectron.module);
 vi.mock('./createMainWindow', async () => {
@@ -848,5 +848,46 @@ describe('page windows', () => {
     windows.showWorkspaceWindow(page.webContents.id, 'goto.branches');
     expect(fakeElectron.focused()).toBe(game);
     expect(sentTo(game)).toEqual([['menuCommand', { commandId: 'goto.branches' }]]);
+  });
+});
+
+describe('focusWindow in an agent’s launch (`windowsStayInBackground`)', () => {
+  const minimizedWindow = (): FakeWindow => {
+    createMainWindow(memorySettings());
+    const window = fakeElectron.windows().at(-1)!;
+    window.minimize();
+    return window;
+  };
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('leaves the window where it is and the focus with the person, in a build run from the checkout', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+    const window = minimizedWindow();
+
+    focusWindow(asBrowserWindow(window));
+    expect(window.shown).toBe(false);
+    expect(fakeElectron.focused()).toBeNull();
+  });
+
+  it('leaves the person’s saved session alone, so their next launch opens as it would have', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    fakeElectron.app.isPackaged = false;
+    const saved: SavedWindow = { workspacePath: '/game', bounds: { x: 0, y: 0, width: 1000, height: 700, maximized: true }, fullScreen: true };
+    const { windows, settings, open } = setUp([], [saved]);
+    open();
+
+    windows.saveSession({ withViews: false });
+    expect(settings.get().openWindows).toEqual([saved]);
+  });
+
+  it('brings an installed app’s window forward as always, whatever its environment holds', () => {
+    vi.stubEnv('UVCS_BACKGROUND_WINDOWS', '1');
+    const window = minimizedWindow();
+
+    focusWindow(asBrowserWindow(window));
+    expect(window.shown).toBe(true);
+    expect(fakeElectron.focused()).toBe(window);
   });
 });

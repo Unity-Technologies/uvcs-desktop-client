@@ -60,6 +60,22 @@ describe('LeftChangesFinder', () => {
     expect(lines()).toContain(foundLine(FOUND_BRANCHES, "where name = 'task1'"));
   });
 
+  it('finds them by the id of the branch the window already read, without looking it up again', async () => {
+    const { cm, lines } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
+    const finder = new LeftChangesFinder(cm, recordsOf([]));
+
+    expect(await finder.find('/work', { name: '/main/task1', id: 37 })).toEqual([expect.objectContaining({ shelveId: 2, foreign: true })]);
+    expect(lines().some((command) => command.startsWith('find branch'))).toBe(false);
+  });
+
+  it('looks the branch up when the window read another one: the workspace switched since', async () => {
+    const { cm, lines } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
+    const finder = new LeftChangesFinder(cm, recordsOf([]));
+
+    expect(await finder.find('/work', { name: '/main/task0', id: 4 })).toEqual([expect.objectContaining({ shelveId: 2, foreign: true })]);
+    expect(lines()).toContain(foundLine(FOUND_BRANCHES, "where name = 'task1'"));
+  });
+
   it('offers changes still waiting to be brought elsewhere as left here, once the workspace is back where they were made', async () => {
     const { cm } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
     const bringing: SwitchShelveRecord = { ...leftRecord(2, 'br:/main/task1'), mode: 'bring' };

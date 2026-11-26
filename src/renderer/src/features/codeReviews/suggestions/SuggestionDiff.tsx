@@ -8,7 +8,11 @@ import { pierreSnippetDiffOptions } from '../../diff/viewer/pierreOptions';
 import { useSyntaxHighlighter } from '../../diff/viewer/useSyntaxHighlighter';
 import type { SuggestionBody } from './suggestedChange';
 import { suggestionFileDiff } from './suggestionFileDiff';
+import { useDiffShadowRoot } from '../../diff/viewer/useDiffShadowRoot';
+import { useWordMarks, type WordMarkColors } from '../../diff/viewer/useWordMarks';
+import { suggestionWordMarks } from './stackedWordMarks';
 import { SuggestionPlaceholder } from './SuggestionPlaceholder';
+import { useSuggestionViewStore } from './suggestionViewStore';
 import styles from './SuggestedChangeBlock.module.css';
 
 interface SuggestionDiffProps {
@@ -28,14 +32,17 @@ export function SuggestionDiff({ path, body }: SuggestionDiffProps) {
   const theme = useResolvedTheme();
   const highlighterReady = useSyntaxHighlighter(pierreThemeName(theme), path);
   const { replacedText, suggestedText, firstLine } = body;
-  const fileDiff = useMemo(() => suggestionFileDiff(path, { replacedText, suggestedText, firstLine }), [path, replacedText, suggestedText, firstLine]);
+  const view = useSuggestionViewStore((state) => state.view);
+  const fileDiff = useMemo(() => suggestionFileDiff(path, { replacedText, suggestedText, firstLine }, view), [path, replacedText, suggestedText, firstLine, view]);
   const options = useMemo(() => pierreSnippetDiffOptions(theme), [theme]);
   const container = useRef<HTMLDivElement | null>(null);
+  const wordMarks = useMemo(() => suggestionWordMarks(view, replacedText, suggestedText, firstLine), [view, replacedText, suggestedText, firstLine]);
+  useWordMarks(container, useDiffShadowRoot(container), wordMarks, DIFF_WORD_COLORS);
   const holdContainer = useCallback((element: HTMLDivElement | null) => {
     container.current = element;
     return keepCodePointerToItself(element);
   }, []);
-  if (!highlighterReady) return <SuggestionPlaceholder rowCount={body.rowCount} />;
+  if (!highlighterReady) return <SuggestionPlaceholder rowCount={fileDiff.unifiedLineCount} />;
   return (
     <div ref={holdContainer} className={styles.diff}>
       <VirtualizerContext.Provider value={undefined}>
@@ -45,3 +52,7 @@ export function SuggestionDiff({ path, body }: SuggestionDiffProps) {
     </div>
   );
 }
+
+
+/** Pierre's own colors for the words it marks, so the stacked marks read as the code's diff's. */
+const DIFF_WORD_COLORS: WordMarkColors = { deletions: 'var(--diffs-bg-deletion-emphasis)', additions: 'var(--diffs-bg-addition-emphasis)' };

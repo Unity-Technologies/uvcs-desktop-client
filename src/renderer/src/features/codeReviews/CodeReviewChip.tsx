@@ -16,6 +16,8 @@ interface CodeReviewChipProps {
   beforeOpen?: () => void;
   /** Drawn inside a row that is itself a button (a branch list's), where a button can't nest: the row keeps the keyboard. */
   insideButton?: boolean;
+  /** One of a column of chips (the Branches view's): it keeps the verdict's room, so every chip ends on one line. */
+  inColumn?: boolean;
 }
 
 /**
@@ -23,8 +25,8 @@ interface CodeReviewChipProps {
  * then its review's status; a code review's status. Clicking it opens the review. Hovering a merge request's shows its
  * summary (`MergeRequestSummaryCard`); a code review's, a tooltip. `iconOnly` where room is short.
  */
-export function CodeReviewChip({ review, iconOnly = false, beforeOpen, insideButton = false }: CodeReviewChipProps) {
-  const chip = reviewChipOf(review, iconOnly);
+export function CodeReviewChip({ review, iconOnly = false, beforeOpen, insideButton = false, inColumn = false }: CodeReviewChipProps) {
+  const chip = reviewChipOf(review, iconOnly, { inColumn });
   const Element = insideButton ? 'span' : 'button';
   const open = (): void => {
     beforeOpen?.();
@@ -64,12 +66,12 @@ function ChipGlyphs({ chip }: { chip: ReviewChip }) {
   return (
     <>
       {chip.state && <MergeRequestStateBadge state={chip.state} compact iconOnly={!chip.stateText} />}
-      {chip.verdict && (
-        <span className={chipStyles.status}>
-          <MergeVerdictIcon verdict={chip.verdict} />
+      {chip.status && <CodeReviewStatusBadge status={chip.status} compact iconOnly={!chip.statusText} />}
+      {(chip.verdict || chip.verdictRoom) && (
+        <span className={chipStyles.status} data-room={chip.verdictRoom}>
+          {chip.verdict && <MergeVerdictIcon verdict={chip.verdict} />}
         </span>
       )}
-      {chip.status && <CodeReviewStatusBadge status={chip.status} compact iconOnly={!chip.statusText} />}
     </>
   );
 }

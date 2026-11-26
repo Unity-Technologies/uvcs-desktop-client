@@ -1,24 +1,50 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
-// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
-// model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
-// error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
-// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`/<checkout>-<hash>.
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view and every kind of page (`PAGES`: a
+// merge with conflicts, a history, the repository at a changeset...), a diff in a new window, a model diff, a branch's
+// permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
+// error, any `cm` command the fake doesn't know, a view that doesn't show, a step that sends the same server command
+// twice, or content cut off where nothing scrolls. It asserts only that things appear, never pixels or copy. Screenshots go to
+// <tmp>/uvcs-e2e-shots/<checkout>-<hash>, or `UVCS_E2E_SHOTS`/<checkout>-<hash>.
+// A step earns its place only for what unit tests can't reach (scripts/e2e/README.md "What belongs here").
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
+import { commandsByStep, duplicateReport, needsServer, readableCommandLine, readCommandLog } from '../build/duplicateServerCommands.mts';
+import { cutOffArguments, findCutOffContent } from './cutOffContent.mjs';
 import { fakeCmExecutable } from './fakeCm/executable.mjs';
 import { createWorkspace } from './workspaceFixture.mjs';
 
 /** The sidebar's views by their accessible names, in its order (`VIEWS` in viewRegistry.ts): a new view is one line. */
 const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Merge requests', 'Locks', 'Sync'];
+/**
+ * Every kind of page (`Page` in pages.ts), each opened by a step that waits for it (`pageShown`): a new kind is one
+ * line here and a step, or `smokeOpensEveryPage.test.ts` fails.
+ */
+const PAGES = ['history', 'diff', 'merge', 'codeReview', 'browseRepository'];
 /** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
 const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
+/**
+ * Server commands still sent twice within a step on main (`duplicateReport`), each allowed in its step only, until the
+ * change named removes it: `{ step: 'Open workspace', command: 'status --header', why: '#349: what removes it' }`.
+ * One that no longer happens only warns, so those changes can merge in any order; then its line goes. None today.
+ */
+const KNOWN_DUPLICATES = [];
+/**
+ * What may end below the nearest box clipping it, where that box doesn't scroll (`findCutOffContent`), each with why:
+ * `{ selector: '[aria-label="Timeline"]', why: 'what makes it right' }`. None today.
+ */
+const CUT_OFF_ALLOWED = [];
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 const VIEWPORT = { width: 1400, height: 880 };
+/**
+ * A screenshot of every step locally, for a person or an agent to look at; on CI only the failed step's, the only one
+ * the job keeps (its artifact is uploaded when it fails): taking each costs about a tenth of the run.
+ */
+const SHOTS_OF_EVERY_STEP = process.env.CI !== 'true';
 
 const projectFolder = fileURLToPath(new URL('../..', import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), 'uvcs-e2e-'));
@@ -51,6 +77,8 @@ const app = await electron.launch({
     UVCS_FAKE_WORKSPACE: workspace,
     UVCS_FAKE_CM_LOG: cmLog,
     UVCS_FAKE_CM_SIGN_IN: signInFile,
+    // Its windows show but never take the focus (`windowsStayInBackground`).
+    UVCS_BACKGROUND_WINDOWS: '1',
     // The official client's config folder, read by the first-run import (`plasticConfigFolder`): an empty one.
     PLASTIC_HOME: join(temp, 'plastic4'),
   },
@@ -65,6 +93,9 @@ const browserWindow = await app.browserWindow(window);
 // (Windows, a Linux desktop) or a small screen would otherwise leave smaller than the page laid out.
 await browserWindow.evaluate((shown, size) => shown.setContentSize(size.width, size.height), VIEWPORT);
 await window.setViewportSize(VIEWPORT);
+// Reduced motion: the app's durations are zero (`--duration-*`), so no step waits for a view's entrance or a dialog's,
+// and the cut-off check measures boxes where they rest. Only loops (spinners) still move, and nothing waits on them.
+await window.emulateMedia({ reducedMotion: 'reduce' });
 
 const main = window.getByRole('main');
 let shotNumber = 0;
@@ -93,16 +124,10 @@ async function withTimeout(promise, ms, what) {
   }
 }
 
-/** The commands the fake `cm` ran so far, as logged (`ok find branch …`). */
-function commandsRun() {
-  return existsSync(cmLog) ? readFileSync(cmLog, 'utf8').split('\n').filter(Boolean) : [];
+/** The fake `cm`'s log so far: the commands it ran and where each step started (`readCommandLog`). */
+function commandLog() {
+  return existsSync(cmLog) ? readCommandLog(readFileSync(cmLog, 'utf8')) : [];
 }
-
-/**
- * Commands that need no sign-in (`needsSignIn` in main/cm/repeatedCommands.ts): those that only read this machine, and
- * a `cm status` told not to work out the workspace's header, which would ask the server for its branch's head.
- */
-const LOCAL_COMMAND = /^(ok |ERR) ((getworkspacefrompath|wi|profile|version|changelist|workspace list)\b|status\b.* (--compact|--cset|--format)\b)/;
 
 // `checkVisibility()` (`settled`) takes an element laid out with `display: contents` for hidden: no loader may use it.
 const LOADING = 'main [aria-busy="true"], main [aria-label="Loading"]';
@@ -145,10 +170,55 @@ function stillLoading(loading) {
   });
 }
 
-async function step(name, run) {
+/** The kinds of page a step saw shown (`pageShown`); each of `PAGES` must be among them once the run ends. */
+const pagesShown = new Set();
+
+/** Waits for a page of `kind` to show in the window (`data-page`, `PageFrame`): only a page shown counts as reached. */
+async function pageShown(kind) {
+  await main.locator(`[data-page="${kind}"]`).filter({ visible: true }).first().waitFor();
+  pagesShown.add(kind);
+}
+
+/** Leaves the page shown for the view under it, by the breadcrumb's way back (`Breadcrumb`), and waits for the view. */
+async function backTo(view) {
+  await main.locator('[data-page]').filter({ visible: true }).getByRole('button', { name: view, exact: true }).click();
+  await main.getByRole('heading', { level: 1, name: view, exact: true }).waitFor();
+}
+
+/**
+ * Waits until `page` reads, changes and waits to read nothing (`markReadsInFlight`), and still doesn't two frames
+ * later, once what the last answer showed has asked for what it needs: each command logged then belongs to the step
+ * that sent it. A step waits on every window it opened before closing it.
+ */
+async function readsSettled(page = window) {
+  const idle = page.waitForFunction(
+    () =>
+      new Promise((answer) => {
+        const idle = () => document.documentElement.dataset.reading === 'false';
+        const idleBefore = idle();
+        requestAnimationFrame(() => requestAnimationFrame(() => answer(idleBefore && idle())));
+      }),
+  );
+  await withTimeout(idle, TIMEOUT_MS, 'reads still in flight');
+}
+
+/**
+ * Runs a step, its start written to the fake `cm`'s log so the duplicate check (`duplicateReport`) counts each step's
+ * commands apart. `rereads` names what, in the step, reads again on purpose (an operation, a refresh): its commands
+ * aren't checked. `leave` puts the window back for the steps after it (leaves the page the step opened), after the
+ * screenshot, which shows what the step opened.
+ */
+async function step(name, run, { rereads, leave } = {}) {
+  appendFileSync(cmLog, `${JSON.stringify({ step: name, rereads })}\n`);
   try {
     await run();
-    await screenshot(name.toLowerCase().replaceAll(' ', '-'));
+    await readsSettled();
+    await nothingCutOff();
+    if (SHOTS_OF_EVERY_STEP) await screenshot(name.toLowerCase().replaceAll(' ', '-'));
+    if (leave) {
+      await leave();
+      await readsSettled();
+    }
     console.log(`ok    ${name}`);
   } catch (error) {
     // Playwright's call log, under the message's first line, says what the step was doing when it gave up: a run that
@@ -157,6 +227,12 @@ async function step(name, run) {
     await screenshot(`FAILED-${name.toLowerCase().replaceAll(' ', '-')}`).catch(() => {});
     throw new Error(`${name}: ${error.message.split('\n')[0]}`);
   }
+}
+
+/** Fails the step when something shown in `page` can't be reached: cut off where nothing scrolls (`findCutOffContent`). */
+async function nothingCutOff(page = window) {
+  const cutOff = await withTimeout(page.evaluate(findCutOffContent, cutOffArguments(CUT_OFF_ALLOWED, LOADING)), TIMEOUT_MS, 'the cut-off check');
+  if (cutOff.length > 0) throw new Error(`Cut off where nothing scrolls (scripts/e2e/README.md "Cut-off content"):\n  ${cutOff.join('\n  ')}`);
 }
 
 const started = Date.now();
@@ -170,44 +246,13 @@ try {
     await window.keyboard.press('Escape');
     await window.getByRole('dialog').waitFor({ state: 'detached' });
   });
-  await step("A Unity organization's projects", async () => {
+  await step("A Unity organization's page", async () => {
     const sidebar = window.getByRole('navigation');
     await sidebar.getByRole('button', { name: /^studio/ }).click();
     await main.getByRole('heading', { level: 1, name: 'studio', exact: true }).waitFor();
-    await main.getByRole('button', { name: 'Project: All projects' }).click();
-    await window.getByPlaceholder('Find a project').fill('racing');
-    await window.getByText('Racing', { exact: true }).first().waitFor();
-    await window.keyboard.press('Enter');
-    await main.getByRole('button', { name: 'Project: Racing' }).waitFor();
-    // Inside its project, a repository goes by its own name; the other project's is filtered out.
-    await main.getByText('Game', { exact: true }).waitFor();
-    await main.getByText('Levels', { exact: true }).waitFor({ state: 'detached' });
-    // A deleted repository shows only once asked for, tagged, with Restore.
-    await main.getByText('Old', { exact: true }).waitFor({ state: 'detached' });
-    await main.getByRole('button', { name: 'Deleted', exact: true }).click();
-    await main.getByText('Old', { exact: true }).waitFor();
-    await main.getByRole('button', { name: 'Restore' }).waitFor();
-    await main.getByRole('button', { name: 'Deleted', exact: true }).click();
+    await settled();
     await sidebar.getByRole('button', { name: /^Home/ }).click();
     await workspaceOnHome.waitFor();
-  });
-  await step('The account switcher', async () => {
-    // Each Unity account shows only its organizations: switching shows the other's, and switching back the owner's.
-    const sidebar = window.getByRole('navigation');
-    const switchTo = async (user) => {
-      await sidebar.getByRole('button', { name: /^Account: / }).click();
-      const menu = window.getByRole('menu');
-      await menu.getByRole('menuitem', { name: /tester@example\.com/ }).waitFor();
-      await menu.getByRole('menuitem', { name: /zoe@example\.com/ }).waitFor();
-      await menu.getByRole('menuitem', { name: new RegExp(user.replaceAll('.', '\\.')) }).click();
-      await sidebar.getByRole('button', { name: `Account: ${user}` }).waitFor();
-    };
-    await switchTo('zoe@example.com');
-    await sidebar.getByRole('button', { name: /^arcade/ }).waitFor();
-    await sidebar.getByRole('button', { name: /^studio/ }).waitFor({ state: 'detached' });
-    await switchTo('tester@example.com');
-    await sidebar.getByRole('button', { name: /^studio/ }).waitFor();
-    await sidebar.getByRole('button', { name: /^arcade/ }).waitFor({ state: 'detached' });
   });
   await step('Open workspace', async () => {
     await workspaceOnHome.click();
@@ -232,15 +277,25 @@ try {
     await window.getByRole('navigation').getByRole('button', { name: /^Merge requests( \d+)?$/ }).click();
     // The row's title: the details panel names the selected row too.
     await main.getByRole('row').getByText('Review player movement', { exact: true }).dblclick();
+    await pageShown('codeReview');
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
-    await main.getByText('Jump only when grounded.').first().waitFor();
-    await main.getByText("You get emails because you're a reviewer.").waitFor();
-    // Its notes as events, its branches named, and its merge card; a move from the card's menu.
-    await main.getByText('marked this as ready for review').waitFor();
-    await main.getByText('changed the destination from /main/task-002 to /main').waitFor();
-    // The card's own: the list's details panel, kept under the page, says where the review stands too.
-    await main.getByRole('region', { name: 'Merge request', exact: true }).getByText('Changes under review').waitFor();
     await settled();
+  });
+  await step('The larger comment editor over the page', async () => {
+    // Its button, from the new comment's field: the panel must be what a press at its middle reaches, never the dimmed
+    // backdrop over it (a stacking context around the views once kept the panel under it).
+    const field = main.locator('[data-comment-field]').filter({ has: window.getByRole('textbox', { name: 'New comment' }) });
+    await field.getByRole('textbox').click();
+    await field.getByRole('button', { name: 'Write in a larger editor' }).click();
+    const panel = window.locator('[data-open="overlay"]');
+    await panel.waitFor();
+    const onTop = await panel.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+    });
+    if (!onTop) throw new Error('The larger editor is under its backdrop: a press on it reaches something else');
+    await window.keyboard.press('Escape');
+    await panel.waitFor({ state: 'detached' });
   });
   await step("A merge the server's merge rules refuse", async () => {
     // The fake's server merges only reviewed branches: the merge page says so and opens the request back.
@@ -250,10 +305,57 @@ try {
     await main.getByRole('tab', { name: /^Conversation/ }).waitFor();
     await settled();
   });
-  await step("A merge request's moves", async () => {
-    await main.getByRole('button', { name: 'More merge request actions' }).click();
-    await window.getByRole('menuitem', { name: 'Close merge request' }).click();
+  await step('A merge with conflicts', async () => {
+    // The merge page laid out with real content, which no unit test lays out: a list longer than the window, a conflict,
+    // a diff. Into another branch on the server, as the workspace has changes, which a merge into it waits for. The
+    // fake's merge (`fakeCm/merge.cjs`) has a conflict to decide, one that merges by itself and 30 changes to apply.
+    // Closed without merging: nothing is checked in.
+    await window.getByRole('navigation').getByRole('button', { name: /^Branches( \d+)?$/ }).click();
+    await main.getByRole('row').filter({ hasText: 'task-002' }).first().click({ button: 'right' });
+    await window.getByRole('menuitem', { name: 'Merge to another branch on the server…' }).click();
+    await window.getByRole('dialog').getByRole('option', { name: /task-001/ }).click();
+    // The refused merge of the step before is still the one in progress.
+    await window.getByRole('dialog').getByRole('button', { name: 'Start another merge' }).click();
+    await pageShown('merge');
+    // The conflict that merges by itself, the one to decide, and a change to apply.
+    await main.getByText('Sky.cs', { exact: true }).first().click();
+    await main.getByText('float exposure = 1.5f;').first().waitFor();
+    await main.getByText('Sun.cs', { exact: true }).first().click();
+    await main.getByText('float intensity = 1.2f;').first().waitFor();
+    await main.getByText('Probe01.asset', { exact: true }).first().click();
+    await main.getByText('m_Name: Probe01').first().waitFor();
     await settled();
+  }, {
+    leave: async () => {
+      await main.getByRole('button', { name: 'Close merge' }).click();
+      await window.getByRole('dialog').getByRole('button', { name: 'Close merge' }).click();
+      await main.locator('[data-page="merge"]').waitFor({ state: 'detached' });
+    },
+  });
+  // The history and the repository at a changeset: pages no other step opens (`PAGES`).
+  await step("A file's history", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
+    await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().click({ button: 'right' });
+    await window.getByRole('menuitem', { name: 'View history' }).click();
+    await pageShown('history');
+    // Its one revision, the one the workspace loaded (`fakeCm/history.cjs`).
+    await main.getByText('Player jumps').first().waitFor();
+    await settled();
+  }, { leave: () => backTo('Changes') });
+  await step('The repository at a changeset', async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
+    // Found by the view's filter: the list is longer than the window and draws only the rows on screen.
+    await main.getByRole('textbox', { name: 'Filter changesets' }).fill('Player runs');
+    await main.getByRole('row').filter({ hasText: 'Player runs' }).first().click({ button: 'right' });
+    await window.getByRole('menuitem', { name: 'Browse repository at this changeset' }).click();
+    await pageShown('browseRepository');
+    await main.getByText('README.md', { exact: true }).first().waitFor();
+    await settled();
+  }, {
+    leave: async () => {
+      await backTo('Changesets');
+      await main.getByRole('textbox', { name: 'Filter changesets' }).fill('');
+    },
   });
   await step('Branch Explorer timeline', async () => {
     // From another view its shortcut opens the Branch Explorer with the timeline shown.
@@ -266,46 +368,10 @@ try {
   });
   await step('Diff', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
-    await main.getByText('src/player.cs', { exact: true }).first().click();
+    // Visible only: the views shown lately stay mounted, hidden, and may name the same file (`mountedViews`).
+    await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().click();
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
-  });
-  await step("The branch's change requests to apply", async () => {
-    // The workspace's branch has a review asking for a change: the description offers it, and picking it writes it.
-    await main.getByRole('button', { name: '1 change request to apply' }).click();
-    await window.getByRole('listbox', { name: 'Suggestions' }).getByRole('option', { name: /Jump only when grounded/ }).click();
-    await main.getByLabel('Applies change request: Jump only when grounded.').waitFor();
-    await main.getByRole('button', { name: '1 change request to apply' }).waitFor({ state: 'detached' });
-  });
-  await step('Expanded diff', async () => {
-    // The header's button, then the key: the sidebar goes out of sight and the diff stays; Esc gives the window back.
-    const sidebar = window.getByRole('navigation');
-    await main.getByRole('button', { name: 'Expand diff' }).click();
-    await sidebar.waitFor({ state: 'hidden' });
-    await main.getByText('void Jump() { }').first().waitFor();
-    await window.keyboard.press('Escape');
-    await sidebar.waitFor();
-    await window.keyboard.press('ControlOrMeta+Shift+E');
-    await sidebar.waitFor({ state: 'hidden' });
-    await main.getByRole('button', { name: 'Expand diff', pressed: true }).click();
-    await sidebar.waitFor();
-  });
-  await step('A revision read from the disk', async () => {
-    await window.getByRole('navigation').getByRole('button', { name: /^Files( \d+)?$/ }).click();
-    await main.getByText('README.md', { exact: true }).first().click();
-    // The fake cm's revision 201 is another file's: README.md's text shows only when its revision is read from disk.
-    await main.getByText('A small game.').first().waitFor();
-    // A last change against its parent: the side after from the disk, the side before (revision 200) downloaded.
-    // Go to file reveals it without selecting its folder (whose details the fake cm doesn't know).
-    await window.keyboard.press('ControlOrMeta+P');
-    // Enter picks only a result shown: the workspace's paths are read when the dialog first opens, slowly on CI.
-    const goToFile = window.getByRole('dialog', { name: 'Go to file' });
-    await goToFile.locator('input').fill('camera');
-    await goToFile.getByText('camera.cs', { exact: false }).first().waitFor();
-    await window.keyboard.press('Enter');
-    await main.getByText('float distance = 8f;').first().waitFor();
-    await main.getByText('float distance = 10f;').first().waitFor();
-    await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
   });
   await step('Model diff', async () => {
     await main.getByText('Assets/crate.obj', { exact: true }).first().click();
@@ -325,12 +391,15 @@ try {
     const opened = app.waitForEvent('window');
     await main.getByRole('button', { name: 'Open in new window' }).click();
     const pageWindow = await opened;
+    await pageWindow.emulateMedia({ reducedMotion: 'reduce' });
     pageWindow.on('pageerror', (error) => errors.push(`page window pageerror: ${error.message}`));
     pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`page window console.error: ${message.text()}`));
     // The diff moved: its window shows it, with its one option, and this window is back on the list.
     await pageWindow.getByRole('button', { name: 'Follow selection' }).waitFor({ timeout: TIMEOUT_MS });
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).waitFor();
+    await readsSettled(pageWindow);
+    await nothingCutOff(pageWindow);
     await pageWindow.close();
   });
   await step('Permissions', async () => {
@@ -339,49 +408,19 @@ try {
     await window.getByRole('menuitem', { name: 'Permissions…' }).click();
     const dialog = window.getByRole('dialog', { name: 'Permissions' });
     await dialog.getByRole('option', { name: /^Developers/ }).click();
-    const checkIn = dialog.getByRole('row', { name: /^Check in/ });
-    await checkIn.click();
-    await window.keyboard.press('d');
-    await dialog.getByRole('button', { name: '1 change' }).waitFor();
-    await checkIn.locator('[data-saved="true"]').waitFor();
-    await window.keyboard.press('Shift+F10');
-    await window.getByRole('menuitem', { name: 'Ignore allows from above' }).waitFor();
-    await window.keyboard.press('Escape');
-    await window.getByRole('menu').waitFor({ state: 'detached' });
+    await dialog.getByRole('row', { name: /^Check in/ }).waitFor();
     await dialog.getByRole('button', { name: 'Cancel' }).click();
-    await window.getByRole('dialog', { name: 'Discard 1 change?' }).getByRole('button', { name: 'Discard' }).click();
     await dialog.waitFor({ state: 'detached' });
   });
   await step('Command palette', async () => {
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
-  await step('A prefix in the palette', async () => {
-    // `@` narrows it to people: the owners of what it read, with no command of its own.
-    const palette = window.getByRole('dialog');
-    await window.keyboard.type('@');
-    await palette.getByRole('group', { name: 'People' }).getByRole('option').first().waitFor();
-    await palette.getByRole('combobox').fill('');
-  });
-  await step('A scope chip in the palette', async () => {
-    // A chip writes its prefix before the text typed, as typing it would.
-    const palette = window.getByRole('dialog');
-    await window.keyboard.type('player');
-    await palette.getByRole('group', { name: 'Search in' }).getByRole('button', { name: /^Branches/ }).click();
-    await window.waitForFunction(() => document.querySelector('[cmdk-input]')?.value === 'br:player');
-    await palette.getByRole('combobox').fill('');
-  });
-  await step("A code review's number in the palette", async () => {
-    // A number alone names a review too, first when it's past every changeset (the fake's reach changeset 7).
-    const palette = window.getByRole('dialog');
-    await window.keyboard.type('80');
-    await palette.getByRole('option').first().filter({ hasText: 'Review player movement' }).waitFor();
-    await palette.getByRole('combobox').fill('');
-  });
   await step('A link pasted in the palette', async () => {
     // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
     await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
     await window.getByRole('dialog').getByRole('option', { name: /^Changeset 3/ }).click();
+    await pageShown('diff');
     // Visible only: the views shown lately stay mounted, hidden, and may list the same file (`mountedViews`).
     await main.getByText('src/player.cs', { exact: true }).filter({ visible: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
@@ -401,12 +440,12 @@ try {
     if ((await signInScreen.count()) !== 1) throw new Error(`${await signInScreen.count()} sign-in screens`);
     // Covered, the place's shortcuts are off (going to a view, Refresh): the window stays on Branches, and asks the
     // server nothing.
-    const before = commandsRun().length;
+    const before = commandLog().length;
     for (const key of ['5', '7', '8', 'R']) await window.keyboard.press(`ControlOrMeta+${key}`);
     await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
     if (await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).isVisible()) throw new Error('a view shortcut ran while covered');
-    const serverCommands = commandsRun().slice(before).filter((line) => !LOCAL_COMMAND.test(line));
-    if (serverCommands.length > 0) throw new Error(`server commands ran while signed out: ${serverCommands.join('; ')}`);
+    const serverCommands = commandLog().slice(before).filter((line) => line.args && needsServer(line.args));
+    if (serverCommands.length > 0) throw new Error(`server commands ran while signed out: ${serverCommands.map(({ args }) => args.join(' ')).join('; ')}`);
   });
   await step('Signed in again', async () => {
     writeFileSync(signInFile, '');
@@ -414,7 +453,8 @@ try {
     await window.getByRole('heading', { name: 'Your session for the server on this computer ended' }).waitFor({ state: 'detached' });
     await main.getByRole('heading', { level: 1, name: 'Branches', exact: true }).waitFor();
     await settled();
-  });
+    // Signing in again runs the reads the ended session refused and refreshes the window: some may meet.
+  }, { rereads: 'Check again' });
   await step('Explore a repository', async () => {
     await window.getByRole('button', { name: 'Home' }).first().click();
     await window.getByRole('navigation').getByRole('button', { name: /^This computer/ }).click();
@@ -432,12 +472,6 @@ try {
       await settled();
     });
   }
-  await step("A repository's file found by name", async () => {
-    await window.getByRole('navigation').getByRole('button', { name: /^Files/ }).click();
-    await main.getByPlaceholder('Find files and folders by name').fill('player');
-    await main.getByRole('button', { name: /player\.cs/ }).first().click();
-    await main.getByRole('row', { name: /player\.cs/ }).first().waitFor();
-  });
   await step("A repository's changeset diff, in a new window too", async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets/ }).click();
     await main.getByRole('button', { name: 'Open diff' }).click();
@@ -445,9 +479,12 @@ try {
     const opened = app.waitForEvent('window');
     await main.getByRole('button', { name: 'Open in new window' }).click();
     const pageWindow = await opened;
+    await pageWindow.emulateMedia({ reducedMotion: 'reduce' });
     pageWindow.on('pageerror', (error) => errors.push(`repository page window pageerror: ${error.message}`));
     pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`repository page window console.error: ${message.text()}`));
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
+    await readsSettled(pageWindow);
+    await nothingCutOff(pageWindow);
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
@@ -479,9 +516,23 @@ if (errors.length === 0 && (savedSettings.showGravatar !== false || savedSetting
   errors.push(`"Not now" wasn't saved: showGravatar ${savedSettings.showGravatar}, gravatarChoiceAsked ${savedSettings.gravatarChoiceAsked}`);
 }
 
+// Every kind of page a step opened. Only after a clean run: a step that failed stopped the ones after it.
+if (errors.length === 0) {
+  errors.push(...PAGES.filter((kind) => !pagesShown.has(kind)).map((kind) => `no step showed a page of kind ${kind}: open one with a step that waits for it (pageShown)`));
+}
+
 // Every command the fake couldn't answer, its `--format` separators made visible.
-const failedCommands = existsSync(cmLog) ? readFileSync(cmLog, 'utf8').split('\n').filter((line) => line.startsWith('ERR')) : [];
-errors.push(...failedCommands.map((line) => `the fake cm failed: ${line.slice(4).replace(/[\u001e\u001f]/g, '|')} (teach it: scripts/e2e/README.md)`));
+const log = commandLog();
+const unknownCommands = log.filter((line) => line.args && !line.known);
+errors.push(...unknownCommands.map(({ args }) => `the fake cm failed: ${readableCommandLine(args.join(' '))} (teach it: scripts/e2e/README.md)`));
+
+// A server command sent twice within a step, unless a known duplicate (`KNOWN_DUPLICATES`). Only after a clean run: a
+// step that failed may have left its reads half done.
+if (errors.length === 0) {
+  const { failures, unused } = duplicateReport(commandsByStep(log), KNOWN_DUPLICATES);
+  errors.push(...failures.map(({ step, commandLine, cwd, times }) => `"${step}" sent the same server command ${times} times: ${readableCommandLine(commandLine)} (in ${cwd}; scripts/e2e/README.md "Duplicate server commands")`));
+  for (const { command, why } of unused) console.warn(`warning: the known duplicate ${readableCommandLine(command)} didn't happen; remove it from KNOWN_DUPLICATES (${why})`);
+}
 console.log(`\n${VIEWS.length} views in ${((Date.now() - started) / 1000).toFixed(1)} s; screenshots in ${shots}`);
 // Windows may hold cm.exe a moment after the app quits.
 rmSync(temp, { recursive: true, force: true, maxRetries: 5 });

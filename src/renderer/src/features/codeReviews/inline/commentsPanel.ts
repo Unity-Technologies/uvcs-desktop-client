@@ -1,3 +1,4 @@
+import type { FileAnchor, LineRange } from '@shared/domain/reviewConversation';
 import { comparePaths } from '@shared/pathOrder';
 import { commentText } from '../../../lib/comments/commentText';
 import { lowerCasedText } from '../../../lib/lowerCasedText';
@@ -7,7 +8,7 @@ import { displayName } from '../../../lib/userName';
 import type { DiffLayout } from '../../diff/viewer/diffPreferencesStore';
 import type { ReviewThread } from '../conversation/reviewThreads';
 import { locationText } from '../conversation/threadBadges';
-import { anchorPath, isLineThread, type LineThread } from './fileThreads';
+import { anchorPath, isFileThread, type FileThread } from './fileThreads';
 
 /**
  * What the Comments panel lists: what's still open (change requests to apply, questions to answer), what's new to the
@@ -53,7 +54,7 @@ export function threadKindOf(thread: Pick<ReviewThread, 'root'>): ThreadKind {
  * Whether a thread shows under the filter row: of a kind chosen, if any is, and holding every word typed in what a
  * card can show: what was said in it, replies too, who said it, and its file.
  */
-export function matchesCommentsSearch(thread: LineThread, { query, kinds }: CommentsSearch): boolean {
+export function matchesCommentsSearch(thread: FileThread, { query, kinds }: CommentsSearch): boolean {
   if (kinds.size > 0 && !kinds.has(threadKindOf(thread))) return false;
   const comments = [thread.root, ...thread.replies];
   return matchesWordFilter([...comments.flatMap((comment) => [comment.text, comment.author, displayName(comment.author)]), anchorPath(thread.root.anchor)], query);
@@ -74,7 +75,7 @@ const EXCERPT_LEAD = 24;
  * thread's first words alone, and a match in a reply or further in would show nothing of why the card is listed. None
  * without words, or when they were found only in who said it or the file, which the card shows already.
  */
-export function matchExcerpt(thread: Pick<LineThread, 'root' | 'replies'>, query: string): MatchExcerpt | null {
+export function matchExcerpt(thread: Pick<FileThread, 'root' | 'replies'>, query: string): MatchExcerpt | null {
   const words = queryWords(query);
   if (words.length === 0) return null;
   let best: { author: string; text: string; found: number; at: number } | null = null;
@@ -134,20 +135,20 @@ export function commentsPanelThreads(
   search: CommentsSearch = NO_COMMENTS_SEARCH,
   order: CommentsOrder = 'code',
   newIds: NewThreads = undefined,
-): LineThread[] {
-  const listed = threads.filter((thread): thread is LineThread => isLineThread(thread) && isListedUnder(thread, filter, newIds) && matchesCommentsSearch(thread, search));
-  if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || a.root.anchor.line - b.root.anchor.line || a.root.id - b.root.id);
+): FileThread[] {
+  const listed = threads.filter((thread): thread is FileThread => isFileThread(thread) && isListedUnder(thread, filter, newIds) && matchesCommentsSearch(thread, search));
+  if (order === 'code') return listed.sort((a, b) => comparePaths(pathOf(a), pathOf(b)) || compareAnchors(a.root.anchor, b.root.anchor) || a.root.id - b.root.id);
   const latest = new Map(listed.map((thread) => [thread.root.id, latestActivity(thread)]));
   const direction = order === 'newest' ? -1 : 1;
   return listed.sort((a, b) => direction * (latest.get(a.root.id)! - latest.get(b.root.id)!) || a.root.id - b.root.id);
 }
 
 /** When a thread last moved: its latest comment or reply, as a time to compare. */
-function latestActivity(thread: LineThread): number {
+function latestActivity(thread: FileThread): number {
   return Math.max(...[thread.root, ...thread.replies].map((comment) => Date.parse(comment.date)));
 }
 
-function pathOf(thread: LineThread): string {
+function pathOf(thread: FileThread): string {
   return anchorPath(thread.root.anchor);
 }
 
@@ -157,14 +158,14 @@ export interface CommentsFileGroup {
   file: string;
   /** Where the file is, without the slashes around it: "src/client"; empty at the root. */
   folder: string;
-  threads: LineThread[];
+  threads: FileThread[];
 }
 
 /**
  * The comments listed, under their files, in the code order: each file named once, not on every comment. None in a
  * time order, where comments of one file are apart.
  */
-export function commentsByFile(listed: readonly LineThread[], order: CommentsOrder): CommentsFileGroup[] | null {
+export function commentsByFile(listed: readonly FileThread[], order: CommentsOrder): CommentsFileGroup[] | null {
   if (order !== 'code') return null;
   const groups: CommentsFileGroup[] = [];
   for (const thread of listed) {
@@ -180,13 +181,13 @@ export function commentsByFile(listed: readonly LineThread[], order: CommentsOrd
   return groups;
 }
 
-/** How many threads on lines of code each filter lists. */
+/** How many threads on files (their lines, their images) each filter lists. */
 export function commentsPanelCounts(threads: readonly ReviewThread[], newIds: NewThreads = undefined): Record<CommentsFilter, number> {
-  const onLines = threads.filter(isLineThread);
+  const onFiles = threads.filter(isFileThread);
   return {
-    open: onLines.filter((thread) => thread.state.kind === 'open').length,
-    new: onLines.filter((thread) => isListedUnder(thread, 'new', newIds)).length,
-    all: onLines.length,
+    open: onFiles.filter((thread) => thread.state.kind === 'open').length,
+    new: onFiles.filter((thread) => isListedUnder(thread, 'new', newIds)).length,
+    all: onFiles.length,
   };
 }
 
@@ -209,7 +210,7 @@ export function commentsFilterChoices(counts: Record<CommentsFilter, number>, ne
   return [
     { value: 'open', label: `Open ${counts.open}`, title: 'Change requests to apply or discard, and questions to answer' },
     ...(newIds ? [{ value: 'new' as const, label: `New ${counts.new}`, title: 'Applied, answered, discarded or said by others since your last review' }] : []),
-    { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the code' },
+    { value: 'all', label: `All ${counts.all}`, title: 'Every comment on the changes' },
   ];
 }
 
@@ -231,9 +232,9 @@ export function initialCommentsFilter(threads: readonly ReviewThread[], newIds: 
 
 /** What the panel says when its filter lists nothing. */
 export function emptyCommentsText(filter: CommentsFilter, counts: Record<CommentsFilter, number>): { title: string; description?: string } {
-  if (counts.all === 0) return { title: 'No comments on the code yet' };
+  if (counts.all === 0) return NO_COMMENTS_YET;
   if (filter === 'new') return { title: 'Nothing new since your last review' };
-  return filter === 'open' ? { title: 'Nothing left to answer', description: 'Every change request is applied or discarded, and every question answered.' } : { title: 'No comments on the code yet' };
+  return filter === 'open' ? { title: 'Nothing left to answer', description: 'Every change request is applied or discarded, and every question answered.' } : NO_COMMENTS_YET;
 }
 
 /**
@@ -241,7 +242,7 @@ export function emptyCommentsText(filter: CommentsFilter, counts: Record<Comment
  * across files); none past either end. One that left the list (settled while Open lists) goes on from where it sat in
  * every comment's order (`all`); from none, the first or the last.
  */
-export function steppedThread(listed: readonly LineThread[], all: readonly LineThread[], currentId: number | undefined, direction: 1 | -1): LineThread | null {
+export function steppedThread(listed: readonly FileThread[], all: readonly FileThread[], currentId: number | undefined, direction: 1 | -1): FileThread | null {
   const index = listed.findIndex((thread) => thread.root.id === currentId);
   if (index !== -1) return listed[index + direction] ?? null;
   const at = all.findIndex((thread) => thread.root.id === currentId);
@@ -275,7 +276,7 @@ export function toggledFold(folded: FoldedFiles, path: string): FoldedFiles {
  * A comment gone to (a click, the arrows, N) is never hidden: the file it's grouped under (`commentsByFile`) unfolds.
  * The same set when it was open.
  */
-export function unfoldedFor(folded: FoldedFiles, thread: LineThread): FoldedFiles {
+export function unfoldedFor(folded: FoldedFiles, thread: FileThread): FoldedFiles {
   const path = pathOf(thread);
   if (!folded.has(path)) return folded;
   const next = new Set(folded);
@@ -312,7 +313,7 @@ export function foldAllEntry(groups: readonly CommentsFileGroup[] | null, folded
  * Where the comment gone to is among those listed ("2 of 9"), or how many there are while none is; grouped by file,
  * in how many files too ("2 of 9 · 3 files").
  */
-export function commentPosition(listed: readonly LineThread[], currentId: number | undefined, groups: readonly CommentsFileGroup[] | null = null): string {
+export function commentPosition(listed: readonly FileThread[], currentId: number | undefined, groups: readonly CommentsFileGroup[] | null = null): string {
   const index = listed.findIndex((thread) => thread.root.id === currentId);
   const position = index === -1 ? pluralize(listed.length, 'comment') : `${index + 1} of ${listed.length}`;
   return groups ? `${position} · ${pluralize(groups.length, 'file')}` : position;
@@ -337,3 +338,19 @@ export function commentsPanelStartsHidden({ codeThreads, diffWidth, layout }: { 
 export function diffWidthBesidePanel({ tabWidth, filesWidth, panelWidth }: { tabWidth: number; filesWidth: number; panelWidth: number }): number {
   return tabWidth - filesWidth - panelWidth;
 }
+
+/**
+ * Threads in the order the code shows them: by the line their card is under (a range's last), then the longer range
+ * first, as its outline starts above. An image's are in the order they were written: the caller's last tie-break, by
+ * id.
+ */
+function compareAnchors(a: FileAnchor, b: FileAnchor): number {
+  return a.kind === 'line' && b.kind === 'line' ? compareLines(a, b) : 0;
+}
+
+function compareLines(a: LineRange, b: LineRange): number {
+  return a.lastLine - b.lastLine || a.firstLine - b.firstLine;
+}
+
+/** A review whose files nobody commented on: what to comment on, as text files and images both take comments. */
+const NO_COMMENTS_YET = { title: 'No comments on the changes yet', description: 'Comment on lines of a file, a point or an area of an image, or a point or a part of a 3D model.' };

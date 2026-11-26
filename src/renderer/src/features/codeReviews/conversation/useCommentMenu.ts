@@ -3,6 +3,7 @@ import type { ReviewComment } from '@shared/domain/reviewConversation';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import type { MenuEntry } from '../../../lib/actions';
 import { reviewCommentCopyTexts } from './commentLink';
+import { commentsDeletedWith } from './commentDeletion';
 import { commentMenu } from './commentMenu';
 import { deleteReviewComment, markChangeRequest } from './reviewCommentOperations';
 import type { ReviewThread } from './reviewThreads';
@@ -29,7 +30,7 @@ export function useCommentMenu({ review, comment, thread, user, edit, threadActi
   const place = usePlace();
   return commentMenu(comment, thread, user, {
     edit,
-    remove: () => void deleteReviewComment(place, comment),
+    remove: () => void deleteReviewComment(place, commentsDeletedWith(comment, thread)),
     copyTexts: reviewCommentCopyTexts(place, review.id, comment),
     markChangeRequest: (mark) => void markChangeRequest(place, review, comment, mark),
     ...threadActions,

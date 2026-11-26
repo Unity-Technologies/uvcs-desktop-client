@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
-import { keyedByWorkspaceInfo, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { leftChangesQuery } from './leftChangesQuery';
 import { leftChangesSummary } from './leftChangesWords';
 
 /**
@@ -13,13 +11,7 @@ import { leftChangesSummary } from './leftChangesWords';
 export function useLeftChanges() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'leftChanges', workspace?.selector),
-    queryFn: () => api.leftChanges.find(workspacePath),
-    enabled: Boolean(workspace),
-    staleTime: SLOW_CHANGING_QUERY.staleTime,
-    meta: keyedByWorkspaceInfo('selector'),
-  });
+  return useQuery({ ...leftChangesQuery(workspacePath, workspace?.selector), enabled: Boolean(workspace) });
 }
 
 /** What waits to be restored, for the dot on Changes in the sidebar; undefined when nothing does. */

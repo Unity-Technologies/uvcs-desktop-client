@@ -37,7 +37,7 @@ export function AppliedChangesetFiles(props: AppliedFilesProps) {
     <CommentInFiles.Provider value={props}>
       <EntryAnnotatorContext.Provider value={CommentedFile}>
         <EntryFlagContext.Provider value={flag}>
-          <DiffBrowserLayout expandable={false}>
+          <DiffBrowserLayout expandable={false} inDialog>
             {(slots) => <DiffBrowser target={target} entries={listed} initialPath={anchorPath(thread.root.anchor)} slots={slots} publishes={false} />}
           </DiffBrowserLayout>
         </EntryFlagContext.Provider>

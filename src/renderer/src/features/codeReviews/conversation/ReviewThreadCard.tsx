@@ -1,13 +1,13 @@
 import { ChevronRight, X } from 'lucide-react';
-import { placeId } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { isAuthor } from '../reviewers';
-import { commentDraftKey } from '../../../components/DetailsHeading';
-import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
+import { useReducer, useState, type ReactNode } from 'react';
 import { usePlace } from '../../../app/workspace/useWorkspace';
 import { navigation } from '../../../app/navigation/navigationStore';
 import { CommentLine } from '../../../components/comments/CommentLine';
+import { suggestionNameOf } from '../suggestions/suggestionPreview';
 import { CommentedFileContext } from '../../../components/commentEditor/commentedFileContext';
+import { rowTakesClick } from '../../../lib/clickedOutsideControls';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { Button } from '../../../ui/Button';
@@ -22,6 +22,7 @@ import { useCommentMenu, type CommentThreadActions } from './useCommentMenu';
 import type { ReviewThread } from './reviewThreads';
 import { answerOf, commentLocationPage, replyAction } from './threadBadges';
 import { initialThreadCardFold, nextThreadCardFold } from './threadCardFold';
+import { useAnswerBox, type AnswerBoxControl } from './useAnswerBox';
 import { cardLightOf, commentElementId, commentLightShown, nextAnswerLight, threadElementId, type AnswerLight, type ShownCommentLight } from './threadPick';
 import { foldsByHand, hasThreadHeader, threadHeaderOf, type HeaderLocation, type HeaderPill } from './threadHeader';
 import { openChangesetDiff } from '../../changesets/changesetOperations';
@@ -70,16 +71,17 @@ export interface ThreadInCode {
   hide?: { label: string; onHide: () => void };
 }
 
-type Answering = 'reply' | 'discard' | null;
-
 /**
  * A comment and its replies as one card. A change request, a question or a comment on a line has a header band: its
  * file and line on a line (a click opens them in Changes), and what it is and where it stands as a pill. Any card with
- * that band folds to it and its first words from its chevron (`foldsByHand`); a settled one starts folded
+ * that band folds to it and its first words from its chevron, and in the conversation from anywhere on the band
+ * (`foldsByHand`); a settled one starts folded
  * (`startsFolded`); a click shows it whole.
  */
 export function ReviewThreadCard({ review, thread, user, inCode, highlight, selected = false, litReply, onSeeApplied }: ReviewThreadCardProps) {
-  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight));
+  // Words written in the thread elsewhere open its box, and unfold the card to show it.
+  const answerBox = useAnswerBox(thread, user, () => foldEvent('unfold'));
+  const [{ folded, editsRoot }, foldEvent] = useReducer(nextThreadCardFold, undefined, () => initialThreadCardFold(thread, highlight, answerBox.box));
   const [shownHighlight, setShownHighlight] = useState(highlight);
   // The Answered pill's: the reply that answered, gone to the how-many-th time.
   const [answerShown, setAnswerShown] = useState<AnswerLight | null>(null);
@@ -102,7 +104,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
   const threadActions = inCode && { showInConversation: inCode.showInConversation };
 
   return (
-    <CommentedFileContext.Provider value={thread.root.anchor.kind === 'line' ? thread.root.anchor.path : null}>
+    <CommentedFileContext.Provider value={thread.root.anchor.kind === 'review' ? null : thread.root.anchor.path}>
       <section
         className={styles.thread}
         data-folded={folded}
@@ -134,7 +136,7 @@ export function ReviewThreadCard({ review, thread, user, inCode, highlight, sele
               <FirstCommentMenu review={review} thread={thread} user={user} threadActions={threadActions} onEdit={() => foldEvent('editRoot')} />
             </div>
           ) : (
-            <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} />
+            <WholeThread review={review} thread={thread} user={user} threadActions={threadActions} editsRoot={editsRoot} onRootEditorOpened={() => foldEvent('editorOpened')} lit={nextCommentLight} commentIds={!inCode} answerBox={answerBox} />
           )}
         </div>
       </section>
@@ -160,7 +162,7 @@ export function ThreadSummaryCard({ reviewId, thread, current, onOpen, onSeeAppl
   return (
     // Anywhere on the card goes to it, as its first words do: what's inside that does something else (a pill) does that.
     // The buttons inside stay the way there by keyboard.
-    <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+    <section className={styles.thread} data-folded="true" data-opens="" data-current={current || undefined} onClick={(event) => rowTakesClick(event) && onOpen()}>
       <ThreadHeader reviewId={reviewId} thread={thread} folded cardOpens onSeeApplied={onSeeApplied} />
       <div className={styles.threadBody}>
         <FoldedThread thread={thread} onOpen={onOpen} excerpt={excerpt} />
@@ -178,15 +180,15 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
   const header = threadHeaderOf({ thread, place: 'fileGroup', folded: true, foldable: false, hides: false, seesHowApplied: onSeeApplied !== undefined, showsAnswer: false, inContext: false });
   const author = excerpt?.author ?? thread.root.author;
   return (
-    <section className={styles.row} data-current={current || undefined} onClick={(event) => clickedOutsideControls(event) && onOpen()}>
+    <section className={styles.row} data-current={current || undefined} onClick={(event) => rowTakesClick(event) && onOpen()}>
       <span className={styles.rowAbout}>
         <Avatar user={author} size={16} tip={null} />
         <span className={styles.author}>
           <Highlight text={displayName(author)} />
         </span>
-        {header.line && (
-          <span className={styles.rowLine} data-tip="The line it was written on">
-            {header.line}
+        {header.writtenPlace && (
+          <span className={styles.rowPlace} data-tip={header.writtenPlaceTip ?? undefined} data-names-part={header.writtenPlaceNamesPart || undefined}>
+            {header.writtenPlace}
           </span>
         )}
         {header.replies && <span className={styles.replyCount}>{header.replies}</span>}
@@ -197,16 +199,10 @@ export function ThreadSummaryRow({ thread, current, onOpen, onSeeApplied, excerp
         </span>
       )}
       <button type="button" className={styles.rowText} onClick={onOpen}>
-        <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={thread.root.text} interactive={false} />}</span>
+        <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={suggestionNameOf(thread.root) ?? thread.root.text} interactive={false} />}</span>
       </button>
     </section>
   );
-}
-
-/** A click on the card itself, not on a control inside it, nor the end of a drag selecting its text to copy. */
-function clickedOutsideControls(event: MouseEvent): boolean {
-  if (window.getSelection()?.isCollapsed === false) return false;
-  return event.target instanceof Element && event.target.closest('button, a, input, textarea, select, label, [role="button"]') === null;
 }
 
 interface ThreadHeaderProps {
@@ -237,10 +233,14 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
     inContext: inCode?.inContext === true,
   });
   const { location, earlierTag, pill } = header;
-  const anchor = root.anchor.kind === 'line' ? root.anchor : null;
+  const bandFolds = onToggle !== undefined && !inCode;
+  const anchor = root.anchor.kind === 'review' ? null : root.anchor;
 
   return (
-    <div className={styles.threadHeader}>
+    // In the conversation, a foldable thread folds with a click anywhere on its band, as with its chevron; its file,
+    // pill and buttons keep their own clicks. Not in the code, where a click on a card picks the thread (`InlineThreads`):
+    // folding it too would undo what the reader meant to look at.
+    <div className={styles.threadHeader} data-folds={bandFolds ? '' : undefined} onClick={bandFolds ? (event) => rowTakesClick(event) && onToggle() : undefined}>
       <span className={styles.headerStart}>
         {header.foldToggle && (
           <button type="button" className={styles.foldToggle} aria-expanded={header.foldToggle.expanded} aria-label={header.foldToggle.label} onClick={onToggle}>
@@ -253,17 +253,17 @@ function ThreadHeader({ reviewId, thread, folded, inCode, cardOpens = false, onT
             <button type="button" className={styles.location} data-tip={location.tip} data-tip-sub={location.tipSub} onClick={() => navigation.openPage(commentLocationPage(reviewId, { ...root, anchor }))}>
               <LocationParts location={location} />
             </button>
-            <WrittenLine line={location.line} />
+            <WrittenPlace place={location.writtenPlace} tip={location.writtenPlaceTip} />
           </>
         ) : (
           // The card goes to the thread: its file and line only name where, the line inside so that, cut short, the
           // folder gives way first, then the line, the file's name last. The whole path and line in its tooltip.
           <span className={styles.location} data-tip={location.tip} data-tip-overflow="">
             <LocationParts location={location} />
-            <WrittenLine line={location.line} />
+            <WrittenPlace place={location.writtenPlace} tip={location.writtenPlaceTip} />
           </span>
         ))}
-        {header.line && <WrittenLine line={header.line} />}
+        {header.writtenPlace && <WrittenPlace place={header.writtenPlace} tip={header.writtenPlaceTip ?? undefined} />}
         {earlierTag &&
           (earlierTag.opensContext ? (
             <button type="button" className={styles.earlierTag} data-tip="See when commented" data-tip-sub={earlierTag.tip} onClick={inCode?.seeInContext}>
@@ -353,17 +353,17 @@ function StatePill({ pill, onSeeApplied, onSeeAnswer }: StatePillProps) {
 function PillContent({ pill }: { pill: HeaderPill }) {
   return (
     <>
-      <ThreadKindIcon kind={pill.kind} size={12} named={pill.kindTip !== null} />
+      <ThreadKindIcon kind={pill.kind} size={12} name={pill.kindTip} />
       <span className={styles.pillLabel}>{pill.label}</span>
     </>
   );
 }
 
-/** Apart from the file, as text: the line it was written on, which an outdated comment's no longer is. */
-function WrittenLine({ line }: { line: string }) {
+/** Apart from the file, as text: where in it the thread was written, which an outdated comment's line no longer is. */
+function WrittenPlace({ place, tip }: { place: string; tip?: string }) {
   return (
-    <span className={styles.writtenLine} data-tip="The line it was written on">
-      {line}
+    <span className={styles.writtenPlace} data-tip={tip}>
+      {place}
     </span>
   );
 }
@@ -393,7 +393,7 @@ function FoldedThread({ thread, onOpen, excerpt, pointerOnly = false }: { thread
       <span className={styles.author}>
         <Highlight text={displayName(author)} />
       </span>
-      <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={thread.root.text} interactive={false} />}</span>
+      <span className={styles.foldedText}>{excerpt ? <Highlight text={excerpt.text} /> : <CommentLine comment={suggestionNameOf(thread.root) ?? thread.root.text} interactive={false} />}</span>
     </button>
   );
 }
@@ -410,11 +410,13 @@ interface WholeThreadProps {
   lit?: ShownCommentLight;
   /** In the conversation, each comment's element has its id (`commentElementId`), which going to a reply scrolls to. */
   commentIds: boolean;
+  /** The reply or discard box under it, kept by the card so it outlives a fold (`useAnswerBox`). */
+  answerBox: AnswerBoxControl;
 }
 
-function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEditorOpened, lit, commentIds }: WholeThreadProps) {
+function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEditorOpened, lit, commentIds, answerBox }: WholeThreadProps) {
   const place = usePlace();
-  const [answering, setAnswering] = useState<Answering>(null);
+  const { answering, focuses } = answerBox.box;
   const { root, replies } = thread;
 
   return (
@@ -433,45 +435,45 @@ function WholeThread({ review, thread, user, threadActions, editsRoot, onRootEdi
           elementId={commentIds ? commentElementId(reply.id) : undefined}
         />
       ))}
-      <div className={styles.answer}>
+      <div className={styles.answer} ref={answerBox.boxRef}>
         {answering === 'reply' && (
           <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewReply', root.guid)}
+            draftKey={answerBox.replyKey}
             placeholder="Reply"
             label="Reply"
             submitLabel="Reply"
-            autoFocus
+            autoFocus={focuses}
             onSubmit={async (text) => {
               const sent = await replyToComment(place, root, text);
-              if (sent) setAnswering(null);
+              if (sent) answerBox.close();
               return sent;
             }}
-            onCancel={() => setAnswering(null)}
+            onCancel={answerBox.close}
           />
         )}
         {answering === 'discard' && (
           <CommentComposer
-            draftKey={commentDraftKey(placeId(place), 'reviewDiscard', root.guid)}
+            draftKey={answerBox.discardKey}
             placeholder="Why isn't this change needed?"
             label="Why the change request is discarded"
             submitLabel="Discard change request"
             danger
-            autoFocus
+            autoFocus={focuses}
             onSubmit={async (text) => {
               const sent = await discardChangeRequest(place, root, text);
-              if (sent) setAnswering(null);
+              if (sent) answerBox.close();
               return sent;
             }}
-            onCancel={() => setAnswering(null)}
+            onCancel={answerBox.close}
           />
         )}
         {answering === null && (
           <div className={styles.answerButtons}>
-            <button type="button" className={styles.replyPrompt} onClick={() => setAnswering('reply')}>
+            <button type="button" className={styles.replyPrompt} onClick={() => answerBox.open('reply')}>
               Reply…
             </button>
             {canDiscard(thread, user) && (
-              <Button size="small" variant="ghost" onClick={() => setAnswering('discard')}>
+              <Button size="small" variant="ghost" onClick={() => answerBox.open('discard')}>
                 Discard…
               </Button>
             )}

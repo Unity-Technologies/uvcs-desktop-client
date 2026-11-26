@@ -18,6 +18,12 @@ describe('modelCommandOf', () => {
     expect(['f', '0', 'g'].map((key) => modelCommandOf(press(key), true))).toEqual(['frame', 'frameAll', null]);
   });
 
+  it('comments with C and stops with Esc, keys none of the moves through the model take', () => {
+    expect(modelCommandOf(press('c'), true)).toBe('comment');
+    expect(modelCommandOf({ ...press('x'), key: 'Escape', code: 'Escape' }, true)).toBe('leaveComment');
+    expect(['w', 'a', 's', 'd', 'q', 'e'].map((key) => modelCommandOf(press(key), true))).toEqual([null, null, null, null, null, null]);
+  });
+
   it("leaves keys held with ⌘, Ctrl or Alt to the window", () => {
     expect(modelCommandOf(press('f', { metaKey: true }), true)).toBeNull();
     expect(modelCommandOf(press('0', { ctrlKey: true }), false)).toBeNull();

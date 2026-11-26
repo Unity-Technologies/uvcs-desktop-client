@@ -76,7 +76,10 @@ import {
   Scissors,
   Search,
   ServerCog,
+  Star,
+  StarOff,
   ShieldCheck,
+  Signpost,
   Square,
   SquareArrowOutUpRight,
   SquareCheckBig,
@@ -109,7 +112,7 @@ export interface MenuWord {
 const word = (group: MenuGroup, icon: Icon, label?: string, danger?: true): MenuWord => ({ group, icon, label, danger });
 
 /**
- * The vocabulary of every object's menu (docs/ARCHITECTURE.md, Menus): one concept, one id, one icon, one wording and
+ * The vocabulary of every object's menu (docs/architecture/renderer.md, Menus): one concept, one id, one icon, one wording and
  * one place, whatever the object and wherever its menu shows. Entries made from it (`menuAction`, `menuSubmenu`) carry
  * their group, so `groupedMenu` puts them in the grammar's order.
  */
@@ -191,6 +194,8 @@ export const MENU_WORDS = {
   loadXlink: word('act', FolderDown, 'Load its files'),
   yourReview: word('act', CircleDot, 'Your review'),
   changeReviewers: word('act', UserPlus, 'Change reviewers…'),
+  // Where a merge request merges, picked from the branches (`changeableDestinationOf` says when it can change).
+  changeDestination: word('act', Signpost, 'Change destination…'),
   // A merge request's state (`mergeRequestMoves`), each in the glyph of the state it moves to. Closing isn't a danger:
   // Reopen undoes it.
   readyForReview: word('act', GitPullRequest, 'Ready for review'),
@@ -297,6 +302,9 @@ export const MENU_WORDS = {
   hide: word('edit', EyeOff),
   unhide: word('edit', Eye),
   forget: word('edit', X, 'Remove from list'),
+  // An organization listed first in the home sidebar (`AppSettings.favoriteOrganizations`).
+  favorite: word('edit', Star, 'Add to favorites'),
+  unfavorite: word('edit', StarOff, 'Remove from favorites'),
   // Who may do what with it (docs/features/permissions.md).
   permissions: word('edit', ShieldCheck, 'Permissions…'),
   pathPermissions: word('edit', FolderLock, 'Path permissions…'),
@@ -384,7 +392,7 @@ export interface MenuHost {
   inBranchExplorer?: boolean;
   /**
    * A list that binds none of the list keys (⌘D, ⌘C, ⇧⌘C), so the menu names no shortcut: there they reach the page's
-   * own object or the view under the page (docs/ARCHITECTURE.md "Menus").
+   * own object or the view under the page (docs/architecture/renderer.md "Menus").
    */
   listKeysElsewhere?: boolean;
   /** Called with the name of a branch created from the menu, e.g. to show it. */

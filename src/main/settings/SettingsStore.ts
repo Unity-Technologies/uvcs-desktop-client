@@ -1,8 +1,19 @@
 import { mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { withFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { storedGravatarChoice } from '@shared/domain/gravatarChoice';
+import { storedCmChoice } from '@shared/domain/storedCmChoice';
 import { withRecentComment } from '@shared/domain/recentComments';
-import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import {
+  withRepositorySettings,
+  withRepositorySettingsAdded,
+  withServerSettings,
+  withServerSettingsAdded,
+  type RepositorySettings,
+  type ScopedSettingsChange,
+  type ServerSettings,
+} from '@shared/domain/scopedSettings';
+import { DEFAULT_SETTINGS, type AppSettings, type WindowKeptSettings } from '@shared/domain/settings';
 import { replaceFileSync } from '../files/replaceFileSync';
 import { withRecentBranch } from './recentBranches';
 import { withoutRecentWorkspace, withRecentWorkspace } from './recentWorkspaces';
@@ -61,6 +72,34 @@ export class SettingsStore {
     return this.update(withRecentComment(this.settings, repository, comment));
   }
 
+  /** Adds an organization to the favorites, or removes it. */
+  setFavoriteOrganization(server: string, favorite: boolean): AppSettings {
+    return this.update({ favoriteOrganizations: withFavoriteOrganization(this.settings.favoriteOrganizations, server, favorite) });
+  }
+
+  /** Changes one repository's settings (a spec, however written), keeping every other repository's. */
+  updateRepositorySettings(repository: string, changes: ScopedSettingsChange<RepositorySettings>): AppSettings {
+    return this.update({ repositorySettings: withRepositorySettings(this.settings.repositorySettings, repository, changes) });
+  }
+
+  /** Changes one server's settings, keeping every other server's. */
+  updateServerSettings(server: string, changes: ScopedSettingsChange<ServerSettings>): AppSettings {
+    return this.update({ serverSettings: withServerSettings(this.settings.serverSettings, server, changes) });
+  }
+
+  /**
+   * Takes what a window's storage kept before these settings held it, where they keep nothing yet: every window
+   * brings the same, and what is here already, set since in any window, wins.
+   */
+  addWindowSettings(kept: WindowKeptSettings): AppSettings {
+    const { repositorySettings, serverSettings, changesetColors } = this.settings;
+    return this.update({
+      repositorySettings: withRepositorySettingsAdded(repositorySettings, kept.repositorySettings),
+      serverSettings: withServerSettingsAdded(serverSettings, kept.serverSettings),
+      changesetColors: changesetColors.users.length > 0 ? changesetColors : kept.changesetColors,
+    });
+  }
+
   onChanged(listener: ChangeListener): void {
     this.listeners.add(listener);
   }
@@ -80,6 +119,7 @@ export class SettingsStore {
         ...stored,
         pendingChanges: { ...DEFAULT_SETTINGS.pendingChanges, ...stored.pendingChanges },
         ...storedGravatarChoice(stored),
+        ...storedCmChoice(stored),
       };
     } catch {
       this.keepAside();

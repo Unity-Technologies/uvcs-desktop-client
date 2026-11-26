@@ -12,6 +12,7 @@
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   min-height: 28px;
@@ -22,19 +23,35 @@
   font-size: var(--text-sm);
 }
 
+/*
+ * In a narrow card the controls go under the title, at the end, and under each other if they must, rather than past
+ * the card's edge; the icon and the controls keep their size, and only the title gives way, cut short.
+ */
+.header > :not(.title, .controls) {
+  flex-shrink: 0;
+}
+
+.controls > * {
+  flex-shrink: 0;
+}
+
+/* From no width: the row breaks only when the controls and a few letters of the title can't share it. */
 .title {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 1 1 0;
+  min-width: 5em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.actions {
+.controls {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: var(--space-1);
+  min-width: 0;
+  margin-left: auto;
 }
 
 /* As tall as its rows: a few lines, never scrolled down, sideways only by their pane (`PaneScrollbars`). */

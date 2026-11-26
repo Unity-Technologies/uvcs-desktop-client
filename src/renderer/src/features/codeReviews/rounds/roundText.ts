@@ -1,5 +1,4 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { commentLineText } from '../../../lib/comments/commentText';
 import type { DayFormat } from '../../../lib/formatDate';
 import { pluralize } from '../../../lib/text';
 import { displayName, sameUser } from '../../../lib/userName';
@@ -21,13 +20,16 @@ export interface RoundLineText {
 }
 
 /**
- * A round's line, its first words bold: its name, then what closed it, at which changeset while `open` is false (once
- * unfolded, the status's own event names it), and what it settled: "**Round 1** · Rework required by you at 14 · 5
- * requests applied, 2 questions answered". A review's only round has no name (`roundName`): its line starts at what
- * closed it, bold, so it still reads as the round's heading: "**Reviewed** by you · 1 request applied".
+ * A round's line, its first words bold. Folded, it sums the round up: its name, what closed it, at which changeset, and
+ * what it settled: "**Round 1** · Rework required by you at 14 · 5 requests applied, 2 questions answered". Unfolded, it
+ * heads what the round held, whose review it was and what it settled, with no verdict: the status's own event says that
+ * once, at the round's end ("**Round 1** · Vio's review · 5 requests applied"); repeated on top, with its time above
+ * older events, it read as a second review. A review's only round has no name (`roundName`): its line starts at what
+ * closed it, or at whose review it was, bold: "**Reviewed** by you · 1 request applied", "**Your review** · 1 request
+ * applied".
  */
 export function roundText(round: ReviewRound, user: string | undefined, roundCount: number, open: boolean): RoundLineText {
-  const who = user !== undefined && sameUser(round.reviewer, user) ? 'you' : displayName(round.reviewer);
+  const own = user !== undefined && sameUser(round.reviewer, user);
   const settled = [
     round.applied > 0 && `${pluralize(round.applied, 'request')} applied`,
     round.discarded > 0 && `${round.discarded} discarded`,
@@ -35,13 +37,23 @@ export function roundText(round: ReviewRound, user: string | undefined, roundCou
     round.open > 0 && `${round.open} open`,
   ].filter((part): part is string => typeof part === 'string');
   const counts = settled.length > 0 ? ` · ${settled.join(', ')}` : '';
-  // Folded, the line names the changeset; unfolded, the status's own event at the round's end does (`reviewEventRow`).
   const changeset = open ? undefined : round.changesetId;
-  const by = `${round.status} by ${who}${changeset !== undefined ? ' at' : ''}`;
   const name = roundName(round.number, roundCount);
-  const words = name === undefined ? { bold: round.status, rest: by.slice(round.status.length) } : { bold: name, rest: ` · ${by}` };
+  const words = open ? headingWords(name, own ? undefined : displayName(round.reviewer)) : summaryWords(name, `${round.status} by ${own ? 'you' : displayName(round.reviewer)}${changeset !== undefined ? ' at' : ''}`, round.status);
   const label = `${words.bold}${words.rest}${changeset !== undefined ? ` ${changeset}` : ''}${counts}`;
   return { ...words, ...(changeset !== undefined && { changeset }), counts, label, dotBeforeTime: changeset !== undefined && counts === '' };
+}
+
+/** A folded round's first words: "**Round 1** · Reviewed by Vio", or "**Reviewed** by Vio" for a review's only round. */
+function summaryWords(name: string | undefined, verdict: string, status: string): { bold: string; rest: string } {
+  return name === undefined ? { bold: status, rest: verdict.slice(status.length) } : { bold: name, rest: ` · ${verdict}` };
+}
+
+/** An unfolded round's first words: "**Round 1** · Vio's review", or "**Vio's review**" for a review's only round. */
+function headingWords(name: string | undefined, reviewer: string | undefined): { bold: string; rest: string } {
+  const whose = reviewer === undefined ? 'your review' : `${reviewer}'s review`;
+  if (name !== undefined) return { bold: name, rest: ` · ${whose}` };
+  return { bold: whose.charAt(0).toUpperCase() + whose.slice(1), rest: '' };
 }
 
 /**
@@ -68,9 +80,4 @@ export function shownCheckins(changesets: readonly Changeset[], showsAll: boolea
   // "1 more" would take the row the changeset itself takes.
   if (showsAll || changesets.length <= MAX_SHOWN_CHECKINS + 1) return { shown: changesets, more: 0 };
   return { shown: changesets.slice(0, MAX_SHOWN_CHECKINS), more: changesets.length - MAX_SHOWN_CHECKINS };
-}
-
-/** A changeset's line in a batch: its comment's first line, or that it has none. */
-export function checkinCommentText(changeset: Pick<Changeset, 'comment'>): string {
-  return commentLineText(changeset.comment) || 'No comment';
 }

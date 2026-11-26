@@ -1,9 +1,14 @@
 # Partial workspaces
 
 A partial workspace downloads only the folders and files the user chooses; everything else stays on the server. How
-the app tells a workspace's kind (`WorkspaceKind`, `workspaceKindsReader`) and shows it (`WorkspaceKindChip`) is in
-ARCHITECTURE.md. This doc holds how a partial workspace is created, how a standard one becomes partial and a partial
-one standard again, how the user chooses what it downloads, and how it stays partial.
+the app tells a workspace's kind (`WorkspaceKind`, `workspaceKindsReader`) and shows it (`WorkspaceKindChip`,
+`WorkspaceKindBadge`) is in docs/architecture/running-cm.md ("Home") and main-process.md ("Windows"). This doc
+holds how a partial workspace is created, how a standard one
+becomes partial and a partial one standard again, how the user chooses what it downloads, and how it stays partial.
+
+Sandboxes: `scripts/sandboxes/partial-operations.sh` (a partial workspace to update, switch and check in) and
+`workspace-kinds.sh` (a standard, a partial and, on Windows, a dynamic workspace of one repository: the chips that
+tell them apart).
 
 ## Creating one
 
@@ -42,10 +47,11 @@ one on a branch (`choosesDownloads`, "Making a standard workspace partial"):
 
 - the current workspace pill's menu (`currentWorkspaceMenu`, a right-click on the top bar's workspace, the `chooseDownloads` action);
 - the command palette (`useWorkspaceCommands`);
-- Files: a button in its header, only in a partial workspace (`showsChooseDownloadsButton`): there choosing folders
-  is everyday work, while in a standard one it makes the workspace partial, a rare step kept in the menu and the
-  palette as **Download the whole branch…** is in a partial one; and its empty state, which says nothing is
-  downloaded yet while the workspace holds nothing (`showsNothingDownloaded`);
+- Files: a button in its header, labeled rather than an icon so it can't be missed, only in a partial workspace
+  (`showsChooseDownloadsButton`): there choosing folders is everyday work, while in a standard one it makes the
+  workspace partial, a rare step kept in the menu and the palette as **Download the whole branch…** is in a partial
+  one; and its empty state, which says nothing is downloaded yet while the workspace holds nothing
+  (`showsNothingDownloaded`);
 - a file or folder's menu in Files, which opens the dialog with that item selected and the folders above it open
   (`openChooseDownloads`'s `initialPath`, `revealedDownload`). Like the header button, only in a partial workspace;
   nor on a private or added item, under an xlink, or on an item of another repository (`choosesDownloadsFor`): the

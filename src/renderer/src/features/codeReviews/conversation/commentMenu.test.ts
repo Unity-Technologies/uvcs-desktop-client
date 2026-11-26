@@ -19,10 +19,10 @@ describe('commentMenu', () => {
     expect(ids(commentMenu(thread!.root, thread!, 'bob', noop))).toEqual(['copy']);
   });
 
-  it('keeps an answered comment from being deleted', () => {
+  it('offers its author to delete an answered comment too, its replies with it', () => {
     const [thread] = threadsOf([comment(1), comment(2, { parentId: 1, author: 'bob' })]);
 
-    expect(ids(commentMenu(thread!.root, thread!, 'ana', noop))).toEqual(['copy', 'separator', 'editComment']);
+    expect(ids(commentMenu(thread!.root, thread!, 'ana', noop))).toEqual(['copy', 'separator', 'editComment', 'separator', 'delete']);
   });
 
   it("leads from a thread's first comment in the code to the conversation", () => {

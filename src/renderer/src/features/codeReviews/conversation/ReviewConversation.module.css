@@ -105,6 +105,15 @@
   font-size: var(--text-sm);
 }
 
+/* At the header's end: the comment's menu, and while a change request is edited, its Suggest change before it. */
+.commentHeaderActions {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 /* Who and when: a narrow card (a side of a split diff) wraps between these parts, never inside a name or a date. */
 .commentWho {
   display: flex;
@@ -199,6 +208,13 @@
   font-size: var(--text-sm);
 }
 
+/* A foldable thread's band folds it with a click anywhere on it (`rowTakesClick`), as its chevron does: the hand on
+   both. */
+.threadHeader[data-folds],
+.threadHeader[data-folds] .foldToggle {
+  cursor: pointer;
+}
+
 .foldToggle {
   display: inline-flex;
   flex: none;
@@ -244,7 +260,7 @@
 
 /* The folder gives way first; then the file's name, its line staying whole. */
 /*
- * Cut short in turn, never together: the folder, then the line (`writtenLine`), the file's name last. Flex shrinks
+ * Cut short in turn, never together: the folder, then the line (`writtenPlace`), the file's name last. Flex shrinks
  * them all at once, by these weights times their widths, and an ellipsis shows at a fraction of a pixel cut: weights
  * this far apart leave the next one less than a layout unit until the one before has gone.
  */
@@ -282,7 +298,7 @@ button.location:hover .locationFile {
  * "line 1962", after the file and not part of its link: the band's gap sets it apart. In the file's font and size, so
  * the two sit on one baseline. Cut short before the file's name, after its folder (`locationFolder`).
  */
-.writtenLine {
+.writtenPlace {
   flex-shrink: 10000;
   min-width: 0;
   overflow: hidden;
@@ -294,7 +310,7 @@ button.location:hover .locationFile {
 }
 
 /* Inside the Comments panel's location, after the file's name. */
-.location > .writtenLine {
+.location > .writtenPlace {
   margin-left: 6px;
 }
 
@@ -303,7 +319,7 @@ button.location:hover .locationFile {
  * UI font sat a pixel apart.
  */
 .headerStart > .location,
-.headerStart > .writtenLine,
+.headerStart > .writtenPlace,
 .headerEnd {
   align-self: baseline;
 }
@@ -706,25 +722,44 @@ button.pill:hover {
   gap: var(--space-3);
 }
 
-.eventRunToggle {
+/* A timeline line that folds what's under it (`FoldableLine`): a click anywhere on it folds, so the whole line answers
+   the pointer; its chevron ends it, after the time, on every line alike. */
+.foldableLine {
+  cursor: pointer;
+}
+
+.foldableLine:hover {
+  color: var(--text-primary);
+}
+
+.foldChevron {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
   padding: 0;
   border: none;
+  border-radius: var(--radius-sm);
   background: none;
+  color: var(--text-tertiary);
+  /* The hand, as the rest of the line it folds (buttons otherwise show the arrow). */
+  cursor: pointer;
+}
+
+.foldableLine:hover .foldChevron {
   color: var(--text-secondary);
 }
 
-.eventRunToggle:hover {
-  color: var(--accent-text);
+.foldChevron:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
 }
 
-.eventRunToggle > svg {
+.foldChevron > svg {
   transition: transform var(--duration-fast) var(--ease-out);
 }
 
-.eventRunToggle[aria-expanded='true'] > svg {
+.foldChevron[aria-expanded='true'] > svg {
   transform: rotate(90deg);
 }
 
@@ -741,18 +776,30 @@ button.pill:hover {
   margin: -4px 0;
 }
 
-/* Asking again and removing show under the pointer, or once a key reaches them. */
+/*
+ * Asking again and removing, always shown, as people didn't find them under the pointer; the × quieter until its row
+ * is under the pointer, as every row has one.
+ */
 .reviewerActions {
   display: inline-flex;
   flex: none;
+  align-items: center;
+  gap: 2px;
   margin-left: auto;
-  opacity: 0;
-  transition: opacity var(--duration-fast);
 }
 
-.reviewer:hover .reviewerActions,
-.reviewerActions:focus-within {
-  opacity: 1;
+/* Within its row, so it outweighs the ghost button's own color. */
+.reviewer .removeReviewer {
+  color: var(--text-tertiary);
+}
+
+.reviewer:hover .removeReviewer,
+.reviewer .removeReviewer:focus-visible {
+  color: var(--text-secondary);
+}
+
+.reviewer .removeReviewer:hover {
+  color: var(--text-primary);
 }
 
 
@@ -904,7 +951,7 @@ button.earlierTag:hover {
 }
 
 /* Alone in the code's band, no path to share a baseline with: centered on the fold toggle, as the pill is. */
-.thread[data-in-code] .headerStart > .writtenLine {
+.thread[data-in-code] .headerStart > .writtenPlace {
   align-self: center;
 }
 
@@ -948,7 +995,8 @@ button.earlierTag:hover {
 
 /*
  * Who started it, its line and replies, cut short in turn in a narrow panel: who started it, then the replies, the
- * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s).
+ * line last (the weights below, orders of magnitude apart, as `.locationFolder`'s). A place naming a model's part
+ * ("point on Wheel") can be as long as an artist made it: it gives way first instead (`.rowPlace[data-names-part]`).
  */
 .rowAbout {
   display: flex;
@@ -977,15 +1025,24 @@ button.earlierTag:hover {
   flex-shrink: 10000;
 }
 
-.rowLine {
+.rowPlace {
   overflow: hidden;
   min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/*
+ * A place naming a model's part (`writtenPlaceNamesPart`): at most half the row, and cut before who wrote it, its
+ * weight orders of magnitude above the author's, so a long part name never leaves the row without its author.
+ */
+.rowPlace[data-names-part] {
+  max-width: 50%;
+  flex-shrink: 1000000000000;
+}
+
 /* "·" between who, where and how many replies: drawn, not read aloud. */
-.rowLine::before,
+.rowPlace::before,
 .rowAbout .replyCount::before {
   content: '·' / '';
   margin-right: 6px;

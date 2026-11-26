@@ -17,7 +17,7 @@
   "private": true,
   "main": "out/main/boot.js",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "electron-vite dev",
@@ -27,7 +27,9 @@
     "test": "vitest run",
     "app:debug": "node scripts/app-debug.mjs",
     "icons": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/icons/makeAppIcons.mjs",
-    "e2e": "electron-vite build --mode development && node scripts/e2e/smoke.mjs && node scripts/e2e/setupScreen.mjs && electron-vite build && node scripts/e2e/smoke.mjs && node scripts/e2e/setupScreen.mjs",
+    "e2e": "npm run e2e:development && npm run e2e:production",
+    "e2e:development": "electron-vite build --mode development && node scripts/e2e/smoke.mjs && node scripts/e2e/setupScreen.mjs",
+    "e2e:production": "electron-vite build && node scripts/e2e/smoke.mjs && node scripts/e2e/setupScreen.mjs",
     "postinstall": "install-electron",
     "dist": "electron-vite build && electron-builder",
     "release": "electron-vite build && electron-builder --publish always",

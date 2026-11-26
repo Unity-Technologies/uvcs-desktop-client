@@ -9,7 +9,7 @@ import { reviewFileFlag } from './reviewFileFlag';
 const BRANCH: CodeReviewTarget = { kind: 'branch', branch: '/main/task' };
 
 function onLine(id: number, path: string, fields: Partial<ReviewComment> = {}): ReviewComment {
-  return { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 30, itemId: 7, path: `/${path}`, line: 3 }, ...fields };
+  return { id, guid: `g${id}`, author: 'ana', date: '2026-11-06T10:00:00Z', text: '', kind: 'question', anchor: { kind: 'line', revisionId: 30, itemId: 7, path: `/${path}`, firstLine: 3, lastLine: 3 }, ...fields };
 }
 
 function entry(path: string): DiffEntry {
@@ -24,6 +24,18 @@ describe('reviewFileFlag', () => {
     expect(markOf(entry('src/Player.cs'))).toBe('2 comments');
     expect(markOf(entry('src/Enemy.cs'))).toBe('1 comment');
     expect(markOf(entry('src/Other.cs'))).toBeNull();
+  });
+
+  it('counts the comments on points and areas of an image', () => {
+    const onImage = (id: number): ReviewComment => ({ ...onLine(id, 'Art/Hero.png'), anchor: { kind: 'image', revisionId: 30, itemId: 9, path: '/Art/Hero.png', spot: { x: id, y: 0 } } });
+    const markOf = reviewFileFlag(threadsOf([onImage(1), onImage(2)]), BRANCH).markOf({ kind: 'branch', branch: '/main/task' });
+    expect(markOf(entry('Art/Hero.png'))).toBe('2 comments');
+  });
+
+  it('counts the comments on points and parts of a 3D model', () => {
+    const onModel = (id: number): ReviewComment => ({ ...onLine(id, 'Art/Car.fbx'), anchor: { kind: 'model', revisionId: 30, itemId: 9, path: '/Art/Car.fbx', spot: { point: { x: id, y: 0, z: 0 } } } });
+    const markOf = reviewFileFlag(threadsOf([onModel(1), onModel(2)]), BRANCH).markOf({ kind: 'branch', branch: '/main/task' });
+    expect(markOf(entry('Art/Car.fbx'))).toBe('2 comments');
   });
 
   it("counts in a changeset's diff only the comments written in it", () => {

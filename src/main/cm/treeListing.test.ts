@@ -18,7 +18,7 @@ describe('parseTreeListing', () => {
     const output = treeListingOutput(
       { path: 'Art', type: 'dir', revid: 3 },
       { path: 'Art/bark.png', size: 8714025, revid: 29682, hash: 'gIxTMls7W/6uGzXpdYIprQ==', changeset: 251, parentrevid: 29001 },
-      { path: 'Art/lib', type: 'xlink', revid: 9 },
+      { path: 'Art/lib', type: 'dir', revid: 9 },
       { path: 'Art/lib/leaf.png', revid: 4, repository: 'shared@acme@cloud' },
     );
     expect(parseTreeListing(output)).toEqual([

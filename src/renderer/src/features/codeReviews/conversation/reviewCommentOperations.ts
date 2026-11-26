@@ -1,12 +1,13 @@
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { Place } from '@shared/domain/place';
-import type { NewLineComment, ReviewComment, ReviewEventChange } from '@shared/domain/reviewConversation';
+import type { NewImageComment, NewModelComment, NewLineComment, ReviewComment, ReviewEventChange } from '@shared/domain/reviewConversation';
 import { api } from '../../../api/client';
 import { runVoidAction } from '../../../app/operations/runOperation';
 import { isAffectedByCodeReviews, isAffectedByTakingPartInReview } from '../../../app/refresh/refreshScopes';
 import { confirm } from '../../../ui/dialog/confirm';
 import { pickChangeset } from '../../changesets/ChangesetPickerDialog';
 import { changesetsToApplyIn, type ChangeRequestMark } from './changeRequestMarks';
+import { deleteConfirmation, deleteFailedTitle } from './commentDeletion';
 
 // Every write on a review reads the review again, its lists too: the counts of comments and open ones change with it.
 // What the user writes (a comment, a reply) subscribes them to its emails again: that is read too.
@@ -19,6 +20,16 @@ export function addReviewComment(place: Place, reviewId: number, text: string): 
 /** A change request, a question or a comment on a line of the review's diff. */
 export function addLineComment(place: Place, reviewId: number, comment: NewLineComment, text: string): Promise<boolean> {
   return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnLine(place, reviewId, comment, text), isAffectedByTakingPartInReview);
+}
+
+/** A change request, a question or a comment on a point or an area of an image of the review's diff. */
+export function addImageComment(place: Place, reviewId: number, comment: NewImageComment, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnImage(place, reviewId, comment, text), isAffectedByTakingPartInReview);
+}
+
+/** A change request, a question or a comment on a point or a part of a 3D model of the review's diff. */
+export function addModelComment(place: Place, reviewId: number, comment: NewModelComment, text: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't add the comment", () => api.reviewComments.addOnModel(place, reviewId, comment, text), isAffectedByTakingPartInReview);
 }
 
 export function replyToComment(place: Place, comment: Pick<ReviewComment, 'guid'>, text: string): Promise<boolean> {
@@ -53,10 +64,12 @@ export function editStatusComment(place: Place, event: Pick<Extract<ReviewEventC
   return runVoidAction(place, "Couldn't save the comment", () => api.reviewComments.editStatusComment(place, event.guid, event.status, text), isAffectedByCodeReviews);
 }
 
-export async function deleteReviewComment(place: Place, comment: Pick<ReviewComment, 'guid'>): Promise<boolean> {
-  const confirmed = await confirm({ title: 'Delete this comment?', message: 'Everyone on the review stops seeing it.', confirmLabel: 'Delete', danger: true });
+/** Deletes a comment and the replies under it, as `commentsDeletedWith` lists them, once the user confirms. */
+export async function deleteReviewComment(place: Place, comments: readonly Pick<ReviewComment, 'guid'>[]): Promise<boolean> {
+  const confirmed = await confirm({ ...deleteConfirmation(comments.length), confirmLabel: 'Delete', danger: true });
   if (!confirmed) return false;
-  return runVoidAction(place, "Couldn't delete the comment", () => api.reviewComments.remove(place, comment.guid), isAffectedByCodeReviews);
+  const guids = comments.map((comment) => comment.guid);
+  return runVoidAction(place, deleteFailedTitle(comments.length), () => api.reviewComments.remove(place, guids), isAffectedByCodeReviews);
 }
 
 export function saveReviewDescription(place: Place, reviewId: number, text: string): Promise<boolean> {

@@ -4,6 +4,7 @@ import type { PathMove } from './followTip';
 import { Kbd } from './Kbd';
 import { PathMoveLines } from './PathMoveLines';
 import styles from './TooltipLayer.module.css';
+import { placeTooltip, type TooltipPlacement, type TooltipSide } from './tooltipPlacement';
 
 interface TooltipBubbleProps {
   text: string;
@@ -18,49 +19,32 @@ interface TooltipBubbleProps {
   pointerY: number;
   /** Room for a paragraph (a whole comment) rather than a label. */
   wide?: boolean;
+  /** The element it's about, to sit on (`side`) instead of by the cursor: a comment's pin. */
+  element?: DOMRectReadOnly;
+  /** The side of its anchor it opens on when it fits (`placeTooltip`). */
+  side?: TooltipSide;
 }
 
-interface Placement {
-  top: number;
-  left: number;
-  side: 'above' | 'below';
-  arrowX: number;
-}
-
-/** The look of the app's tooltips: a small plain bubble by the cursor, its caret pointing at it. It never takes the pointer. */
-export function TooltipBubble({ text, sub, shortcut, move, pointerX, pointerY, wide = false }: TooltipBubbleProps) {
-  const [placement, setPlacement] = useState<Placement | null>(null);
+/** The look of the app's tooltips: a small plain bubble by the cursor (or on the element it's about), its caret pointing at it. It never takes the pointer. */
+export function TooltipBubble({ text, sub, shortcut, move, pointerX, pointerY, wide = false, element, side }: TooltipBubbleProps) {
+  const [placement, setPlacement] = useState<TooltipPlacement | null>(null);
   const tipRef = useRef<HTMLDivElement>(null);
 
-  // Just below the cursor, flipping above near the bottom edge. The bubble starts a little left of the cursor and
-  // shifts to stay on screen, while its caret keeps pointing at the cursor. Placed again whenever its size changes
-  // after it showed (a move's lines fitted to it, `PathMoveLines`).
+  // Placed again whenever its size changes after it showed (a move's lines fitted to it, `PathMoveLines`).
   useLayoutEffect(() => {
-    const element = tipRef.current;
-    if (!element) return;
+    const tooltip = tipRef.current;
+    if (!tooltip) return;
     const place = (): void => {
       // Its laid-out size, not its box on screen, which the pop-in animation scales down while it runs.
-      const bubble = { width: element.offsetWidth, height: element.offsetHeight };
-      const margin = 8;
-      const gap = 18;
-      const arrowInset = 18;
-
-      let side: Placement['side'] = 'below';
-      let top = pointerY + gap;
-      if (top + bubble.height > window.innerHeight - margin) {
-        side = 'above';
-        top = pointerY - gap - bubble.height;
-      }
-      top = Math.max(margin, Math.min(top, window.innerHeight - bubble.height - margin));
-      const left = Math.max(margin, Math.min(pointerX - arrowInset, window.innerWidth - bubble.width - margin));
-      const arrowX = Math.max(14, Math.min(pointerX - left, bubble.width - 14));
-      setPlacement({ top, left, side, arrowX });
+      const bubble = { width: tooltip.offsetWidth, height: tooltip.offsetHeight };
+      const anchor = element ? { element } : { pointer: { x: pointerX, y: pointerY } };
+      setPlacement(placeTooltip(anchor, bubble, { width: window.innerWidth, height: window.innerHeight }, side));
     };
     place();
     const resizes = new ResizeObserver(place);
-    resizes.observe(element);
+    resizes.observe(tooltip);
     return () => resizes.disconnect();
-  }, [text, sub, shortcut, move, pointerX, pointerY]);
+  }, [text, sub, shortcut, move, pointerX, pointerY, element, side]);
 
   return createPortal(
     <div

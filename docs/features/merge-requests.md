@@ -30,7 +30,9 @@ view shows, its own, which selects the new row), and every branch's menu (`branc
 Explorer, the switcher, the top bar), in the `create` group above **New code review…**, which stays: a review of a
 branch with no destination is still asked for, and it is the only kind a branch with nowhere to merge (`/main`) can
 have. Such a branch (no ancestor in its name and no parent, `canMergeSomewhere`) has no New merge request entry,
-rather than one always refused. No shortcut: creating one is rare, and the palette has it.
+rather than one always refused. A branch's details offer it too, as **New** in their Merge request section while the
+branch has none to merge ("A branch's merge request at a glance"). No shortcut: creating one is rare, and the palette
+has it.
 
 - **From** and **Into** sit on one row with an arrow between, read as a sentence. Each opens the branch list
   (`BranchField`, `BranchChoiceList`), the branches read only once it opens: From the branches that can merge
@@ -141,7 +143,7 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   "wanted to merge … into" once closed. Both badges stay: they say
   different things (where the request stands, where its review stands), and side by side they read as two, not noise.
 - **The destination** changes in place while Draft or Open and its source branch is named (`DestinationPicker`;
-  `reviewHeadline` decides): it reads as the headline's other
+  `changeableDestinationOf` decides, for the headline, the list's menu and the details panel): it reads as the headline's other
   branch with a small chevron, a quiet tint under the pointer; it opens the branch list (`BranchSearchList`) with the
   source's **Ancestors** first, nearest first, read from the source's name alone (`ancestorsOf`), then **Other
   branches**, newest first, to find by typing (`destinationGroups`), never the source nor a branch made from it. The branches are read only once
@@ -149,7 +151,15 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
   a top-level source (`/release`, branched from `/main`) has no ancestor there, and its parent shows under Other
   branches. A pick is one quick `cm mergerequest edit <id> --destination=br:<branch>`
   (`setMergeRequestDestination`); the name shows at once, with a spinner while it's written. Merged and closed show it
-  as text.
+  as text. The same change is one step away outside the page. **Change destination…** (`changeDestination`,
+  `chooseMergeRequestDestination`) opens that branch list in a dialog (`pickDestination`) from every menu of a single
+  review (`codeReviewMenu`): the Merge requests view's rows (right-click and their "…"), the Branch Explorer's review
+  menu, and the palette's review results when they come with the branch named. The page's own ⋯ menu leaves it out:
+  its headline has it. In the Merge requests view's details panel, the destination chip opens the list as the headline
+  does (`DestinationPicker`'s `chip` look), instead of showing the branch in the Branch Explorer as the source chip
+  does. Picking the destination it has
+  changes nothing; a pick shows in the row and its details at once, then the reviews are read again
+  (`isAffectedByCodeReviews`). A window with no workspace offers it too: it changes the server, not the disk.
 - **The conversation's events** (`conversationOf`, `reviewEventRow`), from the server's notes:
 
   | Note | Reads |
@@ -174,10 +184,12 @@ A merge request's page is a code review's (`CodeReviewPage`, code-reviews.md "Th
 - **The merged changeset** is in no `cm find` field: only the move to Merged names it, so the page takes it from the
   conversation it reads anyway (`mergedChangesetOf`: the newest move to Merged, unless a later move took it out).
 - **The cost**: opening a merge request's page runs what a review's runs (its reviewers, its email subscription, its
-  branch's changesets, its conversation). Notes that name branches need their names: from what the window already
-  read, at no command (the list named its rows' branches); cold (a link opened first thing, a repository's window)
-  the cache reads every branch's name once, two light `cm find branch`, and keeps them ten minutes
-  (`BranchNamesCache`). Should that read fail, the conversation still shows, its branches unnamed. A merged one's page also reads its branch (`branchQuery`, two light `cm find
+  branch's changesets, its conversation), and the review itself, whose branch is named by its id. Branch names come
+  from what the window already read, at no command (the list named its rows' branches); cold (a link opened first
+  thing, a repository's window) one branch alone, the review's own or a note's, is read by its id (`readBranchName`:
+  `cm find branch where id = N`, then among the hidden ones only when that finds none), and two or more read every
+  branch's name once, two light `cm find branch`, kept ten minutes (`BranchNamesCache`). Should that read fail, the
+  conversation still shows, its branches unnamed. A merged one's page also reads its branch (`branchQuery`, two light `cm find
   branch` by name, visible and hidden), to offer Hide or Unhide: no read the page makes says whether a branch is
   hidden. Nothing polls.
 
@@ -308,17 +320,27 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   by a branch: a merge request its verdict (a check, a cross, a quiet dot while it waits; its state already leads
   the row), a code review its review status's icon, each named by its tooltip (`reviewStatusCellOf`). The marks line up,
   and the room a Status column of words took goes to the title. The Status chip still filters by the review's status, for both kinds.
-- **Changes** says `task → main` for a merge request: the source gives way when narrow, the arrow and the destination
-  stay whole (the destination is usually short). Its tooltip: "Merge /main/task into /main".
+- **Changes** says `task → main` for a merge request, each branch by its name alone (`PathLabel`'s `nameOnly`), so
+  the column stays narrow: the source gives way when narrow, the arrow and the destination stay whole. Its tooltip
+  says it in a sentence, the branches whole (`reviewedChangesTip`), which also tells apart two branches of one name:
+  "Jane Doe wants to merge /main/task into /main" while active, "wanted to" once closed, and "Merged /main/task into
+  /main", naming no one, as whoever merged it may not be the author. A code review of a branch shows its name, the
+  whole branch in its tooltip.
 - **The Kind chip** (`kind`, `ReviewKindFilter`): **Any kind**, where it rests, or **Merge requests** or **Code
   reviews** alone (`matchesKind`), narrowed locally from the same read: switching it runs no command. With Code reviews
   alone the State chip hides and its state is left out of the read (`stateUnderKind`, `showsStateChip`): a code
   review has no state.
-- **The State chip** (the store's `state`, `MergeRequestStateFilter`): **Active**, where it rests, keeps the code
-  reviews and the merge requests still to merge; **Merged** and **Closed** one state; **All** everything.
-  Merged and Closed are the server's (`where mergerequeststatus = 'Merged'`, `codeReviewsQuery`); Active and All ask
-  for no state and share one query key, Active narrowing locally (`matchesState`): `cm find` takes one state per
-  query. An older version's remembered filters have no state and read as Active.
+- **The State chip** (the store's `mergeRequestStates`, `MergeRequestStatesChip`, `mergeRequestStatesFilter.ts`) ticks
+  any mix of **Draft**, **Open**, **Merged** and **Closed**, each with its glyph in its color, the menu staying open
+  so the list shows each change. It rests on Draft and Open (`STILL_TO_MERGE`), the merge requests still to merge, and
+  is highlighted on any other mix (`isFilteringStates`). Its label names the states ticked ("Draft or open",
+  "Merged") or says "Any state" with all four (`statesChipLabel`); its icon stays the plain merge request glyph. The last
+  state ticked can't be unticked (`toggledState`): a chip with none would show nothing. A code review has no state and
+  shows while Draft or Open is ticked: it is still under way, as they are (`matchesStates`). Merged alone or Closed
+  alone is the server's (`where mergerequeststatus = 'Merged'`, `serverStateOf`); every other mix asks for no state,
+  shares one query key and narrows locally: `cm find` takes one state per query, and Draft or Open alone must keep the
+  code reviews. An older version's one choice (Active, Merged, Closed, All) reads as the states it showed
+  (`restoredStates`).
 - **Waiting for me** (`waitingForMe`): a reviewer waits on a code review or an **Open** merge request, never a draft,
   a merged or a closed one; an author's rework waits on a code review or a merge request still to merge. The sidebar's
   count follows.
@@ -328,6 +350,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
 - **The details panel** says "Merge request" (`reviewNoun`) and the state's badge, its verdict left to the Review
   section under it (`reviewStatusCellOf`; a code review, its status's badge), its number to copy, and the source "into" the destination
   (`reviewedChangesOf`, which the Changes column follows too), said once: its Changes property names the branch alone.
+  The destination's chip has a chevron and opens the destination's picker while it can change ("The page").
   Under it (`reviewDetailsSections` decides): **Review**, where the review stands as the request's summary says it
   (`ReviewStanding`; when the summary says it); **Reviewers**, each with the status they gave
   (`ReviewerList`, read only: the page changes them); **Branch attributes**, the reviewed branch's, edited in place
@@ -335,7 +358,7 @@ beside Code reviews) were rejected: two badges, and "where is my review of that 
   show or add). A code review of a branch has the
   last two; of a changeset or a shelve, its reviewers only. The description stays on the page: reading it is the
   conversation's read, too much for a selection.
-- **An empty list** under Active that read only merged or closed requests says none match, with Clear filters, rather
+- **An empty list** under Draft or open (the State chip at rest) that read only merged or closed requests says none match, with Clear filters, rather
   than none yet (`isNarrowed`).
 
 ## Its number
@@ -358,6 +381,24 @@ in, `pointerCardStays`), "Ana wants to merge into /main" (`mergeVerbOf`:
 merge card's words (`reviewSectionOf`): while Open, and once merged if the review was decided (reviewed, or changes
 required: it merged whatever the review said); never for a draft or a closed one. One frame and width wherever it
 stands alone (`.framed`). It reads nothing: it is drawn from the review the branch's chip already holds (`reviewOfEachBranch`).
+
+The **Merge request** section of a branch's details (`MergeRequestDetailsSection`; `branchMergeRequestSectionOf`
+decides) is never empty-handed: with no request still to merge it offers **New** at the title's right, as Attributes
+offers Add, opening the New merge request dialog on that branch ("Creating one"). What it shows:
+
+- A request still to merge (Open or Draft): its card, and nothing to create.
+- A merged or closed one: its card, with New beside the title (the standing review puts a request still to merge
+  first, so none is left).
+- No review: "No merge request", with New.
+- A plain code review: "No open merge request", with New. It may stand over an older merged or closed request (a
+  newer review stands over those), so the section says only what it knows.
+- While the branch's review is read: a placeholder line, so the section doesn't pop in under the pointer. When that
+  read fails, no section, as before it was read: it can't say whether there's a request.
+- A branch with nowhere to merge (`/main`, `canMergeSomewhere`): no section, unless a request names it anyway (its
+  card, nothing to create).
+
+Once created, the reviews are read again (`isAffectedByCodeReviews`) and the section shows the new request's card. It
+costs nothing more: the review it decides from is the one the branch's chip reads (`useBranchReview`).
 
 ## Where a branch's merge request shows
 
@@ -392,11 +433,19 @@ stands alone (`.framed`). It reads nothing: it is drawn from the review the bran
 - **The chip beside a branch's name** (`reviewChipOf`, `CodeReviewChip`, the Branch Explorer's `drawReviewChip`)
   names a merge request's state in its pill ("Open"), then its verdict (a check, a cross, a quiet dot while it waits;
   none for a draft, a merged or a closed one). A code review's chip shows its
-  status's pill. Narrow, the names go and the glyphs stay. The canvas draws the very same pill and icons. Hovering a merge request's chip shows its
+  status's pill. Narrow, the names go and the glyphs stay. The canvas draws the very same pill and icons (without the Branches view's column widths). Hovering a merge request's chip shows its
   summary card ("A branch's merge request at a glance"); a code review's, a tooltip naming it (`codeReviewLine`);
   `reviewChipOf` decides which (`hover`). Every chip, a merge request's or a code review's, is outlined in its color under the pointer, with
-  the hand cursor: a click opens the review. No new
-  column and no "+N more": the list filtered by the branch shows the others.
+  the hand cursor: a click opens the review. No "+N more": the list filtered by the branch shows the others.
+  In the Branches view the chips line up as a column at the right edge of the name's cell, at any depth of the tree
+  (`trailingChip`): every merge request pill with its name is one width, as wide as "Merged" (in `em`, as the name
+  follows each OS's font), and the verdict keeps its room on a
+  row without one (`reviewChipOf`'s `inColumn`, `verdictRoom`), so every chip ends on one line. Short of room, the
+  chips still give up their names before the name is trimmed (`chipsFit`). The workspace's mark and a hidden
+  branch's eye stay beside the name: they describe the branch. Tried and dropped: a column of its own (wide, and
+  empty on most rows), chips right after the name (they zigzag with its length and the tree's indentation), and
+  pills of their own widths at the right edge, or starting at one left edge (a column of uneven shapes). Lists to
+  pick a branch from keep the chip after the name: they're read row by row, and the date holds their right edge.
 - **Lists to pick a branch from** (`BranchSearchList`'s `reviews`: the branch switcher, the Files and Changesets
   branch chips, the branch picker (`pickBranch`: merge, compare, move, and Work on a branch in the task workspace
   dialog), the New merge request dialog's From and Into, the review page's destination): each row drawn shows its

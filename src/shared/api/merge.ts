@@ -41,9 +41,11 @@ export interface MergeApi {
   branchHead(workspacePath: string, branch: string): Promise<number | null>;
   /**
    * What updating brings: the newest page of changesets, one diff from the loaded changeset to the head, and what
-   * collides locally; in a partial workspace, its items the head changes (`PartialIncomingChanges`).
+   * collides locally; in a partial workspace, its items the head changes (`PartialIncomingChanges`). `at` says where a
+   * workspace on a branch stands, as its workspace info told; without it, the workspace's header is read
+   * (`cm status --header`, shared for a few seconds with the workspace info's).
    */
-  incomingChanges(workspacePath: string): Promise<IncomingChanges>;
+  incomingChanges(workspacePath: string, at?: BranchAtChangeset): Promise<IncomingChanges>;
   /** One page of the incoming changesets: the incoming card's newest few, or Incoming's older ones. */
   incomingChangesets(workspacePath: string, request: IncomingChangesetsRequest): Promise<IncomingChangesetPage>;
   /** Updates the workspace, merging locally changed files that also changed on the branch. */

@@ -7,6 +7,7 @@ import { recentCommentsFor } from '@shared/domain/recentComments';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
+import { viewOfferFor } from '../../components/fileListViewMenuModel';
 import { useFileListViewStore } from '../../components/fileListViewStore';
 import { ListToolbar } from '../../components/ListToolbar';
 import { useRankedOrder } from '../../components/useRankedOrder';
@@ -21,7 +22,8 @@ import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
-import { SplitPane } from '../../ui/SplitPane';
+import type { DetailsWidthLimits } from '../../components/detailsPaneStore';
+import { RememberedSplitPane } from '../../components/RememberedSplitPane';
 import { Stowable } from '../../ui/Stowable';
 import { useCollapseWithHost, useDiffExpanded } from '../../components/diffExpansionStore';
 import { ExpandableDiffContext } from '../../components/expandableDiffContext';
@@ -82,6 +84,10 @@ interface PendingChangesPanesProps {
   readAt: number;
 }
 
+/** The list of changes and the check-in panel: remembered as they were left, giving way first as the window narrows so the diff beside them keeps room. */
+const LIST_WIDTH: DetailsWidthLimits = { initial: 380, min: 260, max: 720, restMin: 480 };
+const LIST_WIDTH_KEY = 'pendingChangesList';
+
 /**
  * The list of changes and the check-in panel, beside the diff of the change selected. It keeps this shape from the
  * first read on: a skeleton of rows while the changes load, and "0 files" beside `nothingPending` once nothing is.
@@ -113,7 +119,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     isViewFilter: true,
     reading: !snapshot,
     actions: <ReviewModeButton place={workspacePlace(workspacePath)} />,
-    viewOffer: { statusGroups: true, changelists: grouping === 'changelist' },
+    viewOffer: viewOfferFor(PENDING_CHANGE_FACTS, { statusGroups: true, changelists: grouping === 'changelist' }),
     onChangelistsChange: (on) => setGrouping(on ? 'changelist' : 'none'),
   });
   const order = useRankedOrder(sorted, PENDING_CHANGE_FACTS);
@@ -270,10 +276,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           </div>
         </Stowable>
       )}
-      <SplitPane
-        initialSize={380}
-        minSize={260}
-        maxSize={720}
+      <RememberedSplitPane
+        widthKey={LIST_WIDTH_KEY}
+        widthLimits={LIST_WIDTH}
         // Expanded, the list and the check-in stay mounted out of sight: stepping past the last change goes on to the next file.
         stowed={diffExpanded ? 'first' : undefined}
         first={

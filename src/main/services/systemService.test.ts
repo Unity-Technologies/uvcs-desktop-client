@@ -29,8 +29,14 @@ vi.mock('../system/dragPasteboard', () => ({ readDraggedPath: vi.fn(async () => 
 vi.mock('../window/incomingNotification', () => ({ showIncomingNotification: vi.fn() }));
 
 /** The app's `cm` as the version read sees it: it admits every version unless a test says otherwise. */
-function fakeCmRuntime(overrides: Partial<Pick<CmRuntime, 'admits' | 'isReady'>> = {}): CmRuntime {
-  const runtime: Pick<CmRuntime, 'admits' | 'isReady' | 'pinnedVersion'> = { admits: () => true, isReady: () => true, pinnedVersion: '11.0.16.10659', ...overrides };
+function fakeCmRuntime(overrides: Partial<Pick<CmRuntime, 'admits' | 'isReady' | 'installedRevision'>> = {}): CmRuntime {
+  const runtime: Pick<CmRuntime, 'admits' | 'isReady' | 'pinnedVersion' | 'installedRevision'> = {
+    admits: () => true,
+    isReady: () => true,
+    pinnedVersion: '11.0.16.10659',
+    installedRevision: () => 0,
+    ...overrides,
+  };
   return runtime as CmRuntime;
 }
 
@@ -115,18 +121,53 @@ describe('the cm version of an installed cm older than the app’s own', () => {
   it('fails, naming both versions, while the app’s own sets up or where it has none', async () => {
     const { service } = system({ version: '11.0.16.9000\n' }, {}, fakeCmRuntime({ admits: () => false, isReady: () => false }));
 
-    await expect(service.cmVersion()).rejects.toThrow('The installed Unity Version Control is version 11.0.16.9000. This app needs version 11.0.16.10659 or later.');
+    await expect(service.cmVersion()).rejects.toThrow('The installed Unity Version Control is older than this app needs. Installed: 11.0.16.9000 · Needed: 11.0.16.10659 or later');
   });
 
   it('asks again on Check Again, as the user may have updated it', async () => {
     let answer = '11.0.16.9000\n';
     const { service, lines } = system({ version: () => answer }, {}, fakeCmRuntime({ admits: (_executable, version) => version !== '11.0.16.9000', isReady: () => false }));
 
-    await expect(service.cmVersion()).rejects.toThrow('version 11.0.16.9000');
+    await expect(service.cmVersion()).rejects.toThrow('Installed: 11.0.16.9000');
     answer = '11.0.16.10700\n';
 
     expect(await service.cmVersion()).toBe('11.0.16.10700');
     expect(lines()).toEqual(['version', 'version']);
+  });
+});
+
+describe('the cm version once the installed cm was updated', () => {
+  it('asks it again, rather than take what it answered before, or was answering as it was updated', async () => {
+    let revision = 0;
+    let answer = '11.0.16.10700\n';
+    const { service, lines } = system({ version: () => answer }, {}, fakeCmRuntime({ installedRevision: () => revision }));
+    await service.cmVersion();
+    answer = '11.0.16.10800\n';
+    revision = 1;
+
+    expect(await service.cmVersion()).toBe('11.0.16.10800');
+    expect(lines()).toEqual(['version', 'version']);
+  });
+
+  it('asks again when it was updated while the older one answered', async () => {
+    let revision = 0;
+    let answer = '11.0.16.9000\n';
+    const runtime = fakeCmRuntime({ installedRevision: () => revision, admits: (_executable, version) => version !== '11.0.16.9000' });
+    const { service } = system(
+      {
+        version: () => {
+          const given = answer;
+          // The update ends while this one answers.
+          answer = '11.0.16.10800\n';
+          revision = 1;
+          return given;
+        },
+      },
+      {},
+      runtime,
+    );
+
+    expect(await service.cmVersion()).toBe('11.0.16.10800');
   });
 });
 

@@ -4,15 +4,26 @@ import { pierreThemeName } from '../../../lib/codeTheme';
 import type { DiffLayout } from './diffPreferencesStore';
 import { pierreTint } from './pierreTint';
 
+/** Set on Pierre's element while the code's menu is open on the text typed into (`useCodeMenu`): its caret stays drawn. */
+export const CARET_HELD_ATTRIBUTE = 'data-caret-held';
+
 /**
  * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
  * diffs blend with the app in both themes while keeping Pierre's syntax and add/remove colors.
  * Code takes the app's code font, whose stack has each OS's (Pierre's own knows neither Cascadia nor DejaVu), at
  * 12px rather than Pierre's 13px: the size the classic desktop client shows code at. Only the font shrinks: lines
  * stay 20px tall, the height Pierre's virtualizer and Annotate's `ANNOTATION_LINE_HEIGHT` count on.
+ * The editor's caret takes the app's caret color (`--editor-caret`: a soft gray on light, near-white on dark): Pierre's
+ * own takes the code theme's cursor color, a blue that reads as a selection more than a caret
+ * (`--diffs-bg-caret-override` wins over the theme's).
+ * It stays drawn, still, while the code's menu is open on it (`CARET_HELD_ATTRIBUTE`): Pierre draws it only while the
+ * text has the focus, which the menu takes. Those rules are `!important`: Pierre puts the CSS it's given in a cascade
+ * layer (`@layer unsafe`), and its editor's own, which hides the caret, in none, which wins over any layer.
  */
 export const PIERRE_SURFACE_CSS =
-  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px}';
+  ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono);--diffs-font-size:12px;' +
+  '--diffs-bg-caret-override:var(--editor-caret)}' +
+  `:host([${CARET_HELD_ATTRIBUTE}]) [data-caret]{visibility:visible!important;animation:none!important}`;
 
 /**
  * How a diff marks the words two lines change: word by word, nothing on lines past 1,000 characters (Pierre's own
@@ -74,13 +85,21 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
 const SNIPPET_ROWS_EDGE_TO_EDGE_CSS = ':host{--diffs-gap-block:0px;--diffs-gap-style:none}';
 
 /**
- * A few lines' diff shown whole inside a comment (a change request's Suggested change): the code's diff as the viewer
- * shows it (its colors, bars, word marks and line numbers, which the suggestion gives as the file's), one column, every
- * line shown and no tints for comment rows, as it holds none.
+ * The most unchanged lines a snippet shows rather than fold: a fold saves a reader only a long run, and one of a few
+ * lines reads better shown than behind a bar to click.
+ */
+export const SNIPPET_FOLDS_OVER = 10;
+
+/**
+ * A few lines' diff inside a comment (a change request's Suggested change): the code's diff as the viewer shows it (its
+ * colors, bars, word marks and line numbers, which the suggestion gives as the file's), one column, and no tints for
+ * comment rows, as it holds none. Its lines show whole but for a run of more than `SNIPPET_FOLDS_OVER` unchanged ones
+ * between its hunks, folded behind a bar that unfolds it.
  */
 export function pierreSnippetDiffOptions(theme: ResolvedTheme): FileDiffOptions<undefined, undefined> {
   return {
-    ...pierreDiffOptions({ theme, layout: 'unified', collapseUnchanged: false, wrapLines: false }),
+    ...pierreDiffOptions({ theme, layout: 'unified', collapseUnchanged: true, wrapLines: false }),
+    collapsedContextThreshold: SNIPPET_FOLDS_OVER,
     unsafeCSS: PIERRE_SURFACE_CSS + SNIPPET_ROWS_EDGE_TO_EDGE_CSS,
   };
 }

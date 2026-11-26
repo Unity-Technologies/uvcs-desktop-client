@@ -4,7 +4,7 @@ import { repositoryPlace } from '@shared/domain/place';
 import type { ReviewComment, ReviewConversation } from '@shared/domain/reviewConversation';
 import { commentLinkPage, reviewCommentCopyTexts } from './commentLink';
 
-const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', line: 11 } as const;
+const ON_LINE = { kind: 'line', revisionId: 29, itemId: 23, path: '/Assets/Scripts/SwitchFlow.cs', firstLine: 11, lastLine: 11 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'ana', date: `2026-11-06T10:00:0${id % 10}+01:00`, text: '', kind: 'general', anchor: { kind: 'review' }, ...fields };
@@ -23,6 +23,22 @@ describe('commentLinkPage', () => {
     const replies = conversation(comment(7), comment(8, { parentId: 7, author: 'bob' }), comment(9, { parentId: 8 }));
 
     expect(commentLinkPage(41, 9, replies)).toEqual({ page: { kind: 'codeReview', reviewId: 41, tab: 'conversation', focusThread: 7, focusReply: 9 }, found: true });
+  });
+
+  it('opens a comment on a 3D model in Changes, at its pin', () => {
+    const anchor = { kind: 'model' as const, revisionId: 30, itemId: 24, path: '/Assets/Art/Car.fbx', spot: { point: { x: 1, y: 2, z: 3 }, node: { path: ['Car', 'Wheel_FL'] }, wholePart: true as const } };
+    expect(commentLinkPage(41, 7, conversation(comment(7, { kind: 'question', anchor })))).toEqual({
+      page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Car.fbx', focusThread: 7 },
+      found: true,
+    });
+  });
+
+  it('opens a comment on an image in Changes, at its pin', () => {
+    const anchor = { kind: 'image', revisionId: 30, itemId: 24, path: '/Assets/Art/Banner.png', spot: { x: 4, y: 2 } } as const;
+    expect(commentLinkPage(41, 7, conversation(comment(7, { kind: 'question', anchor })))).toEqual({
+      page: { kind: 'codeReview', reviewId: 41, tab: 'changes', focusPath: 'Assets/Art/Banner.png', focusThread: 7 },
+      found: true,
+    });
   });
 
   it('opens a comment on a line in Changes, at its thread, in the mode it was written in', () => {
@@ -65,5 +81,16 @@ describe('reviewCommentCopyTexts', () => {
       comment: 'Rename it',
       link: 'uvcs://acme.unity/repos/game/code-reviews/41/-/comments/7',
     });
+  });
+
+  it('copies a change request\'s GUID as a check-in comment names it, its first eight digits', () => {
+    const request = comment(7, { kind: 'changeRequest', text: 'Rename it', guid: '2c17a694-5b1e-4c3a-9f0d-1a2b3c4d5e6f' });
+    expect(reviewCommentCopyTexts(repositoryPlace('game@acme@unity'), 41, request).guid).toBe('2c17a694');
+  });
+
+  it('copies no GUID of a comment no check-in applies: a question, a plain comment, a reply', () => {
+    for (const kind of ['question', 'comment', 'general', 'discard'] as const) {
+      expect(reviewCommentCopyTexts(repositoryPlace('game@acme@unity'), 41, comment(7, { kind })).guid).toBeUndefined();
+    }
   });
 });

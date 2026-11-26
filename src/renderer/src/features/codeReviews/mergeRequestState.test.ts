@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codeReviewSummary } from '../../testing/codeReviewSummary';
 import type { CodeReviewTarget, MergeRequestInfo } from '@shared/domain/codeReview';
-import { asMergeRequest, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewNoun } from './mergeRequestState';
+import { asMergeRequest, isActiveMergeRequest, MERGE_REQUEST_STATE_ICONS, mergeRequestMoves, mergeRequestTip, moveFailureTitle, reviewedChangesOf, reviewedChangesTip, reviewNoun } from './mergeRequestState';
 
 const request = (state: MergeRequestInfo['state'], destination = '/main'): { mergeRequest: MergeRequestInfo } => ({ mergeRequest: { state, destination } });
 
@@ -59,5 +59,21 @@ describe('what a review is called and what its changes show', () => {
     expect(reviewedChangesOf({ target: branch, ...request('Open') })).toEqual({ kind: 'merge', source: '/main/task', destination: '/main' });
     expect(reviewedChangesOf({ target: branch })).toEqual({ kind: 'branch', branch: '/main/task' });
     expect(reviewedChangesOf({ target: { kind: 'changeset', changesetId: 4 } })).toEqual({ kind: 'text', text: 'Changeset 4' });
+  });
+
+  it('says in the tooltip who wants to merge which whole branch into which, as the column shows only their names', () => {
+    const nested: CodeReviewTarget = { kind: 'branch', branch: '/main/scm1/scm2' };
+    const tip = (state: MergeRequestInfo['state']) => reviewedChangesTip({ target: nested, owner: 'jane.doe@unity3d.com', ...request(state, '/main/scm1') });
+    expect([tip('Open'), tip('Draft'), tip('Merged'), tip('Closed')]).toEqual([
+      'Jane Doe wants to merge /main/scm1/scm2 into /main/scm1',
+      'Jane Doe wants to merge /main/scm1/scm2 into /main/scm1',
+      'Merged /main/scm1/scm2 into /main/scm1',
+      'Jane Doe wanted to merge /main/scm1/scm2 into /main/scm1',
+    ]);
+  });
+
+  it("names a reviewed branch whole in the tooltip, and gives none for changes said in words", () => {
+    expect(reviewedChangesTip({ target: branch, owner: 'jane' })).toBe('/main/task');
+    expect(reviewedChangesTip({ target: { kind: 'changeset', changesetId: 4 }, owner: 'jane' })).toBeUndefined();
   });
 });

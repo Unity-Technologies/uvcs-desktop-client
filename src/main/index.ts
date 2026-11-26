@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
 import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
-import { readBranchNames } from './cm/branchNames';
+import { cmBranchNameReads } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
 import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
 import { createCmRuntime } from './cmRuntime/createCmRuntime';
@@ -37,6 +37,7 @@ import { handleLaunchRequests, isTheRunningApp, launchNamesAFolder } from './sta
 import { receiveLinks, registerAsLinkHandler } from './startup/linkRequests';
 import type { LinkRequests } from './links/LinkRequests';
 import { trackOperations } from './startup/operationTracking';
+import { KEEP_COVERED_WINDOWS_DRAWING, windowsStayInBackground } from './window/backgroundWindows';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
@@ -63,7 +64,12 @@ const settings = openSettings(userData);
 const cmRuntime = createCmRuntime({
   settings,
   prunes: app.isPackaged,
-  relocated: () => cm.relocate(),
+  relocated: (change) => {
+    // What the first window was read ahead from is the `cm` before.
+    early.dropAll();
+    cm.relocate(change);
+  },
+  holdCm: () => cm.hold(),
   logCommand: (entry) => cm.logEntry(entry),
   statusChanged: (status) => {
     sendEvent('cmRuntimeChanged', status);
@@ -81,7 +87,7 @@ const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serv
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
-  (place) => readBranchNames(cm, place),
+  cmBranchNameReads(cm),
   Date.now,
   // A repository's names are kept while a window explores it (`windows.explores`); its last window lets them go.
   (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
@@ -123,7 +129,7 @@ const closing = new ClosingWithWrites({
   kept: (windowId) => appIcon.windowKept(windowId),
   close: (windowId) => BrowserWindow.fromId(windowId)?.close(),
 });
-const installMenuBar = appMenuInstaller(windows, updates, appLog.file, cmRuntime);
+const installMenuBar = appMenuInstaller(windows, updates, appLog.file, cmRuntime, settings);
 const quitting = new Quitting({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
@@ -200,6 +206,10 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   void launched.then(openFirst, openFirst);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
+}
+
+if (windowsStayInBackground(process.env, app.isPackaged)) {
+  app.commandLine.appendSwitch(KEEP_COVERED_WINDOWS_DRAWING.switch, KEEP_COVERED_WINDOWS_DRAWING.value);
 }
 
 if (isTheRunningApp()) {

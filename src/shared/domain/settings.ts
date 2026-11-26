@@ -1,8 +1,10 @@
+import type { UserColors } from './branchExplorerSettings';
 import type { CmChoice } from './cmRuntime';
 import { AUTO_APP, type CustomEditor } from './externalApps';
 import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
+import type { RepositorySettings, ServerSettings } from './scopedSettings';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -49,10 +51,16 @@ export interface AppSettings {
   /** Automatically refresh pending changes when files change on disk. */
   autoRefresh: boolean;
   /**
-   * Which `cm` the app runs: its own, pinned to this version of the app (the default), or the one installed on the
-   * computer (Settings › Workspaces, docs/features/cm-runtime.md "Which cm runs").
+   * Which `cm` the app runs: the one installed on the computer when there is one, or its own (`automatic`, the
+   * default until the user chooses), the installed one (`installed`), or always its own (`managed`) (Settings ›
+   * Workspaces, docs/features/cm-runtime.md "Which cm runs").
    */
   cmChoice: CmChoice;
+  /**
+   * The pinned version (the oldest `cm` the app runs) for which the user chose the app's own over updating an older
+   * installed one ("Use the included version for now"): not asked again until the pin moves. Null when never chosen.
+   */
+  cmDeclinedUpdateFor: string | null;
   /** Folder new workspaces are created in; empty means the home folder. */
   defaultWorkspaceRoot: string;
   /** What to do with pending changes when switching the workspace. */
@@ -82,6 +90,20 @@ export interface AppSettings {
    * shows unless something on it names another (`homeAccountOf`); empty until one is picked. It changes nothing in `cm`.
    */
   homeAccount: string;
+  /**
+   * The organizations the home sidebar lists first, under Favorites, by server (`acme@unity`, `acme@cloud`), changed
+   * one at a time by the main process (`withFavoriteOrganization`). It changes nothing in `cm`.
+   */
+  favoriteOrganizations: string[];
+  /**
+   * What the user built up or chose in each repository (Branch Explorer rules and moved branches, the sync remote), by
+   * `repositoryKey`, changed one repository at a time by the main process (`updateRepositorySettings`).
+   */
+  repositorySettings: Record<string, RepositorySettings>;
+  /** What the user chose for each server (the home screen's project), by `serverKey`, changed one at a time (`updateServerSettings`). */
+  serverSettings: Record<string, ServerSettings>;
+  /** The Branch Explorer's changeset colors by user, the same in every repository; each turns them off in its own settings. */
+  changesetColors: UserColors;
   /** The merge tool files no rule matches open in: `auto` (the UVCS merge tool, else the first found) or a tool id. */
   mergeTool: string;
   /** Which tool opens which files, tried in order before `mergeTool` (Settings › Merge). */
@@ -103,6 +125,11 @@ export interface AppSettings {
   customEditors: CustomEditor[];
   /** Programs the user runs on what they selected, from its menu's "Tools ▸" (Settings › Tools). */
   tools: Tool[];
+  /**
+   * The zoom of every window (View > Zoom In, Zoom Out: `zoomPage`), as a Chromium zoom level: 0 at 100%, each step of
+   * 1 about 20% larger (`1.2 ** level`). Saved by the app, not left to Chromium, which keys a zoom by the page's address.
+   */
+  zoomLevel: number;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
   /** Where the last page window (a diff in a window of its own) was left; null until one is moved or resized. */
@@ -127,6 +154,12 @@ export interface AppSettings {
   legacyToolsImported: boolean;
 }
 
+/**
+ * What a window's own storage kept before the settings held it (the Branch Explorer's rules, moved branches and
+ * colors, the sync remotes, the home screen's projects), brought once by each window (`addWindowSettings`).
+ */
+export type WindowKeptSettings = Pick<AppSettings, 'repositorySettings' | 'serverSettings' | 'changesetColors'>;
+
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   recentWorkspacePaths: [],
@@ -136,7 +169,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   recentComments: [],
   recentCommentsByRepository: {},
   autoRefresh: true,
-  cmChoice: 'managed',
+  cmChoice: 'automatic',
+  cmDeclinedUpdateFor: null,
   defaultWorkspaceRoot: '',
   pendingChangesOnSwitch: 'ask',
   restoreLeftChangesAutomatically: true,
@@ -147,6 +181,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   gravatarChoiceAsked: false,
   notifyOnIncoming: false,
   homeAccount: '',
+  favoriteOrganizations: [],
+  repositorySettings: {},
+  serverSettings: {},
+  changesetColors: { users: [] },
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
   mergeToolArgs: {},
@@ -156,6 +194,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   terminal: AUTO_APP,
   customEditors: [],
   tools: [],
+  zoomLevel: 0,
   windowBounds: null,
   pageWindowBounds: null,
   openWindows: [],

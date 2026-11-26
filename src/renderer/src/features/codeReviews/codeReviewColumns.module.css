@@ -43,8 +43,15 @@
 }
 
 
-/* A merge request's changes, `task → main`, each branch a fitted `PathLabel`: when narrow the source gives way, down
-   to nothing; the arrow and the destination (usually short) stay whole. */
+/* A code review's branch, by its name: the cell's width, as a `PathLabel` without `fitContent` takes its container's. */
+.branch {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+/* A merge request's changes, `task → main`, each branch's name a fitted `PathLabel`: when narrow the source gives
+   way, down to nothing; the arrow and the destination stay whole. */
 .merge {
   display: flex;
   align-items: center;

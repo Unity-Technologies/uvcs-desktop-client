@@ -9,7 +9,7 @@ import { lineRowSelector, numberCellSelector } from './pierreDom';
  * (`--diffs-bg-deletion-override`, `--diffs-bg-deletion-number-override`): the tint is a lighter moved color
  * (`--diff-moved-tint`), so a move is quieter than the changes around it while its numbers and bar stand out. A move reads as one block in one color: the lines changed on the way (edited, or only added or
  * removed inside it) are tinted a little stronger, and their changed words marked stronger still
- * (`useMovedWordMarks`). Pierre's word marks are dropped from every moved line: they compare it with a line beside it
+ * (`useWordMarks`). Pierre's word marks are dropped from every moved line: they compare it with a line beside it
  * that it has nothing to do with, not with its other place. The move under the pointer stands out in both places.
  */
 export function movedCodeCss(moves: MovedBlock[], hovered: MovedBlock | undefined): string {

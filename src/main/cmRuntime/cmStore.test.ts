@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, posix, win32 } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { cmStoreEntries, cmStoreFolder, managedCmPath, storeEntriesToPrune } from './cmStore';
+import { cmStoreEntries, cmStoreFolder, managedCmPath, officialUpdateFolder, storeEntriesToPrune } from './cmStore';
 
 describe('cmStoreFolder', () => {
   it('is in the local, not the roaming, app data on Windows', () => {
@@ -21,6 +21,14 @@ describe('cmStoreFolder', () => {
   it('follows XDG_DATA_HOME on Linux, ~/.local/share without it', () => {
     expect(cmStoreFolder('linux', { XDG_DATA_HOME: '/data/ana' }, '/home/ana')).toBe(posix.join('/data/ana', 'unity-version-control', 'cm'));
     expect(cmStoreFolder('linux', {}, '/home/ana')).toBe(posix.join('/home/ana', '.local', 'share', 'unity-version-control', 'cm'));
+  });
+});
+
+describe('officialUpdateFolder', () => {
+  it('is beside the store, in the same app data, on every OS', () => {
+    expect(officialUpdateFolder('win32', { LOCALAPPDATA: 'C:\\Users\\ana\\AppData\\Local' }, 'C:\\Users\\ana')).toBe(win32.join('C:\\Users\\ana\\AppData\\Local', 'Unity Version Control', 'update'));
+    expect(officialUpdateFolder('darwin', {}, '/Users/ana')).toBe(posix.join('/Users/ana', 'Library', 'Application Support', 'Unity Version Control', 'update'));
+    expect(officialUpdateFolder('linux', {}, '/home/ana')).toBe(posix.join('/home/ana', '.local', 'share', 'unity-version-control', 'update'));
   });
 });
 
@@ -56,6 +64,11 @@ describe('storeEntriesToPrune', () => {
     expect(storeEntriesToPrune(['11.0.16.10659.partial'], '11.0.16.10659')).toEqual([]);
   });
 
+  it('deletes every version, finished or not, while the installed cm runs', () => {
+    const names = ['.DS_Store', '11.0.16.10659', '11.0.16.10700', '11.0.16.10800.partial'];
+    expect(storeEntriesToPrune(names, null)).toEqual(['11.0.16.10659', '11.0.16.10700', '11.0.16.10800.partial']);
+  });
+
   it('leaves alone anything that is not a version', () => {
     expect(storeEntriesToPrune(['.DS_Store', 'notes', 'latest'], '11.0.16.10659')).toEqual([]);
   });
@@ -69,5 +82,12 @@ describe('the Windows uninstaller', () => {
     const store = cmStoreFolder('win32', { LOCALAPPDATA: '$LOCALAPPDATA' }, '');
     const uninstall = script.slice(script.indexOf('!macro customUnInstall'));
     expect(uninstall).toContain(`\${ifNot} \${isUpdated}\n    RMDir /r "${store}"`);
+  });
+
+  it('removes the folder the installed one’s update downloads into, but not on an update, as it removes the store', () => {
+    const folder = officialUpdateFolder('win32', { LOCALAPPDATA: '$LOCALAPPDATA' }, '');
+    const uninstall = script.slice(script.indexOf('!macro customUnInstall'));
+    const notOnUpdate = uninstall.slice(uninstall.indexOf('${ifNot} ${isUpdated}'), uninstall.indexOf('${endIf}'));
+    expect(notOnUpdate).toContain(`RMDir /r "${folder}"`);
   });
 });

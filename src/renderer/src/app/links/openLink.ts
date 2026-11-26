@@ -15,7 +15,6 @@ import { changeRowKey } from '../../features/pendingChanges/changeRows';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
 import { toast } from '../../ui/toast/toastStore';
 import { useHomeSection } from '../home/homeSectionStore';
-import { useProjectPickStore } from '../home/projectPickStore';
 import { navigation } from '../navigation/navigationStore';
 import { firstViewOf, showsView } from '../navigation/views';
 import { selectInView } from '../navigation/viewSelectionStore';
@@ -26,6 +25,7 @@ import { openUnlessShownElsewhere } from '../workspace/useOpenWorkspace';
 import { useSession } from '../workspace/sessionStore';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import { serversQuery, workspaceHeadsQuery, workspaceListQuery, workspaceRepositoryQuery } from '../workspace/workspaceQueries';
+import { updateServerSettings } from '../settings/useScopedSettings';
 import { linkDestination, type WorkspaceOnRepository } from './linkDestination';
 import { pickLinkWorkspace, showLinkFailure, type LinkWorkspaceChoice } from './linkDialogs';
 import { linkLookup, linkNavigation, type LinkLooked, type LinkNavigation, type LinkTarget } from './linkNavigation';
@@ -58,7 +58,7 @@ export async function openLink(text: string): Promise<void> {
 async function openServerLink(link: ServerLink): Promise<void> {
   if ((await api.windows.openLinkAtHome(formatLink(link))) === 'handedOver') return;
   const { server, project } = serverLinkPlace(link, await queryClient.fetchQuery(serversQuery));
-  useProjectPickStore.getState().pick(server, project);
+  void updateServerSettings(server, { homeProject: project });
   useHomeSection.getState().show({ kind: 'server', server });
 }
 

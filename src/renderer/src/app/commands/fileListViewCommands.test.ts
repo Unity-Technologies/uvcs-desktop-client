@@ -29,6 +29,7 @@ describe('fileListViewCommands', () => {
       ['Sort files by name', true],
       ['Sort files by status', false],
       ['Sort files by extension', false],
+      ['Sort files by date', false],
     ]);
   });
 });

@@ -275,14 +275,21 @@ function isAffectedByWorkspaceEdit(key: QueryKey): boolean {
 
 /**
  * New changesets on the server: repository views (history, branches, incoming...), not the disk, the check that told,
- * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories).
+ * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories). Nor the
+ * incoming changes: those of a workspace at a changeset are keyed by the head the check saw, so the new head is a new
+ * key, and a partial workspace's check compares its items again itself (`useIncomingSummary`).
  */
 export function isAffectedByNewChangesets(key: QueryKey): boolean {
   if ((LOCAL_AREAS as readonly unknown[]).includes(area(key)) || area(key) === 'content') return false;
   // The workspace's own version of a file (no revision spec) changes with the workspace, not with others' checkins.
   if (area(key) === 'annotate' && key[4] == null) return false;
   if (UNTOUCHED_BY_CHECKINS.includes(area(key) as string)) return false;
-  return !isIncomingCheck(key) && !isIncomingChangesetPage(key);
+  return !isIncomingCheck(key) && !isIncomingChangesetPage(key) && !isIncomingChanges(key);
+}
+
+/** What updating brings (`incomingChangesKey`: `['incoming', 'changes', readFor]`). */
+function isIncomingChanges(key: QueryKey): boolean {
+  return area(key) === 'incoming' && detail(key) === 'changes';
 }
 
 /**

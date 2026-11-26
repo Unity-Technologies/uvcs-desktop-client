@@ -1,12 +1,14 @@
 // What the fake `cm` answers to each command, from the synthetic repository. A command, subcommand or `--format`
 // field it doesn't know fails, naming it: the smoke test then fails and says what to teach it.
-const { writeFileSync } = require('node:fs');
+const { existsSync, readFileSync, writeFileSync } = require('node:fs');
 const { formatRecords } = require('./format.cjs');
 const repository = require('./repository.cjs');
 const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
 const { signInFailure } = require('./signIn.cjs');
 const { matching } = require('./where.cjs');
+const { REVISIONS_FOUND, historyOutput } = require('./history.cjs');
+const { isFakeMerge, listsMergeFiles, mergeListing, mergePreview, mergeVersion } = require('./merge.cjs');
 const { version: PINNED_CM_VERSION } = require('../../../cm-version.json');
 
 /** A command `cm` itself refuses, as it would the real one: it fails, but the fake knew what to answer. */
@@ -22,6 +24,7 @@ const FINDABLE = {
   label: repository.LABELS,
   merge: repository.MERGES,
   review: repository.REVIEWS,
+  revision: REVISIONS_FOUND,
   shelve: repository.SHELVES,
 };
 
@@ -31,7 +34,7 @@ const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REPOSITORY_SPEC, REVISIO
 const ORGANIZATION = 'studio@unity';
 /** A cloud organization of the owner's too: with two, the owner's account is the one Home shows first (`mainAccountOf`). */
 const OWNER_CLOUD_ORGANIZATION = 'workshop@cloud';
-/** A second Unity account, with one organization of its own: the home screen's switcher lists both accounts. */
+/** A second Unity account, with one organization of its own: Home's account switcher, tried by hand, lists both. */
 const OTHER_USER = 'zoe@example.com';
 const OTHER_ORGANIZATION = 'arcade@unity';
 const ACCOUNTS = [
@@ -53,9 +56,18 @@ const ORGANIZATION_REPOSITORIES = [
 /** The workspace as `cm workspace list` and `cm getworkspacefrompath` print it: a standard one (`type`, `dynamic`). */
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid, type: 'regular', dynamic: 'static' }];
 
+/**
+ * The version it prints: the one the app pins, or what `UVCS_FAKE_CM_VERSION_FILE` names (read on every command), to be
+ * an installed `cm` older than the app needs: the update screen (docs/features/cm-runtime.md "The update screen").
+ */
+function version() {
+  const file = process.env.UVCS_FAKE_CM_VERSION_FILE;
+  const named = file && existsSync(file) ? readFileSync(file, 'utf8').trim() : '';
+  return `${named || PINNED_CM_VERSION}\n`;
+}
+
 const COMMANDS = {
-  // The version the app pins: as an installed `cm`, an older one wouldn't be run (docs/features/cm-runtime.md).
-  version: () => `${PINNED_CM_VERSION}\n`,
+  version,
   checkconnection: () => 'Test connection executed successfully\n',
   whoami: () => `${OWNER}\n`,
   // Without --format: the local setup check (`checkSetup`), which reads only whether it succeeds.
@@ -67,7 +79,8 @@ const COMMANDS = {
   find: find,
   diff: (args) => formatted(args, DIFFERENCES),
   cat: cat,
-  ls: lsOutput,
+  ls: (args) => (listsMergeFiles(args) ? mergeListing(args) : lsOutput(args)),
+  history: historyOutput,
   'lock list': lockList,
   'repository list': repositoryList,
   showacl: showAcl,
@@ -77,25 +90,28 @@ const COMMANDS = {
   setowner: () => '',
   'codereview reviewer': reviewerList,
   'codereview subscription': reviewSubscription,
-  // A merge request's state or destination: `cm` prints nothing.
+  // A merge request's state or destination: `cm` prints nothing. No smoke step moves one; it stays for trying it by hand.
   'mergerequest edit': () => '',
   // A new merge request: `cm` prints its id alone. The fake keeps no new review: the lists read stay as they are.
   'mergerequest create': () => `${NEW_MERGE_REQUEST_ID}\n`,
-  merge: mergeRefusedByRules,
+  merge: mergeOnServer,
 };
 
 /** The id the fake gives a merge request it is asked to create: after every review `repository.REVIEWS` holds. */
 const NEW_MERGE_REQUEST_ID = 90;
 
 /**
- * `cm merge <branch> --to=<branch>`, previewed: refused by the server's merge rules, as `cm` words them in English
- * (docs/features/merge-requests.md "Merging"). task-001, with an open merge request, isn't reviewed yet; task-002 has
- * none. The fake merges nothing else.
+ * `cm merge <branch> --to=<branch>`, previewed. Into main, refused by the server's merge rules, as `cm` words them in
+ * English (docs/features/merge-requests.md "Merging"): task-001, with an open merge request, isn't reviewed yet;
+ * task-002 has none. task-002 into task-001 is the merge with conflicts the merge page shows (`merge.cjs`). The fake
+ * merges nothing else, and runs no merge.
  */
-function mergeRefusedByRules([source, ...options]) {
+function mergeOnServer(args) {
+  const [source, ...options] = args;
   const to = options.find((option) => option.startsWith('--to='));
   if (options.includes('--merge') || !to) throw new Error('The fake cm only previews merges to a branch');
   const [branch, destination] = [source.replace(/^br:/, ''), to.slice('--to=br:'.length)];
+  if (isFakeMerge(branch, destination)) return mergePreview(options);
   const rules = 'Cannot perform the merge because of the Merge Rules.';
   if (branch === '/main/task-001') throw new CmRefusal(`${rules} Review the branch '${branch}' to merge it to '${destination}'.`);
   if (branch === '/main/task-002') throw new CmRefusal(`${rules} Branch '${branch}' needs an open merge request to '${destination}'.`);
@@ -183,15 +199,15 @@ function cat(args) {
 
 function writeRevision(spec, target) {
   const revision = /^revid:(\d+)/.exec(spec)?.[1];
-  const content = revision ? REVISIONS[revision] : loadedContent(spec);
+  const content = mergeVersion(spec) ?? (revision ? REVISIONS[revision] : loadedContent(spec));
   if (content === undefined) throw new Error(`The fake cm has no revision ${spec}`);
   writeFileSync(target, content);
   return '';
 }
 
 function loadedContent(path) {
-  const relative = path.slice(WORKSPACE.path.length + 1).replaceAll('\\', '/');
-  return path.startsWith(WORKSPACE.path) ? FILES[relative]?.loaded : undefined;
+  const relative = repository.workspacePathOf(path);
+  return relative === undefined ? undefined : FILES[relative]?.loaded;
 }
 
 /** `cm lock list --machinereadable --fieldseparator=… --endlineseparator=…`: its fields in `cm`'s order. */

@@ -51,7 +51,7 @@ settings stored differently, a `cm` version it needs, something that now works d
 
 - [ ] `npm run typecheck` and `npm test` pass. What the new tests cover:
 - [ ] Seen working in the app, in both themes, a narrow window and a development build, with a clean console:
-- [ ] `npm run e2e` passes, if it touches startup, navigation or many views
+- [ ] The smoke test passes (which build: CLAUDE.md "Done means"), if it touches startup, navigation or many views
 - [ ] Other areas the change reaches, and how they were checked:
 - [ ] Reviewed in a clean context (`.claude/agents/reviewer.md`): what it found, what changed for it, and why any
       finding was declined:

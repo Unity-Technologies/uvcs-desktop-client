@@ -13,7 +13,8 @@ import { chooseReviewers, cachedPlaceUser, codeReviewPage, deleteReviews, openRe
 import { reviewedCodeAction } from './reviewedCode';
 import { ownStatus } from './reviewers';
 import { mergeRequestMoves, reviewNoun } from './mergeRequestState';
-import { setMergeRequestState } from './mergeRequestOperations';
+import { chooseMergeRequestDestination, setMergeRequestState } from './mergeRequestOperations';
+import { changeableDestinationOf } from './changeableDestination';
 import { mergeIntoOf } from './mergeInto';
 import { openMergeRequestMerge } from '../mergeTask/mergeTaskOperations';
 
@@ -30,7 +31,7 @@ export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary
  * The menu of the selected code reviews, the same wherever reviews show: the Merge requests view, the Branch Explorer,
  * the palette and their details. It brings the reviewed code to the workspace (`reviewedCodeAction`) wherever the
  * review comes with its target named, disabled where `workspaceOn` (what the workspace is on) already is: everywhere
- * but a branch review in the palette, whose searches don't read branch names (ARCHITECTURE.md "Menus").
+ * but a branch review in the palette, whose searches don't read branch names (docs/architecture/renderer.md "Menus").
  */
 export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], workspaceOn?: WorkspaceSelector): MenuEntry[] {
   if (reviews.length === 0) return [];
@@ -58,6 +59,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
         })),
       ),
     single && menuAction('changeReviewers', () => void chooseReviewers(place, single)),
+    single && changeDestinationEntry(place, single),
     ...(single ? mergeRequestMoveEntries(place, single) : []),
     single && mergeIntoEntry(place, single),
     single && copySubmenu(reviewNoun(single), codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
@@ -87,6 +89,12 @@ export function reviewPageMenu(place: Place, review: CodeReviewSummary): MenuEnt
 function mergeIntoEntry(place: Place, review: CodeReviewSummary) {
   const merge = mergeIntoOf(place, review);
   return merge && menuAction('mergeInto', () => openMergeRequestMerge(merge.request, merge.source), { label: merge.label });
+}
+
+/** Change destination…, for a merge request whose destination can still change (`changeableDestinationOf`). */
+function changeDestinationEntry(place: Place, review: CodeReviewSummary) {
+  const changeable = changeableDestinationOf(review);
+  return changeable && menuAction('changeDestination', () => void chooseMergeRequestDestination(place, review, changeable));
 }
 
 /** A merge request's moves (`mergeRequestMoves`), at once: closing asks nothing, as Reopen undoes it. None for a code review. */

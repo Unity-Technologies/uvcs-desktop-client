@@ -46,9 +46,10 @@ export function createViewFilters<Filters extends ViewFilters>(
         }) as Filters & ViewFilterActions<Filters>,
       {
         name,
-        // 2: Code reviews' "I'm a reviewer" chip became a menu (`reviewerIsMe` to `reviewer`). A new version has every
-        // view's remembered filters read once more by `restoredFilters`, which keeps today's as they are.
-        version: 2,
+        // 2: Code reviews' "I'm a reviewer" chip became a menu (`reviewerIsMe` to `reviewer`). 3: their State chip ticks
+        // states (`mergeRequestState` to `mergeRequestStates`). A new version has every view's remembered filters read
+        // once more by `restoredFilters`, which keeps today's as they are.
+        version: 3,
         partialize: (state) => rememberedFilters(state, forSession),
         migrate: (persisted) => restoredFilters(persisted, defaults, upgrade) as Filters & ViewFilterActions<Filters>,
       },
@@ -64,7 +65,13 @@ export function clearedFilters<Filters extends ViewFilters>(cleared: Partial<Fil
 /** Whether "Clear filters" would show more: text typed, people picked, or a kind narrowing the list. */
 export function isFiltering<Filters extends ViewFilters>(filters: Filters, cleared: Partial<Filters> = {}): boolean {
   if (filters.text.trim() !== '' || !isEveryone(filters.people)) return true;
-  return (Object.keys(cleared) as (keyof Filters)[]).some((key) => filters[key] !== cleared[key]);
+  return (Object.keys(cleared) as (keyof Filters)[]).some((key) => !sameFilterValue(filters[key], cleared[key]));
+}
+
+/** Whether a filter holds its cleared value: a list (the states ticked) by its items, in order; anything else as it is. */
+export function sameFilterValue(value: unknown, cleared: unknown): boolean {
+  if (Array.isArray(value) && Array.isArray(cleared)) return value.length === cleared.length && value.every((item, index) => item === cleared[index]);
+  return value === cleared;
 }
 
 /** What is kept across sessions: everything but the text, the actions, the people picked by name and `forSession`. */

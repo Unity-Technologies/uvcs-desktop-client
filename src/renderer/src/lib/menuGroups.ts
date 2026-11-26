@@ -1,7 +1,7 @@
 import { SEPARATOR, type Action, type MenuEntry, type Submenu } from './actions';
 
 /**
- * The groups of every object's menu, in the order they show (docs/ARCHITECTURE.md, Menus):
+ * The groups of every object's menu, in the order they show (docs/architecture/renderer.md, Menus):
  * - `primary`: what Enter or a double-click does in the app (the details panel's button): open the workspace, a diff.
  * - `open`: opening it in other apps: a file's "Open in <editor>" (its Enter too), the terminal, "Open with ▸", and
  *   revealing it in the file manager, together and apart from what opens in the app.

@@ -1,7 +1,7 @@
 import type { DiffLineAnnotation, FileDiff as FileDiffInstance } from '@pierre/diffs';
 import { useCallback, useContext, useEffect, useRef, type RefObject } from 'react';
 import type { ChangedLine } from './changeBlocks';
-import { DiffAnnotationsContext, linesToReveal, rowsKey, type DiffAnnotations, type LineMarker } from './diffAnnotations';
+import { DiffAnnotationsContext, linesToReveal, rangeLinesOf, rowsKey, type DiffAnnotations, type LineMarker } from './diffAnnotations';
 import type { HunkSides } from './lineToReveal';
 
 /** A marker as the row it stands for, to unfold its line. */
@@ -32,8 +32,9 @@ export function useDiffAnnotations({ containerRef, renderedDiff, hunks, shown, s
   revealRows: () => void;
 } {
   const annotations = useContext(DiffAnnotationsContext);
-  // A marker's line is unfolded as a row's is: what's marked would hide in a folded region otherwise.
-  const marked = [...(annotations?.rows ?? []), ...(annotations?.markers ?? []).map(markedRow)];
+  // A marker's line is unfolded as a row's is: what's marked would hide in a folded region otherwise. So are the lines
+  // of a range above its row, which a fold could cut through.
+  const marked = [...(annotations?.rows ?? []), ...(annotations?.markers ?? []).map(markedRow), ...rangeLinesOf(annotations?.bands ?? [])];
   const latest = useRef({ rows: marked, hunks });
   latest.current = { rows: marked, hunks };
   // At every render: Pierre lays the diff out anew at times (the highlighted text replacing the plain one), folding its

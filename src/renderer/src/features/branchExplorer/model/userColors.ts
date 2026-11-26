@@ -1,24 +1,9 @@
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
+import type { UserColor, UserColors } from '@shared/domain/branchExplorerSettings';
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { displayName, userFilterTexts } from '../../../lib/userName';
 import { BRANCH_HUES } from './branchHue';
-import { isOnIn, type OffByRepository } from './offByRepository';
 import type { RuleColors } from './ruleColors';
-
-/** The hue a person's changesets take. */
-export interface UserColor {
-  /** As `cm` stores the owner: `jane@example.com`. */
-  user: string;
-  hue: number;
-}
-
-/**
- * The changeset colors by user, the same in every repository: people keep their color wherever they work. Whether they
- * apply is each repository's own (`appliedUserColorsOf`).
- */
-export interface UserColors {
-  users: readonly UserColor[];
-}
 
 export const DEFAULT_USER_COLORS: UserColors = { users: [] };
 
@@ -58,14 +43,6 @@ export function withUserToggled(colors: UserColors, user: string): UserColors {
  */
 export function addingTurnsColorsOn(colors: UserColors, on: boolean): boolean {
   return !on && colors.users.length === 0;
-}
-
-/**
- * The colors the graph applies in `repository`: none while they're turned off there, keeping them. The same object
- * while off, so a store selector answering it doesn't render forever.
- */
-export function appliedUserColorsOf(colors: UserColors, off: OffByRepository, repository: string | undefined): UserColors {
-  return isOnIn(off, repository) ? colors : DEFAULT_USER_COLORS;
 }
 
 /** What the "Changeset colors" tab shows: an invitation while no one has a color, else the list, dimmed while off. */

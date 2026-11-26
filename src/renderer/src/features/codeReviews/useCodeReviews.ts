@@ -8,30 +8,18 @@ import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 import { codeReviewKey } from './codeReviewKey';
 import { listedReviewIn, showReviewReadInListsIn } from './listedReview';
+import { namedReviewListQuery } from './reviewListQueries';
 
 /**
- * How a list of reviews is read: `enabled` false reads nothing yet; `slowChanging`, rarely (`SLOW_CHANGING_QUERY`: fresh
- * for five minutes, and a focus never reads it again).
+ * The reviews `filter` asks for, their targets named: the Merge requests view's list. It shares its one `cm find review`
+ * with the sidebar's count (`namedReviewListQuery`, `useWaitingForMeBadge`), and only it reads branch names.
  */
-interface CodeReviewsReading {
-  enabled?: boolean;
-  slowChanging?: boolean;
-}
-
-/**
- * The reviews `filter` asks for. The view and the sidebar's count (`useWaitingForMeBadge`) read one list under one key;
- * the count reads it `slowChanging`, so a focus reads it again only while the view shows it.
- */
-export function useCodeReviews(filter: CodeReviewFilter, { enabled = true, slowChanging = false }: CodeReviewsReading = {}) {
+export function useCodeReviews(filter: CodeReviewFilter) {
   const place = usePlace();
   // Equivalent filters (no owners, not only assigned) share one cache entry and one `cm find`.
-  const query = compactFilter(filter);
   return useQuery({
-    queryKey: queryKeys.inPlace(place, 'codeReviews', query),
-    queryFn: () => api.codeReviews.list(place, query),
+    ...namedReviewListQuery(queryClient, place, compactFilter(filter)),
     placeholderData: (previous) => previous,
-    enabled,
-    ...(slowChanging ? SLOW_CHANGING_QUERY : {}),
   });
 }
 

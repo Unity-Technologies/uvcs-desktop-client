@@ -8,3 +8,11 @@
 .whatsNew {
   margin-right: auto;
 }
+
+/* The installed and needed versions, under what the update does to the installed Unity Version Control. */
+.versions {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}

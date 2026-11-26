@@ -6,7 +6,7 @@ import { OUTDATED_ROW, type FileComments } from './fileComments';
 import type { EarlierThread, LineThread, ThreadSide } from './fileThreads';
 import { lineThreadsOf, shownThreadRows } from './threadRows';
 
-const ON_LINE = { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Retry.cs', line: 20 } as const;
+const ON_LINE = { kind: 'line', revisionId: 30, itemId: 7, path: '/src/Retry.cs', firstLine: 20, lastLine: 20 } as const;
 
 function comment(id: number, fields: Partial<ReviewComment> = {}): ReviewComment {
   return { id, guid: `g${id}`, author: 'borja', date: `2026-11-06T10:${String(id).padStart(2, '0')}:00Z`, text: `Thread ${id}`, kind: 'comment', anchor: ON_LINE, ...fields };
@@ -19,7 +19,7 @@ const threadOf = (root: ReviewComment, ...replies: ReviewComment[]): LineThread 
 /** A file's comments: threads at lines (side, line, thread), and outdated ones. */
 function fileComments(placed: [ThreadSide, number, LineThread][], outdated: LineThread[] = []): Pick<FileComments, 'lines' | 'outdated'> {
   return {
-    lines: lineThreadsOf(placed.map(([side, line, thread]) => ({ side, line, thread }))),
+    lines: lineThreadsOf(placed.map(([side, line, thread]) => ({ side, firstLine: line, line, thread }))),
     outdated: outdated.map((thread): EarlierThread => ({ thread, revisionId: 12 })),
   };
 }

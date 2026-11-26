@@ -33,7 +33,16 @@ export function pickWindowAt(x: number, y: number, viewport: Rect, height: numbe
  * and the point of its surface, in the viewer's space; null where nothing was drawn. The pass writes the point in red,
  * green and blue, and the mesh's place plus one in alpha, over a clear of zeros.
  */
-export function pickedAt(pixel: Float32Array): { mesh: number; point: [number, number, number] } | null {
+export function pickedAt(pixel: Float32Array, normalPixel: Float32Array | null): { mesh: number; point: [number, number, number]; normal: [number, number, number] | null } | null {
   const mesh = Math.round(pixel[3]!) - 1;
-  return mesh < 0 ? null : { mesh, point: [pixel[0]!, pixel[1]!, pixel[2]!] };
+  return mesh < 0 ? null : { mesh, point: [pixel[0]!, pixel[1]!, pixel[2]!], normal: normalPixel ? normalAt(normalPixel) : null };
+}
+
+/**
+ * The surface's direction at the point picked, as the pass writes it in its second pixel (red, green, blue: towards
+ * the camera, in the viewer's space); none where it wrote none (a degenerate face, a GPU that left it blank).
+ */
+export function normalAt(pixel: Float32Array): [number, number, number] | null {
+  const length = Math.hypot(pixel[0]!, pixel[1]!, pixel[2]!);
+  return length > 1e-6 ? [pixel[0]! / length, pixel[1]! / length, pixel[2]! / length] : null;
 }

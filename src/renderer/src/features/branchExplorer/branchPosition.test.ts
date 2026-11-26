@@ -4,7 +4,7 @@ import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { branchPositionEntries, branchPositionsOf, moveBranches, resetAllPositions, type BranchPositions } from './branchPosition';
-import type { BranchPins } from './model/branchRows';
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
 import { branch, changeset } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 

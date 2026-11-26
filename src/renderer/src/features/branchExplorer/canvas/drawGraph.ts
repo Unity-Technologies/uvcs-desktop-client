@@ -30,7 +30,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   drawn.captions.reset();
   const visible = visibleArea(scene);
   const screenPen = contextPen(ctx);
-  const draw: DrawContext = { ctx, pen: screenPen, scene, visible, detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn };
+  const draw: DrawContext = { ctx, pen: screenPen, scene, visible, detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn, zoom: viewport.zoom };
   const originX = originFor(visible.left);
   const originY = originFor(visible.top);
   worldPen.aim(ctx, originX, originY);

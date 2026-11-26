@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { checkinCommentText, checkinsText, roundText, shownCheckins, sinceText, MAX_SHOWN_CHECKINS } from './roundText';
+import { checkinsText, roundText, shownCheckins, sinceText, MAX_SHOWN_CHECKINS } from './roundText';
 import type { ReviewRound } from './reviewRounds';
 
 const IN_MADRID = { locale: 'en-US', timeZone: 'Europe/Madrid' };
@@ -52,8 +52,14 @@ describe('roundText', () => {
     expect(roundText(round({ changesetId: 14 }), 'vio', 2, true).dotBeforeTime).toBe(false);
   });
 
-  it("leaves the changeset to the status's own event once unfolded, so it shows once", () => {
-    expect(roundText(round({ status: 'Reviewed', changesetId: 14 }), 'dani', 1, true)).toEqual({ bold: 'Reviewed', rest: ' by Vio', counts: '', label: 'Reviewed by Vio', dotBeforeTime: false });
+  it("heads an unfolded round as whose review it was, leaving the verdict and its changeset to the status's own event at its end", () => {
+    expect(roundText(round({ status: 'Reviewed', changesetId: 14, applied: 1 }), 'dani', 1, true)).toEqual({ bold: "Vio's review", rest: '', counts: ' · 1 request applied', label: "Vio's review · 1 request applied", dotBeforeTime: false });
+    expect(roundText(round({ changesetId: 14 }), 'vio', 1, true)).toEqual({ bold: 'Your review', rest: '', counts: '', label: 'Your review', dotBeforeTime: false });
+  });
+
+  it('heads an unfolded round among others by its name, then whose review it was', () => {
+    expect(roundText(round({ number: 2, reviewer: 'ana.diaz@unity3d.com', applied: 2 }), 'dani', 2, true)).toEqual({ bold: 'Round 2', rest: " · Ana Diaz's review", counts: ' · 2 requests applied', label: "Round 2 · Ana Diaz's review · 2 requests applied", dotBeforeTime: false });
+    expect(roundText(round(), 'vio', 2, true)).toEqual({ bold: 'Round 1', rest: ' · your review', counts: '', label: 'Round 1 · your review', dotBeforeTime: false });
   });
 
   it('names none for a status given before the branch had a changeset, or on a review of a changeset or a shelve', () => {
@@ -96,12 +102,5 @@ describe('shownCheckins', () => {
     const batch = [1, 2, 3, 4, 5, 6].map(changeset);
 
     expect(shownCheckins(batch, false)).toEqual({ shown: batch, more: 0 });
-  });
-});
-
-describe('checkinCommentText', () => {
-  it("reads a changeset's comment's first line, or says it has none", () => {
-    expect(checkinCommentText({ comment: 'Cap a single wave too\n\nAnd the boss wave' })).toBe('Cap a single wave too');
-    expect(checkinCommentText({ comment: '' })).toBe('No comment');
   });
 });

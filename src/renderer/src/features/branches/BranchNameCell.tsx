@@ -52,12 +52,12 @@ export function BranchNameCell({ row, isCurrent, onToggleCollapsed }: BranchName
         <PathLabel path={shownName} fitContent />
       </span>
       {isCurrent && <WorkspaceMark on="branch" />}
+      {branch.isHidden && <EyeOff size={12} className={styles.hiddenIcon} data-chip data-tip="Hidden branch" />}
       {review && (
-        <span className={styles.chip} data-chip>
-          <CodeReviewChip review={review} iconOnly={compact} />
+        <span className={`${styles.chip} ${styles.trailingChip}`} data-chip>
+          <CodeReviewChip review={review} iconOnly={compact} inColumn />
         </span>
       )}
-      {branch.isHidden && <EyeOff size={12} className={styles.hiddenIcon} data-chip data-tip="Hidden branch" />}
     </span>
   );
 }

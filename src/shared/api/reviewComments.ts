@@ -1,20 +1,30 @@
 import type { CodeReviewStatus } from '../domain/codeReview';
 import type { Place } from '../domain/place';
-import type { NewLineComment, ReviewConversation } from '../domain/reviewConversation';
+import type { ChangeRequestThread, NewImageComment, NewLineComment, NewModelComment, ReviewConversation } from '../domain/reviewConversation';
 
 /** What is said on a code review: its description, its comments and their replies (docs/features/code-reviews.md). */
 export interface ReviewCommentsApi {
   conversation(place: Place, reviewId: number): Promise<ReviewConversation>;
+  /**
+   * The review and thread of the change request a check-in's comment names (`[apply-change:c0d1ce00]`, or its whole
+   * guid), for its chip to open; null when none has that guid, or none the user can see.
+   */
+  changeRequestThread(place: Place, guid: string): Promise<ChangeRequestThread | null>;
   /** A comment on the whole review. */
   add(place: Place, reviewId: number, text: string): Promise<void>;
   /** A comment on a line of a file, from the review's diff. */
   addOnLine(place: Place, reviewId: number, comment: NewLineComment, text: string): Promise<void>;
+  /** A comment on a point or an area of an image, from the review's diff. */
+  addOnImage(place: Place, reviewId: number, comment: NewImageComment, text: string): Promise<void>;
+  /** A comment on a point or a part of a 3D model, from the review's diff. */
+  addOnModel(place: Place, reviewId: number, comment: NewModelComment, text: string): Promise<void>;
   /** `discard`: the reply discards the change request it answers, saying why. */
   reply(place: Place, commentGuid: string, text: string, options?: { discard?: boolean }): Promise<void>;
   edit(place: Place, commentGuid: string, text: string): Promise<void>;
   /** Edits what a reviewer said with their status (a `statusChanged` event's `guid`), the status kept. */
   editStatusComment(place: Place, commentGuid: string, status: CodeReviewStatus, text: string): Promise<void>;
-  remove(place: Place, commentGuid: string): Promise<void>;
+  /** Deletes the comments in one command, in the order given: a comment's replies before it (`commentsDeletedWith`). */
+  remove(place: Place, commentGuids: readonly string[]): Promise<void>;
   /** Marks a change request applied in a changeset of the review's repository, by hand. */
   markApplied(place: Place, changeRequestGuid: string, changesetId: number): Promise<void>;
   /** Marks an applied change request as not applied: it's open again. */

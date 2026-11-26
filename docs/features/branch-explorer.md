@@ -5,6 +5,8 @@
 the search (`useGraphSearch`), the keys (`graphKeyboard`), what Enter and a double-click open (`openSelection`), and
 the canvas it drives through `GraphCanvasHandle` (`graphCanvasHandle`).
 
+Sandbox: `scripts/sandboxes/branch-explorer.sh` (a realistic branch topology).
+
 ## Scale
 
 Repositories reach ~280k changesets and ~20k branches. Layout packs branches into rows with a binary search per row
@@ -17,8 +19,38 @@ count that work (`countCalls`), never time it.
 The world is drawn relative to a per-frame origin near the screen (`OriginPen`, `draw.pen`, the
 world transform carrying the origin in doubles) and bands only as far as the screen, so the canvas, which keeps points in
 float32, never sees the millions of px of a whole history (jagged circles and pills zoomed in otherwise); hit tests stay in world doubles.
-A link is hit within 6 px of the line itself (`distanceToCurve` cuts it into pieces of 8 px at most, however long),
+A link is hit within 6 px of the line itself, along every curve of its path (`distanceToCurve` cuts each into pieces of 8 px at most, however long),
 in screen px when zoomed out.
+
+## Merge links
+
+A merge link must never read as a branch's own line. Branches own right angles and their colors: a band's parent
+line, and the elbow down from its base changeset. Merges own slants, arrowheads and a glow:
+
+- **Shape** (`mergeLinkPath`): a steep link is the S-curve (`linkCurve`). Once it reaches `SHALLOW_RATIO` times farther
+  across than up or down, or joins two changesets on the same row, the S-curve would leave its source flat and arrive
+  flat, running along both bands under their parent lines, its arrow pointing against theirs. Such a link leaves its
+  source on a slant, runs flat through the free strip beside the destination's row on the source's side (`runY`:
+  `RUN_ABOVE` under the captions of the row above, `RUN_BELOW` under the destination's own; level rows take the strip
+  above), and comes onto the destination on a slant. It crosses bands only across them. Merges sharing a source run
+  together and split off into each changeset. A route with right-angled corners was tried: it read as a branch start.
+- **Color** (`GraphPalette.mergeLinks`): one per kind, whatever branches the link joins: `--graph-merge-link` (green)
+  for merges and intervals, `--graph-cherry-pick-link` (violet) for cherry picks, `--status-deleted` (red) for
+  subtractive merges, each 3:1 on the graph. Single cherry picks and subtractives are dashed, intervals dotted
+  (`mergeLinkDash`). Taking the source branch's color made a merge look like that branch's line; a neutral gray was
+  tried and dropped.
+- **Glow** (`mergeLinkGlow`): every lit link glows faintly in its color, strongest at the line and fading out over
+  `GLOW_REACH` in `GLOW_LAYERS` faint layers, with no hard edge. A gap of the background, solid at the line and fading
+  out over `GAP_REACH`, lies between line and glow, so the link reads as passing over the bands and lines it crosses.
+  Links of one color glow as one shape (`glowingPathsByColor`), so a bundle of merges sharing a route glows once
+  instead of piling up, and every gap is one shape too, drawn before any line: a link's gap never cuts through another
+  link's line. The glow and the gap fade out zoomed out (`glowAtZoom`, `gapLayerAlpha`), where they only fattened the
+  line; on a dark graph the glow lightens what is under it (`screen`) and is stronger, as a faint tint on near-black is
+  lost. Links that recede while searching get neither. Merges in progress glow as the others do.
+
+A link is emphasized (wider, opaque, glowing more) while its source or destination is hovered or selected, and while
+the pointer is on the link itself (`hoveredMergeLink`). Lines are drawn receded first, then lit, the emphasized last
+(`inDrawingOrder`), so a hovered merge stays on top of the others sharing its run.
 
 ## Display options
 
@@ -32,8 +64,8 @@ nothing invisible answers the pointer. A cut name keeps its tooltip with the ful
 
 ### Advanced filters & format
 
-The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository
-(`useExplorerRules`, `setRules`; `withRules` and `rulesOf` in `model/rulesByRepository.ts`), since a condition names
+The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository in
+the app's settings (`RepositorySettings.explorerRules`; `useExplorerRules`, `setExplorerRules`), since a condition names
 that repository's branches and owners. The tab's decisions live in `model/ruleList.ts`: the empty state and the
 Filters and Formats sections (`ruleTabBody`), the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`),
 how a row reads (its description, with its kind, condition and relatives under it: `ruleRowTitle`, `ruleRowDetail`),
@@ -57,16 +89,16 @@ so opening it asks nothing more. A condition `cm` refuses fails only its own rul
 a question, no earlier answer colors or hides anything (`shownRuleMatches`). A rule's find has no date range or
 `limit`, since it must hold for everything the graph may draw; it prints one field per object matched (`matchRules`).
 
-"Apply these rules" turns a repository's rules off without losing them (`setRulesOn`, and `isOnIn` and `withOnIn` in
-`model/offByRepository.ts`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
+"Apply these rules" turns a repository's rules off without losing them (`setExplorerRulesOn`,
+`RepositorySettings.explorerRulesOff`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
 colored and no rule asks the server anything, and the tab dims them until they're turned back on. With no rule, the tab shows
 no switch, so adding the first one turns the rules on (`addingTurnsRulesOn`).
 
 ### Changeset colors
 
 The display options' third tab (`ChangesetColorsTab`) gives each person picked a color their changesets take
-(`UserColors`, `model/userColors.ts`). People keep their color in every repository, so the list is the view's, not a
-repository's. "Add people" offers whoever made a changeset in the loaded history (`historyAuthors`) and has no color
+(`UserColors`, `model/userColors.ts`). People keep their color in every repository, so the list is the app's settings'
+(`AppSettings.changesetColors`), not a repository's. "Add people" offers whoever made a changeset in the loaded history (`historyAuthors`) and has no color
 yet, by name (`usersToAdd`); each one added takes the first of `BRANCH_HUES` no one has (`withUsersAdded`). A
 changeset's color is its format rule's, else its author's, else its branch's: the authors' colors go under the rules'
 (`changesetUserHues`, `withUserColors`). "Color changesets by who made them" turns them off in the window's repository
@@ -97,8 +129,8 @@ right, a small solid button on the right edge glides back to them.
 The user can move a branch to another row: a branch's menu has Position (`branchPositionEntries`), with Move up, Move
 down, Move to the top and Move to the bottom, and the keys `graphMoveBranch*` (⌘↑ and ⌘↓, with ⇧ to the top and bottom;
 Ctrl off Mac) move the selected branch, or the branch of the selected changeset. A move is a pin (`BranchPin`: the
-branch's id and the row it asks for, `movedBranch`), so it lasts while history grows. Pins are kept per repository, by
-its spec (`pinsByRepository` in `useBranchExplorerPreferences`), because a branch id means nothing in another one.
+branch's id and the row it asks for, `movedBranch`), so it lasts while history grows. Pins are kept per repository in
+the app's settings (`RepositorySettings.branchPins`, `setBranchPins`), because a branch id means nothing in another one.
 `placeLanes` places pinned lanes first, the one moved last first, each on the first free row from the one it asks for.
 Their children follow below them, but a child moved itself may sit above its parent. Rows nothing ends up on close,
 and pins of branches not drawn are ignored; pins are never pruned, since a branch deleted later is just not drawn. A
@@ -178,6 +210,17 @@ What a frame draws is placed by `timelineDrawing`; `drawTimeline` only paints it
 `timelineGeometry`. Everything is measured once per layout (`timelineHistory`: each date parsed once, sorted for binary
 searches, `sortedSearch`), share and width: never per frame or pointer move. Guards count the searches and parses
 (`countCalls`).
+
+## Search
+
+The search field finds changesets by number, comment or author, and branches and labels by name (`searchGraph`), left
+to right; everything else fades. Next and previous match (Enter, Shift+Enter) step through the hits, the first landing on
+the changeset a number names (`steppedHitIndex`). Once the query typed last stays put for `FIRST_HIT_PAUSE_MS` (keyed
+by its `generation`, so a query typed again waits its own pause) and the graph has searched it, the graph goes to its
+first hit as next match would (`graphSearchState`, `useFirstHitArrival`). It does so once per query: the query stops
+waiting when it went there, when the user stepped first, or when it settled on a laid-out graph with nothing found. So
+neither stepping nor a refresh that changes the hits pulls the view back to it, and clearing the field never moves it.
+Only a graph not laid out yet keeps it waiting.
 
 ## Selection
 

@@ -8,7 +8,7 @@ import type { LineRange } from './lineSelection';
 import type { PageTextSelection } from './pierreDom';
 import { fragmentOfLines, fragmentOfSpan, type CodeFragment } from './clipboardComparison';
 import type { DiffSides } from './shownDiff';
-import { isEmptySpan, spanText, type TextSpan } from './textSpans';
+import { isEmptySpan, orderedSpan, spanText, type TextPosition, type TextSpan } from './textSpans';
 
 /** How a place shows code: one text (the whole-file editor, a merge) or a diff's two sides. */
 export interface CodeLayoutSides {
@@ -63,7 +63,24 @@ export interface OpenedCode {
   readOnly: ReadOnlySelection;
 }
 
-/** The selection holding text the editor treats as its own (its last, as Pierre's search panel does); none for carets alone. */
+/**
+ * Where a right-click leaves the editor's selections (zero-based): a caret at the point clicked, as code editors move
+ * it, or as they are (null) when it's on text they hold, for Cut and Copy to act on, or off the text.
+ */
+export function selectionsAfterRightClick(selections: readonly TextSpan[], clicked: TextPosition | null): TextSpan[] | null {
+  if (!clicked) return null;
+  const holds = selections.some((span) => {
+    const { start, end } = orderedSpan(span);
+    return !isEmptySpan(span) && !isBefore(clicked, start) && !isBefore(end, clicked);
+  });
+  return holds ? null : [{ start: clicked, end: clicked }];
+}
+
+function isBefore(a: TextPosition, b: TextPosition): boolean {
+  return a.line < b.line || (a.line === b.line && a.character < b.character);
+}
+
+/** The selection holding text the editor treats as its own (its last, as Pierre's editor reads it); none for carets alone. */
 export function primarySelection(selections: readonly TextSpan[]): TextSpan | null {
   return selections.findLast((span) => !isEmptySpan(span)) ?? null;
 }
@@ -84,11 +101,18 @@ export interface EditorHistory {
   canRedo: boolean;
 }
 
+/** What the place offers its read-only sides: lines picked by their numbers, a find bar of its own (a text diff's). */
+export interface ReadOnlyTools {
+  linesSelectable: boolean;
+  findBar: boolean;
+}
+
 /**
  * What the menu shows for the code it opened on (`codeMenu`): typed into, the editor's history and every entry; a
- * read-only side's Copy needs text selected in the page, and its Select all lines that can be picked by their numbers.
+ * read-only side's Copy needs text selected in the page, its Select all lines that can be picked by their numbers, and
+ * its Find a find bar of the place's.
  */
-export function codeMenuState(opened: OpenedCode, history: EditorHistory | null, linesSelectable: boolean): CodeMenuState {
+export function codeMenuState(opened: OpenedCode, history: EditorHistory | null, { linesSelectable, findBar }: ReadOnlyTools): CodeMenuState {
   const typed = opened.target.typedInto && history !== null;
   return {
     editable: typed,
@@ -97,6 +121,7 @@ export function codeMenuState(opened: OpenedCode, history: EditorHistory | null,
     canUndo: typed && history.canUndo,
     canRedo: typed && history.canRedo,
     canSelectAll: typed || linesSelectable,
+    canFind: typed || findBar,
   };
 }
 
@@ -151,8 +176,8 @@ export function linesOnSide(lines: FocusedLines | null): SelectedSideLines | nul
 }
 
 /**
- * The lines a right-click's menu acts on: those the lines' menu just picked (`pickLines`, which selects the line
- * clicked before React shows it), where the place has that menu; else those already selected.
+ * The lines a right-click's menu acts on: those the lines' menu just picked (`pickLines`: the line clicked, or the
+ * lines selected when it's one of them, selecting nothing), where the place has that menu; else those already selected.
  */
 export function linesAtRightClick(picked: FocusedLines | null | undefined, selected: LineRange | null): SelectedSideLines | null {
   return picked !== undefined ? linesOnSide(picked) : selectedSideLines(selected);

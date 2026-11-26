@@ -1,5 +1,5 @@
 import type { BranchExplorerData, MergeLinkType } from '@shared/domain/branchExplorer';
-import type { ExplorerRule } from './explorerRules';
+import type { ExplorerRule } from '@shared/domain/branchExplorerSettings';
 import { matchedBy, type RuleMatches } from './ruleMatches';
 
 /** The hue each format rule gives what it matches: a later rule over an earlier one. */

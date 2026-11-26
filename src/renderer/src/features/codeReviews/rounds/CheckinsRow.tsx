@@ -1,18 +1,20 @@
-import { ChevronRight, GitCommitHorizontal } from 'lucide-react';
+import { GitCommitHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { CHIP_ICONS } from '../../../components/comments/chipIcons';
 import { displayName } from '../../../lib/userName';
 import { Avatar } from '../../../ui/Avatar';
 import { RelativeTime } from '../../../ui/RelativeTime';
 import type { CheckinsEntry } from './reviewRounds';
-import { checkinCommentText, checkinsText, shownCheckins } from './roundText';
+import { checkinsText, shownCheckins } from './roundText';
+import { CommentLine } from '../../../components/comments/CommentLine';
+import { FoldableLine } from '../conversation/FoldableLine';
 import conversation from '../conversation/ReviewConversation.module.css';
 import styles from './ReviewRounds.module.css';
 
 /**
  * Changesets checked in one after another, as the timeline shows them: who checked in how many, when, then each
- * changeset's number and its comment's first line, a link to its diff in the review's Changes. A click on its line
- * folds the changesets away and back; those of a closed round start folded (`CheckinsEntry.startsOpen`).
+ * changeset's number and its comment's first line, a link to its diff in the review's Changes. A click anywhere on its
+ * line folds the changesets away and back; those of a closed round start folded (`CheckinsEntry.startsOpen`).
  */
 const ChangesetIcon = CHIP_ICONS.changeset;
 
@@ -26,15 +28,12 @@ export function CheckinsRow({ entry, onOpenChangeset }: { entry: CheckinsEntry; 
         <GitCommitHorizontal size={14} aria-hidden />
       </span>
       <div className={conversation.eventBody}>
-        <p className={conversation.eventLine}>
+        <FoldableLine className={conversation.eventLine} open={open} onToggle={() => setOpen(!open)} label={`${displayName(entry.owner)} ${checkinsText(entry)}`}>
           <Avatar user={entry.owner} size={18} />
           <span className={conversation.author}>{displayName(entry.owner)}</span>
-          <button type="button" className={styles.checkinsToggle} aria-expanded={open} onClick={() => setOpen(!open)}>
-            {checkinsText(entry)}
-            <ChevronRight size={13} className={styles.chevron} aria-hidden />
-          </button>
+          {checkinsText(entry)}
           <RelativeTime date={entry.changesets.at(-1)!.date} />
-        </p>
+        </FoldableLine>
         {open && (
           <ul className={styles.checkins}>
             {shown.map((changeset) => (
@@ -45,7 +44,10 @@ export function CheckinsRow({ entry, onOpenChangeset }: { entry: CheckinsEntry; 
                     <ChangesetIcon size={13} strokeWidth={2.25} aria-hidden />
                     {changeset.id}
                   </span>
-                  <span className={styles.checkinComment}>{checkinCommentText(changeset)}</span>
+                  {/* Its references as chips, as a row's first line shows them; no links: the line is the button. */}
+                  <span className={styles.checkinComment}>
+                    <CommentLine comment={changeset.comment} interactive={false} placeholder="No comment" />
+                  </span>
                 </button>
               </li>
             ))}

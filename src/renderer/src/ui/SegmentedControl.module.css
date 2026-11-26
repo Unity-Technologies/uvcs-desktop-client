@@ -60,3 +60,15 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-regular);
 }
+
+/* Dense: the toolbar's track and raised segment, lower, for a header as tight as a code box's (a suggestion's). */
+.control[data-dense] {
+  padding: 2px;
+}
+
+.control[data-dense] > .segment {
+  gap: 3px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+}

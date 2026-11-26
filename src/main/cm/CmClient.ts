@@ -58,13 +58,15 @@ export interface CmRunOptions {
 interface Placed {
   cwd: string;
   givenCwd: string | undefined;
+  /** Asked with `execute` or `executeRecords`: an operation, long or cancellable, that a hold won't wait for (`hold`). */
+  operation?: boolean;
 }
 
 /** How a command whose list is streamed runs: as any other, but with no output lines to report. */
 export type CmRecordsOptions = Omit<CmRunOptions, 'onOutputLine'>;
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
-type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll' | 'restartSessions'>;
+type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll' | 'restartSessions' | 'endSessions' | 'warmUpShown'>;
 
 /** What `CmClient` runs commands with: a process of their own, and pooled `cm shell` sessions. Tests pass fakes. */
 export interface CmRunners {
@@ -119,6 +121,12 @@ export class CmClient {
   private readonly startListeners = new Set<CommandStartedListener>();
   private nextCommandId = 1;
   private signInGate: SignInGate | null = null;
+  /** While the installed `cm` is updated (`hold`): what waits to start, and how many holds are still on. */
+  private held: { holds: number; resumed: Promise<void>; resume: () => void; deferred: (() => void)[] } | null = null;
+  /** The commands running, in a shell or a process, until each ends: what a hold lets end first (`hold`). */
+  private readonly running = new Set<Promise<unknown>>();
+  /** The operations among them (`execute`, `executeRecords`), which may run for minutes, or never end: no hold waits for one. */
+  private readonly runningOperations = new Set<Promise<unknown>>();
 
   /**
    * `locate` finds the `cm` executable; it runs again on `relocate()`. `outsideWorkspaces` is an empty folder of the
@@ -139,10 +147,17 @@ export class CmClient {
     return this.cmPath;
   }
 
-  /** Looks for `cm` again, e.g. after the user installed it while the app was running. */
-  relocate(): void {
+  /**
+   * Looks for `cm` again, e.g. after the user installed it while the app was running. `replaced`: the `cm` at the same
+   * path was replaced by a newer one (updated outside the app): its sessions, which still run the one it replaced, start
+   * again as they finish their commands (`restartShells`).
+   */
+  relocate({ replaced = false }: { replaced?: boolean } = {}): void {
     const cmPath = this.locate();
-    if (cmPath === this.cmPath) return;
+    if (cmPath === this.cmPath) {
+      if (replaced) this.shellPool.restartSessions();
+      return;
+    }
     this.shellPool.disposeAll();
     this.cmPath = cmPath;
     this.shellPool = this.runners.createShellPool(cmPath);
@@ -196,7 +211,7 @@ export class CmClient {
 
   /** Runs a long or cancellable command in its own process, streaming its output lines; its text as `query`'s. */
   execute(args: string[], options: CmRunOptions = {}): Promise<string> {
-    return this.runText(args, this.placed(options), () => false);
+    return this.runText(args, { ...this.placed(options), operation: true }, () => false);
   }
 
   /**
@@ -207,12 +222,12 @@ export class CmClient {
   async queryRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
     refuseStickyShellOptions(args);
     const placed = this.placed(options);
-    return this.runStreamed(args, new RecordReader(readRecord), placed, this.runsInPooledShell(args, placed));
+    return this.runStreamed(args, new RecordReader(readRecord), placed, () => this.runsInPooledShell(args, placed));
   }
 
   /** Runs a long or cancellable command that prints `--format` records in its own process, reading them as `queryRecords` does. */
   executeRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
-    return this.runStreamed(args, new RecordReader(readRecord), this.placed(options), false);
+    return this.runStreamed(args, new RecordReader(readRecord), { ...this.placed(options), operation: true }, () => false);
   }
 
   /**
@@ -223,7 +238,7 @@ export class CmClient {
   async queryXmlElements<T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions = {}): Promise<T[]> {
     refuseStickyShellOptions(args);
     const placed = this.placed(options);
-    return this.runStreamed(args, new XmlElementReader(element, readElement), placed, this.runsInPooledShell(args, placed));
+    return this.runStreamed(args, new XmlElementReader(element, readElement), placed, () => this.runsInPooledShell(args, placed));
   }
 
   /**
@@ -233,12 +248,12 @@ export class CmClient {
   async queryLines<T>(args: string[], readLine: ReadLine<T>, options: CmRecordsOptions = {}): Promise<T[]> {
     refuseStickyShellOptions(args);
     const placed = this.placed(options);
-    return this.runStreamed(args, new LineReader(readLine), placed, this.runsInPooledShell(args, placed));
+    return this.runStreamed(args, new LineReader(readLine), placed, () => this.runsInPooledShell(args, placed));
   }
 
   /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */
   warmUp(cwd = homedir()): void {
-    this.shellPool.warmUp(cwd);
+    this.unlessHeld(() => this.shellPool.warmUp(cwd));
   }
 
   /**
@@ -247,7 +262,7 @@ export class CmClient {
    * launch whose page finds it broken or missing is never watched, so it never holds them.
    */
   show(cwd: string): void {
-    this.shellPool.show(cwd);
+    this.unlessHeld(() => this.shellPool.show(cwd));
   }
 
   /**
@@ -256,7 +271,7 @@ export class CmClient {
    * For `OPENING_SHOW_MS` at most: a workspace the page finds broken or missing is never watched.
    */
   showWhileOpening(cwd: string): void {
-    this.shellPool.show(cwd, { forMs: OPENING_SHOW_MS });
+    this.unlessHeld(() => this.shellPool.show(cwd, { forMs: OPENING_SHOW_MS }));
   }
 
   /** Ends the `cm shell` sessions of a working directory no window shows anymore (each holds tens of MB). */
@@ -266,6 +281,100 @@ export class CmClient {
 
   dispose(): void {
     this.shellPool.disposeAll();
+  }
+
+  /**
+   * Holds every command while the installed `cm` is updated (docs/features/cm-runtime.md "Updating the installed
+   * one"). From now on no command starts a process or a shell; the commands already running end first, in a shell or a
+   * process of their own, along with those queued for a shell, and then the shells end, as they hold `cm`'s files open
+   * and the Windows installer stops while `cm` runs. Settles once their processes exited, with the function that resumes commands: what was
+   * asked meanwhile runs on the `cm` the update left, and the shells of the directories windows show start again. A
+   * command its caller cancels while it waits never runs. Holds add up: commands run once every one is resumed.
+   *
+   * While an operation runs (`execute`), it holds nothing and settles with null at once: an operation may run for
+   * minutes, or be stuck, and the update would freeze behind it. Shell commands are waited for: each has a timeout.
+   */
+  async hold(): Promise<(() => void) | null> {
+    if (this.runningOperations.size > 0) return null;
+    if (!this.held) {
+      let resume = (): void => undefined;
+      const resumed = new Promise<void>((resolve) => (resume = resolve));
+      this.held = { holds: 0, resumed, resume, deferred: [] };
+    }
+    const held = this.held;
+    held.holds++;
+    let resumedOnce = false;
+    const resume = (): void => {
+      if (resumedOnce) return;
+      resumedOnce = true;
+      if (--held.holds > 0) return;
+      this.held = null;
+      this.shellPool.warmUpShown();
+      held.deferred.forEach((start) => start());
+      held.resume();
+    };
+    await this.commandsEnded();
+    await this.shellPool.endSessions();
+    return resume;
+  }
+
+  /** Settles once no command runs: those running when asked, and any that started while they did. */
+  private async commandsEnded(): Promise<void> {
+    while (this.running.size > 0) await Promise.allSettled([...this.running]);
+  }
+
+  /** Counts a command as running until it ends (`commandsEnded`), and an operation among the operations (`hold`). */
+  private track(finished: Promise<unknown>, operation: boolean): void {
+    this.running.add(finished);
+    if (operation) this.runningOperations.add(finished);
+    const ended = (): void => {
+      this.running.delete(finished);
+      this.runningOperations.delete(finished);
+    };
+    finished.then(ended, ended);
+  }
+
+  /** Starts sessions now, or once the hold ends (`hold`). */
+  private unlessHeld(start: () => void): void {
+    if (this.held) this.held.deferred.push(start);
+    else start();
+  }
+
+  /**
+   * Settles once no hold is on (`hold`), checked again as it resumes: a hold may have started in the same turn. A
+   * command its caller cancels meanwhile fails as it would running; one whose time ran out (`gaveUpWaiting`) fails as a
+   * shell command's timeout does, logged, never with the signal's bare reason.
+   */
+  private async waitWhileHeld(args: string[], cwd: string, signal: AbortSignal | undefined): Promise<void> {
+    const startedAt = Date.now();
+    try {
+      while (this.held) await this.notHeld(signal);
+    } catch (error) {
+      if (!signal || !gaveUpWaiting(signal)) throw error;
+      const stopped = new Error('The cm command took too long and was stopped.', { cause: error });
+      this.log(args, cwd, startedAt, endedWithoutExitCode(stopped), false);
+      throw stopped;
+    }
+  }
+
+  /** Settles once no hold is on (`hold`); fails as the command would if its caller cancels it meanwhile. */
+  private async notHeld(signal: AbortSignal | undefined): Promise<void> {
+    while (this.held) {
+      const { resumed } = this.held;
+      if (!signal) {
+        await resumed;
+        continue;
+      }
+      signal.throwIfAborted();
+      await new Promise<void>((resolve, reject) => {
+        const cancelled = (): void => reject(signal.reason);
+        signal.addEventListener('abort', cancelled, { once: true });
+        void resumed.then(() => {
+          signal.removeEventListener('abort', cancelled);
+          resolve();
+        });
+      });
+    }
   }
 
   /** The options with the directory the command runs in (`directoryOf`), and the one it was given, if any. */
@@ -309,25 +418,28 @@ export class CmClient {
    */
   private async runText(args: string[], options: CmRunOptions & Placed, useShell: () => boolean): Promise<string> {
     const reading: OutputReading = { text: textLimitOf(textOutputKind(args)) };
-    return this.run(args, options, useShell(), reading);
+    return this.run(args, options, useShell, reading);
   }
 
   /**
    * Runs the command with its stdout read by `reader` as it arrives. What it printed besides (its stderr, text after
    * the last item) is its output, which explains its failure and is no item.
    */
-  private async runStreamed<T>(args: string[], reader: StreamReader & { finish(): T[] }, options: CmRecordsOptions & Placed, useShell: boolean): Promise<T[]> {
+  private async runStreamed<T>(args: string[], reader: StreamReader & { finish(): T[] }, options: CmRecordsOptions & Placed, useShell: () => boolean): Promise<T[]> {
     await this.run(args, options, useShell, { stream: reader });
     return reader.finish();
   }
 
   /**
    * Runs `cm <args>`, logs it and fails on an exit code other than 0; its output read as `reading` says. A server command
-   * to a server that needs a sign-in doesn't run, and a sign-in problem it runs into fails as one (`SignInGate`).
+   * to a server that needs a sign-in doesn't run, and a sign-in problem it runs into fails as one (`SignInGate`). It
+   * waits while the installed `cm` is updated (`hold`); only then is `inShell` asked, as it may warm sessions up.
    */
-  private async run(requested: string[], options: CmRunOptions & Placed, useShell: boolean, reading: OutputReading): Promise<string> {
+  private async run(requested: string[], options: CmRunOptions & Placed, inShell: () => boolean, reading: OutputReading): Promise<string> {
     const { cwd } = options;
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
+    await this.waitWhileHeld(args, cwd, options.signal);
+    const useShell = inShell();
     const gate = this.signInGate && !this.signInGate.passes(args) ? this.signInGate : null;
     // Only a folder the command was given tells its workspace: one run in any directory (`anyDirectory`) runs in the
     // shown workspace's by chance, and may be about another (a glance at another workspace's header).
@@ -344,6 +456,7 @@ export class CmClient {
       return this.signInFailure(gate, server ?? learned, startedAt, useShell, entry);
     };
     const finished = useShell ? this.shellPool.run(cwd, args, reading) : this.runProcess(args, cwd, options, reading);
+    this.track(finished, options.operation === true);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
     const result = await finished.catch(async (error: unknown) => {

@@ -52,13 +52,15 @@ bundle, and the main module evaluates it in about 7 ms that the first window wou
   version left. The releases never stage, so nothing is lost; a staged rollout would need
   another way to pick its users. Downloads send no id either, the unsigned-macOS installer's included
   (`downloadInstaller` fetches the bare URL).
-- **Download**: an update found downloads by itself, with the `cm` it runs when that's another one
-  (docs/features/cm-runtime.md "Updates bring their cm"), then waits (`ready`). A check while one is under way or
+- **Download**: an update found downloads by itself, with the `cm` it runs when that's another one, or the installer of
+  the installed Unity Version Control when the update needs a newer one (docs/features/cm-runtime.md "Updates bring
+  their cm"), then waits (`ready`). A check while one is under way or
   ready checks nothing and tells where it stands.
 - **Install**: "Restart & Install" quits into it (Windows runs the installer silently, per user, and starts the app
   again); quitting the app installs it too (`autoInstallOnAppQuit`). Asked while an operation changes a workspace
-  (`writesRunning`: an update, a checkin…), it waits for it to finish (`waitingToInstall`: the card and About say so,
-  with nothing to press) rather than kill its `cm` partway; quitting asks the same. The app comes back with every
+  (`writesRunning`: an update, a checkin…), it waits for it to finish (`waitingToInstall`, `waitingFor: 'operation'`:
+  the card and About say so, with nothing to press) rather than kill its `cm` partway; quitting asks the same. Then the
+  installed Unity Version Control's installer runs first when the update brought one (`waitingFor: 'installedCm'`). The app comes back with every
   window where it was, each on the view it showed (`beforeRestart`; ARCHITECTURE.md "Windows").
 - **Unsigned macOS builds**: Squirrel.Mac, which electron-updater installs through on macOS, rejects any build without a
   Developer ID signature ("code failed to satisfy specified code requirement(s)"). Once an update is found,
@@ -165,7 +167,7 @@ renderer is untrusted and must never run markup from the network.
 
 **Seeing it while developing**: an unpackaged app has no feed, so What's New never opens. `UVCS_PREVIEW_UPDATE=<file>`
 (`previewUpdateFile`, `previewUpdateFeed`; ignored by a packaged app, and when blank) makes it find the update a JSON
-file describes, ready at once and never installed (installing it only logs a warning, and quitting stays a plain quit): `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }] }`, each note the HTML GitHub
+file describes, ready at once and never installed (installing it only logs a warning, and quitting stays a plain quit): `{ "version", "releaseDate", "releaseNotes": [{ "version", "note" }], "cmVersion" }`, the last optional, the `cm` version it pins (docs/features/cm-runtime.md "Updates bring their cm"), each note the HTML GitHub
 renders (`gh api repos/<owner>/<repo>/releases/latest -H "Accept: application/vnd.github.html+json" --jq .body_html`,
 or `gh api markdown -f mode=gfm -F text=@notes.md` for notes not published yet). Start it with `npm run app:debug`; the
 update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
@@ -281,21 +283,30 @@ update card shows after the first check, `FIRST_CHECK_DELAY_MS` after launch.
 
 A pull request joins main through GitHub's merge queue (`gh pr merge --auto --merge`, or "Merge when ready"): once
 its own CI passes, the queue builds a merge commit of main, the pull requests queued ahead of it and this one, runs the
-required checks (the four `ci.yml` jobs, and the Release note check, which skips itself there: it read the pull
+required checks (`ci.yml`'s CI result, and the Release note check, which skips itself there: it read the pull
 request's note already) on it, and merges it only if they pass; if they fail, the pull request leaves
 the queue and main is untouched. So no one updates a branch by hand, and main always passes. Each pull request runs CI
 twice, on its own and in the queue: at about 4 minutes a run, splitting a lighter pull-request CI from a full queue
 CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger of both workflows,
 without which nothing merges.
 
+Of `ci.yml`, branch protection requires one check, CI result (the `ci-result` job), never the jobs themselves: it
+fails unless every other job passed, so adding or renaming a job needs no change to the protection rules, and no job
+can fail while the queue merges. It runs with `if: always()`, because a job skipped after a failure counts as passed
+for a required check. `scripts/build/ciResultGate.test.ts` checks it waits for every job.
+
 `.github/workflows/ci.yml` runs on every push to main, every pull request and every merge-queue entry: the tests and the build on macOS
-arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test (`npm run e2e`) inside the
-macOS and Windows x64 jobs. The shared install step (`.github/actions/install`) pins Node, restores `node_modules` from
+arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test on macOS and Windows x64,
+in four jobs of their own (`npm run e2e:development`, `npm run e2e:production`) beside the tests rather than after them:
+in one job, the tests then both smoke runs took about 6 minutes on macOS. The jobs share their disk setup
+(`.github/actions/build-on-local-ssd`, `.github/actions/temp-in-memory`) and their install (`.github/actions/install`), which pins Node, restores `node_modules` from
 the last install of the same lockfile (`reuse-node-modules`, CI only: releases install clean), or else caches npm's and
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
 Drive and builds there (`BUILD_DIR`). On macOS the temp folder is a disk in memory: the runner's own disk now and
 then holds writes for seconds, which timed out tests writing a temp file. A failed smoke test keeps its screenshots,
-written in that temp folder, as the job's artifact `smoke-screenshots-<job>`. How fast the tests run on CI's 2-CPU
+written in that temp folder, as the job's artifact `smoke-screenshots-<platform>-<build>`. Splitting the unit tests across
+two jobs per Windows runner (`vitest --shard`) was rejected: every job pays the setup again (about 95 s on Windows
+arm64), so four more runners would have cut CI by about 40 s. How fast the tests run on CI's 2-CPU
 runners, and why: `vitest.config.ts`.
 
 CI's runners are slow and uneven: a test runs up to ten times slower there than on a laptop, and several times slower

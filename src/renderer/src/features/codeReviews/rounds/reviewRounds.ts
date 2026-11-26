@@ -356,7 +356,8 @@ export interface StepGroup {
 }
 
 /**
- * The settled threads on lines (applied, answered, discarded) "How it was applied" steps through, part by part of the
+ * The settled threads on lines (applied, answered, discarded) "How it was applied" steps through (an image's have no
+ * "How it was applied" yet), part by part of the
  * conversation, each in the order it shows them: a closed round's; after every round, those under the "New since last
  * review" line for a reviewer, by when each settled, or those after the last round for anyone else. Stepping stays in
  * the part the reviewer is reading: a round closed long ago doesn't mix with what they came back to check.
