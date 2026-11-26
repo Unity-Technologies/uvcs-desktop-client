@@ -2,7 +2,6 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { IssueTrackerStore } from './IssueTrackerStore';
 
@@ -46,15 +45,25 @@ describe('IssueTrackerStore', () => {
   });
 
   it('drops a binding kept by spec when the GUID has one of its own, and leaves every other repository’s', () => {
-    const store = new IssueTrackerStore(join(folder(), 'issue-trackers.json'));
-    store.saveConnection(connection);
-    store.bind({ repository: 'game@acme@unity' as RepositoryGuid, connectionId: 'c1', projects: ['acme/old'] });
+    const path = join(folder(), 'issue-trackers.json');
+    writeFileSync(path, JSON.stringify({ connections: [connection], bindings: [{ repository: 'game@acme@unity', connectionId: 'c1', projects: ['acme/old'] }] }));
+    const store = new IssueTrackerStore(path);
     store.bind({ repository: GAME, connectionId: 'c1', projects: ['acme/game'] });
     store.bind({ repository: TOOLS, connectionId: 'c1', projects: ['acme/tools'] });
 
     store.keepRepositoryByGuid('game@acme@unity', GAME);
 
     expect(store.bindings().map((binding) => binding.projects)).toEqual([['acme/game'], ['acme/tools']]);
+    expect(store.bindingsKeptBySpec()).toEqual([]);
+  });
+
+  it('holds a binding still kept by spec apart from those kept by GUID, until its GUID is known', () => {
+    const path = join(folder(), 'issue-trackers.json');
+    writeFileSync(path, JSON.stringify({ connections: [connection], bindings: [{ repository: 'game@acme@unity', connectionId: 'c1', projects: ['acme/old'] }, { repository: TOOLS, connectionId: 'c1', projects: ['acme/tools'] }] }));
+    const store = new IssueTrackerStore(path);
+
+    expect(store.bindings()).toEqual([{ repository: TOOLS, connectionId: 'c1', projects: ['acme/tools'] }]);
+    expect(store.bindingsKeptBySpec()).toEqual([{ repository: 'game@acme@unity', connectionId: 'c1', projects: ['acme/old'] }]);
   });
 
   it('starts empty from a file it can’t read', () => {
