@@ -8,7 +8,7 @@
 import { isFavoriteOrganization, withFavoriteOrganization } from '@shared/domain/favoriteOrganizations';
 import { isUnityOrganization } from '@shared/domain/organizations';
 import { serverKey } from '@shared/domain/repository';
-import { serverSettingsOf } from '@shared/domain/scopedSettings';
+import { serverSettingsOf, type ServerSettingsByKey } from '@shared/domain/scopedSettings';
 import type { AppSettings } from '@shared/domain/settings';
 import type { OrganizationId } from '@shared/domain/stableIds';
 
@@ -50,6 +50,19 @@ export function organizationsFollowed(kept: OrganizationsKept, ids: ReadonlyMap<
   return changed ? { favoriteOrganizations, serverSettings } : null;
 }
 
+/**
+ * Every server's settings, the server's id forgotten once it keeps nothing else (no favorite, no setting): recorded
+ * only to follow what an organization keeps, it would otherwise outlive it, and a scope left with nothing is dropped.
+ */
+export function withoutIdAlone(kept: OrganizationsKept, server: string): ServerSettingsByKey {
+  const key = serverKey(server);
+  if (kept.serverSettings[key]?.organizationId === undefined || keepsSomething(kept, server)) return kept.serverSettings;
+  const { [key]: _forgotten, ...others } = kept.serverSettings;
+  return others;
+}
+
+/** Whether the organization keeps anything: a favorite or a setting, its recorded id aside. */
 function keepsSomething(kept: OrganizationsKept, server: string): boolean {
-  return isFavoriteOrganization(kept.favoriteOrganizations, server) || Object.keys(serverSettingsOf(kept.serverSettings, server)).length > 0;
+  const { organizationId: _id, ...settings } = serverSettingsOf(kept.serverSettings, server);
+  return isFavoriteOrganization(kept.favoriteOrganizations, server) || Object.keys(settings).length > 0;
 }
