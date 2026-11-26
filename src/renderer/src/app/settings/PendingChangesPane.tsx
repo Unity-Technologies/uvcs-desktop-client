@@ -1,6 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
-import { setReviewMode, useReviewModeOn } from '../../features/review/reviewModeSetting';
+import { ReviewModeCheckbox } from './ReviewModeCheckbox';
 import { Checkbox } from '../../ui/Checkbox';
 import { PercentSlider } from '../../ui/PercentSlider';
 import { useSession } from '../workspace/sessionStore';
@@ -47,16 +46,5 @@ export function PendingChangesPane() {
         />
       </SettingsGroup>
     </>
-  );
-}
-
-function ReviewModeCheckbox({ workspacePath }: { workspacePath: string }) {
-  const place = workspacePlace(workspacePath);
-  return (
-    <Checkbox
-      label="Review mode in this workspace: mark files as you review them, in Changes and every diff (R)"
-      checked={useReviewModeOn(place)}
-      onChange={(on) => void setReviewMode(place, on)}
-    />
   );
 }
