@@ -36,7 +36,7 @@ renames"). It is the workspace's by its GUID, and what a rename changed is writt
   is its own number, a branch is the one the window already read (`workspaceSpot`, `LeftChangesApi.find`'s `branch`)
   or, on arrival from a switch, one a list read lately under the workspace's branch name (`BranchNamesCache.knownName`).
   Ids are per repository, so those names go when the workspace's header names another repository than before
-  (`tellingRepositoryChanges`).
+  (`tellingRepositoryChanges`), and a list read under way then keeps none (`readStarts`).
 - **How its shelve is found**: by the shelve's GUID (`shelveGuid`), learned the first time `cm find shelve` lists it,
   whatever the repository is called now (`shelveOf`); until then by its number, in the repository the record names
   only. A number and an automatic comment alike in another repository are no sign of the same shelve: numbers and

@@ -15,9 +15,10 @@ export function createBranchesService({ cm, settings, headers }: ServiceContext,
   async function find(place: Place, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
     const at = cmPlace(place);
     const args = findArgs(FOUND_BRANCHES, { ...filter, branch: undefined }, 'date desc', conditions, at.repository);
+    const readSince = branchNames.readStarts(place);
     const branches = await cm.queryRecords(args, layoutReader(FOUND_BRANCHES), at.options);
     // The code review chips name branches by id: this list answers them.
-    branchNames.remember(place, branches);
+    branchNames.remember(place, branches, { readSince });
     return branches;
   }
 

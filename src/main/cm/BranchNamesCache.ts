@@ -16,6 +16,8 @@ export class BranchNamesCache {
   private readonly entries = new Map<string, Map<number, { name: string; readAt: number }>>();
   private readonly completeAt = new Map<string, number>();
   private readonly reading = new Map<string, Promise<ReadonlyMap<number, string>>>();
+  /** By place: how many times it was forgotten, so a read that started before keeps nothing (`readStarts`). */
+  private readonly forgotten = new Map<string, number>();
 
   /**
    * `isShown`: whether some window shows the place (`isShown` in `watchShownWorkspaces`). Names are kept only then: a
@@ -27,9 +29,22 @@ export class BranchNamesCache {
     private readonly isShown: (place: Place) => boolean = () => true,
   ) {}
 
-  /** Names read along with something else (a branch list); `complete` when it holds every branch, hidden ones too. */
-  remember(place: Place, branches: readonly BranchName[], { complete = false } = {}): void {
+  /**
+   * Where the place stands as a read of its branches starts, for `remember`: names read while the place was forgotten
+   * (its window closed, its workspace switched to another repository, whose ids are others') are kept by no one.
+   */
+  readStarts(place: Place): number {
+    return this.forgotten.get(placeId(place)) ?? 0;
+  }
+
+  /**
+   * Names read along with something else (a branch list); `complete` when it holds every branch, hidden ones too.
+   * `readSince`: `readStarts` as the read started, when it read the server; names it read are kept only if the place
+   * wasn't forgotten meanwhile.
+   */
+  remember(place: Place, branches: readonly BranchName[], { complete = false, readSince }: { complete?: boolean; readSince?: number } = {}): void {
     if (!this.isShown(place)) return;
+    if (readSince !== undefined && readSince !== this.readStarts(place)) return;
     const key = placeId(place);
     const readAt = this.now();
     let entries = this.entries.get(key);
@@ -61,6 +76,7 @@ export class BranchNamesCache {
    */
   forget(place: Place): void {
     const key = placeId(place);
+    this.forgotten.set(key, this.readStarts(place) + 1);
     this.entries.delete(key);
     this.completeAt.delete(key);
     this.reading.delete(key);
@@ -83,9 +99,10 @@ export class BranchNamesCache {
   private async readUnknown(place: Place, unknown: number[]): Promise<ReadonlyMap<number, string>> {
     const [id] = unknown;
     if (unknown.length > 1 || id === undefined || this.reading.has(placeId(place))) return this.readEvery(place);
+    const readSince = this.readStarts(place);
     const branch = await this.reads.one(place, id);
     if (!branch) return new Map();
-    this.remember(place, [branch]);
+    this.remember(place, [branch], { readSince });
     return new Map([[branch.id, branch.name]]);
   }
 
