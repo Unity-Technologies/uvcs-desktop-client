@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { parseRepositoryGuid } from '@shared/domain/stableIds';
 import { listRepositories } from './listRepositories';
 import { RepositoryGuids } from './RepositoryGuids';
 import { cmFails, fakeCmClient, type CmAnswer } from './testing/fakeCmClient';
 import { formatOutput } from './testing/cmOutput';
 
-const GAME = '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
-const TOOLS = '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61';
+const GAME = parseRepositoryGuid('0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d')!;
+const TOOLS = parseRepositoryGuid('5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61')!;
 
 /** `cm repository list` of acme@cloud as it prints it: id, name, server, owner, type, GUID. */
 function listed(...repositories: [name: string, guid: string][]): string {
@@ -138,5 +139,15 @@ describe('RepositoryGuids', () => {
 
     expect(guids.knownGuidOf('ACME@cloud', 'Game')).toBe(GAME);
     expect(lines()).toHaveLength(1);
+  });
+
+  it('lists the server again for a repository created here, however recent the last listing', async () => {
+    const { guids, lines } = guidsOf(listed(['game', GAME]), listed(['game', GAME], ['tools', TOOLS]));
+    await guids.list('acme@cloud');
+
+    guids.added('acme@cloud');
+
+    expect(await guids.guidOf('acme@cloud', 'tools')).toBe(TOOLS);
+    expect(lines()).toHaveLength(2);
   });
 });

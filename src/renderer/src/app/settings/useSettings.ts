@@ -5,6 +5,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
+import { repositoryGuidToWrite } from '../workspace/repositoryGuid';
 
 export const settingsQuery = queryOptions({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
 
@@ -54,12 +55,14 @@ export async function rememberRecentWorkspace(workspacePath: string): Promise<vo
 }
 
 /**
- * Puts a check-in's comment first among its repository's recent ones. The main process changes the list, so a window
- * checking in to another repository meanwhile keeps its own. A store that can't save it says so.
+ * Puts a check-in's comment first among its repository's (a spec) recent ones, kept by the repository's GUID. The main
+ * process changes the list, so a window checking in to another repository meanwhile keeps its own. A store that can't
+ * save it, or a GUID that can't be read, says so.
  */
 export async function rememberRecentComment(repository: string, comment: string): Promise<void> {
   try {
-    queryClient.setQueryData(queryKeys.settings, await api.settings.rememberRecentComment(repository, comment));
+    const guid = await repositoryGuidToWrite(repository);
+    queryClient.setQueryData(queryKeys.settings, await api.settings.rememberRecentComment(guid, comment));
   } catch (error) {
     toast.error("Couldn't save the settings", error);
   }

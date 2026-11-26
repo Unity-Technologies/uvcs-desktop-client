@@ -68,6 +68,15 @@ export function repositoryKey(repositorySpec: string): string {
 }
 
 /**
+ * A repository spec's name and server (`game@acme@unity` → `game`, `acme@unity`): its name holds no `@`, so the server
+ * is everything after the first one. None for a spec that names no server.
+ */
+export function repositorySpecParts(repositorySpec: string): { name: string; server: string } | undefined {
+  const at = repositorySpec.indexOf('@');
+  return at <= 0 || at === repositorySpec.length - 1 ? undefined : { name: repositorySpec.slice(0, at), server: repositorySpec.slice(at + 1) };
+}
+
+/**
  * Whether an item of `repository` is in the place's (a workspace's, or a repository explored without one): undefined
  * while the place's isn't known yet, so a caller doesn't act on an xlinked repository's item meanwhile (list the wrong
  * tree, restore the wrong revision).

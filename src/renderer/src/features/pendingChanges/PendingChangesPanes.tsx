@@ -15,6 +15,7 @@ import { FileTreeFoldingContext } from '../../components/fileTreeFolding';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
+import { useRepositoryGuid } from '../../app/workspace/repositoryGuid';
 import { branchWorkedOn } from '../../components/workingObject';
 import { singleSelection } from '../../lib/selection';
 import { shownRowsOf, withMetas } from '../../lib/unityMetaPairs';
@@ -95,6 +96,7 @@ const LIST_WIDTH_KEY = 'pendingChangesList';
 export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothingPending, review, readAt }: PendingChangesPanesProps) {
   const incomingSummary = useKnownIncomingSummary();
   const settings = useSettings();
+  const repositoryGuid = useRepositoryGuid(workspace?.repository);
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
   const layout = useFileListViewStore((state) => state.layout);
   const groupByStatus = useFileListViewStore((state) => state.groupByStatus);
@@ -337,7 +339,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               behindDescription={behind && behindDescription(behind)}
               preparedChangelistNote={preparedNote}
               allReviewed={allReviewed}
-              recentComments={recentCommentsFor(settings, workspace?.repository)}
+              recentComments={recentCommentsFor(settings, repositoryGuid)}
               mode={checkinMode}
               onModeChange={setCheckinMode}
               busy={submit.busy}

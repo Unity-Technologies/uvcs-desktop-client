@@ -30,7 +30,7 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   pendingChanges: 'namesNoObject',
   warnOnEmptyComment: 'namesNoObject',
   recentComments: 'namesNoObject',
-  recentCommentsByRepository: { byName: 'Not yet: kept by the repository’s spec.' },
+  recentCommentsByRepository: 'repositoryGuid',
   autoRefresh: 'namesNoObject',
   cmChoice: 'namesNoObject',
   cmDeclinedUpdateFor: 'namesNoObject',
@@ -45,7 +45,7 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   notifyOnIncoming: 'namesNoObject',
   homeAccount: { byName: 'A Unity account is the user cm signs in with, a server account its server: cm has no other id for either.' },
   favoriteOrganizations: { byName: 'Not yet: by the organization’s name.' },
-  repositorySettings: { byName: 'Not yet: kept by the repository’s spec.' },
+  repositorySettings: 'repositoryGuid',
   serverSettings: { byName: 'Not yet: by the organization’s name; a server of its own is its address, which has no other id.' },
   changesetColors: { byName: 'cm prints no id for a user, only the owner of what they made.' },
   mergeTool: 'namesNoObject',
@@ -72,6 +72,7 @@ export const REPOSITORY_SETTINGS_IDENTITY: { readonly [Setting in keyof Required
   changesetColorsOff: 'namesNoObject',
   branchPins: { byIdIn: 'repository', because: 'The Branch Explorer draws branches by their number, which a rename keeps.' },
   syncRemote: { byName: 'Not yet: the remote repository by its spec.' },
+  syncRemoteGuid: 'repositoryGuid',
 };
 
 export const SERVER_SETTINGS_IDENTITY: { readonly [Setting in keyof Required<ServerSettings>]: SettingIdentity } = {

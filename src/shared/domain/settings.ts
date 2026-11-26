@@ -44,8 +44,9 @@ export interface AppSettings {
    */
   recentComments: string[];
   /**
-   * Recent check-in comments of each repository, newest first, by `repositoryKey`; the repository checked in to last
-   * comes first (`withRecentComment`).
+   * Recent check-in comments of each repository, newest first, by its GUID (those kept before by its spec, under its
+   * `repositoryKey`, until its GUID is known: `withRecentCommentsKeptByGuid`); the repository checked in to last comes
+   * first (`withRecentComment`).
    */
   recentCommentsByRepository: Record<string, string[]>;
   /** Automatically refresh pending changes when files change on disk. */
@@ -97,7 +98,8 @@ export interface AppSettings {
   favoriteOrganizations: string[];
   /**
    * What the user built up or chose in each repository (Branch Explorer rules and moved branches, the sync remote), by
-   * `repositoryKey`, changed one repository at a time by the main process (`updateRepositorySettings`).
+   * its GUID (`RepositorySettingsByKey`), changed one repository at a time by the main process
+   * (`updateRepositorySettings`).
    */
   repositorySettings: Record<string, RepositorySettings>;
   /** What the user chose for each server (the home screen's project), by `serverKey`, changed one at a time (`updateServerSettings`). */

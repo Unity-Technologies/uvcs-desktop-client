@@ -115,24 +115,24 @@ export function useBranchPins(repository: string | undefined): BranchPins {
   return branchPinsOf(useRepositorySettings(repository));
 }
 
-export function setExplorerRules(repository: string, rules: ExplorerRule[]): void {
-  void updateRepositorySettings(repository, { explorerRules: rules });
+export function setExplorerRules(repository: string, rules: ExplorerRule[]): Promise<void> {
+  return updateRepositorySettings(repository, { explorerRules: rules });
 }
 
-export function setExplorerRulesOn(repository: string, on: boolean): void {
-  void updateRepositorySettings(repository, { explorerRulesOff: !on });
+export function setExplorerRulesOn(repository: string, on: boolean): Promise<void> {
+  return updateRepositorySettings(repository, { explorerRulesOff: !on });
 }
 
 export function setUserColors(colors: UserColors): void {
   void saveSettings({ changesetColors: colors });
 }
 
-export function setUserColorsOn(repository: string, on: boolean): void {
-  void updateRepositorySettings(repository, { changesetColorsOff: !on });
+export function setUserColorsOn(repository: string, on: boolean): Promise<void> {
+  return updateRepositorySettings(repository, { changesetColorsOff: !on });
 }
 
-export function setBranchPins(repository: string, pins: BranchPins): void {
-  void updateRepositorySettings(repository, { branchPins: [...pins] });
+export function setBranchPins(repository: string, pins: BranchPins): Promise<void> {
+  return updateRepositorySettings(repository, { branchPins: [...pins] });
 }
 
 /** The display options alone, the same object until one of them changes. */

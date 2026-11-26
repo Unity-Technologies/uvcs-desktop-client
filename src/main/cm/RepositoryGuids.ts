@@ -79,6 +79,15 @@ export class RepositoryGuids {
     return this.byServer.get(key)?.names.get(guid);
   }
 
+  /**
+   * A repository was created or restored on `server` here: the next lookup of a name no listing taught lists the server
+   * again, however recent the last listing, so the repository just made is found.
+   */
+  added(server: string): void {
+    const known = this.byServer.get(serverKey(server));
+    if (known) known.listedAt = Number.NEGATIVE_INFINITY;
+  }
+
   /** A repository renamed here keeps its GUID under its new name at once, without listing its server again. */
   renamed(server: string, from: string, to: string): void {
     const known = this.byServer.get(serverKey(server));

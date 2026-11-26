@@ -1,4 +1,11 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseRepositoryGuid } from '@shared/domain/stableIds';
+import { listRepositories } from '../cm/listRepositories';
+import { RepositoryGuids } from '../cm/RepositoryGuids';
+import { SettingsStore } from '../settings/SettingsStore';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -167,5 +174,84 @@ describe('repositories', () => {
 
     expect(await context.repositoryGuids.guidOf('acme@cloud', 'build-tools')).toBe('5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61');
     expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), 'repository rename tools@acme@cloud build-tools']);
+  });
+});
+
+describe('guidOf', () => {
+  const GAME = parseRepositoryGuid('0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d')!;
+  const listed = (name: string) => formatOutput(['2', name, 'acme@cloud', 'ana', 'VCS', GAME]);
+
+  /** The server's listing is each one in turn, then the last again; the clock moves only when the test says. */
+  function lookups(...listings: string[]) {
+    let calls = 0;
+    const fake = fakeCmClient({ 'repository list': () => listings[Math.min(calls++, listings.length - 1)]!, 'repository acme@cloud': '' });
+    const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-guids-')), 'settings.json'));
+    const clock = { now: 0 };
+    const repositoryGuids = new RepositoryGuids((server) => listRepositories(fake.cm, server), () => clock.now);
+    const context = serviceContext(fake.cm, { settings, repositoryGuids });
+    return { ...fake, settings, clock, service: createRepositoriesService(context, profilesContext(fake.cm)) };
+  }
+
+  it('costs no command for a repository whose server the home screen listed', async () => {
+    const { service, lines } = lookups(listed('game'));
+    await service.list('acme@cloud');
+
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('lists the server once for a repository no listing taught, and for nothing else', async () => {
+    const { service, commands } = lookups(listed('game'));
+
+    expect(await service.guidOf('Game@ACME@cloud')).toBe(GAME);
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(commands).toMatchObject([{ via: 'execute', args: ['repository', 'list', 'ACME@cloud', expect.any(String)] }]);
+  });
+
+  it('answers null for a spec that names no server, without asking cm', async () => {
+    const { service, lines } = lookups(listed('game'));
+
+    expect(await service.guidOf('game')).toBeNull();
+    expect(lines()).toEqual([]);
+  });
+
+  it('moves what was kept by the repository’s spec under its GUID, the first time it is known', async () => {
+    const { service, settings } = lookups(listed('game'));
+    settings.addWindowSettings({ repositorySettings: { 'game@acme@cloud': { explorerRulesOff: true } }, serverSettings: {}, changesetColors: { users: [] } });
+    settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
+
+    await service.guidOf('game@acme@cloud');
+
+    expect(settings.get().repositorySettings).toEqual({ [GAME]: { explorerRulesOff: true } });
+    expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+  });
+
+  it('finds a repository renamed elsewhere by its new name, with the GUID what was kept for it is kept by', async () => {
+    const { service, settings, clock } = lookups(listed('game'), listed('racer'));
+    await service.guidOf('game@acme@cloud');
+    settings.updateRepositorySettings(GAME, { branchPins: [{ branch: 4, row: 1 }] });
+    clock.now += 61_000;
+
+    const lookedUp = await service.guidOf('racer@acme@cloud');
+
+    expect(lookedUp).toBe(GAME);
+    expect(settings.get().repositorySettings[lookedUp!]).toEqual({ branchPins: [{ branch: 4, row: 1 }] });
+  });
+
+  it('finds a repository created here, however recent the last listing', async () => {
+    const { service, lines } = lookups(formatOutput(), listed('game'));
+    await service.list('acme@cloud');
+
+    await service.create('acme@cloud', 'game');
+
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(lines().filter((line) => line.startsWith('repository list'))).toHaveLength(2);
+  });
+
+  it('rejects when the server can’t be listed', async () => {
+    const fake = fakeCmClient({ 'repository list': cmFails('Unable to connect to acme@cloud') });
+    const service = createRepositoriesService(serviceContext(fake.cm), profilesContext(fake.cm));
+
+    await expect(service.guidOf('game@acme@cloud')).rejects.toThrow('Unable to connect');
   });
 });
