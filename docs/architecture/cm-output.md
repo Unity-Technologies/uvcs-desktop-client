@@ -245,7 +245,13 @@ by name, and never passes it to `cm`.
   `UnityOrganizationIds` asks it once per organization for the session: each session reads again the ids of the
   organizations that recorded one, and of those that keep something with none recorded (`organizationsToIdentify`);
   only when a recorded name no longer answers its id does it read the other organizations listed, to find it under
-  its new name (`organizationsToSearch`). Never read `cm`'s own file mapping names to ids ("`cm` owns its files").
+  its new name (`organizationsToSearch`). The profiles changing (a sign-in, a profile removed) makes it read them
+  again (`OrganizationRenames.listed`, `UnityOrganizationIds.forget`), so a rename `cm` learns during a session is
+  followed at once. A recorded organization whose name stops answering for another reason (the user left it) makes
+  each session read the listed organizations with no id recorded, all local reads, until it keeps nothing: the
+  sidebar lists only the profiles' organizations, so its favorite no longer shows there, and only its page, opened
+  from a link to it, still offers the star that removes it. Never read `cm`'s own file mapping names to ids
+  ("`cm` owns its files").
   `{unityid}` is the same number as the id form `<id>@cloud`; the app never builds that form from it.
 - **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
   `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
