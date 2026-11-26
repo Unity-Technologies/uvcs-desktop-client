@@ -25,6 +25,22 @@ function renamesOver(settings: Partial<AppSettings>, idsByName: Record<string, s
 }
 
 describe('OrganizationRenames', () => {
+  it('follows a rename cm learns during the session, once the profiles list the new name', async () => {
+    const idsByName: Record<string, string> = { 'acme@unity': `${ACME}\n` };
+    const { renames, settings, lines } = renamesOver({ favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing' } } }, idsByName);
+    await renames.listed(['acme@unity']);
+    await renames.listed(['acme@unity']);
+
+    // The user signs in to the organization's new name: cm learns its id and forgets the old name.
+    delete idsByName['acme@unity'];
+    idsByName['acmestudio@unity'] = `${ACME}\n`;
+    await renames.listed(['acme@unity', 'acmestudio@unity']);
+
+    expect(settings().favoriteOrganizations).toEqual(['acmestudio@unity']);
+    expect(settings().serverSettings).toEqual({ 'acmestudio@unity': { homeProject: 'Racing', organizationId: ACME } });
+    expect(lines().filter((line) => line.includes('acme@unity'))).toHaveLength(2);
+  });
+
   it("keeps a favorite and the project picked through the organization's rename, the old name still listed", async () => {
     const before = renamesOver({ favoriteOrganizations: ['acme@unity'], serverSettings: { 'acme@unity': { homeProject: 'Racing' } } }, { 'acme@unity': '1375943370549\n' });
     await before.renames.follow(['acme@unity', 'arcade@unity']);
