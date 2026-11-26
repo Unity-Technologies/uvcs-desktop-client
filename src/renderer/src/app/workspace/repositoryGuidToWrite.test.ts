@@ -2,7 +2,7 @@ import { fakeApi } from '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { queryClient } from '../queryClient';
-import { repositoryGuidToWrite } from './repositoryGuid';
+import { repositoryGuidToWrite } from './repositoryGuidToWrite';
 
 const GAME = repositoryGuidFor(1);
 

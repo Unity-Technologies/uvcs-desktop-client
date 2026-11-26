@@ -5,7 +5,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
-import { repositoryGuidToWrite } from '../workspace/repositoryGuid';
+import { repositoryGuidToWrite } from '../workspace/repositoryGuidToWrite';
 
 export const settingsQuery = queryOptions({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
 

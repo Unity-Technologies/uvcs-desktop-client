@@ -7,7 +7,7 @@ import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { BRANCH_EXPLORER_KEPT_KEY } from '../../app/settings/windowKeptSettings';
-import { repositoryGuidToWrite } from '../../app/workspace/repositoryGuid';
+import { repositoryGuidToWrite } from '../../app/workspace/repositoryGuidToWrite';
 import { shownToasts } from '../../testing/operationOutcome';
 import { fakeApi } from '../../testing/fakeWindow';
 import { setBranchPins, setExplorerRulesOn, setUserColors, useBranchExplorerPreferences } from './branchExplorerStore';

@@ -3,7 +3,7 @@ import { repositoryKey } from '@shared/domain/repository';
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { IMMUTABLE_QUERY, queryClient } from '../queryClient';
+import { IMMUTABLE_QUERY } from '../queryMeta';
 import { usePlaceRepository } from './useWorkspace';
 
 // What the app keeps for a repository is kept by its GUID, which a rename never changes (ARCHITECTURE.md "Settings
@@ -33,14 +33,4 @@ export function useRepositoryGuid(repositorySpec: string | undefined): Repositor
 /** The GUID of the window's place's repository (`usePlaceRepository`), as `useRepositoryGuid` reads it. */
 export function usePlaceRepositoryGuid(): RepositoryGuid | undefined {
   return useRepositoryGuid(usePlaceRepository());
-}
-
-/**
- * The GUID a change the user makes for the repository is written under: the one read already, else read now. Rejects
- * with a message to show when it can't be read, so the change is said to be unsaved, never lost without a word.
- */
-export async function repositoryGuidToWrite(repositorySpec: string): Promise<RepositoryGuid> {
-  const guid = await queryClient.fetchQuery(repositoryGuidQuery(repositorySpec));
-  if (!guid) throw new Error(`Couldn't find ${repositorySpec} on its server.`);
-  return guid;
 }

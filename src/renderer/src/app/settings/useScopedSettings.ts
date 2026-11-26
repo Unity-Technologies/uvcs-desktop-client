@@ -10,7 +10,8 @@ import {
 } from '@shared/domain/scopedSettings';
 import { api } from '../../api/client';
 import { toast } from '../../ui/toast/toastStore';
-import { repositoryGuidToWrite, useRepositoryGuid } from '../workspace/repositoryGuid';
+import { useRepositoryGuid } from '../workspace/repositoryGuid';
+import { repositoryGuidToWrite } from '../workspace/repositoryGuidToWrite';
 import { saveShown, settingsQuery } from './useSettings';
 
 // What the user keeps for one repository or one server (`RepositorySettings`, `ServerSettings`), read from the app's

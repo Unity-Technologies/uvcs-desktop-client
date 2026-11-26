@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { SignInFailure, SignInOutcome } from '@shared/domain/issueTrackers';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
 import { api } from '../../../api/client';
@@ -17,7 +18,7 @@ interface SignInForProps {
   link: RecognizedLink;
   linkText: string;
   step: SignInStep;
-  repository: string | undefined;
+  repository: RepositoryGuid | undefined;
   /** The sign-in covering the link was picked in the first step, and the link step already says so. */
   picked: boolean;
   onConnected: (outcome: SignedIn) => void;

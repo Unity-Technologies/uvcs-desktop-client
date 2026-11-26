@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Issue, IssueSearchAnswer, TrackerConnection } from '@shared/domain/issueTrackers';
 import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { issueSearchStaleTime, issueSuggestionReads, issueSuggestionRows, ISSUE_SEARCH_FRESH_MS, ISSUE_SEARCH_RETRY_MS, type IssueListState } from './issueSuggestions';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
 const github: TrackerConnection = { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*' };
-const jiraReader = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira);
-const githubReader = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c2', projects: ['acme/game'] }, github);
+const jiraReader = issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }, jira);
+const githubReader = issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c2', projects: ['acme/game'] }, github);
 
 function issue(key: string, title: string, statusCategory: Issue['statusCategory'] = 'todo'): Issue {
   return { key, title, status: 'Open', statusCategory, type: 'Bug', assignee: null, url: `https://acme.atlassian.net/browse/${key}` };
@@ -37,7 +38,7 @@ describe('issueSuggestionReads', () => {
     expect(issueSuggestionReads(jiraReader, 'cr', 'cr')).toEqual({ words: null, key: null });
     expect(issueSuggestionReads(jiraReader, 'crash', 'crash')).toEqual({ words: 'crash', key: null });
     expect(issueSuggestionReads(githubReader, 'ña', 'ña')).toEqual({ words: null, key: null });
-    const twoProjects = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS', 'OPS'] }, jira);
+    const twoProjects = issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS', 'OPS'] }, jira);
     expect(issueSuggestionReads(twoProjects, '123', '123')).toEqual({ words: null, key: null });
   });
 });

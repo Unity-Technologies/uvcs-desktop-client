@@ -79,7 +79,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     mergeTools: createMergeToolsService(context, apps),
     pendingChanges: createPendingChangesService(context, switching),
     permissions: createPermissionsService(context),
-    repositories: createRepositoriesService(context, profiles, (from, to) => context.issueTrackers.repositoryRenamed(from, to)),
+    repositories: createRepositoriesService(context, profiles),
     review: createReviewService(context),
     settings: createSettingsService(context),
     shelves: createShelvesService(context, switching),

@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { TrackerConnection } from '@shared/domain/issueTrackers';
 import { issueReferenceReader } from '@shared/issueTrackers/issueReferences';
+import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { findReferences } from './comments/commentReferences';
 import { commentLineInlines } from './comments/commentHeading';
 import { parseMarkdown, type MarkdownInline } from './markdown';
 
 const jira: TrackerConnection = { id: 'c1', kind: 'jiraCloud', server: 'https://x.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const issues = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c1', projects: ['VCS'] }, jira);
-const github = issueReferenceReader({ repository: 'game@acme@unity', connectionId: 'c2', projects: ['acme/game'] }, { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*' });
+const issues = issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }, jira);
+const github = issueReferenceReader({ repository: repositoryGuidFor(1), connectionId: 'c2', projects: ['acme/game'] }, { ...jira, id: 'c2', kind: 'github', server: 'https://github.com', scope: '*' });
 
 const issue = (key: string, source: string, bare = false): MarkdownInline => ({ kind: 'reference', reference: { kind: 'issue', key, bare }, source });
 const paragraph = (text: string, reader = issues) => {

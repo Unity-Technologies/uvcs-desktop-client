@@ -5,11 +5,10 @@ import { serverProfiles } from '../cm/profiles';
 import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
 /**
- * `renamed` hears a repository renamed here, by its spec before and after (`game@acme@unity`, `racer@acme@unity`): its
- * issue tracker follows it (`IssueTrackers.repositoryRenamed`). The listings go through `RepositoryGuids`, which keeps
- * the repositories' GUIDs, and follows a rename made here at once.
+ * The listings go through `RepositoryGuids`, which keeps the repositories' GUIDs that what the app keeps for a
+ * repository is kept by, and follows a rename made here at once.
  */
-export function createRepositoriesService({ cm, repositoryGuids, settings }: ServiceContext, { profiles }: ProfilesContext, renamed: (from: string, to: string) => void = () => undefined): RepositoriesApi {
+export function createRepositoriesService({ cm, repositoryGuids, settings, issueTrackers }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
   async function servers() {
     return serverProfiles(await profiles.read());
   }
@@ -37,6 +36,7 @@ export function createRepositoriesService({ cm, repositoryGuids, settings }: Ser
   /** What the app kept for the repository by its spec, before it kept it by its GUID, moves under its GUID. */
   function keepByGuid(repositorySpec: string, guid: RepositoryGuid): void {
     settings.keepRepositoryByGuid(repositorySpec, guid);
+    issueTrackers.keepRepositoryByGuid(repositorySpec, guid);
   }
 
   async function create(server: string, name: string): Promise<string> {
@@ -51,7 +51,6 @@ export function createRepositoriesService({ cm, repositoryGuids, settings }: Ser
     const at = repositorySpec.indexOf('@');
     if (at <= 0) return;
     repositoryGuids.renamed(repositorySpec.slice(at + 1), repositorySpec.slice(0, at), newName);
-    renamed(repositorySpec, `${newName}${repositorySpec.slice(at)}`);
   }
 
   async function remove(repositorySpec: string): Promise<void> {

@@ -1,7 +1,8 @@
 import type { LinkSignIn, RepositorySignIn, TokenPageChoice, TokenPageTarget } from '@shared/api/issueTrackers';
 import type { BoundProject, BoundProjectsAnswer, DeviceSignIn, IssueRead, IssueSearch, IssueSearchAnswer, IssueTrackerKind, IssueTrackerSetup, TrackerErrorReason, SignInFailure, SignInMethodKind, SignInOutcome, TrackerConnection } from '@shared/domain/issueTrackers';
 import { coveringConnection, needsHostConsent, ownerOf } from '@shared/issueTrackers/connections';
-import { sameRepository } from '@shared/issueTrackers/issueReferences';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
+import { bindingOf } from '@shared/issueTrackers/issueReferences';
 import { deviceFlowHostsOf, type GitHubApp } from '@shared/issueTrackers/signInMethods';
 import type { RecognizedLink } from '@shared/issueTrackers/trackerGrammar';
 import { isRecognizedLink, recognizeTrackerLink, TRACKER_GRAMMARS } from '@shared/issueTrackers/trackerGrammars';
@@ -198,7 +199,7 @@ export class IssueTrackers {
   async addProject(request: RepositorySignIn): Promise<SignInOutcome> {
     const reading = this.readLink(request.link);
     if ('failure' in reading) return failed(reading.failure);
-    const binding = this.deps.store.bindings().find((kept) => sameRepository(kept.repository, request.repository));
+    const binding = this.bindingOf(request.repository);
     const connection = binding && this.deps.store.connection(binding.connectionId);
     if (!binding || !connection || coveringConnection([connection], reading.kind, reading.server, reading.project) === undefined) {
       return failed({ reason: 'projectUnreadable', project: reading.project });
@@ -207,7 +208,7 @@ export class IssueTrackers {
     return this.bindProven(connection, request.repository, projects, reading.project);
   }
 
-  removeProject(repository: string, project: string): void {
+  removeProject(repository: RepositoryGuid, project: string): void {
     const binding = this.bindingOf(repository);
     if (!binding || binding.projects.length < 2 || !binding.projects.includes(project)) return;
     this.deps.store.bind({ ...binding, projects: binding.projects.filter((kept) => kept !== project) });
@@ -219,7 +220,7 @@ export class IssueTrackers {
    * alone. Nothing is asked of a connection that needs signing in again; every project out of reach is the tracker
    * out of reach.
    */
-  async readProjects(repository: string): Promise<BoundProjectsAnswer> {
+  async readProjects(repository: RepositoryGuid): Promise<BoundProjectsAnswer> {
     const binding = this.bindingOf(repository);
     const connection = binding && this.deps.store.connection(binding.connectionId);
     if (!binding || !connection) return { kind: 'failed', reason: 'unexpected' };
@@ -247,11 +248,11 @@ export class IssueTrackers {
     return { kind: 'read', projects };
   }
 
-  private bindingOf(repository: string) {
-    return this.deps.store.bindings().find((kept) => sameRepository(kept.repository, repository));
+  private bindingOf(repository: RepositoryGuid) {
+    return bindingOf(this.deps.store.bindings(), repository);
   }
 
-  disconnect(repository: string): void {
+  disconnect(repository: RepositoryGuid): void {
     this.deps.store.unbind(repository);
     this.announce();
   }
@@ -263,10 +264,12 @@ export class IssueTrackers {
     this.announce();
   }
 
-  /** A repository renamed in the app keeps its tracker. */
-  repositoryRenamed(from: string, to: string): void {
-    this.deps.store.renameRepository(from, to);
-    this.announce();
+  /**
+   * The repository's binding kept by its spec, before bindings were kept by its GUID, moves to its GUID once it is
+   * known; every window hears it when one did.
+   */
+  keepRepositoryByGuid(spec: string, guid: RepositoryGuid): void {
+    if (this.deps.store.keepRepositoryByGuid(spec, guid)) this.announce();
   }
 
   /**
@@ -295,8 +298,8 @@ export class IssueTrackers {
    * A `#` search of the repository's bound projects, in one request (docs/features/issue-trackers.md, "Suggesting
    * issues"). A newer search by the same window for the same repository aborts this one, which answers `superseded`.
    */
-  async searchIssues(repository: string, search: IssueSearch, ownerId?: number): Promise<IssueSearchAnswer> {
-    const binding = this.deps.store.bindings().find((kept) => sameRepository(kept.repository, repository));
+  async searchIssues(repository: RepositoryGuid, search: IssueSearch, ownerId?: number): Promise<IssueSearchAnswer> {
+    const binding = this.bindingOf(repository);
     const connection = binding && this.deps.store.connection(binding.connectionId);
     if (!binding || !connection) return { kind: 'failed', reason: 'unexpected' };
     const owner = `${ownerId ?? 'main'}:${repository}`;
@@ -338,7 +341,7 @@ export class IssueTrackers {
     return { token, ...(kind === 'jiraCloud' && { email: email!.trim() }) };
   }
 
-  private async completeSignIn(reading: RecognizedLink, repository: string | undefined, credential: TrackerCredential, method: SignInMethodKind): Promise<SignInOutcome> {
+  private async completeSignIn(reading: RecognizedLink, repository: RepositoryGuid | undefined, credential: TrackerCredential, method: SignInMethodKind): Promise<SignInOutcome> {
     if (!(await this.hostAllowed(reading.server, reading.kind))) return failed({ reason: 'hostDeclined', server: reading.server });
     const provider = this.providers[reading.kind];
     let signedIn;
@@ -392,7 +395,7 @@ export class IssueTrackers {
    * Proves `project` with the connection, then binds the repository to it (none: a sign-in alone, from a window with no
    * repository); nothing is bound when the project can't be read.
    */
-  private async bindProven(connection: StoredConnection, repository: string | undefined, projects: string[], project: string): Promise<SignInOutcome> {
+  private async bindProven(connection: StoredConnection, repository: RepositoryGuid | undefined, projects: string[], project: string): Promise<SignInOutcome> {
     try {
       const access = await this.providers[connection.kind].projectAccess(this.connectionHttp(connection), connection, project);
       if (repository) this.deps.store.bind({ repository, connectionId: connection.id, projects });

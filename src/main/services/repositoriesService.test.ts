@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseRepositoryGuid } from '@shared/domain/stableIds';
 import { listRepositories } from '../cm/listRepositories';
+import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
 import { RepositoryGuids } from '../cm/RepositoryGuids';
 import { SettingsStore } from '../settings/SettingsStore';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
@@ -153,14 +154,6 @@ describe('repositories', () => {
     });
   });
 
-  it('tells a rename by the repository’s spec before and after, so its issue tracker follows it', async () => {
-    const fake = fakeCmClient({ 'repository rename': '' });
-    const renames: string[][] = [];
-    const service = createRepositoriesService(serviceContext(fake.cm), profilesContext(fake.cm), (from, to) => renames.push([from, to]));
-    await service.rename('tools@acme@cloud', 'build-tools');
-    expect(renames).toEqual([['tools@acme@cloud', 'build-tools@acme@cloud']]);
-  });
-
   it('keeps a repository renamed here known by its new name, with the GUID it had, without listing its server again', async () => {
     const { cm, lines } = fakeCmClient({
       'repository list': formatOutput(['4', 'tools', 'acme@cloud', 'bob', 'VCS', '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61']),
@@ -188,8 +181,11 @@ describe('guidOf', () => {
     const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-guids-')), 'settings.json'));
     const clock = { now: 0 };
     const repositoryGuids = new RepositoryGuids((server) => listRepositories(fake.cm, server), () => clock.now);
-    const context = serviceContext(fake.cm, { settings, repositoryGuids });
-    return { ...fake, settings, clock, service: createRepositoriesService(context, profilesContext(fake.cm)) };
+    /** The bindings moved to a GUID (`IssueTrackers.keepRepositoryByGuid`, tested with the trackers). */
+    const trackersKept: string[][] = [];
+    const issueTrackers = { keepRepositoryByGuid: (spec: string, guid: string) => void trackersKept.push([spec, guid]) } as unknown as IssueTrackers;
+    const context = serviceContext(fake.cm, { settings, repositoryGuids, issueTrackers });
+    return { ...fake, settings, clock, trackersKept, service: createRepositoriesService(context, profilesContext(fake.cm)) };
   }
 
   it('costs no command for a repository whose server the home screen listed', async () => {
@@ -216,7 +212,7 @@ describe('guidOf', () => {
   });
 
   it('moves what was kept by the repository’s spec under its GUID, the first time it is known', async () => {
-    const { service, settings } = lookups(listed('game'));
+    const { service, settings, trackersKept } = lookups(listed('game'));
     settings.addWindowSettings({ repositorySettings: { 'game@acme@cloud': { explorerRulesOff: true } }, serverSettings: {}, changesetColors: { users: [] } });
     settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
 
@@ -224,6 +220,7 @@ describe('guidOf', () => {
 
     expect(settings.get().repositorySettings).toEqual({ [GAME]: { explorerRulesOff: true } });
     expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+    expect(trackersKept).toEqual([['game@acme@cloud', GAME]]);
   });
 
   it('finds a repository renamed elsewhere by its new name, with the GUID what was kept for it is kept by', async () => {
