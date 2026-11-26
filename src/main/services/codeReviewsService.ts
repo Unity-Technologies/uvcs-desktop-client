@@ -34,7 +34,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       // `reviewer` isn't in `cm find`'s help, but it is what the official client asks for "Needs my review".
       ...(filter.reviewerIsMe ? ["reviewer = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
-      // `{mergerequeststatusname}`'s English name, as `cm find` takes it; one state per query, as for the status.
+      // `{mergerequeststatus}`'s English name, as `cm find` takes it; one state per query, as for the status.
       ...(filter.mergeRequestState ? [equalsCondition('mergerequeststatus', filter.mergeRequestState)] : []),
     ];
     return findReviews(place, conditions, {

@@ -79,17 +79,17 @@ const SHELVES = [
 ];
 
 /**
- * A merge request's two fields as `cm find review` prints them (`{mergerequeststatusname}`, `{destination}`); a plain
- * code review prints `None` and nothing. `mergerequeststatus` is what a query's condition names.
+ * A merge request's two fields as `cm find review` prints them (`{mergerequeststatus}`, `{destination}`); a plain
+ * code review prints `None` and nothing. A query's condition names `mergerequeststatus` too.
  */
-const mergeRequest = (state, destination) => ({ mergerequeststatusname: state, mergerequeststatus: state, destination: `br:${destination}` });
-const plainReview = { mergerequeststatusname: 'None', mergerequeststatus: 'None', destination: '' };
+const mergeRequest = (state, destination) => ({ mergerequeststatus: state, destination: `br:${destination}` });
+const plainReview = { mergerequeststatus: 'None', destination: '' };
 
 const REVIEWS = [
   {
     id: 80,
     title: 'Review player movement',
-    codereviewstatusname: 'Under review',
+    codereviewstatus: 'Under review',
     reviewers: `${OWNER}:Under review`,
     comments: 3,
     unresolvedissues: 1,
@@ -103,7 +103,7 @@ const REVIEWS = [
   {
     id: 81,
     title: 'Review the HUD',
-    codereviewstatusname: 'Rework required',
+    codereviewstatus: 'Rework required',
     reviewers: 'ana.diaz@acme.com:Reviewed,bob.smith@acme.com:Rework required,Developers:Under review,eva.lopez@acme.com:Reviewed',
     comments: 14,
     unresolvedissues: 0,
@@ -117,7 +117,7 @@ const REVIEWS = [
   {
     id: 82,
     title: 'Scene lighting',
-    codereviewstatusname: 'Under review',
+    codereviewstatus: 'Under review',
     reviewers: '',
     comments: 0,
     unresolvedissues: 0,
@@ -131,7 +131,7 @@ const REVIEWS = [
   {
     id: 83,
     title: 'First playable',
-    codereviewstatusname: 'Reviewed',
+    codereviewstatus: 'Reviewed',
     reviewers: 'ana.diaz@acme.com:Reviewed',
     comments: 1,
     unresolvedissues: 0,

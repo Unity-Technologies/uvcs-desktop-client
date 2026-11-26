@@ -94,7 +94,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 - One `cm find review` reads each review with its reviewers and the status each gave (`{reviewers}`,
   `name:Status` pairs, `parseReviewers`; which are groups, the server's groups say: see "Groups"), the number of comments (`{comments}`: comments, questions, change requests
   and their replies) and of open ones (`{unresolvedissues}`: change requests neither applied nor discarded, questions
-  with no reply), and the last activity (`{modifieddate}`). `{codereviewstatusname}` prints the status in English
+  with no reply), and the last activity (`{modifieddate}`). `{codereviewstatus}` prints the status in English
   whatever the client's language; `{status}` translates it (`FOUND_REVIEWS`).
 - Columns: the title, where it stands as an icon (merge-requests.md "One view"), the reviewers (`ReviewerStack`, from `stackedReviewers`: their avatars stacked in
   `ui/AvatarStack`, three then a "+N" disc whose tooltip names the rest; hovered, the stack spreads and each avatar

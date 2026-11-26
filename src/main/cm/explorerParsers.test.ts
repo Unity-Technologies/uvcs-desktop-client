@@ -153,7 +153,7 @@ describe('code review records', () => {
       {
         id: 60,
         title: 'Branch review',
-        codereviewstatusname: 'Rework required',
+        codereviewstatus: 'Rework required',
         reviewers: 'ana@acme.com:Reviewed,qa-team:Rework required',
         modifieddate: '2026-11-06T11:38:32+01:00',
         comments: 12,
@@ -161,8 +161,8 @@ describe('code review records', () => {
         targettype: 'Branch',
         target: 'id:54',
       },
-      { id: 62, title: 'Changeset review', codereviewstatusname: 'Reviewed', reviewers: '', comments: 0, unresolvedissues: 0, targettype: 'Changeset', target: 2 },
-      { id: 63, title: 'Shelve review', codereviewstatusname: 'Under review', targettype: 'Shelve', target: 3 },
+      { id: 62, title: 'Changeset review', codereviewstatus: 'Reviewed', reviewers: '', comments: 0, unresolvedissues: 0, targettype: 'Changeset', target: 2 },
+      { id: 63, title: 'Shelve review', codereviewstatus: 'Under review', targettype: 'Shelve', target: 3 },
     );
     expect(recordsIn(output, FOUND_REVIEWS)).toMatchObject([
       {

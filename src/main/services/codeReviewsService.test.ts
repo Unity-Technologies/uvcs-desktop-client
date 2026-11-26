@@ -22,7 +22,7 @@ function review(id: number, targetType: string, target: string) {
   return {
     id: id,
     title: `Review ${id}`,
-    codereviewstatusname: 'Under review',
+    codereviewstatus: 'Under review',
     owner: 'ana',
     reviewers: 'bob:Under review',
     date: '2026-09-25T10:00:00+02:00',
@@ -166,7 +166,7 @@ describe('code review list', () => {
   });
 
   it('carries a merge request’s state and destination in the reviews it lists', async () => {
-    const request = { ...ON_TASK1, mergerequeststatusname: 'Open', destination: 'br:/main' };
+    const request = { ...ON_TASK1, mergerequeststatus: 'Open', destination: 'br:/main' };
     const { service } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, request, ON_CHANGESET) });
 
     const [listed, plain] = await service.listSummaries(IN_WORKSPACE, {});

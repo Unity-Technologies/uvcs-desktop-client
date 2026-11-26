@@ -1,9 +1,9 @@
 {
-  "version": "11.0.16.10694",
+  "version": "11.0.16.10740",
   "bundles": {
-    "win32-x64": { "file": "client-windows.zip", "sha256": "9db011620060663c4bdc030d50e29035b7a25983735e423be0f5d3a70dcd7037" },
-    "darwin-x64": { "file": "client-macos.tar.gz", "sha256": "4050cfcd761d1721ad96762e0466374c2b171830f491f26d16c0c4bda526283d" },
-    "darwin-arm64": { "file": "client-macos-arm64.tar.gz", "sha256": "bfefea8c267750045fa475d94cd63b3a8532730a02e9f4d387918597d8f6b75a" },
-    "linux-x64": { "file": "client-linux.tar.gz", "sha256": "dda698a72ec0868fb2438400f84ef669e306d8c67ae17b1e28bd6831cf054df1" }
+    "win32-x64": { "file": "client-windows.zip", "sha256": "d6d2923421cca46b506c254f0a70b993998a0e33a30403972dc520ec7b56fe34" },
+    "darwin-x64": { "file": "client-macos.tar.gz", "sha256": "14cfa6d7da66286e654ef3ab2d508b4034a61677dfbcff5c7098f1007466dafe" },
+    "darwin-arm64": { "file": "client-macos-arm64.tar.gz", "sha256": "26bb754dcd66b3ecd15f5d22051b78fff982e53505c7f717574e8e89f7e27222" },
+    "linux-x64": { "file": "client-linux.tar.gz", "sha256": "82e5a8ffd2daa2a9f4808f0c1385fc66853fbd407b695e04435e52e7a7692810" }
   }
 }
