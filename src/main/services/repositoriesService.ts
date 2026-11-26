@@ -37,7 +37,12 @@ export function createRepositoriesService(context: ServiceContext, { profiles }:
     return `${name}@${server}`;
   }
 
+  /**
+   * What was still kept by the repository's spec moves under its GUID first (free when the home screen listed its
+   * server), as no spec will name it once renamed.
+   */
   async function rename(repositorySpec: string, newName: string): Promise<void> {
+    await repositoryGuidOf(context, repositorySpec).catch((error: unknown) => console.warn('[settings] What was kept by the repository\'s name not moved to its GUID:', error));
     await cm.query(['repository', 'rename', repositorySpec, newName]);
     const parts = repositorySpecParts(repositorySpec);
     if (parts) repositoryGuids.renamed(parts.server, parts.name, newName);

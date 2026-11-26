@@ -135,12 +135,13 @@ describe('repositories', () => {
   });
 
   it('renames and deletes a repository by its spec', async () => {
-    const { service, lines } = repositories({ repository: '' });
+    const { service, lines } = repositories({ repository: '', 'repository list': formatOutput(['4', 'tools', 'acme@cloud', 'bob', 'VCS', '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61']) });
+    await service.list('acme@cloud');
 
     await service.rename('tools@acme@cloud', 'build-tools');
     await service.remove('tools@acme@cloud');
 
-    expect(lines()).toEqual(['repository rename tools@acme@cloud build-tools', 'repository delete tools@acme@cloud']);
+    expect(lines().slice(1)).toEqual(['repository rename tools@acme@cloud build-tools', 'repository delete tools@acme@cloud']);
   });
 
   describe('restore', () => {
