@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { branch, changeset } from './graphFixtures';
-import { branchesMoves, branchMoves, movedBranch, movedBranches, pinsOf, withoutPin, withPins, type BranchPins } from './branchRows';
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
+import { branchesMoves, branchMoves, movedBranch, movedBranches, withoutPin } from './branchRows';
 import { layoutGraph } from './layoutGraph';
 
 /**
@@ -146,22 +147,5 @@ describe('branchesMoves', () => {
     const { layout, lane } = lanesOf(pins);
     expect(branchesMoves(layout, [lane('/main/a'), lane('/main/c')], pins)).toMatchObject({ reset: true, resetAll: true });
     expect(branchesMoves(layout, [lane('/main/a'), lane('/main')], pins)).toMatchObject({ reset: false, resetAll: true });
-  });
-});
-
-describe('withPins', () => {
-  it("changes only the repository's own positions, and forgets a repository without any", () => {
-    const before = { game: [{ branch: 4, row: 0 }], tools: [{ branch: 3, row: 2 }] };
-    expect(withPins(before, 'game', [])).toEqual({ tools: [{ branch: 3, row: 2 }] });
-    expect(withPins({}, 'game', [{ branch: 4, row: 0 }])).toEqual({ game: [{ branch: 4, row: 0 }] });
-    expect(before.game).toHaveLength(1);
-  });
-});
-
-describe('pinsOf', () => {
-  it("reads the repository's positions, the same empty list when it has none", () => {
-    // The same array every time: a store selector answering a new one would render forever.
-    expect(pinsOf({ game: [{ branch: 4, row: 0 }] }, 'game')).toEqual([{ branch: 4, row: 0 }]);
-    expect(pinsOf({}, 'game')).toBe(pinsOf({}, undefined));
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { newRule, NO_EXPANSION, type ExplorerRule, type ExplorerRuleKind } from './explorerRules';
+import type { ExplorerRule, ExplorerRuleKind } from '@shared/domain/branchExplorerSettings';
+import { newRule, NO_EXPANSION } from './explorerRules';
 import {
   ADD_RULE_GROUPS,
   addingTurnsRulesOn,

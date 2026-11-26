@@ -5,7 +5,7 @@ import { graphActions } from './graphActions';
 import { isMac } from '../../lib/platform';
 import { handleGraphKey, keyboardMergeSource, keyboardMoveLanes, type GraphKeyboard } from './graphKeyboard';
 import type { GraphSelection, GraphSelections } from './graphSelection';
-import type { BranchPins } from './model/branchRows';
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
 import { branch, changeset, sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';

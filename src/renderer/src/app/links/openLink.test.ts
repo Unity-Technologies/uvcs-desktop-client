@@ -2,13 +2,13 @@ import '../../testing/fakeWindow';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { WorkspaceHead } from '@shared/domain/workspace';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
 import { fakeApi } from '../../testing/fakeWindow';
 import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
 import { useHomeSection } from '../home/homeSectionStore';
-import { useProjectPickStore } from '../home/projectPickStore';
 import { useNavigation } from '../navigation/navigationStore';
 import { useSession } from '../workspace/sessionStore';
 import { pickLinkWorkspace, showLinkFailure } from './linkDialogs';
@@ -248,7 +248,7 @@ describe('a workspace link', () => {
 describe("a link to a server's repositories", () => {
   it("shows them on this window's home screen, the project it names picked, as the user's profiles name the server", async () => {
     useHomeSection.setState({ section: { kind: 'welcome' } });
-    useProjectPickStore.setState({ picks: {} });
+    fakeApi.answer('settings.updateServerSettings', async () => ({ ...DEFAULT_SETTINGS, serverSettings: { 'mycroquerorg@unity': { homeProject: 'Racing' } } }));
     fakeApi.answer('windows.openLinkAtHome', async () => 'openHere');
     fakeApi.answer('repositories.servers', async () => [{ server: 'MyCroquerOrg@unity', user: 'ana', workingMode: 'SSOWorkingMode' }]);
 
@@ -256,7 +256,7 @@ describe("a link to a server's repositories", () => {
 
     expect(fakeApi.argsOf('windows.openLinkAtHome')).toEqual([['uvcs://mycroquerorg.unity/projects/Racing']]);
     expect(useHomeSection.getState().section).toEqual({ kind: 'server', server: 'MyCroquerOrg@unity' });
-    expect(useProjectPickStore.getState().picks).toEqual({ 'MyCroquerOrg@unity': 'Racing' });
+    expect(fakeApi.argsOf('settings.updateServerSettings')).toEqual([['MyCroquerOrg@unity', { homeProject: 'Racing' }]]);
   });
 
   it('leaves this window as it is when another window on the home screen took it', async () => {

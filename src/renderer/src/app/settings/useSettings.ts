@@ -23,11 +23,19 @@ export function useUpdateSettings(): (changes: Partial<AppSettings>) => void {
  * Saves settings from anywhere, hooks or not: the change shows right away and the store confirms it. A change the
  * store couldn't save goes back to what was shown before, and says so.
  */
-export async function saveSettings(changes: Partial<AppSettings>): Promise<void> {
+export function saveSettings(changes: Partial<AppSettings>): Promise<void> {
+  return saveShown((current) => ({ ...current, ...changes }), () => api.settings.update(changes));
+}
+
+/**
+ * Shows a change to the settings at once (`shown`), then keeps what the main process saved (`save`); a change it
+ * couldn't save goes back to what was shown before, and says so.
+ */
+export async function saveShown(shown: (current: AppSettings) => AppSettings, save: () => Promise<AppSettings>): Promise<void> {
   const current = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
-  queryClient.setQueryData(queryKeys.settings, { ...current, ...changes });
+  queryClient.setQueryData(queryKeys.settings, shown(current));
   try {
-    queryClient.setQueryData(queryKeys.settings, await api.settings.update(changes));
+    queryClient.setQueryData(queryKeys.settings, await save());
   } catch (error) {
     queryClient.setQueryData(queryKeys.settings, current);
     toast.error("Couldn't save the settings", error);

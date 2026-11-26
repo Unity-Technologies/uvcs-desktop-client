@@ -5,7 +5,8 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { TextArea, TextField } from '../../ui/TextField';
 import { HuePicker } from './HuePicker';
-import { hasCondition, isFormatRule, type ExplorerRule } from './model/explorerRules';
+import type { ExplorerRule } from '@shared/domain/branchExplorerSettings';
+import { hasCondition, isFormatRule } from './model/explorerRules';
 import { conditionHint, EXPANSION_OPTIONS, ruleDraftProblem, ruleEditorTitle } from './model/ruleList';
 import styles from './ExplorerRuleEditor.module.css';
 

@@ -1,20 +1,46 @@
 import { describe, expect, it } from 'vitest';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { DEFAULT_GRAPH_VIEW_OPTIONS, graphViewOptionsOf } from './canvas/graphViewOptions';
+import { newRule } from './model/explorerRules';
 import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPreferences } from './branchExplorerMigration';
 
 describe('migrateBranchExplorerPreferences', () => {
   it('keeps the people picked from version 1 on, and drops whether the details were open', () => {
     const migrated = migrateBranchExplorerPreferences({ dateRange: 'lastWeek', people: MINE, detailsOpen: false, showComments: false }, 1);
-    expect(migrated).toEqual({ dateRange: 'lastWeek', people: MINE, showComments: false });
+    expect(migrated).toEqual({ remembered: { dateRange: 'lastWeek', people: MINE, showComments: false }, kept: null });
   });
 
   it('turns version 0 date ranges into the shared presets, and starts with everyone', () => {
-    expect(migrateBranchExplorerPreferences({ dateRange: 'nonsense', people: MINE }, 0)).toEqual({ dateRange: 'lastMonth', people: EVERYONE });
+    expect(migrateBranchExplorerPreferences({ dateRange: 'nonsense', people: MINE }, 0).remembered).toEqual({ dateRange: 'lastMonth', people: EVERYONE });
+  });
+
+  it('puts the rules, moved branches and colors of version 2 aside for the app\u2019s settings, remembering the rest', () => {
+    const rule = newRule('include', 'r1');
+    const migrated = migrateBranchExplorerPreferences(
+      {
+        dateRange: 'lastWeek',
+        rulesByRepository: { 'game@host': [rule] },
+        rulesOff: { 'game@host': true },
+        userColors: { users: [{ user: 'ana', hue: 120 }] },
+        userColorsOff: {},
+        pinsByRepository: { 'game@host': [{ branch: 4, row: 1 }] },
+      },
+      2,
+    );
+    expect(migrated).toEqual({
+      remembered: { dateRange: 'lastWeek' },
+      kept: {
+        rulesByRepository: { 'game@host': [rule] },
+        rulesOff: { 'game@host': true },
+        userColors: { users: [{ user: 'ana', hue: 120 }] },
+        userColorsOff: {},
+        pinsByRepository: { 'game@host': [{ branch: 4, row: 1 }] },
+      },
+    });
   });
 
   it('reads nothing remembered as nothing to keep', () => {
-    expect(migrateBranchExplorerPreferences(undefined, 1)).toEqual({});
+    expect(migrateBranchExplorerPreferences(undefined, 1)).toEqual({ remembered: {}, kept: null });
   });
 });
 
@@ -40,12 +66,6 @@ describe('rememberedPreferences', () => {
   it('starts the display options remembered before there were more at their defaults, keeping the ones remembered', () => {
     const started = rememberedPreferences({ dateRange: 'lastWeek', showComments: false, showAvatars: true }, current);
     expect(graphViewOptionsOf(started)).toEqual({ ...DEFAULT_GRAPH_VIEW_OPTIONS, showComments: false });
-    expect(started.dateRange).toBe('lastWeek');
-  });
-
-  it('starts preferences remembered before the advanced filters with none, keeping the rest', () => {
-    const started = rememberedPreferences({ dateRange: 'lastWeek' }, { ...current, rulesByRepository: {} });
-    expect(started.rulesByRepository).toEqual({});
     expect(started.dateRange).toBe('lastWeek');
   });
 

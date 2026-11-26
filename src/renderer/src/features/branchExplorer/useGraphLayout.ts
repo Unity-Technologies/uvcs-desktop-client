@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
+import type { BranchPins, ExplorerRule } from '@shared/domain/branchExplorerSettings';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
-import type { BranchPins } from './model/branchRows';
-import type { ExplorerRule } from './model/explorerRules';
 import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph, layoutKeeping, type GraphLayout, type PendingChangeset } from './model/layoutGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';

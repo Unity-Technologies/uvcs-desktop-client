@@ -11,6 +11,7 @@ import { ListSkeleton } from '../../ui/Skeleton';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useDeletedRepositories, useProjects, useRepositories } from '../workspace/workspaceQueries';
+import { updateServerSettings, useServerSettings } from '../settings/useScopedSettings';
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
 import { deletedRepositoriesTip, repositoriesShown } from './deletedRepositories';
@@ -18,7 +19,6 @@ import { FavoriteOrganizationButton } from './FavoriteOrganizationButton';
 import { useDeletedRepositoriesStore } from './deletedRepositoriesStore';
 import { noRepositoriesState, projectChoices, repositoriesInProject, shownProject } from './repositoryProjects';
 import { ProjectFilter } from './ProjectFilter';
-import { useProjectPickStore } from './projectPickStore';
 import { RepositoryList, type RepositoryListHandle } from './RepositoryList';
 import { matchingRepositories, repositoryListRows, workspaceKindsByPath, workspacesByRepository } from './repositoryListRows';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
@@ -37,9 +37,8 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const { data: projects = NO_PROJECTS } = useProjects(server);
   const { data: deleted = NO_REPOSITORIES } = useDeletedRepositories(server);
   const { shown: withDeleted, setShown: setWithDeleted } = useDeletedRepositoriesStore();
-  const shownOne = shownProject(useProjectPickStore((store) => store.picks[server]), projects);
+  const shownOne = shownProject(useServerSettings(server).homeProject, projects);
   const project = shownOne?.name ?? null;
-  const pickProject = useProjectPickStore((store) => store.pick);
   const { all: workspaceEntries } = useWorkspaceEntries('');
   const choices = useMemo(() => projectChoices(projects, repositories ?? []), [projects, repositories]);
   // Named as in the sidebar: "This computer", an organization's name.
@@ -82,7 +81,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
             if (event.key === 'ArrowDown' && listRef.current?.focusFirst()) event.preventDefault();
           }}
         />
-        {choices.length > 0 && <ProjectFilter choices={choices} repositoryCount={repositories?.length ?? 0} project={shownOne} onChange={(picked) => pickProject(server, picked)} />}
+        {choices.length > 0 && <ProjectFilter choices={choices} repositoryCount={repositories?.length ?? 0} project={shownOne} onChange={(picked) => void updateServerSettings(server, { homeProject: picked })} />}
         {deleted.length > 0 && (
           <ToggleChip pressed={withDeleted} onChange={setWithDeleted} icon={<Trash2 size={13} />} data-tip={deletedRepositoriesTip(server)}>
             Deleted

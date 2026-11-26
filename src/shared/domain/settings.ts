@@ -1,8 +1,10 @@
+import type { UserColors } from './branchExplorerSettings';
 import type { CmChoice } from './cmRuntime';
 import { AUTO_APP, type CustomEditor } from './externalApps';
 import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
+import type { RepositorySettings, ServerSettings } from './scopedSettings';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -93,6 +95,15 @@ export interface AppSettings {
    * one at a time by the main process (`withFavoriteOrganization`). It changes nothing in `cm`.
    */
   favoriteOrganizations: string[];
+  /**
+   * What the user built up or chose in each repository (Branch Explorer rules and moved branches, the sync remote), by
+   * `repositoryKey`, changed one repository at a time by the main process (`updateRepositorySettings`).
+   */
+  repositorySettings: Record<string, RepositorySettings>;
+  /** What the user chose for each server (the home screen's project), by `serverKey`, changed one at a time (`updateServerSettings`). */
+  serverSettings: Record<string, ServerSettings>;
+  /** The Branch Explorer's changeset colors by user, the same in every repository; each turns them off in its own settings. */
+  changesetColors: UserColors;
   /** The merge tool files no rule matches open in: `auto` (the UVCS merge tool, else the first found) or a tool id. */
   mergeTool: string;
   /** Which tool opens which files, tried in order before `mergeTool` (Settings › Merge). */
@@ -143,6 +154,12 @@ export interface AppSettings {
   legacyToolsImported: boolean;
 }
 
+/**
+ * What a window's own storage kept before the settings held it (the Branch Explorer's rules, moved branches and
+ * colors, the sync remotes, the home screen's projects), brought once by each window (`addWindowSettings`).
+ */
+export type WindowKeptSettings = Pick<AppSettings, 'repositorySettings' | 'serverSettings' | 'changesetColors'>;
+
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   recentWorkspacePaths: [],
@@ -165,6 +182,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifyOnIncoming: false,
   homeAccount: '',
   favoriteOrganizations: [],
+  repositorySettings: {},
+  serverSettings: {},
+  changesetColors: { users: [] },
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
   mergeToolArgs: {},

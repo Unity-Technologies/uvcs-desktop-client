@@ -7,11 +7,16 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SettingsGroup } from '../../app/settings/SettingsGroup';
 import { usePlaceRepository } from '../../app/workspace/useWorkspace';
 import {
+  setExplorerRules,
+  setExplorerRulesOn,
+  setUserColors,
+  setUserColorsOn,
   useAppliedExplorerRules,
   useBranchExplorerPreferences,
   useExplorerRules,
   useExplorerRulesOn,
   useGraphViewOptions,
+  useUserColors,
   useUserColorsOn,
 } from './branchExplorerStore';
 import { DEFAULT_GRAPH_VIEW_OPTIONS, GRAPH_VIEW_OPTION_GROUPS, hidesAnything } from './canvas/graphViewOptions';
@@ -91,16 +96,14 @@ function RepositoryRules() {
   const rules = useExplorerRules(repository);
   const on = useExplorerRulesOn(repository);
   const applied = useAppliedExplorerRules(repository);
-  const setRules = useBranchExplorerPreferences((preferences) => preferences.setRules);
-  const setRulesOn = useBranchExplorerPreferences((preferences) => preferences.setRulesOn);
   if (!repository) return null;
   return (
     <ExplorerRulesTab
       rules={rules}
       on={on}
       applied={applied}
-      onChange={(changed) => setRules(repository, changed)}
-      onTurn={(turnedOn) => setRulesOn(repository, turnedOn)}
+      onChange={(changed) => setExplorerRules(repository, changed)}
+      onTurn={(turnedOn) => setExplorerRulesOn(repository, turnedOn)}
     />
   );
 }
@@ -112,10 +115,8 @@ function RepositoryRules() {
 function ChangesetColors() {
   const repository = usePlaceRepository();
   const { data } = useBranchExplorerData();
-  const colors = useBranchExplorerPreferences((preferences) => preferences.userColors);
+  const colors = useUserColors();
   const on = useUserColorsOn(repository);
-  const set = useBranchExplorerPreferences((preferences) => preferences.set);
-  const setUserColorsOn = useBranchExplorerPreferences((preferences) => preferences.setUserColorsOn);
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => historyAuthors(data)) : []), [data]);
   if (!repository) return null;
   return (
@@ -123,7 +124,7 @@ function ChangesetColors() {
       colors={colors}
       on={on}
       authors={authors}
-      onChange={(userColors) => set({ userColors })}
+      onChange={setUserColors}
       onTurn={(turnedOn) => setUserColorsOn(repository, turnedOn)}
     />
   );
