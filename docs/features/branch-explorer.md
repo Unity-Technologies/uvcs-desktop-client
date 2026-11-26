@@ -66,7 +66,8 @@ nothing invisible answers the pointer. A cut name keeps its tooltip with the ful
 
 The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository in
 the app's settings (`RepositorySettings.explorerRules`; `useExplorerRules`, `setExplorerRules`), since a condition names
-that repository's branches and owners. The tab's decisions live in `model/ruleList.ts`: the empty state and the
+that repository's branches and owners. A repository's settings are kept by its GUID, so a rename made anywhere keeps
+them; they read as none while the window reads it (ARCHITECTURE.md "Settings survive renames"). The tab's decisions live in `model/ruleList.ts`: the empty state and the
 Filters and Formats sections (`ruleTabBody`), the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`),
 how a row reads (its description, with its kind, condition and relatives under it: `ruleRowTitle`, `ruleRowDetail`),
 how the list changes, and when an edited rule can be saved (`ruleDraftProblem`). A rule opens in its own dialog

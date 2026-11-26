@@ -164,9 +164,9 @@ isn't the one. "Search matches…" in either one's menu pairs them by hand, with
 
 The check-in's Recent comments menu offers the comments checked in to the workspace's repository, from any of its
 workspaces, never another repository's: a comment often names what only makes sense where it was written (`cs:4207`,
-`br:/main/task`, a change request applied). They're kept in the settings by repository
-(`recentCommentsByRepository`, keyed by `repositoryKey`: the name and the server in any case, the server without its
-protocol, so two workspaces of one repository share them), the newest first, `MAX_RECENT_COMMENTS` each; a check-in
+`br:/main/task`, a change request applied). They're kept in the settings by the repository's GUID
+(`recentCommentsByRepository`; ARCHITECTURE.md "Settings survive renames"), so every workspace of a repository shares
+them and a rename made anywhere keeps them, the newest first, `MAX_RECENT_COMMENTS` each; a check-in
 puts its comment first (`rememberComment` in `checkinOperations`, the repository read from the workspace's info
 Changes already has). The main process applies it to what it holds (`settings.rememberRecentComment`,
 `SettingsStore.rememberRecentComment`, `withRecentComment`), as it does the recent workspaces and branches: a window

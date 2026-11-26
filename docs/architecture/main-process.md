@@ -153,7 +153,8 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
   focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
   per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
-  (`showInactive`). After a restart to install an update, which nobody chose, each also opens on the view it showed
+  (`showInactive`). A repository explored without a workspace is saved with its GUID when a listing taught it, and its
+  window, opened at once on the saved name, is asked to open the name a rename made elsewhere gave it (`followRename`). After a restart to install an update, which nobody chose, each also opens on the view it showed
   (`Quitting.restartToInstall` saves `withViews`; the page reports each view it goes to, `windows.viewShown`, and reads
   it back from its address, `startingViewIn`); a launch of the user's own starts on Changes. Where the app quits as
   its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
