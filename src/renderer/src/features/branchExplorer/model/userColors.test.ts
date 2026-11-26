@@ -3,7 +3,7 @@ import { BRANCH_HUES } from './branchHue';
 import { changeset, sampleHistory } from './graphFixtures';
 import { NO_RULE_COLORS, type RuleColors } from './ruleColors';
 import type { UserColors } from '@shared/domain/branchExplorerSettings';
-import { addingTurnsColorsOn, addPeopleEmpty, appliedUserColorsOf, changesetColorsTabBody, changesetUserHues, DEFAULT_USER_COLORS, historyAuthors, isColored, peopleMatching, usersToAdd, withUserColors, withUserHue, withUserRemoved, withUsersAdded, withUserToggled } from './userColors';
+import { addingTurnsColorsOn, addPeopleEmpty, changesetColorsTabBody, changesetUserHues, DEFAULT_USER_COLORS, historyAuthors, isColored, peopleMatching, usersToAdd, withUserColors, withUserHue, withUserRemoved, withUsersAdded, withUserToggled } from './userColors';
 
 const [first, second, third] = BRANCH_HUES;
 
@@ -40,19 +40,6 @@ describe('addingTurnsColorsOn', () => {
   it('keeps them off once someone has a color, and leaves them on', () => {
     expect(addingTurnsColorsOn(colorsOf(['ana', first!]), false)).toBe(false);
     expect(addingTurnsColorsOn(DEFAULT_USER_COLORS, true)).toBe(false);
-  });
-});
-
-describe('appliedUserColorsOf', () => {
-  const colors = colorsOf(['ana', first!]);
-
-  it('applies the colors in a repository where they are on', () => {
-    expect(appliedUserColorsOf(colors, { tools: true }, 'game')).toBe(colors);
-  });
-
-  it('applies none where they are off, the same object every time', () => {
-    expect(appliedUserColorsOf(colors, { game: true }, 'game')).toBe(appliedUserColorsOf(colorsOf(['bo', 1]), { game: true }, 'game'));
-    expect(appliedUserColorsOf(colors, { game: true }, 'game').users).toEqual([]);
   });
 });
 

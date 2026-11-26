@@ -5,7 +5,7 @@ import type { BranchPins } from '@shared/domain/branchExplorerSettings';
 import { branchesMoves, movedBranches, NO_PINS, withoutPin, type BranchMove } from './model/branchRows';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
-/** The branches moved in the repository shown, and how to change them (`setPins` in the preferences). */
+/** The branches moved in the repository shown, and how to change them (`setBranchPins`). */
 export interface BranchPositions {
   pins: BranchPins;
   setPins: (pins: BranchPins) => void;

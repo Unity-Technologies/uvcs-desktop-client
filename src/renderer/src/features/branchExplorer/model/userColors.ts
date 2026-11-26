@@ -3,7 +3,6 @@ import type { UserColor, UserColors } from '@shared/domain/branchExplorerSetting
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { displayName, userFilterTexts } from '../../../lib/userName';
 import { BRANCH_HUES } from './branchHue';
-import { isOnIn, type OffByRepository } from './offByRepository';
 import type { RuleColors } from './ruleColors';
 
 export const DEFAULT_USER_COLORS: UserColors = { users: [] };
@@ -44,14 +43,6 @@ export function withUserToggled(colors: UserColors, user: string): UserColors {
  */
 export function addingTurnsColorsOn(colors: UserColors, on: boolean): boolean {
   return !on && colors.users.length === 0;
-}
-
-/**
- * The colors the graph applies in `repository`: none while they're turned off there, keeping them. The same object
- * while off, so a store selector answering it doesn't render forever.
- */
-export function appliedUserColorsOf(colors: UserColors, off: OffByRepository, repository: string | undefined): UserColors {
-  return isOnIn(off, repository) ? colors : DEFAULT_USER_COLORS;
 }
 
 /** What the "Changeset colors" tab shows: an invitation while no one has a color, else the list, dimmed while off. */

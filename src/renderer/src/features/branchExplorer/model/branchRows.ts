@@ -1,26 +1,12 @@
 import type { BranchPins } from '@shared/domain/branchExplorerSettings';
 import type { GraphLayout, Lane } from './layoutGraph';
 
-/** The moved branches, by repository: an id names a branch of one repository. */
-export type PinsByRepository = Readonly<Record<string, BranchPins>>;
-
 export const NO_PINS: BranchPins = [];
 
 export type BranchMove = 'up' | 'down' | 'top' | 'bottom';
 
 /** Which moves the branch's menu offers, and whether its own position or every position can be reset. */
 export type BranchMoves = Record<BranchMove | 'reset' | 'resetAll', boolean>;
-
-/** The repository's moved branches; always the same empty list when it has none, so a store selector stays stable. */
-export function pinsOf(pinsByRepository: PinsByRepository, repository: string | undefined): BranchPins {
-  return (repository === undefined ? undefined : pinsByRepository[repository]) ?? NO_PINS;
-}
-
-/** The positions with the repository's replaced; a repository without any is forgotten. */
-export function withPins(pinsByRepository: PinsByRepository, repository: string, pins: BranchPins): PinsByRepository {
-  const { [repository]: _replaced, ...others } = pinsByRepository;
-  return pins.length === 0 ? others : { ...others, [repository]: pins };
-}
 
 /** The positions once the lane's branch moves from the row it is drawn on; `bottom` is below every row. */
 export function movedBranch(pins: BranchPins, lane: Lane, move: BranchMove, rowCount: number): BranchPins {
