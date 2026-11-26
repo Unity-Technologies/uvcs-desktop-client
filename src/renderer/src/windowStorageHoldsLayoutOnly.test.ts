@@ -31,6 +31,17 @@ const LAYOUT_STORES: Record<string, string> = {
   'lib/viewFilters.ts': 'every view’s filters: time range, kinds, Mine',
 };
 
+/**
+ * The maps a stored store keeps (a field typed `Record<string, …>`), by `file#field`, and what they're keyed by. A map
+ * of places (`picks` by server) once hid behind an innocent name, so every map is named here, not only `*ByRepository`.
+ */
+const KEYED_MAPS: Record<string, string> = {
+  'components/detailsPaneStore.ts#widths': 'by splitter or details panel (`widthKey`, `detailsKey`)',
+  'components/detailsPaneStore.ts#hidden': 'by details panel (`detailsKey`)',
+  'components/detailsPaneStore.ts#startedHidden': 'by details panel, for the session only: not remembered (`partialize`)',
+  'features/diff/viewer/diffPreferencesStore.ts#representations': 'by kind of file: how a diff shows it',
+};
+
 /** Sources that reach the window's storage themselves, and why. */
 const STORAGE_READERS: Record<string, string> = {
   'components/fileListViewStore.ts': 'starts from the layout Changes kept before every file list shared one',
@@ -55,6 +66,11 @@ describe("a window's storage", () => {
   it('keeps no map of repositories, workspaces or servers, which the settings keep (`RepositorySettings`)', () => {
     const byPlace = stored.filter(({ text }) => /\w+By(Repository|Workspace|Server|Place)\b|\bRepositorySettings\b/.test(text)).map(({ file }) => file);
     expect(byPlace).toEqual([]);
+  });
+
+  it('keeps only the maps named, each keyed by something of the window, not a place', () => {
+    const maps = stored.flatMap(({ file, text }) => [...text.matchAll(/^\s+(\w+)\??: (?:Readonly<)?Record</gm)].map(([, field]) => `${file}#${field}`));
+    expect(maps.sort()).toEqual(Object.keys(KEYED_MAPS).sort());
   });
 
   it('is reached directly only by the sources named, each with why', () => {
