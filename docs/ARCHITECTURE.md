@@ -164,7 +164,8 @@ A Unity Cloud organization's server has a name (`AcmeStudio@unity`) and an id fo
 never shows the id form, never compares it with a name and never passes it to `cm` (`fakeCmClient` fails a test that
 does: `namesOrganizationById`); it takes the name from an output `cm` already names it in, never by mapping ids
 itself. An organization's own name can change; its id never does, and is the one thing settings record of it, never
-shown nor passed to `cm` ("Settings survive renames"). Where each name comes from, the two kinds of organizations,
+shown nor passed to `cm` ("Settings survive renames"). That id (`{unityid}`) is the same number as the id form, which
+the app never builds from it. Where each name comes from, the two kinds of organizations,
 projects and deleted repositories:
 architecture/cm-output.md "Unity organizations".
 
@@ -347,7 +348,8 @@ be passed where one is kept.
   it, and no other organization can ever take a name one had. So what it keeps (its favorite, its `ServerSettings`)
   records its id (`OrganizationId`, `ServerSettings.organizationId`), and follows it to its new name
   (`OrganizationRenames`, `organizationsKept.ts`). The id comes from `cm getconfig organization`, a local read, once
-  per organization for the session, and only once some organization keeps something (`UnityOrganizationIds`).
+  per organization for the session (`UnityOrganizationIds`): those that recorded one are read again each session, and
+  the others only when a recorded name stops answering its id. An id goes once its organization keeps nothing else.
   Details: architecture/cm-output.md "Unity organizations".
 
 ## `cm` owns its files

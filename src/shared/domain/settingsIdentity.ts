@@ -12,6 +12,8 @@ import type { AppSettings } from './settings';
 export type SettingIdentity =
   /** It names no workspace, repository, branch, project, organization or user: a choice of the app. */
   | 'namesNoObject'
+  /** The stable id itself of the object whose settings hold it, recorded to recognize it after a rename: it names no other object. */
+  | 'theIdItself'
   | 'workspaceGuid'
   | 'repositoryGuid'
   | 'branchGuid'
@@ -82,5 +84,5 @@ export const REPOSITORY_SETTINGS_IDENTITY: { readonly [Setting in keyof Required
 
 export const SERVER_SETTINGS_IDENTITY: { readonly [Setting in keyof Required<ServerSettings>]: SettingIdentity } = {
   homeProject: 'projectGuid',
-  organizationId: { organizationFollowedById: 'The id itself, of the organization whose settings hold it.' },
+  organizationId: 'theIdItself',
 };

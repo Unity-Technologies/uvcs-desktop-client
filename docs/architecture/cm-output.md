@@ -242,9 +242,11 @@ by name, and never passes it to `cm`.
   an organization that isn't a Unity one) from what `cm` keeps on this machine, never asking a server, and fails for
   an organization `cm` hasn't signed in to here. `cm` learns a new name's id when it first signs in to it, and forgets
   the old name then. Its `--format` takes no `{tab}`: the command fails on it. It answers one organization a call, so
-  `UnityOrganizationIds` asks it once per organization for the session, and `organizationsToIdentify` only for those
-  that keep something or, once one recorded its id, those that keep nothing yet (one may be a renamed one). Never
-  read `cm`'s own file mapping names to ids ("`cm` owns its files").
+  `UnityOrganizationIds` asks it once per organization for the session: each session reads again the ids of the
+  organizations that recorded one, and of those that keep something with none recorded (`organizationsToIdentify`);
+  only when a recorded name no longer answers its id does it read the other organizations listed, to find it under
+  its new name (`organizationsToSearch`). Never read `cm`'s own file mapping names to ids ("`cm` owns its files").
+  `{unityid}` is the same number as the id form `<id>@cloud`; the app never builds that form from it.
 - **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
   `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
   sidebar lists one Unity account's at a time, by its switcher (docs/features/accounts.md "Home"), and groups them

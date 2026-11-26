@@ -7,8 +7,9 @@ import { organizationIdArgs } from './organizationIds';
 /**
  * Each Unity organization's id by its name (`acme@unity`), asked of `cm` once per name for the session: an id never
  * changes, and a name renamed meanwhile names no other organization, as no other organization can ever take it. A
- * local read (`organizationIdArgs`). An organization `cm` doesn't know yet (no sign-in to it on this machine) has no
- * id until the next session; a server that isn't a Unity organization has none.
+ * local read (`organizationIdArgs`). Any failure is kept for the session too: an organization `cm` doesn't know yet
+ * (no sign-in to it on this machine) has no id until the next session; a server that isn't a Unity organization has
+ * none.
  */
 export class UnityOrganizationIds {
   /** By `serverKey`: `cm` takes an organization's name in any case. */
