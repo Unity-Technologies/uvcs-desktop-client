@@ -6,7 +6,7 @@ import { workspacePlace } from '@shared/domain/place';
 import { branchGuidFor, repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { queryClient } from '../../../app/queryClient';
 import { shownToasts } from '../../../testing/operationOutcome';
-import { diffReviewTargetToWrite, setDiffReviewed } from './diffReviewOperations';
+import { diffReviewTargetToWrite, reviewTargetWhenKnown, setDiffReviewed } from './diffReviewOperations';
 
 const place = workspacePlace('/ws');
 const GAME = repositoryGuidFor(1);
@@ -59,5 +59,23 @@ describe('setDiffReviewed', () => {
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't mark the files as reviewed", detail: 'Unable to connect to local' }]);
     expect(fakeApi.argsOf('review.markDiff')).toEqual([]);
+  });
+});
+
+describe('reviewTargetWhenKnown', () => {
+  const changeset = { kind: 'changeset', changesetId: 4 } as const;
+
+  it('writes where the marks were read, asking nothing', async () => {
+    const known = { place, repository: GAME, name: 'cs:4' };
+
+    expect(await reviewTargetWhenKnown(known, place, undefined, changeset)!()).toBe(known);
+    expect(fakeApi.methods()).toEqual([]);
+  });
+
+  it('reads where to write once the repository is known, and marks nothing before', async () => {
+    fakeApi.answer('repositories.guidOf', () => GAME);
+
+    expect(reviewTargetWhenKnown(undefined, place, undefined, changeset)).toBeNull();
+    expect(await reviewTargetWhenKnown(undefined, place, 'game@local', changeset)!()).toMatchObject({ repository: GAME, name: 'cs:4' });
   });
 });
