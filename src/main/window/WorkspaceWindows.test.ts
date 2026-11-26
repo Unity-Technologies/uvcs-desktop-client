@@ -208,6 +208,22 @@ describe('a repository explored without a workspace', () => {
     expect(relaunched.windows.takeRequested(window!.webContents.id)).toEqual(repositoryPlace('racer@local'));
   });
 
+  it('leaves a window reopened on it alone once the user went elsewhere before the server said it was renamed', async () => {
+    const saved: SavedWindow = { repository: 'game@local', repositoryGuid: repositoryGuidFor(1), bounds: { x: 0, y: 0, width: 800, height: 600, maximized: false }, fullScreen: false };
+    let answer: (spec: string) => void = () => undefined;
+    const { windows, shows } = setUp([], [saved], { specNow: () => new Promise((resolve) => (answer = resolve)) });
+    const reopened = windows.openFirst();
+    const [window] = fakeElectron.windows();
+    windows.takeRequested(window!.webContents.id);
+    shows(window!, GAME);
+
+    answer('racer@local');
+    await reopened;
+
+    expect(window!.webContents.sent).toEqual([]);
+    expect(windows.takeRequested(window!.webContents.id)).toBeNull();
+  });
+
   it('reopens on the name it was saved with while that one still names it, or its server is out of reach', async () => {
     const guid = repositoryGuidFor(1);
     const saved: SavedWindow = { repository: 'game@local', repositoryGuid: guid, bounds: { x: 0, y: 0, width: 800, height: 600, maximized: false }, fullScreen: false };
