@@ -177,6 +177,7 @@ export function CheckinPanel({
               <DescriptionFooter
                 buttons={footerButtons}
                 recentComments={recentComments.comments}
+                recentCommentsWaiting={recentComments.waiting}
                 onRecentCommentsOpen={onRecentCommentsOpen}
                 onRecentComment={(pick) => {
                   onMessageChange(pick.parts);

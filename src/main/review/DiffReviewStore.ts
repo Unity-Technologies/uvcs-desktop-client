@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DiffReviewMark } from '@shared/domain/review';
 import type { RepositoryGuid } from '@shared/domain/stableIds';
+import { pathExists } from '../files/pathExists';
 import { PersistedByKey } from './PersistedByKey';
 
 /** Diffs remembered per repository; the least recently used go first. */
@@ -51,7 +52,7 @@ export class DiffReviewStore {
    * known: unless the GUID has one of its own, or it was read already this session.
    */
   async keepRepositoryByGuid(spec: string, guid: RepositoryGuid): Promise<void> {
-    if (this.files.has(guid) || (await exists(this.filePath(guid)))) return;
+    if (this.files.has(guid) || (await pathExists(this.filePath(guid)))) return;
     await rename(this.filePathBySpec(spec), this.filePath(guid)).catch(() => undefined);
   }
 
@@ -92,12 +93,6 @@ export class DiffReviewStore {
   }
 }
 
-async function exists(path: string): Promise<boolean> {
-  return stat(path).then(
-    () => true,
-    () => false,
-  );
-}
 
 /** Moves the marks kept under `formerDiff` to `diff` while it keeps none; whether it did. */
 function movedFromFormerName(marks: RepositoryMarks, diff: string, formerDiff: string | undefined): boolean {

@@ -10,6 +10,8 @@ interface DescriptionFooterProps {
   /** What it shows (`descriptionFooterButtons`). */
   buttons: readonly DescriptionFooterButton[];
   recentComments: readonly string[];
+  /** Shown disabled in the recent comments' menu in place of them, while they can't be offered (`RecentCommentsOffer.waiting`). */
+  recentCommentsWaiting: string | null;
   /** The recent comments' menu opened. */
   onRecentCommentsOpen: () => void;
   /** A recent comment picked: its parts go in the summary and the description. */
@@ -24,7 +26,7 @@ interface DescriptionFooterProps {
  * The check-in description's footer (`descriptionFooterButtons`): quiet icon buttons at its bottom-left, apart by
  * hairlines; nothing at all when it has none.
  */
-export function DescriptionFooter({ buttons, recentComments, onRecentCommentsOpen, onRecentComment, onRecentMenuClosed, onChangeRequests }: DescriptionFooterProps) {
+export function DescriptionFooter({ buttons, recentComments, recentCommentsWaiting, onRecentCommentsOpen, onRecentComment, onRecentMenuClosed, onChangeRequests }: DescriptionFooterProps) {
   if (buttons.length === 0) return null;
   return (
     <div className={styles.descriptionFooter} role="toolbar" aria-label="Description">
@@ -33,7 +35,11 @@ export function DescriptionFooter({ buttons, recentComments, onRecentCommentsOpe
           {index > 0 && <span className={styles.footerSeparator} aria-hidden />}
           {button.kind === 'recentComments' ? (
             <ActionDropdownMenu
-              entries={recentComments.map((recent, entry) => ({ id: `recent.${entry}`, label: recentCommentLabel(recent), run: () => onRecentComment(recentCommentPick(recent)) }))}
+              entries={
+                recentCommentsWaiting !== null
+                  ? [{ id: 'recent.waiting', label: recentCommentsWaiting, disabled: true, run: () => {} }]
+                  : recentComments.map((recent, entry) => ({ id: `recent.${entry}`, label: recentCommentLabel(recent), run: () => onRecentComment(recentCommentPick(recent)) }))
+              }
               onOpenChange={(open) => open && onRecentCommentsOpen()}
               onCloseAutoFocus={onRecentMenuClosed}
             >

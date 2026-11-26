@@ -2,10 +2,11 @@ import type { IssueTrackerSetup, TrackerConnection } from '@shared/domain/issueT
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { bindingOf, issueReferenceReader, type IssueReferenceReader } from '@shared/issueTrackers/issueReferences';
 
-/** A place's tracker: how its comments read issues, and the connection that reads them. */
+/** A place's tracker: how its comments read issues, the connection that reads them, and the repository it's bound to. */
 export interface PlaceTracker {
   reader: IssueReferenceReader;
   connection: TrackerConnection;
+  repository: RepositoryGuid;
 }
 
 /**
@@ -16,10 +17,11 @@ const built = new WeakMap<IssueTrackerSetup, Map<RepositoryGuid, PlaceTracker | 
 
 /**
  * Whether any repository uses a tracker: only then does a window read its repository's GUID to find its own
- * (`usePlaceTracker`), so one with no tracker anywhere asks nothing.
+ * (`usePlaceTracker`), so one with no tracker anywhere asks nothing. A binding still kept by spec counts: reading the
+ * GUID moves it there.
  */
 export function tracksAnyRepository(setup: IssueTrackerSetup | undefined): boolean {
-  return setup !== undefined && setup.bindings.length > 0;
+  return setup !== undefined && (setup.bindings.length > 0 || setup.bindingsKeptBySpec.length > 0);
 }
 
 /** The tracker of a place's repository (its GUID), when it has one bound: none, and its comments read no issue. */
@@ -35,5 +37,5 @@ function buildPlaceTracker(setup: IssueTrackerSetup, repository: RepositoryGuid)
   const binding = bindingOf(setup.bindings, repository);
   const connection = binding && setup.connections.find((kept) => kept.id === binding.connectionId);
   if (!binding || !connection) return null;
-  return { reader: issueReferenceReader(binding, connection), connection };
+  return { reader: issueReferenceReader(binding, connection), connection, repository };
 }

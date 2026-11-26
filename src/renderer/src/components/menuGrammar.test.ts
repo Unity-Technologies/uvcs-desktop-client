@@ -58,6 +58,7 @@ import { queryClient } from '../app/queryClient';
 import { workspaceInfoQuery } from '../app/workspace/useWorkspace';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { ExternalApps } from '@shared/domain/externalApps';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const ws = '/ws';
 
@@ -83,7 +84,7 @@ const branch: Branch = {
 };
 const changeset: Changeset = { id: 5, guid: 'c-guid', branch: '/main/a', comment: 'Finish feature', owner: 'jane@example.com', date: '2026-09-06T00:00:00Z', parent: 4, repository };
 const label: Label = { id: 3, name: 'v1', changeset: 6, branch: '/main', comment: 'First', owner: 'jane@example.com', date: '2026-09-07T00:00:00Z', repository };
-const shelve: Shelve = { id: 12, guid: 's-guid', comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
+const shelve: Shelve = { id: 12, guid: shelveGuidFor(12), comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
 const review: CodeReviewSummary = codeReviewSummary({ id: 9, title: 'Review the task', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z' });
 /** The review as the Merge requests view lists it, its branch named. */
 const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
@@ -721,7 +722,7 @@ describe('Copy', () => {
       'Shelve spec: sh:12',
       'Shelve full spec: sh:12@game@local',
       'Shelve comment: Spike',
-      'Shelve GUID: s-guid',
+      `Shelve GUID: ${shelveGuidFor(12)}`,
     ]);
   });
 

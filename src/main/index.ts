@@ -7,6 +7,7 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { cmBranchNameReads } from './cm/branchNames';
 import { listRepositories } from './cm/listRepositories';
+import { repositoryIdOf } from './cm/repositoryIdOf';
 import { RepositoryGuids } from './cm/RepositoryGuids';
 import { UnityOrganizationIds } from './cm/UnityOrganizationIds';
 import { OrganizationRenames } from './settings/OrganizationRenames';
@@ -103,7 +104,7 @@ const headers = new WorkspaceHeaders(
 const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 // Every listing of a server's repositories, which teaches the GUIDs their settings are kept by (`RepositoryGuids`).
-const repositoryGuids = new RepositoryGuids((server) => listRepositories(cm, server));
+const repositoryGuids = new RepositoryGuids({ list: (server) => listRepositories(cm, server), idOf: (spec, server) => repositoryIdOf(cm, spec, server) });
 // What a Unity organization keeps follows it to its new name when its owners rename it (`OrganizationRenames`).
 const organizationRenames = new OrganizationRenames(settings, new UnityOrganizationIds(cm));
 const workspaceCopies = new WorkspaceCopies({ cm });

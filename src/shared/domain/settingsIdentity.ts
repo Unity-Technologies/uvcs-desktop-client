@@ -2,8 +2,9 @@ import type { RepositorySettings, ServerSettings } from './scopedSettings';
 import type { AppSettings } from './settings';
 
 // What each setting keeps the objects it names by (ARCHITECTURE.md "Settings survive renames"). A name changes with a
-// rename, and what was kept by it is lost: a repository, branch or project is kept by its GUID (`stableIds.ts`), a
-// workspace by its GUID. A path or a name is kept only where nothing stable exists, and says why.
+// rename, and what was kept by it is lost: a workspace, repository or project is kept by its GUID (`stableIds.ts`), a
+// branch inside what is kept per repository by its object id. A path or a name is kept only where nothing stable
+// exists, and says why.
 //
 // Every setting has its line here, and the type checker asks for one when a setting is added: whoever adds it decides
 // what it is kept by.
@@ -36,6 +37,7 @@ export type SettingIdentity =
 export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: SettingIdentity } = {
   theme: 'namesNoObject',
   recentWorkspacePaths: { byPath: 'Opening a workspace takes its folder; a workspace moved is found again by opening it.' },
+  // Per workspace GUID, each branch by its GUID.
   recentBranchesByWorkspace: 'workspaceGuid',
   pendingChanges: 'namesNoObject',
   warnOnEmptyComment: 'namesNoObject',
@@ -47,6 +49,8 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   defaultWorkspaceRoot: 'namesNoObject',
   pendingChangesOnSwitch: 'namesNoObject',
   restoreLeftChangesAutomatically: 'namesNoObject',
+  // Per workspace GUID, each record naming its repository by spec, which a rename leaves behind: its shelve's GUID
+  // (`shelveGuid`) finds the shelve again, and its branches by their object id (`br:37`), as ids are per repository.
   switchShelves: 'workspaceGuid',
   reviewModeWorkspaces: 'placeGuid',
   reviewModeHintDone: 'namesNoObject',

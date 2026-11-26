@@ -23,6 +23,16 @@ export function diffReviewName(target: DiffTarget, branchGuid: BranchGuid | unde
   }
 }
 
+/**
+ * What a committed diff reads to show its marks: its repository's GUID, and a branch's GUID for a branch's diff, only
+ * in review mode, where the marks show, and only once its files are asked for (`enabled`). A mark
+ * made before they're read reads them then (`reviewTargetWhenKnown`).
+ */
+export function diffReviewReads({ enabled, reviewModeOn, target }: { enabled: boolean; reviewModeOn: boolean; target: DiffTarget }): { repository: boolean; branch: boolean } {
+  const reads = enabled && reviewModeOn;
+  return { repository: reads, branch: reads && target.kind === 'branch' };
+}
+
 /** What a diff's marks were kept under before: a branch's by its name, until they move under its GUID. */
 export function formerDiffReviewName(target: DiffTarget): string | undefined {
   return target.kind === 'branch' ? `br:${target.branch}` : undefined;

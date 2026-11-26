@@ -195,6 +195,24 @@ exception is `cm undelete`, which refuses any spec naming a repository and takes
   `on repository`), but leads to none of the workspace's views: no changeset diff, Branch Explorer, branch chip link or
   labels, and its changeset spec is copied with its repository.
 
+## A repository's GUID
+
+What the app keeps for a repository is kept by its GUID (ARCHITECTURE.md "Settings survive renames"), which only
+`cm repository list` prints (`{repguid}`, beside `{repid}`, the repository's number on its server): `cm status
+--header`, `cm wi`, `cm find` and `cm getworkspacefrompath` print neither, and no spec takes a GUID.
+
+- **A rename leaves the old name behind.** `cm repository rename` changes only the listing: a workspace of the
+  repository keeps naming it by its old name in `cm status --header`, `cm wi` and its selector, forever (`cm update`
+  doesn't rewrite it), and `cm` keeps working because the server keeps the old name as an alias of the repository,
+  until another repository takes the name or the renamed one is deleted for good. `cm repository list` lists only the
+  new name.
+- **The id behind a name**: `cm ls / --tree=cs:0@<name>@<server> --format={repid}` prints the id of the repository
+  `cm` takes the name for, under its new name or an old one, inside a workspace or out (`repositoryIdOf`). Changeset
+  0 is in every repository and its tree is the root alone, so it prints one record; a branch (`br:/main`) can be
+  renamed, and a loaded changeset's root prints a record per entry. A name no repository goes by fails ("The
+  specified repository couldn't be found"). `RepositoryGuids` finds that id in the listing, so the old name costs one
+  `cm ls` per session.
+
 ## Unity organizations
 
 A Unity Cloud organization's server has two names: the one people use, which `cm` prints and takes almost everywhere

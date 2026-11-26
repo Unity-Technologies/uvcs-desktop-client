@@ -9,12 +9,13 @@ import { cachedShelve } from '../../features/shelves/cachedShelve';
 import type { Page } from '../navigation/pages';
 import { queryClient } from '../queryClient';
 import { pageSeed, plantPageSeed } from './pageSeeds';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const WS = '/work/game';
 const IN_WS = workspacePlace(WS);
 const READ_AT = 1_700_000_000_000;
 const CHANGESET: Changeset = { id: 10, guid: 'g10', parent: 9, branch: '/main/drift', owner: 'ana', date: '2026-10-16T10:00:00Z', comment: 'Drift physics', repository: 'game@local' };
-const SHELVE: Shelve = { id: 4, guid: 'g4', comment: 'Wip', owner: 'ana', date: '2026-10-01T10:00:00Z', parentChangeset: 9, repository: 'game@local' };
+const SHELVE: Shelve = { id: 4, guid: shelveGuidFor(4), comment: 'Wip', owner: 'ana', date: '2026-10-01T10:00:00Z', parentChangeset: 9, repository: 'game@local' };
 const diffOf = (target: Extract<Page, { kind: 'diff' }>['target']): Page => ({ kind: 'diff', title: 'A diff', target });
 
 beforeEach(() => queryClient.clear());

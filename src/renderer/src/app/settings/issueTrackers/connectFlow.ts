@@ -233,7 +233,8 @@ export function signInRows(setup: IssueTrackerSetup | undefined, repository?: Re
   const here = setup && repository ? bindingOf(setup.bindings, repository)?.connectionId : undefined;
   return (setup?.connections ?? []).map((connection) => {
     const signInNeeded = needsSignIn(connection);
-    const used = setup?.bindings.filter((binding) => binding.connectionId === connection.id).length ?? 0;
+    // Bindings still kept by spec lose their tracker too.
+    const used = [...(setup?.bindings ?? []), ...(setup?.bindingsKeptBySpec ?? [])].filter((binding) => binding.connectionId === connection.id).length;
     const name = TRACKER_GRAMMARS[connection.kind].name;
     return {
       id: connection.id,

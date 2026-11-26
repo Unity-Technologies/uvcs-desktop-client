@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
+import { parseProjectGuid } from '@shared/domain/stableIds';
+import { projectGuidFor } from '@shared/testing/stableIdsFor';
 import { homeProjectKept, homeProjectOfLink, matchingProjects, movedHomeProject, noRepositoriesState, projectChoices, repositoriesInProject, repositoryLabels, shownProject } from './repositoryProjects';
 
 const SERVER = 'racing@unity';
@@ -14,19 +16,19 @@ const EDITOR = repository('Cloud Repositories/TextEditor', 'Cloud Repositories')
 const LEGACY = repository('legacy');
 const REPOSITORIES = [ART, EDITOR, GAME, LEGACY];
 
-const unityProject = (name: string) => ({ name, guid: `guid-of-${name}` });
+const unityProject = (name: string, index: number) => ({ name, guid: projectGuidFor(index + 1) });
 
-const RACING_GUID = '5a1c2d3e-0000-4000-8000-00000000abcd';
-const KART_GUID = '7b2d3e4f-0000-4000-8000-00000000ef01';
+const RACING_GUID = parseProjectGuid('5a1c2d3e-0000-4000-8000-00000000abcd')!;
+const KART_GUID = parseProjectGuid('7b2d3e4f-0000-4000-8000-00000000ef01')!;
 const RACING = { name: 'Racing', guid: RACING_GUID };
 const KART = { name: 'Kart', guid: KART_GUID };
 
 describe('projectChoices', () => {
   it('offers every project, empty ones too, with its repositories counted', () => {
     expect(projectChoices(['Archived', 'Cloud Repositories', 'Racing'].map(unityProject), REPOSITORIES)).toEqual([
-      { name: 'Archived', guid: 'guid-of-Archived', repositoryCount: 0 },
-      { name: 'Cloud Repositories', guid: 'guid-of-Cloud Repositories', repositoryCount: 1 },
-      { name: 'Racing', guid: 'guid-of-Racing', repositoryCount: 2 },
+      { name: 'Archived', guid: projectGuidFor(1), repositoryCount: 0 },
+      { name: 'Cloud Repositories', guid: projectGuidFor(2), repositoryCount: 1 },
+      { name: 'Racing', guid: projectGuidFor(3), repositoryCount: 2 },
     ]);
   });
 });
@@ -69,7 +71,7 @@ describe('shownProject', () => {
 describe('homeProjectKept', () => {
   it("keeps a project by its GUID, by its name only from a cm that printed none, and nothing for all projects", () => {
     expect(homeProjectKept(RACING)).toBe(RACING_GUID);
-    expect(homeProjectKept({ name: 'Racing', guid: '' })).toBe('Racing');
+    expect(homeProjectKept({ name: 'Racing' })).toBe('Racing');
     expect(homeProjectKept(null)).toBeNull();
   });
 });
@@ -98,7 +100,7 @@ describe('movedHomeProject', () => {
     expect(movedHomeProject(RACING_GUID, [RACING])).toBeUndefined();
     expect(movedHomeProject(undefined, [RACING])).toBeUndefined();
     expect(movedHomeProject('Deleted', [RACING])).toBeUndefined();
-    expect(movedHomeProject('Racing', [{ name: 'Racing', guid: '' }])).toBeUndefined();
+    expect(movedHomeProject('Racing', [{ name: 'Racing' }])).toBeUndefined();
   });
 });
 

@@ -1141,8 +1141,9 @@ dropped. Committed diffs (changeset, branch, shelve, range, code review) keep ma
 `main/review/DiffReviewStore`: per repository, by its GUID (`<guid>.json`), by the diff's name (`cs:42`,
 `br:<branch GUID>`, `sh:3`: `diffReviewName`) and the revision reviewed, so a branch's file is changed since its review
 once another revision shows, and a rename of the repository or the branch made anywhere keeps them; the least recently
-reviewed diffs are forgotten. A branch's GUID is read only in review mode, where the marks show (`branchQuery`, one
-light `cm find` shared with every view of the branch); marks kept by its name before (`br:/main/task`) move under it as
+reviewed diffs are forgotten. The repository's GUID, and a branch's, are read only in review mode, where the marks show
+(`diffReviewReads`; a branch's is `branchQuery`, one light `cm find` shared with every view of the branch), and a mark
+made before they're read reads them then (`reviewTargetWhenKnown`); a branch's marks kept by its name before (`br:/main/task`) move under its GUID as
 they're first read or marked (`formerDiffReviewName`). `features/review` holds the shared list pieces.
 
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the

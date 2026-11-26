@@ -1,16 +1,19 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { RepositoryTrackerBinding, TrackerConnection } from '@shared/domain/issueTrackers';
+import type { BindingKeptBySpec, RepositoryTrackerBinding, TrackerConnection } from '@shared/domain/issueTrackers';
 import { repositoryKey } from '@shared/domain/repository';
-import type { RepositoryGuid } from '@shared/domain/stableIds';
+import { parseRepositoryGuid, type RepositoryGuid } from '@shared/domain/stableIds';
 import { replaceFileSync } from '../files/replaceFileSync';
 
 /** A connection as it is kept: its credential's state is the secrets' to say. */
 export type StoredConnection = Omit<TrackerConnection, 'credential'>;
 
+/** A binding as it is kept: by the repository's GUID, or by its spec when made before (`BindingKeptBySpec`). */
+type StoredBinding = BindingKeptBySpec;
+
 interface StoredTrackers {
   connections: StoredConnection[];
-  bindings: RepositoryTrackerBinding[];
+  bindings: StoredBinding[];
 }
 
 const EMPTY: StoredTrackers = { connections: [], bindings: [] };
@@ -29,8 +32,17 @@ export class IssueTrackerStore {
     return this.read().connections;
   }
 
+  /** The bindings kept by the repository's GUID. */
   bindings(): readonly RepositoryTrackerBinding[] {
-    return this.read().bindings;
+    return this.read().bindings.flatMap((binding) => {
+      const repository = parseRepositoryGuid(binding.repository);
+      return repository ? [{ ...binding, repository }] : [];
+    });
+  }
+
+  /** The bindings still kept by the repository's spec, until its GUID is known (`keepRepositoryByGuid`). */
+  bindingsKeptBySpec(): readonly BindingKeptBySpec[] {
+    return this.read().bindings.filter((binding) => !parseRepositoryGuid(binding.repository));
   }
 
   connection(id: string): StoredConnection | undefined {
@@ -66,7 +78,7 @@ export class IssueTrackerStore {
    */
   keepRepositoryByGuid(spec: string, guid: RepositoryGuid): boolean {
     const { connections, bindings } = this.read();
-    const bySpec = bindings.find((binding) => repositoryKey(binding.repository) === repositoryKey(spec));
+    const bySpec = this.bindingsKeptBySpec().find((binding) => repositoryKey(binding.repository) === repositoryKey(spec));
     if (!bySpec) return false;
     const others = bindings.filter((binding) => binding !== bySpec);
     const byGuid = others.some((binding) => binding.repository === guid);

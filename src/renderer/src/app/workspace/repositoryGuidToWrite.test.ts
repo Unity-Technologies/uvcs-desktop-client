@@ -21,7 +21,7 @@ describe('repositoryGuidToWrite', () => {
   it('rejects with a message to show when the server holds no such repository', async () => {
     fakeApi.answer('repositories.guidOf', () => null);
 
-    await expect(repositoryGuidToWrite('game@acme@unity')).rejects.toThrow("Couldn't find game@acme@unity on its server.");
+    await expect(repositoryGuidToWrite('game@acme@unity')).rejects.toThrow("Couldn't find game@acme@unity on its server. If it was renamed, open it again from the home screen.");
   });
 
   it('asks again after a lookup that failed, as when the server was out of reach', async () => {

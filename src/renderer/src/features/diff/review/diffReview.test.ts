@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import { branchGuidFor } from '@shared/testing/stableIdsFor';
-import { diffReviewName, diffReviewStatusOf, formerDiffReviewName, reviewedRevisionToCompare } from './diffReview';
+import { diffReviewName, diffReviewReads, diffReviewStatusOf, formerDiffReviewName, reviewedRevisionToCompare } from './diffReview';
+
+describe('diffReviewReads', () => {
+  it("reads the repository's GUID, and a branch's, only in review mode, for a diff whose files are asked for", () => {
+    expect(diffReviewReads({ enabled: true, reviewModeOn: true, target: { kind: 'branch', branch: '/main/task' } })).toEqual({ repository: true, branch: true });
+    expect(diffReviewReads({ enabled: true, reviewModeOn: true, target: { kind: 'changeset', changesetId: 4 } })).toEqual({ repository: true, branch: false });
+    expect(diffReviewReads({ enabled: true, reviewModeOn: false, target: { kind: 'branch', branch: '/main/task' } })).toEqual({ repository: false, branch: false });
+    expect(diffReviewReads({ enabled: false, reviewModeOn: true, target: { kind: 'changeset', changesetId: 4 } })).toEqual({ repository: false, branch: false });
+  });
+});
 
 const entry = (path: string, revisionId: number, itemType: DiffEntry['itemType'] = 'file'): DiffEntry => ({
   status: 'changed',

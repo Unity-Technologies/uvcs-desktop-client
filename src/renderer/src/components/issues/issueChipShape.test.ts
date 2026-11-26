@@ -80,7 +80,7 @@ describe('issueStaleTime', () => {
 });
 
 const connection: TrackerConnection = { id: 'c1', kind: 'jiraCloud', server: 'https://x.atlassian.net', account: { id: 'a', name: 'Ana' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const setup = (connections: TrackerConnection[]): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts: [] });
+const setup = (connections: TrackerConnection[]): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'c1', projects: ['VCS'] }], bindingsKeptBySpec: [], sessionOnly: false, deviceFlowHosts: [] });
 
 describe('connectionsToReread', () => {
   it('reads a connection’s issues again when its sign-in changed, not when nothing did', () => {
@@ -101,5 +101,9 @@ describe('placeTrackerOf', () => {
     expect(placeTrackerOf(setup([connection]), repositoryGuidFor(1))?.connection.id).toBe('c1');
     expect(placeTrackerOf(setup([connection]), repositoryGuidFor(5))).toBeNull();
     expect(placeTrackerOf(undefined, repositoryGuidFor(1))).toBeNull();
+  });
+
+  it('names the repository it was found for, so searching its issues reads no GUID of its own', () => {
+    expect(placeTrackerOf(setup([connection]), repositoryGuidFor(1))?.repository).toBe(repositoryGuidFor(1));
   });
 });

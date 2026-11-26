@@ -199,9 +199,11 @@ way, every window reads its issues again (`connectionsToReread`).
 
 A repository is identified by its GUID (ARCHITECTURE.md "Settings survive renames"), so its binding stays through a
 rename made anywhere: in the app, another client or `cm`. The window reads it once (`useRepositoryGuid`), and only when
-some repository uses a tracker (`tracksAnyRepository`): one `cm repository list` per server per session at most, free
-when the home screen listed it (ARCHITECTURE.md "Settings survive renames" says why that's accepted). A binding made before bindings were kept by GUID holds the repository's spec, and
-moves to its GUID the first time the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`, matched by
+some repository uses a tracker (`tracksAnyRepository`), free when the home screen listed its server (ARCHITECTURE.md
+"Settings survive renames" says what it costs otherwise, and why that's accepted). The tracker found names its
+repository (`PlaceTracker.repository`), so the `#` issue list reads no GUID of its own. A binding made before bindings were kept by GUID holds the repository's spec
+(`BindingKeptBySpec`, held apart from the others: `IssueTrackerSetup.bindingsKeptBySpec`), counts as a tracker in use,
+and moves to its GUID the first time the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`, matched by
 `repositoryKey`). While the GUID can't be read, the window's comments read no issue, and Settings says why.
 
 ### Where they're kept

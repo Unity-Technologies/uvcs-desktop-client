@@ -40,4 +40,3 @@ export function warnOnOrganizationIds(cm: Pick<CmClient, 'onCommandStarted'>): v
 export function organizationIdArgs(server: string): string[] {
   return ['getconfig', 'organization', server, '--format={unityid}'];
 }
-

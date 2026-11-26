@@ -14,6 +14,7 @@ import { labelFilterTexts } from '../../features/labels/labelFilters';
 import { shelveFilterTexts } from '../../features/shelves/shelveFilterTexts';
 import { branchIndex, branchQueryText, changesetIndex, changesetSuggestion, codeReviewIndex, labelIndex, personIndex, shelveIndex } from './suggestionItems';
 import { rankCandidates } from '../../lib/candidateRanking';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 /** Queries a user types in a list's filter and after a trigger alike: case, several words, punctuation, accents. */
 const QUERIES = ['Accelerator', 'ACCEL', 'merged accelerator', 'accelerator-v2:', 'v2 delete', 'task-2210', 'ana', 'Díaz', 'diaz', 'cache Ana', '4207'];
@@ -35,7 +36,7 @@ const branches: Branch[] = changesets.map((changeset, index) => ({
   repository: 'game',
 }));
 const labels: Label[] = changesets.map((changeset, index) => ({ id: index, name: `v${index}.0-accelerator`, changeset: changeset.id, branch: changeset.branch, comment: changeset.comment, owner: changeset.owner, date: changeset.date, repository: 'game' }));
-const shelves: Shelve[] = changesets.map((changeset) => ({ id: changeset.id % 100, guid: changeset.guid, comment: changeset.comment, owner: changeset.owner, date: changeset.date, parentChangeset: changeset.parent, repository: 'game' }));
+const shelves: Shelve[] = changesets.map((changeset) => ({ id: changeset.id % 100, guid: shelveGuidFor(changeset.id), comment: changeset.comment, owner: changeset.owner, date: changeset.date, parentChangeset: changeset.parent, repository: 'game' }));
 const reviews: CodeReviewSummary[] = changesets.map((changeset, index) => codeReviewSummary({ id: index + 40, title: changeset.comment.split('\n')[0]!, owner: changeset.owner, date: changeset.date }));
 /** The people a mention can name: those it reads back whole (`personIndex`), as written in the lists' rows. */
 const people = ['ana@acme.com', 'jose.diaz@acme.com', 'ana.lopez'];

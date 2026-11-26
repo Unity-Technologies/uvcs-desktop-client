@@ -1,4 +1,4 @@
-import type { RepositoryGuid } from './stableIds';
+import type { ProjectGuid, RepositoryGuid } from './stableIds';
 
 /**
  * How long a listing of a server answers a repository it doesn't hold as unknown, before a lookup lists the server
@@ -32,7 +32,8 @@ export interface RepositorySummary {
 /** A Unity organization's project: its GUID decides its color in every client (`projectColor`). */
 export interface UnityProject {
   name: string;
-  guid: string;
+  /** What the Repositories view keeps the project picked by (`homeProject`); none only where `cm` printed no GUID. */
+  guid?: ProjectGuid;
 }
 
 /**

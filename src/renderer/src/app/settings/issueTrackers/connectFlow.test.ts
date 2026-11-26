@@ -4,7 +4,7 @@ import { repositoryGuidFor } from '@shared/testing/stableIdsFor';
 import { otherTokenPageOffered, clearsClipboardAfter, connectedTrackerOf, connectFailureWords, deviceCodeWords, linkReadBack, addProjectReady, signInAgainStep, signInAgainView, signInMethodShown, signInForView, connectsWithSignIn, connectStage, pickedSignInShown, repositoryTrackerView, issueTrackerPaneView, signInRows, tokenStepReady, usableSignIns, tokenStepWords, signInStepFor, suggestedEmail, suggestedTrackerLink, type SignInStep } from './connectFlow';
 
 const jira: TrackerConnection = { id: 'j', kind: 'jiraCloud', server: 'https://acme.atlassian.net', account: { id: '5b', name: 'Ana Díaz', email: 'ana@acme.com' }, signInMethod: 'token', access: 'read', credential: 'kept' };
-const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'j', projects: ['VCS'] }], sessionOnly: false, deviceFlowHosts });
+const setup = (connections: TrackerConnection[], deviceFlowHosts: string[] = []): IssueTrackerSetup => ({ connections, bindings: [{ repository: repositoryGuidFor(1), connectionId: 'j', projects: ['VCS'] }], bindingsKeptBySpec: [], sessionOnly: false, deviceFlowHosts });
 
 describe('linkReadBack', () => {
   it('reads a link back in parts too: the kind for a badge, the host, the project', () => {
@@ -298,7 +298,7 @@ describe('issueTrackerPaneView', () => {
 
   it('says why when the repository’s GUID can’t be read: its server out of reach, or no repository by its name', () => {
     expect(issueTrackerPaneView({ ...read, guid: { error: new Error('Unable to connect to acme@unity') } })).toEqual({ kind: 'guidUnread', reason: 'Unable to connect to acme@unity' });
-    expect(issueTrackerPaneView({ ...read, guid: { data: null, error: null } })).toEqual({ kind: 'guidUnread', reason: "Couldn't find game@acme@unity on its server." });
+    expect(issueTrackerPaneView({ ...read, guid: { data: null, error: null } })).toEqual({ kind: 'guidUnread', reason: "Couldn't find game@acme@unity on its server. If it was renamed, open it again from the home screen." });
   });
 
   it('shows the sign-ins alone in a window with no repository', () => {

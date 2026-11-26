@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Shelve } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { matchesShelveFilter, myShelves, myShelvesLabel, withFoundShelves } from './myShelves';
+import { shelveGuidFor } from '@shared/testing/stableIdsFor';
 
 const NOW = Date.parse('2026-09-27T12:00:00Z');
 const MINE = { everyone: false, me: 'me' };
@@ -9,7 +10,7 @@ const EVERYONE = { everyone: true, me: 'Me' };
 
 const shelve = (id: number, comment: string, repository = 'eco@local', owner = 'me'): Shelve => ({
   id,
-  guid: `guid-${id}`,
+  guid: shelveGuidFor(id),
   comment,
   owner,
   date: '2026-09-27T10:00:00Z',

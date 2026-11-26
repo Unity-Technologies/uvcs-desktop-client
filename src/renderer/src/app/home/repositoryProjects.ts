@@ -28,7 +28,7 @@ export function matchingProjects(choices: readonly ProjectChoice[], search: stri
 export function shownProject(kept: string | undefined, projects: readonly UnityProject[]): UnityProject | null {
   if (kept === undefined) return null;
   const guid = parseProjectGuid(kept);
-  return projects.find((project) => (guid ? parseProjectGuid(project.guid) === guid : project.name === kept)) ?? null;
+  return projects.find((project) => (guid ? project.guid === guid : project.name === kept)) ?? null;
 }
 
 /**
@@ -36,7 +36,7 @@ export function shownProject(kept: string | undefined, projects: readonly UnityP
  * moves to the GUID once a listing prints one); null for all projects.
  */
 export function homeProjectKept(project: Pick<UnityProject, 'name' | 'guid'> | null): string | null {
-  return project === null ? null : (parseProjectGuid(project.guid) ?? project.name);
+  return project === null ? null : (project.guid ?? project.name);
 }
 
 /**
@@ -53,7 +53,7 @@ export function homeProjectOfLink(name: string | null, listed: readonly UnityPro
 export function movedHomeProject(kept: string | undefined, projects: readonly UnityProject[]): ProjectGuid | undefined {
   if (kept === undefined || parseProjectGuid(kept)) return undefined;
   const project = projects.find((candidate) => candidate.name === kept);
-  return project && parseProjectGuid(project.guid);
+  return project?.guid;
 }
 
 /** The repositories of `project`, or all of them for none. */
