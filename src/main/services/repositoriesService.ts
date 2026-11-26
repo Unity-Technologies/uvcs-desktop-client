@@ -12,7 +12,7 @@ export function createRepositoriesService({ cm, repositoryGuids, organizationRen
   /** The servers; what a Unity organization keeps meanwhile follows it if its owners renamed it (`OrganizationRenames`). */
   async function servers() {
     const listed = serverProfiles(await profiles.read());
-    void organizationRenames.follow(listed.map((profile) => profile.server)).catch((error: unknown) => console.warn('[settings] Organizations not followed:', error));
+    void organizationRenames.listed(listed.map((profile) => profile.server)).catch((error: unknown) => console.warn('[settings] Organizations not followed:', error));
     return listed;
   }
 

@@ -10,7 +10,7 @@ import { serviceContext } from './testing/serviceContext';
 function settingsService() {
   const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'settings-service-')), 'settings.json'));
   const followed: string[][] = [];
-  const context = serviceContext(fakeCmClient().cm, { settings, organizationRenames: { follow: async (servers) => void followed.push([...servers]) } });
+  const context = serviceContext(fakeCmClient().cm, { settings, organizationRenames: { listed: async () => undefined, follow: async (servers) => void followed.push([...servers]) } });
   return { service: createSettingsService(context), followed };
 }
 

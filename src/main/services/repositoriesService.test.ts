@@ -28,7 +28,7 @@ describe('servers', () => {
   it('has what an organization keeps follow it under the names the profiles list now', async () => {
     const fake = fakeCmClient({ 'profile list': formatOutput(['acmestudio@unity', 'acmestudio@unity', 'ana', 'SSOWorkingMode']) });
     const followed: string[][] = [];
-    const context = serviceContext(fake.cm, { organizationRenames: { follow: async (servers) => void followed.push([...servers]) } });
+    const context = serviceContext(fake.cm, { organizationRenames: { listed: async (servers) => void followed.push([...servers]), follow: async () => undefined } });
 
     await createRepositoriesService(context, profilesContext(fake.cm)).servers();
 

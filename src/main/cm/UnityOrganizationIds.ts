@@ -26,4 +26,9 @@ export class UnityOrganizationIds {
     this.ids.set(key, read);
     return read;
   }
+
+  /** Forgets every answer: the profiles changed, and `cm` may know an organization by a new name now. */
+  forget(): void {
+    this.ids.clear();
+  }
 }

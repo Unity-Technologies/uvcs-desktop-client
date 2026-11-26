@@ -22,6 +22,17 @@ describe('UnityOrganizationIds', () => {
     expect(lines()).toHaveLength(1);
   });
 
+  it('asks again once told to forget, as cm may know an organization by a new name after a sign-in', async () => {
+    const { cm, lines } = fakeCmClient({ 'getconfig organization': '1375943370549\n' });
+    const ids = new UnityOrganizationIds(cm);
+    await ids.idOf('acme@unity');
+
+    ids.forget();
+    await ids.idOf('acme@unity');
+
+    expect(lines()).toHaveLength(2);
+  });
+
   it('has none for what cm prints for no Unity organization (-1)', async () => {
     const { cm } = fakeCmClient({ 'getconfig organization': '-1\n' });
 

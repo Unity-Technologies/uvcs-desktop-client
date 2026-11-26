@@ -79,7 +79,7 @@ describe('OrganizationRenames', () => {
     let answer: (id: OrganizationId) => void = () => undefined;
     let current: AppSettings = { ...DEFAULT_SETTINGS, favoriteOrganizations: ['acme@unity'] };
     const store = { get: () => current, update: (changes: Partial<AppSettings>) => (current = { ...current, ...changes }) };
-    const renames = new OrganizationRenames(store, { idOf: () => new Promise<OrganizationId>((resolve) => (answer = resolve)) });
+    const renames = new OrganizationRenames(store, { idOf: () => new Promise<OrganizationId>((resolve) => (answer = resolve)), forget: () => undefined });
 
     const following = renames.follow(['acme@unity']);
     store.update({ serverSettings: { 'arcade@unity': { homeProject: 'Kart' } } });
