@@ -52,7 +52,7 @@ describe('repositories', () => {
     });
 
     expect(await service.list('racing@unity')).toEqual({
-      repositories: [{ id: '4', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
+      repositories: [{ id: '4', guid: '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
       projects: [{ name: 'Racing', guid: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f' }],
       deletedRepositories: [],
     });

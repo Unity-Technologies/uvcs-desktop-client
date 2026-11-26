@@ -14,6 +14,7 @@
 
 import type { RepositoryListing, RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { projectOfRepository } from '@shared/domain/organizations';
+import { parseRepositoryGuid } from '@shared/domain/stableIds';
 import { recordFormat } from './formatRecords';
 
 const REPOSITORY_FIELDS = ['repid', 'repname', 'repserver', 'repowner', 'reptype', 'repguid'] as const;
@@ -50,8 +51,10 @@ export function repositoryListingOf(records: readonly string[][], server: string
     if (withProjects && type === PROJECT_TYPE) {
       if (!deleted) projects.push({ name, guid });
     } else if (!withProjects || REPOSITORY_TYPES.has(type)) {
-      if (deleted) deletedRepositories.push({ id, name, server: repositoryServer, owner, spec, deleted: true });
-      else repositories.push({ id, name, server: repositoryServer, owner, spec });
+      const repositoryGuid = parseRepositoryGuid(guid);
+      const identity = { id, ...(repositoryGuid && { guid: repositoryGuid }), name, server: repositoryServer, owner, spec };
+      if (deleted) deletedRepositories.push({ ...identity, deleted: true });
+      else repositories.push(identity);
     }
   }
   projects.sort((a, b) => byName(a.name, b.name));

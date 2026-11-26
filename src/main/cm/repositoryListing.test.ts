@@ -47,8 +47,8 @@ describe('parseRepositoryListing', () => {
 
   it('reads each repository with its project, by name, leaving storage out', () => {
     expect(parseRepositoryListing(ORGANIZATION_LISTED, ORGANIZATION, { withProjects: true }).repositories).toEqual([
-      { id: '12', name: 'Cloud Repositories/TextEditor', server: ORGANIZATION, owner: 'ana', spec: `Cloud Repositories/TextEditor@${ORGANIZATION}`, project: 'Cloud Repositories' },
-      { id: '4', name: 'Racing/Game', server: ORGANIZATION, owner: 'bob', spec: `Racing/Game@${ORGANIZATION}`, project: 'Racing' },
+      { id: '12', guid: '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61', name: 'Cloud Repositories/TextEditor', server: ORGANIZATION, owner: 'ana', spec: `Cloud Repositories/TextEditor@${ORGANIZATION}`, project: 'Cloud Repositories' },
+      { id: '4', guid: '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d', name: 'Racing/Game', server: ORGANIZATION, owner: 'bob', spec: `Racing/Game@${ORGANIZATION}`, project: 'Racing' },
     ]);
   });
 
@@ -56,7 +56,7 @@ describe('parseRepositoryListing', () => {
     const listed = formatOutput(['3', 'Racing', ORGANIZATION, 'ana', 'Project', RACING_GUID], ['9', 'legacy', ORGANIZATION, 'ana', 'VCS', CLOUD_GUID]);
 
     expect(parseRepositoryListing(listed, ORGANIZATION, { withProjects: true }).repositories).toEqual([
-      { id: '9', name: 'legacy', server: ORGANIZATION, owner: 'ana', spec: `legacy@${ORGANIZATION}` },
+      { id: '9', guid: CLOUD_GUID, name: 'legacy', server: ORGANIZATION, owner: 'ana', spec: `legacy@${ORGANIZATION}` },
     ]);
   });
 
@@ -83,6 +83,12 @@ describe('parseRepositoryListing', () => {
     });
   });
 
+  it("leaves a repository without a GUID where cm printed none, or something that isn't one", () => {
+    const listed = formatOutput(['4', 'tools', 'acme@cloud', 'bob', 'VCS', ''], ['2', 'game', 'acme@cloud', 'ana', 'VCS', 'game']);
+
+    expect(parseRepositoryListing(listed, 'acme@cloud', { withProjects: false }).repositories.map((repository) => repository.guid)).toEqual([undefined, undefined]);
+  });
+
   it('reads an empty listing as nothing, with CRLF line ends too', () => {
     expect(parseRepositoryListing('', ORGANIZATION, { withProjects: true })).toEqual({ repositories: [], projects: [], deletedRepositories: [] });
     expect(parseRepositoryListing(ORGANIZATION_LISTED.replaceAll('\n', '\r\n'), ORGANIZATION, { withProjects: true }).projects).toHaveLength(3);
@@ -101,11 +107,11 @@ describe('deleted repositories', () => {
     );
 
     expect(parseRepositoryListing(listed, 'acme@cloud', { withProjects: false })).toEqual({
-      repositories: [{ id: '4', name: 'tools', server: 'acme@cloud', owner: 'bob', spec: 'tools@acme@cloud' }],
+      repositories: [{ id: '4', guid: CLOUD_GUID, name: 'tools', server: 'acme@cloud', owner: 'bob', spec: 'tools@acme@cloud' }],
       projects: [],
       deletedRepositories: [
-        { id: '9', name: 'art', server: 'acme@cloud', owner: 'ana', spec: `${OTHER_DELETED_GUID}@acme@cloud`, deleted: true },
-        { id: '8', name: 'old-tools', server: 'acme@cloud', owner: 'ana', spec: `${DELETED_GUID}@acme@cloud`, deleted: true },
+        { id: '9', guid: OTHER_DELETED_GUID, name: 'art', server: 'acme@cloud', owner: 'ana', spec: `${OTHER_DELETED_GUID}@acme@cloud`, deleted: true },
+        { id: '8', guid: DELETED_GUID, name: 'old-tools', server: 'acme@cloud', owner: 'ana', spec: `${DELETED_GUID}@acme@cloud`, deleted: true },
       ],
     });
   });
@@ -135,7 +141,7 @@ describe('deleted repositories', () => {
     const listing = parseRepositoryListing(listed, ORGANIZATION, { withProjects: true });
     expect(listing.projects).toEqual([{ name: 'Racing', guid: RACING_GUID }]);
     expect(listing.deletedRepositories).toEqual([
-      { id: '8', name: 'Racing/Old', server: ORGANIZATION, owner: 'ana', spec: `${DELETED_GUID}@${ORGANIZATION}`, deleted: true, project: 'Racing' },
+      { id: '8', guid: DELETED_GUID, name: 'Racing/Old', server: ORGANIZATION, owner: 'ana', spec: `${DELETED_GUID}@${ORGANIZATION}`, deleted: true, project: 'Racing' },
     ]);
   });
 });
