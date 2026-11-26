@@ -68,9 +68,16 @@ describe('setReviewMode', () => {
   it('turns review mode on by the GUID, from the stored list, and says the offer was taken', async () => {
     const { service, settings } = review({ getworkspacefrompath: WORKSPACE_NAMES }, ['/other']);
 
-    const saved = await service.setReviewMode(workspacePlace('/work'), true);
+    const { settings: saved, key } = await service.setReviewMode(workspacePlace('/work'), true);
     expect(saved).toMatchObject({ reviewModeWorkspaces: ['/other', WORKSPACE_GUID], reviewModeHintDone: true });
     expect(settings.get()).toEqual(saved);
+    expect(key).toBe(WORKSPACE_GUID);
+  });
+
+  it("answers the key it used, so a window that kept the path while the GUID couldn't be read follows it", async () => {
+    const { service } = review({ getworkspacefrompath: WORKSPACE_NAMES }, ['/work']);
+
+    expect(await service.setReviewMode(workspacePlace('/work'), true)).toMatchObject({ key: WORKSPACE_GUID, settings: { reviewModeWorkspaces: [WORKSPACE_GUID] } });
   });
 
   it('moves what was kept by the path and turns it off in one write: the path never comes back', async () => {

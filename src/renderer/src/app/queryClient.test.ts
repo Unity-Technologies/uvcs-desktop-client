@@ -8,6 +8,7 @@ import { queryKeys } from '../api/queryKeys';
 import {
   createQueryClient,
   IMMUTABLE_QUERY,
+  immutableOnceRead,
   invalidatePlaceIn,
   invalidateWorkspaceIn,
   keyedByWorkspaceInfo,
@@ -67,6 +68,17 @@ describe('invalidatePlace', () => {
     await invalidatePlaceIn(client, workspacePlace(ws));
 
     expect(shown.reads()).toBe(2);
+  });
+});
+
+describe('immutableOnceRead', () => {
+  it('skips a query in refreshes once its answer is lasting, and refreshes it while it is not', async () => {
+    const lasting = await showQuery(client, key('lasting'), { answer: () => 'guid', meta: immutableOnceRead((data) => data === 'guid') });
+    const fallback = await showQuery(client, key('fallback'), { answer: () => '/work', meta: immutableOnceRead((data) => data === 'guid') });
+
+    await invalidateWorkspaceIn(client, ws);
+
+    expect([lasting.reads(), fallback.reads()]).toEqual([1, 2]);
   });
 });
 
