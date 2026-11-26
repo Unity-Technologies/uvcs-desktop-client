@@ -71,7 +71,7 @@ export const REPOSITORY_SETTINGS_IDENTITY: { readonly [Setting in keyof Required
   explorerRulesOff: 'namesNoObject',
   changesetColorsOff: 'namesNoObject',
   branchPins: { byIdIn: 'repository', because: 'The Branch Explorer draws branches by their number, which a rename keeps.' },
-  syncRemote: { byName: 'Not yet: the remote repository by its spec.' },
+  syncRemote: { byName: 'The spec sync takes, kept with syncRemoteGuid: once its name names the remote no more, the GUID finds it.' },
   syncRemoteGuid: 'repositoryGuid',
 };
 

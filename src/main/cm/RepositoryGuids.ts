@@ -1,5 +1,5 @@
 import type { RepositoryListing } from '@shared/domain/repository';
-import { serverKey } from '@shared/domain/repository';
+import { repositorySpecParts, serverKey } from '@shared/domain/repository';
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 
 /**
@@ -86,6 +86,18 @@ export class RepositoryGuids {
   added(server: string): void {
     const known = this.byServer.get(serverKey(server));
     if (known) known.listedAt = Number.NEGATIVE_INFINITY;
+  }
+
+  /**
+   * The spec the repository kept as `spec` with its `guid` goes by now, on the same server: `spec` while its name still
+   * names it (free once a listing taught the name), else its new name, renamed anywhere. `spec` too when the server
+   * holds it no more, so what uses it says so as it would have. Rejects when the server can't be listed.
+   */
+  async specNow(spec: string, guid: RepositoryGuid): Promise<string> {
+    const parts = repositorySpecParts(spec);
+    if (!parts || (await this.guidOf(parts.server, parts.name)) === guid) return spec;
+    const name = await this.nameOf(parts.server, guid);
+    return name === undefined ? spec : `${name}@${parts.server}`;
   }
 
   /** A repository renamed here keeps its GUID under its new name at once, without listing its server again. */

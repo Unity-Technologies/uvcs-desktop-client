@@ -150,4 +150,24 @@ describe('RepositoryGuids', () => {
     expect(await guids.guidOf('acme@cloud', 'tools')).toBe(TOOLS);
     expect(lines()).toHaveLength(2);
   });
+
+  it('keeps a spec kept with its GUID while its name still names the repository, from one listing', async () => {
+    const { guids, lines } = guidsOf(listed(['game', GAME]));
+
+    expect(await guids.specNow('game@acme@cloud', GAME)).toBe('game@acme@cloud');
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('follows a spec kept with its GUID to the name a rename made elsewhere gave it, in the same listing', async () => {
+    const { guids, lines } = guidsOf(listed(['racer', GAME], ['game', TOOLS]));
+
+    expect(await guids.specNow('game@acme@cloud', GAME)).toBe('racer@acme@cloud');
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('keeps the spec of a repository its server holds no more', async () => {
+    const { guids } = guidsOf(listed(['tools', TOOLS]));
+
+    expect(await guids.specNow('game@acme@cloud', GAME)).toBe('game@acme@cloud');
+  });
 });

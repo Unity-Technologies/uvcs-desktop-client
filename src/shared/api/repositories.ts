@@ -12,6 +12,12 @@ export interface RepositoriesApi {
    * server holds no such repository, or `cm` prints no GUID; rejects when the server can't be listed.
    */
   guidOf(repositorySpec: string): Promise<RepositoryGuid | null>;
+  /**
+   * The spec a repository kept by its spec and GUID goes by now: the same while its name names it, else the name a
+   * rename made anywhere gave it, on the same server; the same too once the server holds it no more. Free when its
+   * server was listed, else one listing; rejects when the server can't be listed.
+   */
+  specNow(repositorySpec: string, guid: RepositoryGuid): Promise<string>;
   /** Creates a repository on the server: resolves to its spec, `name@server`. */
   create(server: string, name: string): Promise<string>;
   rename(repositorySpec: string, newName: string): Promise<void>;

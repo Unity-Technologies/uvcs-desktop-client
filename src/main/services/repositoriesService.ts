@@ -30,6 +30,10 @@ export function createRepositoriesService({ cm, repositoryGuids, settings }: Ser
     return guid;
   }
 
+  function specNow(repositorySpec: string, guid: RepositoryGuid): Promise<string> {
+    return repositoryGuids.specNow(repositorySpec, guid);
+  }
+
   /** What the app kept for the repository by its spec, before it kept it by its GUID, moves under its GUID. */
   function keepByGuid(repositorySpec: string, guid: RepositoryGuid): void {
     settings.keepRepositoryByGuid(repositorySpec, guid);
@@ -61,5 +65,5 @@ export function createRepositoriesService({ cm, repositoryGuids, settings }: Ser
     if (restoredOn) repositoryGuids.added(restoredOn);
   }
 
-  return { servers, list, guidOf, create, rename, remove, restore };
+  return { servers, list, guidOf, specNow, create, rename, remove, restore };
 }

@@ -24,6 +24,8 @@ export const queryKeys = {
   repositories: (server: string) => ['repositories', server] as const,
   /** A repository's GUID by its spec's `repositoryKey`, read once per window (`repositoryGuidQuery`). */
   repositoryGuid: (repositoryKey: string) => ['repositoryGuid', repositoryKey] as const,
+  /** The spec a repository kept by its spec and GUID goes by now (`repositories.specNow`). */
+  repositorySpecNow: (repositorySpec: string, guid: string) => ['repositorySpecNow', repositorySpec, guid] as const,
   /** Every object's permissions on a server: saving some refreshes them all, as objects inherit from each other. */
   permissionsOn: (server: string) => ['permissions', server, 'acl'] as const,
   permissions: (server: string, spec: string) => ['permissions', server, 'acl', spec] as const,
