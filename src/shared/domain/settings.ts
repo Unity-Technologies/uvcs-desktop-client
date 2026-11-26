@@ -5,6 +5,7 @@ import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { RepositorySettings, ServerSettings } from './scopedSettings';
+import type { RepositoryGuid } from './stableIds';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -24,6 +25,11 @@ export interface SavedWindow {
   workspacePath?: string;
   /** The repository it explored without a workspace (`repositoryPlace`). */
   repository?: string;
+  /**
+   * That repository's GUID, when a listing taught it: the window reopens on the name it goes by now, renamed anywhere
+   * (`WorkspaceWindows.openFirst`).
+   */
+  repositoryGuid?: RepositoryGuid;
   bounds: SavedWindowBounds;
   fullScreen: boolean;
   /** The view it showed (a renderer `ViewId`): saved only by a restart to install an update, which nobody chose. */

@@ -2,7 +2,10 @@ import { existsSync } from 'node:fs';
 import { app, BrowserWindow, type Event, type WebContents } from 'electron';
 import type { PageSeed, PageWindowOpening, PageWindowPage } from '@shared/domain/pageWindow';
 import { repositoryPlace, samePlace, workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
+import { repositorySpecParts } from '@shared/domain/repository';
 import type { SavedWindow } from '@shared/domain/settings';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
+import type { RepositoryGuids } from '../cm/RepositoryGuids';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { CmSetupStart } from '@shared/startingPlace';
@@ -36,6 +39,11 @@ interface WorkspaceWindowsOptions {
    * it started runs (`ClosingWithWrites.closeLeftBehind`).
    */
   closeLeftBehind: (windowId: number) => void;
+  /**
+   * The repositories' GUIDs: a repository explored without a workspace is saved with the one a listing taught, and
+   * reopens on the name it goes by now (`specNow`), renamed anywhere.
+   */
+  repositoryGuids: Pick<RepositoryGuids, 'knownGuidOf' | 'specNow'>;
 }
 
 /** Where a window opens again at launch, as it was when the app quit (`createMainWindow`'s `reopen`). */
@@ -256,18 +264,20 @@ export class WorkspaceWindows {
   /**
    * The windows at launch: those open when the app quit, where they were and on what they showed, the focused one in
    * front; else one on the last workspace used. A workspace that launched the app then comes forward, in its window
-   * if one reopened on it.
+   * if one reopened on it. Every window opens at once; the promise ends once those reopened on a repository renamed
+   * elsewhere were asked to open it under its name now (`followRename`), which nothing waits for but tests.
    */
-  openFirst(): void {
+  openFirst(): Promise<void> {
     const launchRequest = this.launchRequest;
     this.launchRequest = null;
     const reopened = this.windowsToReopen();
-    reopened.forEach((reopen, index) => {
+    const renamesFollowed = reopened.map((reopen, index) => {
       const behindAnother = index < reopened.length - 1 || launchRequest !== null;
-      this.open(savedPlaceOf(reopen), { reopen, inBackground: behindAnother });
+      return this.followRename(this.open(savedPlaceOf(reopen), { reopen, inBackground: behindAnother }), reopen);
     });
     if (launchRequest) this.showPlace(workspacePlace(launchRequest));
     else if (reopened.length === 0) this.open(placeOfWorkspace(this.lastUsedWorkspace()));
+    return Promise.all(renamesFollowed).then(() => undefined);
   }
 
   /**
@@ -280,7 +290,7 @@ export class WorkspaceWindows {
     if (windowsStayInBackground(process.env, app.isPackaged)) return;
     const openWindows = inSessionOrder(this.all(), this.lastFocused).map((window): SavedWindow => {
       const place = this.placeIn(window);
-      const saved = { ...savedPlaceFields(place), bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() };
+      const saved = { ...this.savedPlaceFields(place), bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() };
       // The home screen has no view.
       const view = withViews && place ? this.views.get(window.webContents.id) : undefined;
       return view ? { ...saved, view } : saved;
@@ -445,6 +455,31 @@ export class WorkspaceWindows {
     return app.isPackaged ? windowsToReopen(this.options.settings.get().openWindows, existsSync) : [];
   }
 
+  /**
+   * A window reopened on a repository explored without a workspace opens at once on the name it was saved with; once
+   * the server says the repository goes by another (`specNow`: free when the name still names it and its server was
+   * listed, else one listing), the window is asked to open that one. A server out of reach leaves it as it was.
+   */
+  private async followRename(window: BrowserWindow, { repository, repositoryGuid }: SavedWindow): Promise<void> {
+    if (!repository || !repositoryGuid) return;
+    const specNow = await this.options.repositoryGuids.specNow(repository, repositoryGuid).catch(() => repository);
+    if (specNow === repository || window.isDestroyed()) return;
+    this.requested.set(window.webContents.id, repositoryPlace(specNow));
+    sendEventTo(window.webContents, 'workspaceOpenRequested', {});
+  }
+
+  /** What a window is saved with to reopen on its place: a workspace's folder, or a repository's spec and GUID. */
+  private savedPlaceFields(place: Place | undefined): Pick<SavedWindow, 'workspacePath' | 'repository' | 'repositoryGuid'> {
+    if (!place) return {};
+    if (place.kind === 'workspace') return { workspacePath: place.workspacePath };
+    return { repository: place.repository, ...withGuid(this.knownGuidOf(place.repository)) };
+  }
+
+  private knownGuidOf(repositorySpec: string): RepositoryGuid | undefined {
+    const parts = repositorySpecParts(repositorySpec);
+    return parts && this.options.repositoryGuids.knownGuidOf(parts.server, parts.name);
+  }
+
   private lastUsedWorkspace(): string | undefined {
     const lastUsed = app.isPackaged ? this.options.settings.get().recentWorkspacePaths[0] : undefined;
     return lastUsed && existsSync(lastUsed) ? lastUsed : undefined;
@@ -492,9 +527,8 @@ function savedPlaceOf({ workspacePath, repository }: SavedWindow): Place | undef
   return repository ? repositoryPlace(repository) : undefined;
 }
 
-function savedPlaceFields(place: Place | undefined): Pick<SavedWindow, 'workspacePath' | 'repository'> {
-  if (!place) return {};
-  return place.kind === 'workspace' ? { workspacePath: place.workspacePath } : { repository: place.repository };
+function withGuid(repositoryGuid: RepositoryGuid | undefined): Pick<SavedWindow, 'repositoryGuid'> {
+  return repositoryGuid ? { repositoryGuid } : {};
 }
 
 function placeOfWorkspace(workspacePath: string | undefined): Place | undefined {

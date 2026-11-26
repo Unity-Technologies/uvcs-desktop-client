@@ -60,7 +60,7 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   zoomLevel: 'namesNoObject',
   windowBounds: 'namesNoObject',
   pageWindowBounds: 'namesNoObject',
-  openWindows: { byPath: 'Not yet: a workspace by its folder, which reopening it takes; a repository explored without one by its spec.' },
+  openWindows: { byPath: 'A workspace by its folder, which reopening it takes; a repository explored without one by its spec, followed by its GUID once renamed.' },
   legacySettingsImported: 'namesNoObject',
   legacyMergeToolsImported: 'namesNoObject',
   legacyToolsImported: 'namesNoObject',
