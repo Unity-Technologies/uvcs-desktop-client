@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isReviewModeOn, movedReviewMode, withReviewMode } from './reviewModePlaces';
+import { isReviewModeOn, movedReviewMode, needsReviewModeKey, withReviewMode } from './reviewModePlaces';
 
 const WORKSPACE = 'a0411612-d36e-4eca-b9b5-97acad5969ea';
 const OTHER = '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61';
@@ -33,5 +33,12 @@ describe('movedReviewMode', () => {
   it('moves nothing when the path was never kept, or is the key itself', () => {
     expect(movedReviewMode([OTHER], '/work', WORKSPACE)).toBeUndefined();
     expect(movedReviewMode(['/work'], '/work', '/work')).toBeUndefined();
+  });
+});
+
+describe('needsReviewModeKey', () => {
+  it("asks for a place's key only while review mode is on somewhere: with none on, it's off without a server listing", () => {
+    expect(needsReviewModeKey([])).toBe(false);
+    expect(needsReviewModeKey([OTHER])).toBe(true);
   });
 });
