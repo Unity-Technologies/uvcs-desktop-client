@@ -8,6 +8,8 @@ import { BranchNamesCache } from './cm/BranchNamesCache';
 import { cmBranchNameReads } from './cm/branchNames';
 import { listRepositories } from './cm/listRepositories';
 import { RepositoryGuids } from './cm/RepositoryGuids';
+import { UnityOrganizationIds } from './cm/UnityOrganizationIds';
+import { OrganizationRenames } from './settings/OrganizationRenames';
 import { CmClient } from './cm/CmClient';
 import { cmSetupIconProgress } from './cmRuntime/cmSetupIconProgress';
 import { createCmRuntime } from './cmRuntime/createCmRuntime';
@@ -97,6 +99,8 @@ const branchNames = new BranchNamesCache(
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 // Every listing of a server's repositories, which teaches the GUIDs their settings are kept by (`RepositoryGuids`).
 const repositoryGuids = new RepositoryGuids((server) => listRepositories(cm, server));
+// What a Unity organization keeps follows it to its new name when its owners rename it (`OrganizationRenames`).
+const organizationRenames = new OrganizationRenames(settings, new UnityOrganizationIds(cm));
 const workspaceCopies = new WorkspaceCopies({ cm });
 watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
 const revisionCat = new RevisionCat({ cm });
@@ -184,6 +188,7 @@ const api = createServices({
   repositoryPaths,
   branchNames,
   repositoryGuids,
+  organizationRenames,
   issueTrackers,
   diagnosticLog: appLog,
   signIns,

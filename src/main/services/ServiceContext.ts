@@ -12,6 +12,7 @@ import type { RevisionCat } from '../files/RevisionCat';
 import type { WorkspaceCopies } from '../files/WorkspaceCopies';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
+import type { OrganizationRenames } from '../settings/OrganizationRenames';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { AppIcons } from '../system/apps/AppIcons';
 import type { ExternalAppsCatalog } from '../system/apps/ExternalAppsCatalog';
@@ -55,6 +56,8 @@ export interface ServiceContext {
   branchNames: BranchNamesCache;
   /** Every listing of a server's repositories, and the repositories' GUIDs it teaches (`RepositoryGuids`). */
   repositoryGuids: RepositoryGuids;
+  /** What a Unity organization keeps, carried to its new name when its owners rename it (`OrganizationRenames`). */
+  organizationRenames: Pick<OrganizationRenames, 'follow'>;
   /** The issue trackers' engine: connections, bindings and issue reads (`IssueTrackers`). */
   issueTrackers: IssueTrackers;
   /** The log file a user sends with a bug report (`appLog`). */
