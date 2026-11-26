@@ -1135,7 +1135,8 @@ reply): a place lists rows that come later after the others (`annotationRowsOf`)
 `main/review/ReviewStore` keeps, per workspace, the fingerprint of each file marked reviewed (and a copy of its text,
 read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/<workspace GUID>/`, so a workspace
 renamed or moved keeps them; a folder kept by the hash of the workspace's path, as before, moves there the first time
-its marks are read. Marks of paths that leave the pending changes are dropped.
+its marks are read, or goes when the GUID's folder exists already. One that can't be moved (Windows refuses while a
+file in it is open) is used for the session and moved at the next. Marks of paths that leave the pending changes are dropped.
 Committed diffs (changeset, branch, shelve, range, code review) keep marks too, in `main/review/DiffReviewStore`: per repository,
 by the diff's name (`cs:42`, `br:/main/task`, `sh:3`) and the revision reviewed, so a branch's file is changed since its review once
 another revision shows; the least recently reviewed diffs are forgotten. `features/review` holds the shared list pieces.

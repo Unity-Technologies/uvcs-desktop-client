@@ -47,6 +47,7 @@ export class ReviewStore {
   constructor(
     private readonly root: string,
     private readonly guidOf: WorkspaceGuidOf,
+    private readonly moveFolder: (from: string, to: string) => Promise<void> = rename,
   ) {}
 
   async marks(workspacePath: string): Promise<ReviewMark[]> {
@@ -108,17 +109,24 @@ export class ReviewStore {
   }
 
   /**
-   * The workspace's folder: its GUID's, taking over the one kept by the workspace's path before, if any and if it has
-   * none yet; its path's hash when `cm` prints no GUID.
+   * The workspace's folder: its GUID's, taking over the one kept by the workspace's path before; its path's hash when
+   * `cm` prints no GUID. When the GUID's folder exists already, it holds the marks and the path's goes. When the path's
+   * can't be moved (Windows refuses while a file in it is open), it is used for the session, and moved at the next.
    */
   private async findFolder(workspacePath: string): Promise<string> {
     const byPath = join(this.root, hashOf(workspacePath).slice(0, 16));
     const guid = await this.guidOf(workspacePath);
     if (!guid) return byPath;
     const byGuid = join(this.root, guid);
-    // Without a folder kept by its path, there is nothing to move.
-    if (!(await exists(byGuid))) await rename(byPath, byGuid).catch(() => undefined);
-    return byGuid;
+    if (await exists(byGuid)) {
+      await rm(byPath, { recursive: true, force: true });
+      return byGuid;
+    }
+    if (!(await exists(byPath))) return byGuid;
+    return this.moveFolder(byPath, byGuid).then(
+      () => byGuid,
+      () => byPath,
+    );
   }
 }
 
