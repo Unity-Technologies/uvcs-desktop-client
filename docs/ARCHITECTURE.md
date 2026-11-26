@@ -307,10 +307,10 @@ the app's settings.
     by the repository's GUID).
   A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
   main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
-  `setFavoriteOrganization`, `review.setReviewMode`), never written whole from a window's copy. A value of the whole app (a Settings choice, the
-  changeset colors) is written whole (`saveSettings`): every window follows `settingsChanged`, so its copy is current
-  but for a save still on its way. `scopedSettings.ts` keeps only what differs from
-  having nothing, so the file holds only what the user set.
+  `setFavoriteOrganization`, `review.setReviewMode`), never written whole from a window's copy. A value of the whole
+  app (a Settings choice, the changeset colors) is written whole (`saveSettings`): every window follows
+  `settingsChanged`, so its copy is current but for a save still on its way. `scopedSettings.ts` keeps only what
+  differs from having nothing, so the file holds only what the user set.
 - **The window's storage** (`localStorage`, zustand's `persist`): only how the views are laid out, what costs a click to
   set again: splitter widths, folds, sorting, view toggles, filters, the diff's layout. Every window keeps its own copy
   of such a store and writes all of it back on any change, so the last window to change it wins: right for a layout,

@@ -85,12 +85,6 @@ const cm = new CmClient(() => cmRuntime.cmPath(), join(userData, 'outside-worksp
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it; each one's server
 // remembered as it's read, for the sign-in gate.
 const workspaceServers = new WorkspaceServers((directory) => readWorkspaceOrigin(cm, directory));
-// A workspace read on another repository than before lets its branch names go: ids are per repository.
-const headers = new WorkspaceHeaders(
-  tellingRepositoryChanges(workspaceServers.remembering(cmHeaderReaders(cm)), (workspacePath) => branchNames.forget(workspacePlace(workspacePath))),
-);
-// One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
-const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
@@ -99,6 +93,12 @@ const branchNames = new BranchNamesCache(
   // A repository's names are kept while a window explores it (`windows.explores`); its last window lets them go.
   (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
 );
+// A workspace read on another repository than before lets its branch names go: ids are per repository.
+const headers = new WorkspaceHeaders(
+  tellingRepositoryChanges(workspaceServers.remembering(cmHeaderReaders(cm)), (workspacePath) => branchNames.forget(workspacePlace(workspacePath))),
+);
+// One sign-in state per server: from here on, no command goes to a server that needs a sign-in.
+const signIns = trackSignIns(cm, workspaceServers, (sessions) => sendEvent('serverSessionsChanged', sessions));
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 // Every listing of a server's repositories, which teaches the GUIDs their settings are kept by (`RepositoryGuids`).
 const repositoryGuids = new RepositoryGuids((server) => listRepositories(cm, server));
