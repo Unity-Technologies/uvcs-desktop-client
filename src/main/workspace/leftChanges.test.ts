@@ -165,6 +165,15 @@ describe('changes left before a rename', () => {
     expect(records.find({ shelveId: 2, repository: 'eco@local' })).toMatchObject({ shelveGuid: SHELVE_2_GUID });
   });
 
+  it("on arrival, are compared by repository name until their shelve's GUID is known: only then could a rename have been followed", async () => {
+    const { cm } = fakeCm(shelvesFound());
+    const unlisted = leftRecord(2, 'br:/main/task1', { repository: 'other@local' });
+    const listed = { ...unlisted, shelveGuid: SHELVE_2_GUID as SwitchShelveRecord['shelveGuid'] };
+
+    expect(await new LeftChangesFinder(cm, recordsOf([unlisted])).hasOwnWaiting('/work')).toBe(false);
+    expect(await new LeftChangesFinder(cm, recordsOf([listed])).hasOwnWaiting('/work')).toBe(true);
+  });
+
   it('keep the record of another repository the workspace switched away from, whose shelve this one lists under the same number', async () => {
     const records = recordsOf([leftRecord(2, 'br:/main/task1', { repository: 'other@local', shelveGuid: 'c7558622-b4f1-49eb-9f76-639af4d70009' as SwitchShelveRecord['shelveGuid'] })]);
 
