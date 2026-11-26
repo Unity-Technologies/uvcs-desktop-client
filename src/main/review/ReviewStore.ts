@@ -19,6 +19,12 @@ interface StoredMark extends Fingerprint {
 
 type Marks = Map<string, StoredMark>;
 
+/** A workspace's marks, and the folder they're kept in. */
+interface WorkspaceMarks {
+  directory: string;
+  marks: Marks;
+}
+
 /** The workspace's GUID (`WorkspaceHeaders.names`, a local read the workspace's window already made); undefined when `cm` printed none. */
 export type WorkspaceGuidOf = (workspacePath: string) => Promise<WorkspaceGuid | undefined>;
 
@@ -29,14 +35,14 @@ export type WorkspaceGuidOf = (workspacePath: string) => Promise<WorkspaceGuid |
  * of the workspace's path: such a folder moves to the GUID's the first time the workspace's marks are read.
  */
 export class ReviewStore {
-  private readonly files = new PersistedByKey<Marks>(async (workspacePath) => {
-    const marksPath = await this.marksPath(workspacePath);
-    return readFile(marksPath, 'utf8')
+  /** Read once per workspace path, folder and marks together; a read that fails (its GUID couldn't be read) is tried again. */
+  private readonly files = new PersistedByKey<WorkspaceMarks>(async (workspacePath) => {
+    const directory = await this.findFolder(workspacePath);
+    const marks: Marks = await readFile(join(directory, MARKS_FILE), 'utf8')
       .then((json) => new Map(Object.entries(JSON.parse(json) as Record<string, StoredMark>)))
       .catch(() => new Map());
+    return { directory, marks };
   });
-  /** Each workspace's folder, by its path: found once per path, as a GUID never changes. */
-  private readonly folders = new Map<string, Promise<string>>();
 
   constructor(
     private readonly root: string,
@@ -44,57 +50,54 @@ export class ReviewStore {
   ) {}
 
   async marks(workspacePath: string): Promise<ReviewMark[]> {
-    const marks = await this.files.load(workspacePath);
+    const kept = await this.files.load(workspacePath);
     const checked = await Promise.all(
-      [...marks].map(async ([path, stored]) => ({ path, stored, ...(await stillReviewed(toAbsolutePath(workspacePath, path), stored)) })),
+      [...kept.marks].map(async ([path, stored]) => ({ path, stored, ...(await stillReviewed(toAbsolutePath(workspacePath, path), stored)) })),
     );
-    for (const { path, refreshed } of checked) if (refreshed) marks.set(path, refreshed);
-    if (checked.some(({ refreshed }) => refreshed)) await this.save(workspacePath, marks);
+    for (const { path, refreshed } of checked) if (refreshed) kept.marks.set(path, refreshed);
+    if (checked.some(({ refreshed }) => refreshed)) await this.save(workspacePath, kept);
     return checked.map(({ path, stored, reviewed }) => ({ path, state: reviewed ? 'reviewed' : 'changedSinceReview', hasSnapshot: stored.snapshot }));
   }
 
   async mark(workspacePath: string, paths: string[]): Promise<void> {
-    const marks = await this.files.load(workspacePath);
-    const directory = await this.directory(workspacePath);
-    await mkdir(directory, { recursive: true });
+    const kept = await this.files.load(workspacePath);
+    await mkdir(kept.directory, { recursive: true });
     for (const path of paths) {
       const { bytes, ...fingerprint } = await fingerprintFile(toAbsolutePath(workspacePath, path));
       const snapshot = bytes !== undefined && bytes.length <= MAX_SNAPSHOT_BYTES && !toFileContent(bytes, path).isBinary;
-      if (snapshot) await writeFile(snapshotPath(directory, path), bytes);
-      else await rm(snapshotPath(directory, path), { force: true });
-      marks.set(path, { ...fingerprint, snapshot });
+      if (snapshot) await writeFile(snapshotPath(kept.directory, path), bytes);
+      else await rm(snapshotPath(kept.directory, path), { force: true });
+      kept.marks.set(path, { ...fingerprint, snapshot });
     }
-    await this.save(workspacePath, marks);
+    await this.save(workspacePath, kept);
   }
 
   async unmark(workspacePath: string, paths: string[]): Promise<void> {
-    const marks = await this.files.load(workspacePath);
-    const marked = paths.filter((path) => marks.has(path));
+    const kept = await this.files.load(workspacePath);
+    const marked = paths.filter((path) => kept.marks.has(path));
     if (marked.length === 0) return;
-    const directory = await this.directory(workspacePath);
     for (const path of marked) {
-      marks.delete(path);
-      await rm(snapshotPath(directory, path), { force: true });
+      kept.marks.delete(path);
+      await rm(snapshotPath(kept.directory, path), { force: true });
     }
-    await this.save(workspacePath, marks);
+    await this.save(workspacePath, kept);
   }
 
   async keepOnly(workspacePath: string, pendingPaths: string[]): Promise<void> {
     const pending = new Set(pendingPaths);
-    const marks = await this.files.load(workspacePath);
+    const { marks } = await this.files.load(workspacePath);
     await this.unmark(workspacePath, [...marks.keys()].filter((path) => !pending.has(path)));
   }
 
   async readSnapshot(workspacePath: string, path: string): Promise<FileContent> {
-    const stored = (await this.files.load(workspacePath)).get(path);
-    if (!stored?.snapshot) throw new Error(`No reviewed copy of ${path} was kept.`);
-    return toFileContent(await readFile(snapshotPath(await this.directory(workspacePath), path)), path);
+    const { directory, marks } = await this.files.load(workspacePath);
+    if (!marks.get(path)?.snapshot) throw new Error(`No reviewed copy of ${path} was kept.`);
+    return toFileContent(await readFile(snapshotPath(directory, path)), path);
   }
 
   /** Writes the marks as they are when the save's turn comes; without marks, the workspace's folder goes. */
-  private save(workspacePath: string, marks: Marks): Promise<void> {
+  private save(workspacePath: string, { directory, marks }: WorkspaceMarks): Promise<void> {
     return this.files.save(workspacePath, async () => {
-      const directory = await this.directory(workspacePath);
       if (marks.size === 0) {
         await rm(directory, { recursive: true, force: true });
         return;
@@ -104,22 +107,10 @@ export class ReviewStore {
     });
   }
 
-  /** The workspace's folder: its GUID's, or its path's hash when `cm` prints no GUID. A failed read isn't kept. */
-  private directory(workspacePath: string): Promise<string> {
-    let folder = this.folders.get(workspacePath);
-    if (!folder) {
-      const found = this.findFolder(workspacePath);
-      found.catch(() => this.folders.get(workspacePath) === found && this.folders.delete(workspacePath));
-      this.folders.set(workspacePath, (folder = found));
-    }
-    return folder;
-  }
-
-  private async marksPath(workspacePath: string): Promise<string> {
-    return join(await this.directory(workspacePath), MARKS_FILE);
-  }
-
-  /** The GUID's folder, taking over the one kept by the workspace's path before, if any and if it has none yet. */
+  /**
+   * The workspace's folder: its GUID's, taking over the one kept by the workspace's path before, if any and if it has
+   * none yet; its path's hash when `cm` prints no GUID.
+   */
   private async findFolder(workspacePath: string): Promise<string> {
     const byPath = join(this.root, hashOf(workspacePath).slice(0, 16));
     const guid = await this.guidOf(workspacePath);
