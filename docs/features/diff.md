@@ -104,7 +104,7 @@ changeset's part.
 
 Each changeset's row has the changeset's own menu (`changesetMenu`, as in the Changesets view), whose Copy ▸ Link
 shares the changeset; the header's Copy link (⇧⌘C) stays the branch's, what the page is about. The list binds no list
-keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no ⌘C (`useCopyCommand`), as the view
+keys, so its menu names none (`listKeysElsewhere`, docs/architecture/renderer.md "Menus"): no ⌘C (`useCopyCommand`), as the view
 under the page keeps its own, and offering the list's link would take the view's from ⇧⌘C once the page closes
 (`useOfferSelectedObjectLink`). "All changes" has no menu: the page's header is the branch's.
 

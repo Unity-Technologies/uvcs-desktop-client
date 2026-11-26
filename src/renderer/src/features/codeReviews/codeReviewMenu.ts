@@ -31,7 +31,7 @@ export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary
  * The menu of the selected code reviews, the same wherever reviews show: the Merge requests view, the Branch Explorer,
  * the palette and their details. It brings the reviewed code to the workspace (`reviewedCodeAction`) wherever the
  * review comes with its target named, disabled where `workspaceOn` (what the workspace is on) already is: everywhere
- * but a branch review in the palette, whose searches don't read branch names (ARCHITECTURE.md "Menus").
+ * but a branch review in the palette, whose searches don't read branch names (docs/architecture/renderer.md "Menus").
  */
 export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], workspaceOn?: WorkspaceSelector): MenuEntry[] {
   if (reviews.length === 0) return [];

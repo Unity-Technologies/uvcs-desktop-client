@@ -22,7 +22,7 @@ const ONE_SCAN_CONDITION = /\bowner = |equalsCondition\('owner'/;
 
 /**
  * The one file allowed to OR ids: the reviews of a block of branches, at most `BRANCH_REVIEWS_BLOCK`, whose `targetid`s
- * the server matches in one scan (`branchTargetsCondition`, which enforces the bound). docs/ARCHITECTURE.md "Queries".
+ * the server matches in one scan (`branchTargetsCondition`, which enforces the bound). docs/architecture/running-cm.md "Queries".
  */
 const ALLOWED_FILES = new Set([join('main', 'cm', 'branchTargetsCondition.ts')]);
 

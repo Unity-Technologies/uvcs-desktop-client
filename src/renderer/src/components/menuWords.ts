@@ -392,7 +392,7 @@ export interface MenuHost {
   inBranchExplorer?: boolean;
   /**
    * A list that binds none of the list keys (⌘D, ⌘C, ⇧⌘C), so the menu names no shortcut: there they reach the page's
-   * own object or the view under the page (docs/ARCHITECTURE.md "Menus").
+   * own object or the view under the page (docs/architecture/renderer.md "Menus").
    */
   listKeysElsewhere?: boolean;
   /** Called with the name of a branch created from the menu, e.g. to show it. */

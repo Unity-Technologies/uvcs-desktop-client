@@ -652,7 +652,7 @@ describe('one menu per object, the same everywhere', () => {
     const inView = codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector);
     const { target: _named, ...asSearched } = branchReview;
     expectOnlyAdds(graphMenu({ kind: 'codeReview', review: asSearched }, graphContext), inView);
-    // The one exception (ARCHITECTURE.md "Menus"): the palette's searches don't name a branch, so it can't switch to it.
+    // The one exception (docs/architecture/renderer.md "Menus"): the palette's searches don't name a branch, so it can't switch to it.
     expectOnlyAdds(codeReviewResult(asSearched, resultContext).menu!(), withoutAction(inView, 'switch'));
     expectOnlyAdds(codeReviewResult(changesetReview, resultContext).menu!(), codeReviewMenu(workspacePlace(ws), [changesetReview], workspace.selector));
   });
