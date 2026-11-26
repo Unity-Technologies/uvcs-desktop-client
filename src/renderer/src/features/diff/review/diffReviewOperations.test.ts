@@ -51,7 +51,7 @@ describe('setDiffReviewed', () => {
 
     await setDiffReviewed(async () => ({ place, repository: GAME, name: `br:${TASK}` }), [entry], true);
 
-    expect(fakeApi.argsOf('review.markDiff')).toEqual([[GAME, `br:${TASK}`, [{ path: 'a.ts', revisionId: 10 }]]]);
+    expect(fakeApi.argsOf('review.markDiff')).toEqual([[GAME, `br:${TASK}`, [{ path: 'a.ts', revisionId: 10 }], undefined]]);
   });
 
   it('says the files weren’t marked when where to write their marks can’t be read', async () => {

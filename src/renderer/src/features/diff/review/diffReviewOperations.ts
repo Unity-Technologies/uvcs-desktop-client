@@ -63,7 +63,9 @@ export async function setDiffReviewed(targetToWrite: () => Promise<DiffReviewTar
   await queryClient.cancelQueries({ queryKey: key });
   queryClient.setQueryData<DiffReviewMark[]>(key, (current = []) => [...current.filter((mark) => !paths.has(mark.path)), ...(reviewed ? marks : [])]);
   try {
-    await (reviewed ? api.review.markDiff(target.repository, target.name, marks) : api.review.unmarkDiff(target.repository, target.name, [...paths]));
+    await (reviewed
+      ? api.review.markDiff(target.repository, target.name, marks, target.formerName)
+      : api.review.unmarkDiff(target.repository, target.name, [...paths], target.formerName));
   } catch (error) {
     toast.error(failure, error);
   }

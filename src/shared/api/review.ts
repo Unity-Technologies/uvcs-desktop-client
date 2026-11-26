@@ -14,6 +14,6 @@ export interface ReviewApi {
    * `formerDiff`: the name its marks were kept by before (`br:/main/task`), which move under `diff` while it has none.
    */
   diffMarks(repository: RepositoryGuid, diff: string, formerDiff?: string): Promise<DiffReviewMark[]>;
-  markDiff(repository: RepositoryGuid, diff: string, marks: DiffReviewMark[]): Promise<void>;
-  unmarkDiff(repository: RepositoryGuid, diff: string, paths: string[]): Promise<void>;
+  markDiff(repository: RepositoryGuid, diff: string, marks: DiffReviewMark[], formerDiff?: string): Promise<void>;
+  unmarkDiff(repository: RepositoryGuid, diff: string, paths: string[], formerDiff?: string): Promise<void>;
 }

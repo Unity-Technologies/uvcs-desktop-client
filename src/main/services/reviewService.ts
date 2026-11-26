@@ -8,7 +8,7 @@ export function createReviewService({ reviews, diffReviews }: ServiceContext): R
     unmark: (workspacePath, paths) => reviews.unmark(workspacePath, paths),
     keepOnly: (workspacePath, pendingPaths) => reviews.keepOnly(workspacePath, pendingPaths),
     diffMarks: (repository, diff, formerDiff) => diffReviews.marks(repository, diff, formerDiff),
-    markDiff: (repository, diff, marks) => diffReviews.mark(repository, diff, marks),
-    unmarkDiff: (repository, diff, paths) => diffReviews.unmark(repository, diff, paths),
+    markDiff: (repository, diff, marks, formerDiff) => diffReviews.mark(repository, diff, marks, formerDiff),
+    unmarkDiff: (repository, diff, paths, formerDiff) => diffReviews.unmark(repository, diff, paths, formerDiff),
   };
 }

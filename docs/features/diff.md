@@ -1139,7 +1139,7 @@ by its GUID (`<guid>.json`), by the diff's name (`cs:42`, `br:<branch GUID>`, `s
 so a branch's file is changed since its review once another revision shows, and a rename of the repository or the branch
 made anywhere keeps them; the least recently reviewed diffs are forgotten. A branch's GUID is read only in review mode, where
 the marks show (`branchQuery`, one light `cm find` shared with every view of the branch); marks kept by its name before
-(`br:/main/task`) move under it as they're read (`formerDiffReviewName`). `features/review` holds the shared list pieces.
+(`br:/main/task`) move under it as they're first read or marked (`formerDiffReviewName`). `features/review` holds the shared list pieces.
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
 Its toggle (`ReviewModeButton`) ends the filter bar of the lists that review (Changes and every diff), and the review bar
 (`ReviewBar`: progress, the "Unreviewed" filter, mark all, clear) opens right beneath it, between the filter bar and the

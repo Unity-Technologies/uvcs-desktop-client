@@ -37,16 +37,12 @@ export class DiffReviewStore {
   ) {}
 
   /**
-   * The diff's marks. `formerDiff`: the name they were kept by before (a branch's diff by the branch's name, now by its
-   * GUID), whose marks move under `diff` while it keeps none.
+   * The diff's marks. `formerDiff`, here and in `mark` and `unmark`: the name they were kept by before (a branch's diff
+   * by the branch's name, now by its GUID), whose marks move under `diff` while it keeps none, whichever comes first.
    */
   async marks(repository: RepositoryGuid, diff: string, formerDiff?: string): Promise<DiffReviewMark[]> {
     const repositoryMarks = await this.files.load(repository);
-    if (formerDiff !== undefined && !repositoryMarks[diff] && repositoryMarks[formerDiff]) {
-      repositoryMarks[diff] = repositoryMarks[formerDiff];
-      delete repositoryMarks[formerDiff];
-      await this.save(repository, repositoryMarks);
-    }
+    if (movedFromFormerName(repositoryMarks, diff, formerDiff)) await this.save(repository, repositoryMarks);
     return Object.entries(repositoryMarks[diff]?.marks ?? {}).map(([path, revisionId]) => ({ path, revisionId }));
   }
 
@@ -59,17 +55,18 @@ export class DiffReviewStore {
     await rename(this.filePathBySpec(spec), this.filePath(guid)).catch(() => undefined);
   }
 
-  async mark(repository: RepositoryGuid, diff: string, marks: DiffReviewMark[]): Promise<void> {
-    await this.update(repository, diff, (current) => ({ ...current, ...Object.fromEntries(marks.map((mark) => [mark.path, mark.revisionId])) }));
+  async mark(repository: RepositoryGuid, diff: string, marks: DiffReviewMark[], formerDiff?: string): Promise<void> {
+    await this.update(repository, diff, formerDiff, (current) => ({ ...current, ...Object.fromEntries(marks.map((mark) => [mark.path, mark.revisionId])) }));
   }
 
-  async unmark(repository: RepositoryGuid, diff: string, paths: string[]): Promise<void> {
+  async unmark(repository: RepositoryGuid, diff: string, paths: string[], formerDiff?: string): Promise<void> {
     const unmarked = new Set(paths);
-    await this.update(repository, diff, (current) => Object.fromEntries(Object.entries(current).filter(([path]) => !unmarked.has(path))));
+    await this.update(repository, diff, formerDiff, (current) => Object.fromEntries(Object.entries(current).filter(([path]) => !unmarked.has(path))));
   }
 
-  private async update(repository: RepositoryGuid, diff: string, change: (marks: Record<string, number>) => Record<string, number>): Promise<void> {
+  private async update(repository: RepositoryGuid, diff: string, formerDiff: string | undefined, change: (marks: Record<string, number>) => Record<string, number>): Promise<void> {
     const repositoryMarks = await this.files.load(repository);
+    movedFromFormerName(repositoryMarks, diff, formerDiff);
     const marks = change(repositoryMarks[diff]?.marks ?? {});
     if (Object.keys(marks).length === 0) delete repositoryMarks[diff];
     else repositoryMarks[diff] = { usedAt: this.now(), marks };
@@ -100,6 +97,14 @@ async function exists(path: string): Promise<boolean> {
     () => true,
     () => false,
   );
+}
+
+/** Moves the marks kept under `formerDiff` to `diff` while it keeps none; whether it did. */
+function movedFromFormerName(marks: RepositoryMarks, diff: string, formerDiff: string | undefined): boolean {
+  if (formerDiff === undefined || marks[diff] || !marks[formerDiff]) return false;
+  marks[diff] = marks[formerDiff];
+  delete marks[formerDiff];
+  return true;
 }
 
 function forgetLeastRecentlyUsed(marks: RepositoryMarks, kept: number): void {
