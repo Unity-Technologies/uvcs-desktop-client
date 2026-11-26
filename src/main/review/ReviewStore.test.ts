@@ -111,6 +111,29 @@ describe('ReviewStore', () => {
     expect((await byGuid.readSnapshot(workspace, 'a.ts')).text).toBe('one');
   });
 
+  it("drops the folder kept by the path once the GUID's has the marks", async () => {
+    await write('a.ts', 'one');
+    await store.mark(workspace, ['a.ts']);
+    // A `cm` that printed no GUID meanwhile left a folder by the path.
+    await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
+    expect(await readdir(root)).toHaveLength(2);
+
+    expect(await new ReviewStore(root, knownGuid).marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toEqual([GUID]);
+  });
+
+  it("keeps showing the marks kept by the path when their folder can't be moved (a file open in it, on Windows)", async () => {
+    await write('a.ts', 'one');
+    await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
+    const [byPath] = await readdir(root);
+    const unmovable = new ReviewStore(root, knownGuid, async () => {
+      throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+    });
+
+    expect(await unmovable.marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toEqual([byPath]);
+  });
+
   it("reads the GUID again after a read that failed, keeping no empty marks meanwhile", async () => {
     await write('a.ts', 'one');
     await store.mark(workspace, ['a.ts']);
