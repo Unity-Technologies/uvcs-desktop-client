@@ -75,5 +75,5 @@ export const REPOSITORY_SETTINGS_IDENTITY: { readonly [Setting in keyof Required
 };
 
 export const SERVER_SETTINGS_IDENTITY: { readonly [Setting in keyof Required<ServerSettings>]: SettingIdentity } = {
-  homeProject: { byName: 'Not yet: the project by its name.' },
+  homeProject: 'projectGuid',
 };

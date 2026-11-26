@@ -22,7 +22,11 @@ export interface RepositorySettings {
 
 /** What the user chose for one server (`acme@unity`, `host:8087`). */
 export interface ServerSettings {
-  /** The project the home screen narrows this Unity organization's repositories to; none for all of them. */
+  /**
+   * The project the home screen narrows this Unity organization's repositories to, by its GUID (`ProjectGuid`), which a
+   * rename keeps; none for all of them. A name kept before, or by a link opened before the organization was listed,
+   * moves to the GUID once a listing holds it (`movedHomeProject`).
+   */
   homeProject?: string;
 }
 

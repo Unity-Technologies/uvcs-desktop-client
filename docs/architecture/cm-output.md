@@ -252,7 +252,9 @@ by name, and never passes it to `cm`.
   (`svgPathOf`), so its license ships in the third-party notices with the rest. A repository there is named after its
   project, the part before the first `/` (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`,
   `nameWithProject`), which New repository builds from the project picked and Rename keeps (`repositoryRename`).
-  The Repositories view filters by project (`ProjectFilter`, remembered per organization: `ServerSettings.homeProject`, `updateServerSettings`) and
+  The Repositories view filters by project (`ProjectFilter`, remembered per organization by the project's GUID, so a renamed project stays picked:
+  `ServerSettings.homeProject`, `useHomeProject`; a name kept before moves to the GUID once a listing holds it,
+  `movedHomeProject`) and
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
   names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
   app doesn't call: it shows the organization's name as `cm` takes it.
