@@ -154,6 +154,12 @@ export interface AppSettings {
   legacyToolsImported: boolean;
 }
 
+/**
+ * What a window's own storage kept before the settings held it (the Branch Explorer's rules, moved branches and
+ * colors, the sync remotes, the home screen's projects), brought once by each window (`addWindowSettings`).
+ */
+export type WindowKeptSettings = Pick<AppSettings, 'repositorySettings' | 'serverSettings' | 'changesetColors'>;
+
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   recentWorkspacePaths: [],
