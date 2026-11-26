@@ -25,6 +25,18 @@ interface WorkspaceMarks {
   marks: Marks;
 }
 
+/** How the folder kept by a workspace's path is moved to its GUID's, or removed once the GUID's holds the marks. */
+export interface FolderMoves {
+  move(from: string, to: string): Promise<void>;
+  remove(folder: string): Promise<void>;
+}
+
+/** On the disk; removing retries a few times, as Windows refuses while a file in the folder is open. */
+export const DISK_FOLDERS: FolderMoves = {
+  move: rename,
+  remove: (folder) => rm(folder, { recursive: true, force: true, maxRetries: 5 }),
+};
+
 /** The workspace's GUID (`WorkspaceHeaders.names`, a local read the workspace's window already made); undefined when `cm` printed none. */
 export type WorkspaceGuidOf = (workspacePath: string) => Promise<WorkspaceGuid | undefined>;
 
@@ -47,7 +59,7 @@ export class ReviewStore {
   constructor(
     private readonly root: string,
     private readonly guidOf: WorkspaceGuidOf,
-    private readonly moveFolder: (from: string, to: string) => Promise<void> = rename,
+    private readonly folders: FolderMoves = DISK_FOLDERS,
   ) {}
 
   async marks(workspacePath: string): Promise<ReviewMark[]> {
@@ -110,8 +122,9 @@ export class ReviewStore {
 
   /**
    * The workspace's folder: its GUID's, taking over the one kept by the workspace's path before; its path's hash when
-   * `cm` prints no GUID. When the GUID's folder exists already, it holds the marks and the path's goes. When the path's
-   * can't be moved (Windows refuses while a file in it is open), it is used for the session, and moved at the next.
+   * `cm` prints no GUID. When the GUID's folder exists already, it holds the marks and the path's goes (or stays until
+   * a later session, when it can't be removed). When the path's can't be moved (Windows refuses while a file in it is
+   * open), it is used for the session, and moved at the next.
    */
   private async findFolder(workspacePath: string): Promise<string> {
     const byPath = join(this.root, hashOf(workspacePath).slice(0, 16));
@@ -119,11 +132,11 @@ export class ReviewStore {
     if (!guid) return byPath;
     const byGuid = join(this.root, guid);
     if (await exists(byGuid)) {
-      await rm(byPath, { recursive: true, force: true });
+      await this.folders.remove(byPath).catch(() => undefined);
       return byGuid;
     }
     if (!(await exists(byPath))) return byGuid;
-    return this.moveFolder(byPath, byGuid).then(
+    return this.folders.move(byPath, byGuid).then(
       () => byGuid,
       () => byPath,
     );
