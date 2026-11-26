@@ -61,12 +61,13 @@ export class LeftChangesFinder {
 
   /**
    * Whether this app's records have changes waiting on what the workspace is on now. Reads no server data: a branch
-   * renamed since is told by the names lists already read (`knownBranchName`). The repository isn't compared, as a
-   * rename changes its name: `find` tells a shelve of another repository apart by its GUID.
+   * renamed since is told by the names lists already read (`knownBranchName`). A record whose shelve's GUID is known
+   * may be of a repository renamed since, which `find` tells by that GUID; one without is compared by its repository's
+   * name, as no rename could have been followed for it.
    */
   async hasOwnWaiting(workspacePath: string): Promise<boolean> {
     const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
-    const records = this.records.forWorkspace(workspace.guid).filter(isLeftChanges);
+    const records = this.records.forWorkspace(workspace.guid).filter((record) => isLeftChanges(record) && (record.shelveGuid || record.repository === workspace.repository));
     const at = this.spotOf(workspacePath, workspace, records);
     return records.some((record) => waitingOn(record, at));
   }

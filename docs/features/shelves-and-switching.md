@@ -43,7 +43,9 @@ renames"). It is the workspace's by its GUID, and what a rename changed is writt
   changes were left.
 - **The limit**: neither `cm status --header` nor `cm getworkspacefrompath` prints a branch's id, so `hasOwnWaiting`
   reads no server data and, when no list read a renamed branch lately, leaves the changes to the "Welcome back" banner
-  instead of restoring them on arrival.
+  instead of restoring them on arrival. It compares a record's repository by name until its shelve's GUID is known,
+  since no rename could have been followed for it before; a record stored before a repository rename is then offered
+  by the banner, and restored on arrival from then on.
 
 Both places that ask what happens to the pending changes, the switch's question (`SwitchWithChangesDialog`,
 `planSwitch` with the `switch` flow, which prefers leaving them) and the new-branch dialog (`CreateBranchDialog`, the
