@@ -44,12 +44,14 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 3. The code next to what you change, and its tests: they show the idiom to follow.
 4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`). The app highlights with
    Shiki and doesn't use Pierre's own highlighter, @pierre/highlights (why: `docs/features/diff.md`); its
-   `pierre-highlights` skill is installed because the diffs skill links to it. The app pins one version of @pierre/diffs
-   (package.json), so check what they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
-   (`pierreSkillVersion.test.ts` names the command) and re-applying the `localChanges` each `pierre-version.json` lists.
+   `pierre-highlights` skill is installed because the diffs skill links to it. The app pins one version of
+   @pierre/diffs (package.json), so check what they say against `node_modules`; updating @pierre/diffs means
+   reinstalling both skills from its tag (`pierreSkillVersion.test.ts` names the command) and re-applying the
+   `localChanges` each `pierre-version.json` lists.
 
 This file holds the rules and where to find things; ARCHITECTURE.md holds the architecture's rules in short, and
-`docs/architecture/` their details and numbers. When they seem to disagree, the code and its tests decide, and the doc gets fixed.
+`docs/architecture/` their details and numbers. When they seem to disagree, the code and its tests decide, and the
+doc gets fixed.
 
 ## Architecture in one screen
 
@@ -120,7 +122,8 @@ npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts and scripts/build/**/*.test.ts
-npm run e2e          # the smoke test, every view of the real app against a fake cm, and the first run's setup screen, over a development build then a production one
+npm run e2e          # the smoke test, every view of the real app against a fake cm, and the first run's setup screen, over a development
+                     # build then a production one
 npm run e2e:development   # the smoke test over the development build only: the one to run while working
 npm run dist         # the installer for this OS, into dist/
 npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
@@ -165,7 +168,8 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   it prints renderer errors as `[renderer]` and `[pageerror]`).
 - Sandboxes on a local server: `scripts/sandboxes/*.sh`, one per case a feature has to show (a branch topology, every
   kind of move, merge conflicts, code reviews, 3D models, textures, xlinks…); each script's first lines say what it
-  builds and how to run it. A feature doc names its sandbox.
+  builds and how to run it, and the feature doc of its area names it. `demo.sh` builds a small game project for any
+  screenshot.
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
@@ -186,8 +190,9 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
   synthetic"). Most services have no contract test yet: add one for the service you change.
 - **Interactions**: flows across modules, including their failure paths: a switch with changes (shelve, undo,
   switch, bring; a failure puts the changes back), a menu builder serving every place, a shortcut reaching its command.
-- **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
-  static test ("Rules the tests enforce" below). A bug fix starts with a test that fails without it.
+- **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository may become a
+  static test, when it clears the bar in "Rules the tests enforce" below. A bug fix starts with a test that fails
+  without it.
 - **Every case the feature names**: each case a feature's doc (`docs/features/`) names, or its sandbox script builds,
   has a test (code moved unchanged, a texture unreadable, a conflict on a directory). A case the sandbox shows and no
   test covers is the bug that ships.
@@ -270,7 +275,8 @@ test joins that list.
   live. Platform differences go through small pure helpers that take the platform (`lib/platform.ts`,
   `shared/windowChrome.ts`, `formatShortcut` in `lib/shortcuts.ts`, `Whereabouts` in `main/system/apps`). Watch path
   separators and drive letters, CRLF, NFD names on macOS, Windows' console code page, `.cmd` launchers and
-  32,767-character command lines (ARCHITECTURE.md "Parsing `cm` output"). What can't be run here is tested with each
+  32,767-character command lines (docs/architecture/running-cm.md "How `CmClient` runs a command"; code pages:
+  cm-output.md "Parsing `cm` output"). What can't be run here is tested with each
   OS's own input (its paths, its tools' output), and `UVCS_RENDERER_PLATFORM` previews another OS's UI.
 - **Copy**: plain words, short. Labels name things, tooltips define them, no sentence restates what the screen shows.
   UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags. Error
@@ -386,6 +392,7 @@ merge it (docs/features/updates.md "CI"). Once the user says it merged, remove i
   has rules the code can't show, and list it at the top of ARCHITECTURE.md). Name the
   symbols (`inCmPathForm`) so they can be found. Say each rule in one place and point to it from the others.
 - Record why an obvious alternative was rejected when it was tried, so it isn't proposed again.
-- No figure the next change makes wrong: how many tests there are, how long a run takes, a dependency's version, a list
-  of what a folder holds. Point to where it's found instead (`package.json`, the folder, each script's header). A
-  measurement that explains a decision stays, with how it was measured.
+- No figure the next change makes wrong: how many tests there are, how long a run takes, what a folder holds when
+  nothing keeps the list in step. Point to where it's found instead (the folder, each script's header). A list a rule
+  keeps in step stays (ARCHITECTURE.md's tables of docs, the static tests' list), a fact true of one version names that
+  version, and a measurement that explains a decision stays, with how it was measured.

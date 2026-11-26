@@ -50,12 +50,10 @@ is missing, say so in your report as a finding.
   taking it from a pure, tested `.ts` module is a must-fix (CLAUDE.md "Tests are the quality gate"). Presentational
   conditionals (`open &&`, a class from a prop) are fine; decisions the change doesn't touch are a note at most.
 - **Docs**: what `docs/` says is still true; a new rule is written in one place and named so it can be grepped.
-- **A rule a static test could keep**: propose one only when you clearly see it pays off. The rule is one many
-  changes could break (this change broke it, or nearly did, and the next one could), the test reads the sources
-  simply, runs in milliseconds and stays easy to keep, and it would catch many cases, not one. Check
-  `docs/rules-the-tests-enforce.md` first: extending a test there beats a new one. A rare case, a rule that needs
-  judgment, or a test that would cost time on every run is not proposed: the suite must stay small and fast, and
-  most reviews propose none.
+- **A rule a static test could keep**: propose one only when it clearly clears the bar in CLAUDE.md "Rules the tests
+  enforce" (a rule many changes could break, a simple test that runs in milliseconds and stays easy to keep, many
+  cases caught), and this change broke the rule or nearly did. Check `docs/rules-the-tests-enforce.md` first:
+  extending a test there beats a new one. Most reviews propose none.
 - **Release note**: the note the author gives you follows the `release-notes`
   skill (`.claude/skills/release-notes/SKILL.md`): a kind that fits what users get, a short title and a description
   a user who never saw the change understands, in the app's words, never the code's; or `None:` only where users

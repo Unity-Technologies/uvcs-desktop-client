@@ -140,7 +140,7 @@ each rule in full, with the views it shapes (Incoming, Home, the Branch Explorer
 Each rule in full, with the quirks of each command: architecture/cm-output.md "Parsing `cm` output".
 
 - **No list is one string**: every command says in `COMMAND_OUTPUTS` whether it prints a list (read as it arrives,
-  item by item), an answer (read whole, refused past 4 MB) or an operation (its start and end kept, never stopped).
+  item by item), an answer (read whole, refused past 4 MB) or an operation (its start and end kept, never stopped for its size).
   `query` and `execute` refuse a list, in `CmClient` and `fakeCmClient` alike.
 - **Records, not XML**: a command that has `--format` is read as records, through a `RecordLayout` and `RecordReader`.
   XML remains only where `--format` can't say it (the `cm status` header, `cm fileinfo`, `cm history`). Never parse
