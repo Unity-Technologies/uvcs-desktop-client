@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { updateRepositorySettings } from '../../app/settings/useScopedSettings';
+import { useRepositoryGuid } from '../../app/workspace/repositoryGuid';
 import { PathLabel } from '../../components/PathLabel';
 import { RepositoryPicker } from '../../components/RepositoryPicker';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
@@ -33,7 +34,9 @@ import styles from './SyncView.module.css';
  */
 export function RepositorySyncPanel({ localRepository }: { localRepository: string | undefined }) {
   const workspacePath = useWorkspacePath();
-  const remote = useSyncRemote(localRepository);
+  // The remote is kept by the repository's GUID: picked only once it's known, so a pick is never lost.
+  const localGuid = useRepositoryGuid(localRepository);
+  const remote = useSyncRemote(localGuid);
   const [filter, setFilter] = useState('');
   const [selection, setSelection] = useState(EMPTY_SELECTION);
   const { data: branches, isPending, error } = useBranches();
@@ -82,7 +85,8 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
             label="Remote repository"
             value={remote}
             exclude={localRepository}
-            onChange={(repository) => localRepository && void updateRepositorySettings(localRepository, syncRemoteChange(repository))}
+            disabled={!localGuid}
+            onChange={(repository) => localGuid && void updateRepositorySettings(localGuid, syncRemoteChange(repository))}
           />
         </div>
       </section>

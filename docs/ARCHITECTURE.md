@@ -339,9 +339,11 @@ be passed where one is kept.
   server has a GUID of its own, and its own settings.
 - **The main process resolves, the renderer asks once.** A window reads its repository's GUID by its spec
   (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus. What is kept
-  for the repository reads as none until it's known, so nothing waits for it; a change the user makes waits for it
-  (`repositoryGuidToWrite`), and when it can't be read (a server out of reach, a `cm` that prints no GUID) the change
-  is said to be unsaved, never dropped without a word. The main process and the API take what is kept by its GUID's
+  for the repository reads as none until it's known, so nothing waits for it. What the user changes from what is shown
+  (the Branch Explorer's rules and moved branches, the sync remote) is offered only once it's known, and written under
+  it (`updateRepositorySettings` takes a `RepositoryGuid`): a change made from the empty copy shown meanwhile would
+  replace what is kept. A check-in's comment and a review mark, made from nothing kept, wait for it
+  (`repositoryGuidToWrite`), and when it can't be read the change is said to be unsaved, never dropped without a word. The main process and the API take what is kept by its GUID's
   type (`RepositoryGuid`), so a spec can't be passed where a GUID is kept.
 - **A spec kept for later use** (the sync remote, a repository window reopened at launch) is kept with its GUID, and
   followed to the name the repository goes by now (`RepositoryGuids.specNow`, `repositories.specNow`) from the same

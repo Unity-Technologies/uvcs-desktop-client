@@ -2,6 +2,7 @@ import type { Action } from '../../lib/actions';
 import { hotkey, type ShortcutId } from '../../lib/shortcutRegistry';
 import { confirm } from '../../ui/dialog/confirm';
 import type { BranchPins } from '@shared/domain/branchExplorerSettings';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { branchesMoves, movedBranches, NO_PINS, withoutPin, type BranchMove } from './model/branchRows';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
@@ -12,10 +13,11 @@ export interface BranchPositions {
 }
 
 /**
- * The branches moved in `repository` and how to change them; null while the repository isn't known yet, since pins
- * are kept per repository: the Position entries are then disabled and the keys move nothing.
+ * The branches moved in `repository` (its GUID) and how to change them; null while its GUID isn't known yet, since
+ * pins are kept by it, and a move made from the none shown meanwhile would replace those kept: the Position entries are
+ * then disabled and the keys move nothing.
  */
-export function branchPositionsOf(repository: string | undefined, pins: BranchPins, setPinsOf: (repository: string, pins: BranchPins) => void): BranchPositions | null {
+export function branchPositionsOf(repository: RepositoryGuid | undefined, pins: BranchPins, setPinsOf: (repository: RepositoryGuid, pins: BranchPins) => void): BranchPositions | null {
   if (repository === undefined) return null;
   return { pins, setPins: (next) => setPinsOf(repository, next) };
 }

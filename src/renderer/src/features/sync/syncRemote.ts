@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { RepositorySettings, ScopedSettingsChange } from '@shared/domain/scopedSettings';
+import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useRepositorySettings } from '../../app/settings/useScopedSettings';
@@ -15,10 +16,11 @@ export function syncRemoteChange(remote: RepositorySummary): ScopedSettingsChang
 }
 
 /**
- * The spec of the repository `localRepository` syncs with, as it goes by now: the one kept, followed to its new name
- * once the server says it was renamed (`repositories.specNow`, read once per window). Null with none picked yet.
+ * The spec of the repository `localRepository` (its GUID) syncs with, as it goes by now: the one kept, followed to its
+ * new name once the server says it was renamed (`repositories.specNow`, read once per window). Null with none picked
+ * yet, or while the GUID isn't known.
  */
-export function useSyncRemote(localRepository: string | undefined): string | null {
+export function useSyncRemote(localRepository: RepositoryGuid | undefined): string | null {
   const { syncRemote, syncRemoteGuid } = useRepositorySettings(localRepository);
   const { data: followed } = useQuery({
     queryKey: queryKeys.repositorySpecNow(syncRemote ?? '', syncRemoteGuid ?? ''),

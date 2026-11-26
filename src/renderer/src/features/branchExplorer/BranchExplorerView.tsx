@@ -4,6 +4,7 @@ import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowin
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
+import { usePlaceRepositoryGuid } from '../../app/workspace/repositoryGuid';
 import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { usePlaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
@@ -73,14 +74,16 @@ export function BranchExplorerView() {
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const placeRepository = usePlaceRepository();
+  // What the Branch Explorer keeps per repository is read and written by its GUID only once it's known.
+  const repositoryGuid = usePlaceRepositoryGuid();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, showTimeline } = preferences;
   const viewOptions = useGraphViewOptions();
-  const rules = useAppliedExplorerRules(placeRepository);
-  const userColors = useAppliedUserColors(placeRepository);
-  const pins = useBranchPins(placeRepository);
-  const positions = branchPositionsOf(placeRepository, pins, setBranchPins);
+  const rules = useAppliedExplorerRules(repositoryGuid);
+  const userColors = useAppliedUserColors(repositoryGuid);
+  const pins = useBranchPins(repositoryGuid);
+  const positions = branchPositionsOf(repositoryGuid, pins, setBranchPins);
   const ruleMatches = useRuleMatches(rules);
   const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
