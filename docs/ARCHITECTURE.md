@@ -778,6 +778,33 @@ user `cm whoami` shows; `PendingChangesOnSwitchAction`, neutralized by `switchWi
 official client created (its automatic shelves, offered as left changes). Its diff tools (client.conf's
 `<DiffTools>`) aren't imported: the app shows diffs itself.
 
+## Where a setting is kept
+
+Two stores, chosen by what losing a value would cost:
+
+- **The app's settings** (`settings.json`, `AppSettings`): what the user chose or built up, and anything kept for one
+  repository, workspace or server. Every window reads them (`useSettings`) and follows the others' changes
+  (`settingsChanged`); the main process writes them. They hold four scopes:
+  - the whole app: Settings' choices, the changeset colors, the windows to reopen;
+  - a repository (`repositorySettings`, `RepositorySettings` by `repositoryKey`): the Branch Explorer's rules and moved
+    branches, whether its rules and changeset colors apply, the sync remote;
+  - a server (`serverSettings`, `ServerSettings` by `serverKey`): the home screen's project;
+  - a workspace: its recent branches (`recentBranchesByWorkspace`) and review mode (`reviewModeWorkspaces`).
+  A value one window changes while another may change its neighbors (a repository's, a list's entry) is changed by the
+  main process from the stored value (`updateRepositorySettings`, `updateServerSettings`, `rememberRecentComment`,
+  `setFavoriteOrganization`), never written whole from a window's copy. `scopedSettings.ts` keeps only what differs from
+  having nothing, so the file holds only what the user set.
+- **The window's storage** (`localStorage`, zustand's `persist`): only how the views are laid out, what costs a click to
+  set again: splitter widths, folds, sorting, view toggles, filters, the diff's layout. Every window keeps its own copy
+  of such a store and writes all of it back on any change, so the last window to change it wins: right for a layout,
+  wrong for a map of places, where one window's write drops what another added.
+
+`windowStorageHoldsLayoutOnly.test.ts` holds every stored store to a list (`LAYOUT_STORES`) that says why it's layout,
+refuses one keeping a map by repository, workspace or server, and names the few sources that reach the storage
+directly (`STORAGE_READERS`). What the window's storage kept before the settings held it (the Branch Explorer's version
+2, the old sync and home stores) is handed to the settings at the next start (`bringStoredWindowSettings`,
+`addWindowSettings`), which take it only where they hold nothing yet, and stays in the storage until they do.
+
 ## `cm` owns its files
 
 The app asks `cm`, never reads what `cm` keeps for itself, whose format is `cm`'s to change: a workspace's metadata

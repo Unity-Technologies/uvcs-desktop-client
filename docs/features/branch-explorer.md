@@ -62,8 +62,8 @@ nothing invisible answers the pointer. A cut name keeps its tooltip with the ful
 
 ### Advanced filters & format
 
-The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository
-(`useExplorerRules`, `setRules`; `withRules` and `rulesOf` in `model/rulesByRepository.ts`), since a condition names
+The display options' second tab (`ExplorerRulesTab`) holds the advanced rules (`ExplorerRule`), kept per repository in
+the app's settings (`RepositorySettings.explorerRules`; `useExplorerRules`, `setExplorerRules`), since a condition names
 that repository's branches and owners. The tab's decisions live in `model/ruleList.ts`: the empty state and the
 Filters and Formats sections (`ruleTabBody`), the kinds' names (`RULE_KIND_LABELS`), the Add menu (`ADD_RULE_GROUPS`),
 how a row reads (its description, with its kind, condition and relatives under it: `ruleRowTitle`, `ruleRowDetail`),
@@ -87,16 +87,16 @@ so opening it asks nothing more. A condition `cm` refuses fails only its own rul
 a question, no earlier answer colors or hides anything (`shownRuleMatches`). A rule's find has no date range or
 `limit`, since it must hold for everything the graph may draw; it prints one field per object matched (`matchRules`).
 
-"Apply these rules" turns a repository's rules off without losing them (`setRulesOn`, and `isOnIn` and `withOnIn` in
-`model/offByRepository.ts`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
+"Apply these rules" turns a repository's rules off without losing them (`setExplorerRulesOn`,
+`RepositorySettings.explorerRulesOff`): while off, the graph applies none (`useAppliedExplorerRules`), so nothing is hidden or
 colored and no rule asks the server anything, and the tab dims them until they're turned back on. With no rule, the tab shows
 no switch, so adding the first one turns the rules on (`addingTurnsRulesOn`).
 
 ### Changeset colors
 
 The display options' third tab (`ChangesetColorsTab`) gives each person picked a color their changesets take
-(`UserColors`, `model/userColors.ts`). People keep their color in every repository, so the list is the view's, not a
-repository's. "Add people" offers whoever made a changeset in the loaded history (`historyAuthors`) and has no color
+(`UserColors`, `model/userColors.ts`). People keep their color in every repository, so the list is the app's settings'
+(`AppSettings.changesetColors`), not a repository's. "Add people" offers whoever made a changeset in the loaded history (`historyAuthors`) and has no color
 yet, by name (`usersToAdd`); each one added takes the first of `BRANCH_HUES` no one has (`withUsersAdded`). A
 changeset's color is its format rule's, else its author's, else its branch's: the authors' colors go under the rules'
 (`changesetUserHues`, `withUserColors`). "Color changesets by who made them" turns them off in the window's repository
@@ -127,8 +127,8 @@ right, a small solid button on the right edge glides back to them.
 The user can move a branch to another row: a branch's menu has Position (`branchPositionEntries`), with Move up, Move
 down, Move to the top and Move to the bottom, and the keys `graphMoveBranch*` (⌘↑ and ⌘↓, with ⇧ to the top and bottom;
 Ctrl off Mac) move the selected branch, or the branch of the selected changeset. A move is a pin (`BranchPin`: the
-branch's id and the row it asks for, `movedBranch`), so it lasts while history grows. Pins are kept per repository, by
-its spec (`pinsByRepository` in `useBranchExplorerPreferences`), because a branch id means nothing in another one.
+branch's id and the row it asks for, `movedBranch`), so it lasts while history grows. Pins are kept per repository in
+the app's settings (`RepositorySettings.branchPins`, `setBranchPins`), because a branch id means nothing in another one.
 `placeLanes` places pinned lanes first, the one moved last first, each on the first free row from the one it asks for.
 Their children follow below them, but a child moved itself may sit above its parent. Rows nothing ends up on close,
 and pins of branches not drawn are ignored; pins are never pruned, since a branch deleted later is just not drawn. A
