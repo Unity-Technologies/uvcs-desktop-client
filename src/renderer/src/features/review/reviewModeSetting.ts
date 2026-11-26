@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Place } from '@shared/domain/place';
-import { isReviewModeOn, withReviewMode } from '@shared/domain/reviewModePlaces';
+import { isReviewModeOn, needsReviewModeKey, withReviewMode } from '@shared/domain/reviewModePlaces';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY, queryClient } from '../../app/queryClient';
@@ -23,10 +23,11 @@ function reviewModeKeyQuery(place: Place) {
   };
 }
 
-/** Off until the place's key is known. */
+/** Off until the place's key is known; its key is asked only while review mode is on somewhere (`needsReviewModeKey`). */
 export function useReviewModeOn(place: Place): boolean {
-  const { data: key } = useQuery(reviewModeKeyQuery(place));
-  return isReviewModeOn(useSettings().reviewModeWorkspaces, key);
+  const { reviewModeWorkspaces } = useSettings();
+  const { data: key } = useQuery({ ...reviewModeKeyQuery(place), enabled: needsReviewModeKey(reviewModeWorkspaces) });
+  return isReviewModeOn(reviewModeWorkspaces, key);
 }
 
 /**

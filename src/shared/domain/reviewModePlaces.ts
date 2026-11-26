@@ -1,6 +1,14 @@
 // The places with review mode on (`AppSettings.reviewModeWorkspaces`), each by the key the main process keeps it by:
 // its workspace's or repository's GUID (`reviewModeKeyOf`), or its `placeId` when `cm` can't tell one.
 
+/**
+ * Whether a place's key is worth asking for to show whether review mode is on: with no place on, it's off for every
+ * place, and a repository's key (a server listing) isn't read just to show the toggle off.
+ */
+export function needsReviewModeKey(places: readonly string[]): boolean {
+  return places.length > 0;
+}
+
 /** Whether review mode is on for the place of `key`; off while the key isn't known yet. */
 export function isReviewModeOn(places: readonly string[], key: string | undefined): boolean {
   return key !== undefined && places.includes(key);
