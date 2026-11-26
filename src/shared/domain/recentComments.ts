@@ -23,6 +23,26 @@ export function recentCommentsFor(settings: RecentCommentSettings, repository: R
   return settings.recentCommentsByRepository[repository] ?? settings.recentComments;
 }
 
+/** What the check-in's Recent comments menu offers (`recentCommentsOffer`). */
+export interface RecentCommentsOffer {
+  /** Whether its button shows. */
+  offered: boolean;
+  comments: string[];
+}
+
+/**
+ * What the check-in's Recent comments menu offers in `repository` (its GUID): its comments once the GUID is known.
+ * The GUID is read only as the menu opens (or once a check-in read it), so before that the button shows while any
+ * comment is kept, and its comments come as the GUID does.
+ */
+export function recentCommentsOffer(settings: RecentCommentSettings, repository: RepositoryGuid | undefined): RecentCommentsOffer {
+  if (repository !== undefined) {
+    const comments = recentCommentsFor(settings, repository);
+    return { offered: comments.length > 0, comments };
+  }
+  return { offered: settings.recentComments.length > 0 || Object.keys(settings.recentCommentsByRepository).length > 0, comments: [] };
+}
+
 /**
  * The settings change that puts `comment` first among `repository`'s recent comments, once. Its first check-in starts
  * its own list. The repository goes first, and only the `MAX_RECENT_COMMENT_REPOSITORIES` checked in to last are kept

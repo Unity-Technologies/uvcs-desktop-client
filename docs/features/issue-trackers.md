@@ -198,8 +198,9 @@ way, every window reads its issues again (`connectionsToReread`).
 `owner/repo` in lower case). One tracker per repository; "Add a project" adds another of the same tracker.
 
 A repository is identified by its GUID (ARCHITECTURE.md "Settings survive renames"), so its binding stays through a
-rename made anywhere: in the app, another client or `cm`. The window reads it once (`useRepositoryGuid`), free when
-the home screen listed its server. A binding made before bindings were kept by GUID holds the repository's spec, and
+rename made anywhere: in the app, another client or `cm`. The window reads it once (`useRepositoryGuid`), and only when
+some repository uses a tracker (`tracksAnyRepository`): one `cm repository list` per server per session at most, free
+when the home screen listed it (ARCHITECTURE.md "Settings survive renames" says why that's accepted). A binding made before bindings were kept by GUID holds the repository's spec, and
 moves to its GUID the first time the GUID is known (`IssueTrackerStore.keepRepositoryByGuid`, matched by
 `repositoryKey`). While the GUID can't be read, the window's comments read no issue, and Settings says why.
 

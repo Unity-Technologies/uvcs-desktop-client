@@ -339,8 +339,12 @@ be passed where one is kept.
   answers the lookups of the next minute with its failure, so windows asking again don't list a server out of reach. A replica on another
   server has a GUID of its own, and its own settings.
 - **The main process resolves, the renderer asks once.** A window reads its repository's GUID by its spec
-  (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus. What is kept
-  for the repository reads as none until it's known, so nothing waits for it. What the user changes from what is shown
+  (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus, and only
+  where something kept is needed: the Branch Explorer and Sync as they show, the issue tracker only when some
+  repository has one (`tracksAnyRepository`), recent comments as their menu opens or a check-in saves one. That costs
+  at most one `cm repository list` per server per session, none once the home screen listed it: the price of a name
+  that a rename made anywhere no longer loses, paid only where something is kept. What is kept for the repository reads
+  as none until it's known, so nothing waits for it. What the user changes from what is shown
   (the Branch Explorer's rules and moved branches, the sync remote) is offered only once it's known, and written under
   it (`updateRepositorySettings` takes a `RepositoryGuid`): a change made from the empty copy shown meanwhile would
   replace what is kept. A check-in's comment and a review mark, made from nothing kept, wait for it

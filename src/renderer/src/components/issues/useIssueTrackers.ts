@@ -8,7 +8,7 @@ import { useRepositoryGuid } from '../../app/workspace/repositoryGuid';
 import { useSession } from '../../app/workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { connectionsToReread, issueKeys, issueTrackerSetupQuery } from './issueQueries';
-import { placeTrackerOf, type PlaceTracker } from './placeTracker';
+import { placeTrackerOf, tracksAnyRepository, type PlaceTracker } from './placeTracker';
 
 export function useIssueTrackerSetup() {
   return useQuery(issueTrackerSetupQuery).data;
@@ -22,7 +22,7 @@ export function usePlaceTracker(): PlaceTracker | null {
   const setup = useIssueTrackerSetup();
   const place = useSession((state) => state.place);
   const info = useWorkspaceInfoOf(place ? workspacePathOf(place) : null).data;
-  const repository = useRepositoryGuid(place ? repositoryOfPlace(place, info) : undefined);
+  const repository = useRepositoryGuid(place && tracksAnyRepository(setup) ? repositoryOfPlace(place, info) : undefined);
   return useMemo(() => placeTrackerOf(setup, repository), [setup, repository]);
 }
 

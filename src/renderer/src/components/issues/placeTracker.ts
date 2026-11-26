@@ -14,6 +14,14 @@ export interface PlaceTracker {
  */
 const built = new WeakMap<IssueTrackerSetup, Map<RepositoryGuid, PlaceTracker | null>>();
 
+/**
+ * Whether any repository uses a tracker: only then does a window read its repository's GUID to find its own
+ * (`usePlaceTracker`), so one with no tracker anywhere asks nothing.
+ */
+export function tracksAnyRepository(setup: IssueTrackerSetup | undefined): boolean {
+  return setup !== undefined && setup.bindings.length > 0;
+}
+
 /** The tracker of a place's repository (its GUID), when it has one bound: none, and its comments read no issue. */
 export function placeTrackerOf(setup: IssueTrackerSetup | undefined, repository: RepositoryGuid | undefined): PlaceTracker | null {
   if (!setup || !repository) return null;

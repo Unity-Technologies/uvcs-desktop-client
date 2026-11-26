@@ -27,9 +27,12 @@ export function repositoryGuidQuery(repositorySpec: string) {
   });
 }
 
-/** The repository's GUID; undefined while it's read, and when it can't be (its server out of reach, no repository by that name). */
-export function useRepositoryGuid(repositorySpec: string | undefined): RepositoryGuid | undefined {
-  const { data } = useQuery({ ...repositoryGuidQuery(repositorySpec ?? ''), enabled: repositorySpec !== undefined });
+/**
+ * The repository's GUID; undefined while it's read, and when it can't be (its server out of reach, no repository by
+ * that name). `read` false only takes one read already (by a check-in, another view): what reads it when it's needed.
+ */
+export function useRepositoryGuid(repositorySpec: string | undefined, { read = true } = {}): RepositoryGuid | undefined {
+  const { data } = useQuery({ ...repositoryGuidQuery(repositorySpec ?? ''), enabled: repositorySpec !== undefined && read });
   return data ?? undefined;
 }
 
