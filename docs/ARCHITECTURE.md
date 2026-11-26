@@ -360,8 +360,9 @@ be passed where one is kept.
 - **What was kept by name before** moves to the object's GUID the first time the GUID is known, with no extra `cm`
   call: a repository's settings, recent comments, issue tracker binding and review marks as `guidOf` answers
   (`keepByGuid` in `repositoriesService`: `SettingsStore`, `IssueTrackerStore`, `DiffReviewStore`
-  `keepRepositoryByGuid`), a branch diff's review marks as they are first read or marked (`formerDiffReviewName`). What was kept for a
-  repository never opened again stays where it was.
+  `keepRepositoryByGuid`), a branch diff's review marks as they are first read or marked (`formerDiffReviewName`).
+  What a window's storage hands over later by spec (`addWindowSettings`) goes under the GUID when a listing taught it.
+  What was kept for a repository never opened again stays where it was.
 
 ## `cm` owns its files
 
