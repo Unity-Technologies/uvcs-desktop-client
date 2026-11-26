@@ -5,7 +5,8 @@ import type { RepositoryGuid } from '@shared/domain/stableIds';
 /**
  * A listing this recent answers a repository it doesn't hold as unknown instead of listing again: the repository was
  * just looked for, and a lookup of a name nobody can see (a typo in a link, a repository the user has no access to)
- * lists its server once a minute at most.
+ * lists its server once a minute at most. A listing that failed this recently answers a lookup with its failure, so
+ * windows asking again (each view mounting) don't list a server out of reach each time.
  */
 const FRESH_LISTING_MS = 60_000;
 
@@ -24,6 +25,8 @@ export class RepositoryGuids {
    */
   private readonly byServer = new Map<string, { guids: Map<string, RepositoryGuid>; names: Map<RepositoryGuid, string>; listedAt: number }>();
   private readonly listing = new Map<string, Promise<RepositoryListing>>();
+  /** By `serverKey`: the last listing's failure, while it's the last listing. */
+  private readonly failed = new Map<string, { error: unknown; at: number }>();
 
   constructor(
     private readonly listServer: (server: string) => Promise<RepositoryListing>,
@@ -36,10 +39,17 @@ export class RepositoryGuids {
     const running = this.listing.get(key);
     if (running) return running;
     const listed = this.listServer(server)
-      .then((listing) => {
-        this.remember(key, listing);
-        return listing;
-      })
+      .then(
+        (listing) => {
+          this.failed.delete(key);
+          this.remember(key, listing);
+          return listing;
+        },
+        (error: unknown) => {
+          this.failed.set(key, { error, at: this.now() });
+          throw error;
+        },
+      )
       .finally(() => this.listing.delete(key));
     this.listing.set(key, listed);
     return listed;
@@ -55,7 +65,7 @@ export class RepositoryGuids {
     const known = this.byServer.get(key);
     const guid = known?.guids.get(name.toLowerCase());
     if (guid || (known && this.now() - known.listedAt < FRESH_LISTING_MS)) return guid;
-    await this.list(server);
+    await this.listToLookUp(server);
     return this.byServer.get(key)?.guids.get(name.toLowerCase());
   }
 
@@ -75,7 +85,7 @@ export class RepositoryGuids {
     const known = this.byServer.get(key);
     const name = known?.names.get(guid);
     if (name !== undefined || (known && this.now() - known.listedAt < FRESH_LISTING_MS)) return name;
-    await this.list(server);
+    await this.listToLookUp(server);
     return this.byServer.get(key)?.names.get(guid);
   }
 
@@ -108,6 +118,13 @@ export class RepositoryGuids {
     known.guids.delete(from.toLowerCase());
     known.guids.set(to.toLowerCase(), guid);
     known.names.set(guid, to);
+  }
+
+  /** Lists the server for a lookup, unless its last listing failed within a minute: that failure answers it then. */
+  private async listToLookUp(server: string): Promise<void> {
+    const failure = this.failed.get(serverKey(server));
+    if (failure && this.now() - failure.at < FRESH_LISTING_MS) throw failure.error;
+    await this.list(server);
   }
 
   private remember(key: string, listing: RepositoryListing): void {

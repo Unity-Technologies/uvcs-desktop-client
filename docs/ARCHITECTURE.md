@@ -335,7 +335,8 @@ be passed where one is kept.
 - **A repository's GUID** is printed only by `cm repository list`, never by `cm status --header` or `cm find`, so
   every listing of a server goes through `RepositoryGuids`, which keeps its names' GUIDs for the session: the home
   screen's listing teaches them, and a name it doesn't know lists the server once more (a repository renamed or created
-  since), at most once a minute; one created or restored here lists it again at once (`added`). A replica on another
+  since), at most once a minute; one created or restored here lists it again at once (`added`). A listing that failed
+  answers the lookups of the next minute with its failure, so windows asking again don't list a server out of reach. A replica on another
   server has a GUID of its own, and its own settings.
 - **The main process resolves, the renderer asks once.** A window reads its repository's GUID by its spec
   (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus. What is kept
