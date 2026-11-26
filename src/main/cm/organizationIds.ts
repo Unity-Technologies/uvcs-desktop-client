@@ -29,3 +29,15 @@ export function warnOnOrganizationIds(cm: Pick<CmClient, 'onCommandStarted'>): v
     console.warn(`[organization id] ${commandLineForLog(args)} names a Unity organization's server by its id. See "Unity organizations" in docs/ARCHITECTURE.md.`);
   });
 }
+
+/**
+ * Asks `cm` a Unity organization's id (`1375943370549` for `acme@unity`): what recognizes it once its owners change its
+ * name (`acme`), which they can, while its id stays. `cm getconfig organization` answers from what `cm` keeps on this
+ * machine, never asking a server; an organization `cm` hasn't signed in to yet isn't there, and the command fails.
+ * Its `--format` takes no `{tab}`: it would fail on it. The answer is read with `parseOrganizationId` (`-1` for an
+ * organization that isn't a Unity one).
+ */
+export function organizationIdArgs(server: string): string[] {
+  return ['getconfig', 'organization', server, '--format={unityid}'];
+}
+

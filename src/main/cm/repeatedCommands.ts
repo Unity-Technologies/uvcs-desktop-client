@@ -9,7 +9,7 @@ import { commandLineForLog } from './hideSecrets';
 // Two copies follow this list and `needsSignIn`, as the e2e scripts can't import the app's code: `needsServer` in
 // scripts/build/duplicateServerCommands.mts and `isLocal` in scripts/e2e/fakeCm/signIn.cjs. Change them together:
 // duplicateServerCommands.test.ts holds both to `needsSignIn`.
-const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
+const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist', 'getconfig']);
 
 export function isServerCommand(args: readonly string[]): boolean {
   const [command = '', subcommand] = args;

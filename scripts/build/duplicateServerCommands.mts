@@ -81,7 +81,7 @@ export function needsServer(args: readonly string[]): boolean {
   return !LOCAL_COMMANDS.has(command);
 }
 
-const LOCAL_COMMANDS = new Set(['getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
+const LOCAL_COMMANDS = new Set(['getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist', 'getconfig']);
 
 /**
  * The incoming check's `cm find` (`incomingChangesetsArgs`, or `branchHeadArgs` for a partial workspace): the one read

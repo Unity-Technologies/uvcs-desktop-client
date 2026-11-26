@@ -46,6 +46,7 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
 
   // Answers.
   checkconnection: 'answer',
+  getconfig: 'answer',
   fileinfo: 'answer',
   getworkspacefrompath: 'answer',
   showacl: 'answer',
