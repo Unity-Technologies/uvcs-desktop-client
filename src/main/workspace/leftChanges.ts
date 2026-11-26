@@ -63,7 +63,9 @@ export class LeftChangesFinder {
    * Whether this app's records have changes waiting on what the workspace is on now. Reads no server data: a branch
    * renamed since is told by the names lists already read (`knownBranchName`). A record whose shelve's GUID is known
    * may be of a repository renamed since, which `find` tells by that GUID; one without is compared by its repository's
-   * name, as no rename could have been followed for it.
+   * name, as no rename could have been followed for it. A record with a GUID of another repository the workspace left
+   * may match an equal branch id here: that costs the `cm find shelve` of one `find` per such arrival, which finds no
+   * shelve of that GUID, never a wrong restore.
    */
   async hasOwnWaiting(workspacePath: string): Promise<boolean> {
     const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
