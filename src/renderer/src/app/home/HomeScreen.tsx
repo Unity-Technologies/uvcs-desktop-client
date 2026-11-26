@@ -4,7 +4,7 @@ import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useProjects, useServers } from '../workspace/workspaceQueries';
 import { TopBar } from '../shell/TopBar';
-import { useServerSettings } from '../settings/scopedSettings';
+import { useServerSettings } from '../settings/useScopedSettings';
 import { BackToWorkspaceButton } from './BackToWorkspaceButton';
 import { homeLink } from './homeLink';
 import { useHomeAccountPick } from './homeAccountStore';

@@ -25,7 +25,7 @@ import { openUnlessShownElsewhere } from '../workspace/useOpenWorkspace';
 import { useSession } from '../workspace/sessionStore';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import { serversQuery, workspaceHeadsQuery, workspaceListQuery, workspaceRepositoryQuery } from '../workspace/workspaceQueries';
-import { updateServerSettings } from '../settings/scopedSettings';
+import { updateServerSettings } from '../settings/useScopedSettings';
 import { linkDestination, type WorkspaceOnRepository } from './linkDestination';
 import { pickLinkWorkspace, showLinkFailure, type LinkWorkspaceChoice } from './linkDialogs';
 import { linkLookup, linkNavigation, type LinkLooked, type LinkNavigation, type LinkTarget } from './linkNavigation';

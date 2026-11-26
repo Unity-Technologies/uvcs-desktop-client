@@ -11,7 +11,7 @@ import { ListSkeleton } from '../../ui/Skeleton';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useDeletedRepositories, useProjects, useRepositories } from '../workspace/workspaceQueries';
-import { updateServerSettings, useServerSettings } from '../settings/scopedSettings';
+import { updateServerSettings, useServerSettings } from '../settings/useScopedSettings';
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
 import { deletedRepositoriesTip, repositoriesShown } from './deletedRepositories';

@@ -8,12 +8,8 @@ import {
   type ScopedSettingsChange,
   type ServerSettings,
 } from '@shared/domain/scopedSettings';
-import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
-import { toast } from '../../ui/toast/toastStore';
-import { queryClient } from '../queryClient';
-import { settingsQuery } from './useSettings';
+import { saveShown, settingsQuery } from './useSettings';
 
 // What the user keeps for one repository or one server (`RepositorySettings`, `ServerSettings`), read from the app's
 // settings and changed one value at a time by the main process, so a window changing another repository's meanwhile
@@ -33,7 +29,7 @@ export function useServerSettings(server: string | undefined): ServerSettings {
 
 /** Changes the repository's settings: shown at once, confirmed by the main process, put back and said when it can't save. */
 export function updateRepositorySettings(repository: string, changes: ScopedSettingsChange<RepositorySettings>): Promise<void> {
-  return saveScoped(
+  return saveShown(
     (settings) => ({ ...settings, repositorySettings: withRepositorySettings(settings.repositorySettings, repository, changes) }),
     () => api.settings.updateRepositorySettings(repository, changes),
   );
@@ -41,19 +37,8 @@ export function updateRepositorySettings(repository: string, changes: ScopedSett
 
 /** Changes the server's settings, as `updateRepositorySettings` changes a repository's. */
 export function updateServerSettings(server: string, changes: ScopedSettingsChange<ServerSettings>): Promise<void> {
-  return saveScoped(
+  return saveShown(
     (settings) => ({ ...settings, serverSettings: withServerSettings(settings.serverSettings, server, changes) }),
     () => api.settings.updateServerSettings(server, changes),
   );
-}
-
-async function saveScoped(shown: (settings: AppSettings) => AppSettings, save: () => Promise<AppSettings>): Promise<void> {
-  const current = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
-  queryClient.setQueryData(queryKeys.settings, shown(current));
-  try {
-    queryClient.setQueryData(queryKeys.settings, await save());
-  } catch (error) {
-    queryClient.setQueryData(queryKeys.settings, current);
-    toast.error("Couldn't save the settings", error);
-  }
 }

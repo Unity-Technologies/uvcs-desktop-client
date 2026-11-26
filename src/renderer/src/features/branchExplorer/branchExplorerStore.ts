@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import type { BranchPins, ExplorerRule, UserColors } from '@shared/domain/branchExplorerSettings';
 import { navigation } from '../../app/navigation/navigationStore';
-import { updateRepositorySettings, useRepositorySettings } from '../../app/settings/scopedSettings';
+import { updateRepositorySettings, useRepositorySettings } from '../../app/settings/useScopedSettings';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { BRANCH_EXPLORER_KEPT_KEY, bringStoredWindowSettings } from '../../app/settings/windowKeptSettings';
 import { useDetailsPaneStore } from '../../components/detailsPaneStore';

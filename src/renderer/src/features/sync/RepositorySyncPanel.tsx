@@ -2,7 +2,7 @@ import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, GitBranch } from 'luc
 import { useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { updateRepositorySettings, useRepositorySettings } from '../../app/settings/scopedSettings';
+import { updateRepositorySettings, useRepositorySettings } from '../../app/settings/useScopedSettings';
 import { PathLabel } from '../../components/PathLabel';
 import { RepositoryPicker } from '../../components/RepositoryPicker';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
