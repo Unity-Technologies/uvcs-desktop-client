@@ -95,10 +95,26 @@ describe('RepositoryGuids', () => {
     expect(await guids.guidOf('acme@cloud', 'game')).toBeUndefined();
   });
 
-  it('rejects when the server can’t be listed, and lists it again on the next lookup', async () => {
-    const { guids, lines } = guidsOf(cmFails('Unable to connect to acme@cloud'), listed(['game', GAME]));
+  it('rejects when the server can’t be listed, with the same failure for a minute without listing again, then lists it again', async () => {
+    const { guids, lines, clock } = guidsOf(cmFails('Unable to connect to acme@cloud'), listed(['game', GAME]));
 
     await expect(guids.guidOf('acme@cloud', 'game')).rejects.toThrow('Unable to connect');
+    clock.now += 59_000;
+    await expect(guids.guidOf('acme@cloud', 'game')).rejects.toThrow('Unable to connect');
+    await expect(guids.nameOf('acme@cloud', GAME)).rejects.toThrow('Unable to connect');
+    expect(lines()).toHaveLength(1);
+
+    clock.now += 2_000;
+    expect(await guids.guidOf('acme@cloud', 'game')).toBe(GAME);
+    expect(lines()).toHaveLength(2);
+  });
+
+  it('lists a server that failed again at once for the home screen, which the user asked for', async () => {
+    const { guids, lines } = guidsOf(cmFails('Unable to connect to acme@cloud'), listed(['game', GAME]));
+    await expect(guids.guidOf('acme@cloud', 'game')).rejects.toThrow('Unable to connect');
+
+    await guids.list('acme@cloud');
+
     expect(await guids.guidOf('acme@cloud', 'game')).toBe(GAME);
     expect(lines()).toHaveLength(2);
   });
