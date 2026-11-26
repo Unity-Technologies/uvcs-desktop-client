@@ -11,9 +11,9 @@ included.
 ## What makes a review a merge request
 
 - `cm find review` prints `{mergerequeststatus}`, the state in English whatever the client's language (`None`,
-  `Draft`, `Open`, `Closed`, `Merged`), the name a query's condition and `cm mergerequest edit --mergerequeststatus`
-  take, and `{destination}`, the destination branch's spec (`br:/main`), empty for a plain review (`FOUND_REVIEWS`).
-  Both fields print so in every `cm` the app runs (cm-runtime.md "Which cm runs").
+  `Draft`, `Open`, `Closed`, `Merged`); a query's condition and `cm mergerequest edit --mergerequeststatus` take the
+  same names. `{destination}` prints the destination branch's spec (`br:/main`), empty for a plain review
+  (`FOUND_REVIEWS`). Both fields print so in every `cm` the app runs (cm-runtime.md "Which cm runs").
 - A review is a merge request when its state is one of the four **and** it has a destination (`mergeRequestOf`,
   `CodeReviewSummary.mergeRequest`, `MergeRequestInfo`); anything else, a state this version doesn't know included, is
   a plain code review. The destination is kept as a branch name, `br:` stripped.
