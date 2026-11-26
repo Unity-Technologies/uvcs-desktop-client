@@ -3,7 +3,7 @@ import { REPOSITORY_LISTING_FRESH_MS, repositoryKey } from '@shared/domain/repos
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { IMMUTABLE_QUERY } from '../queryMeta';
+import { immutableOnceRead } from '../queryMeta';
 import { usePlaceRepository } from './useWorkspace';
 
 // What the app keeps for a repository is kept by its GUID, which a rename never changes (ARCHITECTURE.md "Settings
@@ -20,10 +20,10 @@ export function repositoryGuidQuery(repositorySpec: string) {
   return queryOptions({
     queryKey: queryKeys.repositoryGuid(repositoryKey(repositorySpec)),
     queryFn: () => api.repositories.guidOf(repositorySpec),
-    // A GUID never changes, and nothing is asked again on focus.
+    // A GUID never changes, and nothing is asked again on focus; no repository by that name is asked again.
     staleTime: (query) => (query.state.data === null ? REPOSITORY_LISTING_FRESH_MS : Infinity),
     refetchOnWindowFocus: false,
-    meta: IMMUTABLE_QUERY,
+    meta: immutableOnceRead((guid) => guid != null),
   });
 }
 
