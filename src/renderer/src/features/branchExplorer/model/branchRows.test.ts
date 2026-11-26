@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import { branch, changeset } from './graphFixtures';
-import { branchesMoves, branchMoves, movedBranch, movedBranches, pinsOf, withoutPin, withPins, type BranchPins } from './branchRows';
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
+import { branchesMoves, branchMoves, movedBranch, movedBranches, pinsOf, withoutPin, withPins } from './branchRows';
 import { layoutGraph } from './layoutGraph';
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BranchExplorerData, RuleMatch } from '@shared/domain/branchExplorer';
-import { newRule, ruleQueries, type ExplorerRule, type ExplorerRuleKind } from './explorerRules';
+import type { ExplorerRule, ExplorerRuleKind } from '@shared/domain/branchExplorerSettings';
+import { newRule, ruleQueries } from './explorerRules';
 import { branch, changeset, merge, sampleHistory } from './graphFixtures';
 import { branchesWithPendingMerges, NO_RULE_COLORS, ruleColors } from './ruleColors';
 import { ruleMatchesOf, type RuleMatches } from './ruleMatches';

@@ -8,12 +8,14 @@ import type { SincePreset } from '../../lib/sincePresets';
 import { DEFAULT_GRAPH_VIEW_OPTIONS, graphViewOptionsOf, type GraphViewOptions } from './canvas/graphViewOptions';
 import { hiddenAfterMigration, migrateBranchExplorerPreferences, rememberedPreferences } from './branchExplorerMigration';
 import type { BranchChoice } from './model/branchChoice';
-import type { ExplorerRule } from './model/explorerRules';
+import type { ExplorerRule } from '@shared/domain/branchExplorerSettings';
 import type { RevealTarget } from './model/revealTarget';
-import { pinsOf, withPins, type BranchPins, type PinsByRepository } from './model/branchRows';
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
+import { pinsOf, withPins, type PinsByRepository } from './model/branchRows';
 import { isOnIn, withOnIn, type OffByRepository } from './model/offByRepository';
 import { appliedRulesOf, rulesOf, withRules, type RulesByRepository } from './model/rulesByRepository';
-import { appliedUserColorsOf, DEFAULT_USER_COLORS, type UserColors } from './model/userColors';
+import type { UserColors } from '@shared/domain/branchExplorerSettings';
+import { appliedUserColorsOf, DEFAULT_USER_COLORS } from './model/userColors';
 
 /** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
 export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';

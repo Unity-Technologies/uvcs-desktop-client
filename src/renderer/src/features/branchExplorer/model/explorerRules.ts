@@ -1,37 +1,6 @@
 import type { RuleObject, RuleQuery } from '@shared/domain/branchExplorer';
+import type { ExplorerRule, ExplorerRuleKind, RuleExpansion } from '@shared/domain/branchExplorerSettings';
 import { BRANCH_HUES } from './branchHue';
-
-/**
- * The Branch Explorer's advanced rules, applied in order. Inclusions keep only the branches they match, exclusions hide
- * the branches they match (and win over inclusions), and format rules color what they match (a later rule over an
- * earlier one). Every rule but the two built-in formats asks the server with a `cm find` condition.
- */
-export type ExplorerRuleKind = 'include' | 'exclude' | 'branchFormat' | 'changesetFormat' | 'labelFormat' | 'pendingMerges' | 'currentBranch';
-
-/** Which relatives of the branches an inclusion or exclusion matches it takes with them. */
-export interface RuleExpansion {
-  /** Every branch below them. */
-  children: boolean;
-  /** The branch each one starts from. */
-  parent: boolean;
-  /** The branches merged into them. */
-  mergeSources: boolean;
-  /** The branches they were merged into. */
-  mergeDestinations: boolean;
-}
-
-export interface ExplorerRule {
-  id: string;
-  kind: ExplorerRuleKind;
-  enabled: boolean;
-  description: string;
-  /** A `cm find` condition without `where` (`owner = 'me'`); empty for the built-in formats, which need none. */
-  condition: string;
-  /** For inclusions and exclusions only. */
-  expansion: RuleExpansion;
-  /** One of `BRANCH_HUES`, for format rules only. */
-  hue: number | null;
-}
 
 export const NO_EXPANSION: RuleExpansion = { children: false, parent: false, mergeSources: false, mergeDestinations: false };
 

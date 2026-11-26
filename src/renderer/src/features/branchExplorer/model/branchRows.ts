@@ -1,13 +1,5 @@
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
 import type { GraphLayout, Lane } from './layoutGraph';
-
-/** A branch the user moved: the row it asks for, by its object id (a name changes with a rename). */
-export interface BranchPin {
-  branch: number;
-  row: number;
-}
-
-/** The branches moved, the one moved last at the end: where two want the same room, it wins (`placeLanes`). */
-export type BranchPins = readonly BranchPin[];
 
 /** The moved branches, by repository: an id names a branch of one repository. */
 export type PinsByRepository = Readonly<Record<string, BranchPins>>;

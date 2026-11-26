@@ -11,19 +11,8 @@ import { IconButton } from '../../ui/IconButton';
 import { Popover } from '../../ui/Popover';
 import { HueDot } from './HueDot';
 import { HuePicker } from './HuePicker';
-import {
-  addingTurnsColorsOn,
-  addPeopleEmpty,
-  changesetColorsTabBody,
-  isColored,
-  peopleMatching,
-  usersToAdd,
-  withUserHue,
-  withUserRemoved,
-  withUserToggled,
-  type UserColor,
-  type UserColors,
-} from './model/userColors';
+import type { UserColor, UserColors } from '@shared/domain/branchExplorerSettings';
+import { addingTurnsColorsOn, addPeopleEmpty, changesetColorsTabBody, isColored, peopleMatching, usersToAdd, withUserHue, withUserRemoved, withUserToggled } from './model/userColors';
 import styles from './ChangesetColorsTab.module.css';
 
 interface ChangesetColorsTabProps {

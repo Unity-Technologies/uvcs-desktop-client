@@ -1,4 +1,5 @@
-import { hasCondition, isFormatRule, type ExplorerRule, type ExplorerRuleKind, type RuleExpansion } from './explorerRules';
+import type { ExplorerRule, ExplorerRuleKind, RuleExpansion } from '@shared/domain/branchExplorerSettings';
+import { hasCondition, isFormatRule } from './explorerRules';
 
 /**
  * The decisions of the display options' "Advanced filters & format" tab (`ExplorerRulesTab`) and its rule editor

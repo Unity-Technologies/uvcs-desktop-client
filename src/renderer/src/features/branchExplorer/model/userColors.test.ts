@@ -2,24 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { BRANCH_HUES } from './branchHue';
 import { changeset, sampleHistory } from './graphFixtures';
 import { NO_RULE_COLORS, type RuleColors } from './ruleColors';
-import {
-  addingTurnsColorsOn,
-  addPeopleEmpty,
-  appliedUserColorsOf,
-  changesetColorsTabBody,
-  changesetUserHues,
-  DEFAULT_USER_COLORS,
-  historyAuthors,
-  isColored,
-  peopleMatching,
-  usersToAdd,
-  withUserColors,
-  withUserHue,
-  withUserRemoved,
-  withUsersAdded,
-  withUserToggled,
-  type UserColors,
-} from './userColors';
+import type { UserColors } from '@shared/domain/branchExplorerSettings';
+import { addingTurnsColorsOn, addPeopleEmpty, appliedUserColorsOf, changesetColorsTabBody, changesetUserHues, DEFAULT_USER_COLORS, historyAuthors, isColored, peopleMatching, usersToAdd, withUserColors, withUserHue, withUserRemoved, withUsersAdded, withUserToggled } from './userColors';
 
 const [first, second, third] = BRANCH_HUES;
 

@@ -1,4 +1,4 @@
-import type { ExplorerRule } from './explorerRules';
+import type { ExplorerRule } from '@shared/domain/branchExplorerSettings';
 import { isOnIn, type OffByRepository } from './offByRepository';
 
 /** The advanced rules, by repository: a condition names that repository's branches and owners. */

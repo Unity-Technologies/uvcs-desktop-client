@@ -1,24 +1,10 @@
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
+import type { UserColor, UserColors } from '@shared/domain/branchExplorerSettings';
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { displayName, userFilterTexts } from '../../../lib/userName';
 import { BRANCH_HUES } from './branchHue';
 import { isOnIn, type OffByRepository } from './offByRepository';
 import type { RuleColors } from './ruleColors';
-
-/** The hue a person's changesets take. */
-export interface UserColor {
-  /** As `cm` stores the owner: `jane@example.com`. */
-  user: string;
-  hue: number;
-}
-
-/**
- * The changeset colors by user, the same in every repository: people keep their color wherever they work. Whether they
- * apply is each repository's own (`appliedUserColorsOf`).
- */
-export interface UserColors {
-  users: readonly UserColor[];
-}
 
 export const DEFAULT_USER_COLORS: UserColors = { users: [] };
 

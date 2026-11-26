@@ -1,5 +1,5 @@
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
-import type { ExplorerRule, RuleExpansion } from './explorerRules';
+import type { ExplorerRule, RuleExpansion } from '@shared/domain/branchExplorerSettings';
 import { matchedBy, type RuleMatches } from './ruleMatches';
 
 /**

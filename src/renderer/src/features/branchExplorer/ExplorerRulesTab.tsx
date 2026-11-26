@@ -7,7 +7,8 @@ import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { editExplorerRule } from './ExplorerRuleEditor';
 import { HueDot } from './HueDot';
-import { isFormatRule, newRule, type ExplorerRule } from './model/explorerRules';
+import type { ExplorerRule } from '@shared/domain/branchExplorerSettings';
+import { isFormatRule, newRule } from './model/explorerRules';
 import { ruleError } from './model/ruleMatches';
 import {
   ADD_RULE_GROUPS,

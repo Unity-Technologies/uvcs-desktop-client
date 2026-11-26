@@ -5,7 +5,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
 import { graphMenu } from './graphMenu';
 import type { GraphSelections } from './graphSelection';
-import type { BranchPins } from './model/branchRows';
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
 import { sampleHistory } from './model/graphFixtures';
 import { layoutGraph } from './model/layoutGraph';
 

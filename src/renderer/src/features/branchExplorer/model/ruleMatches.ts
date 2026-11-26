@@ -1,5 +1,6 @@
 import type { RuleMatch, RuleQuery } from '@shared/domain/branchExplorer';
-import { ruleQueryKey, ruleQueryOf, type ExplorerRule } from './explorerRules';
+import type { ExplorerRule } from '@shared/domain/branchExplorerSettings';
+import { ruleQueryKey, ruleQueryOf } from './explorerRules';
 
 /** The server's answers to `ruleQueries`, by `ruleQueryKey`. */
 export type RuleMatches = ReadonlyMap<string, RuleMatch>;

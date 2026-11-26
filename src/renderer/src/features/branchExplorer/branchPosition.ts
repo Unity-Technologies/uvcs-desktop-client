@@ -1,7 +1,8 @@
 import type { Action } from '../../lib/actions';
 import { hotkey, type ShortcutId } from '../../lib/shortcutRegistry';
 import { confirm } from '../../ui/dialog/confirm';
-import { branchesMoves, movedBranches, NO_PINS, withoutPin, type BranchMove, type BranchPins } from './model/branchRows';
+import type { BranchPins } from '@shared/domain/branchExplorerSettings';
+import { branchesMoves, movedBranches, NO_PINS, withoutPin, type BranchMove } from './model/branchRows';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
 /** The branches moved in the repository shown, and how to change them (`setPins` in the preferences). */

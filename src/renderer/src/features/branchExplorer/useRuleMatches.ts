@@ -4,7 +4,8 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace } from '../../app/workspace/useWorkspace';
-import { ruleQueries, type ExplorerRule } from './model/explorerRules';
+import type { ExplorerRule } from '@shared/domain/branchExplorerSettings';
+import { ruleQueries } from './model/explorerRules';
 import { ruleMatchesOf, shownRuleMatches, type RuleMatches } from './model/ruleMatches';
 
 /**
