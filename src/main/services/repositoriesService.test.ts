@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseRepositoryGuid } from '@shared/domain/stableIds';
 import { listRepositories } from '../cm/listRepositories';
+import { repositoryIdOf } from '../cm/repositoryIdOf';
 import type { IssueTrackers } from '../issueTrackers/IssueTrackers';
 import { DiffReviewStore } from '../review/DiffReviewStore';
 import { RepositoryGuids } from '../cm/RepositoryGuids';
@@ -189,10 +190,15 @@ describe('guidOf', () => {
   /** The server's listing is each one in turn, then the last again; the clock moves only when the test says. */
   function lookups(...listings: string[]) {
     let calls = 0;
-    const fake = fakeCmClient({ 'repository list': () => listings[Math.min(calls++, listings.length - 1)]!, 'repository acme@cloud': '' });
+    const fake = fakeCmClient({
+      'repository list': () => listings[Math.min(calls++, listings.length - 1)]!,
+      'repository acme@cloud': '',
+      // A workspace of `game` renamed to `racer` still names it `game`, which cm still takes; no other name answers.
+      ls: ({ args }) => (args.includes('--tree=cs:0@game@acme@cloud') ? formatOutput(['2']) : cmFails("The specified repository couldn't be found: tools.")),
+    });
     const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-guids-')), 'settings.json'));
     const clock = { now: 0 };
-    const repositoryGuids = new RepositoryGuids((server) => listRepositories(fake.cm, server), () => clock.now);
+    const repositoryGuids = new RepositoryGuids({ list: (server) => listRepositories(fake.cm, server), idOf: (spec, server) => repositoryIdOf(fake.cm, spec, server), now: () => clock.now });
     /** The bindings moved to a GUID (`IssueTrackers.keepRepositoryByGuid`, tested with the trackers). */
     const trackersKept: string[][] = [];
     const issueTrackers = { keepRepositoryByGuid: (spec: string, guid: string) => void trackersKept.push([spec, guid]) } as unknown as IssueTrackers;
@@ -260,6 +266,31 @@ describe('guidOf', () => {
 
     expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
     expect(lines().filter((line) => line.startsWith('repository list'))).toHaveLength(2);
+  });
+
+  it('finds a repository renamed elsewhere by the old name its workspaces keep, with one listing and one cm ls', async () => {
+    const { service, lines } = lookups(listed('racer'));
+
+    expect(await service.guidOf('game@acme@cloud')).toBe(GAME);
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), `ls / --tree=cs:0@game@acme@cloud --format={repid}\u001e`]);
+  });
+
+  it('moves what was kept by the old spec under the GUID, when a workspace still names the repository by it', async () => {
+    const { service, settings, trackersKept } = lookups(listed('racer'));
+    settings.update({ recentCommentsByRepository: { 'game@acme@cloud': ['Fix cs:4207'] } });
+
+    await service.guidOf('game@acme@cloud');
+
+    expect(settings.get().recentCommentsByRepository).toEqual({ [GAME]: ['Fix cs:4207'] });
+    expect(trackersKept).toEqual([['game@acme@cloud', GAME]]);
+  });
+
+  it('asks nothing more for a name no repository goes by, within the minute', async () => {
+    const { service, lines } = lookups(listed('game'));
+
+    expect(await service.guidOf('tools@acme@cloud')).toBeNull();
+    expect(await service.guidOf('tools@acme@cloud')).toBeNull();
+    expect(lines()).toEqual([expect.stringMatching(/^repository list acme@cloud/), expect.stringMatching(/^ls \/ --tree=cs:0@tools@acme@cloud/)]);
   });
 
   it('rejects when the server can’t be listed', async () => {
