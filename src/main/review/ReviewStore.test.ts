@@ -4,12 +4,17 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parseWorkspaceGuid, type WorkspaceGuid } from '@shared/domain/stableIds';
 import { WORKSPACE_GUID } from '../cm/testing/cmOutput';
-import { ReviewStore } from './ReviewStore';
+import { DISK_FOLDERS, ReviewStore } from './ReviewStore';
 
 const GUID = parseWorkspaceGuid(WORKSPACE_GUID) as WorkspaceGuid;
 
 /** The workspace's GUID as `cm getworkspacefrompath` prints it, wherever its folder is. */
 const knownGuid = async (): Promise<WorkspaceGuid | undefined> => GUID;
+
+/** What Windows answers while a file in the folder is open. */
+const refused = (operation: string) => async (): Promise<void> => {
+  throw Object.assign(new Error(`EPERM: operation not permitted, ${operation}`), { code: 'EPERM' });
+};
 
 describe('ReviewStore', () => {
   let workspace: string;
@@ -122,13 +127,21 @@ describe('ReviewStore', () => {
     expect(await readdir(root)).toEqual([GUID]);
   });
 
+  it("reads the GUID's marks when the leftover folder kept by the path can't be removed, and leaves it for later", async () => {
+    await write('a.ts', 'one');
+    await store.mark(workspace, ['a.ts']);
+    await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
+    const stuck = new ReviewStore(root, knownGuid, { ...DISK_FOLDERS, remove: refused('rmdir') });
+
+    expect(await stuck.marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
+    expect(await readdir(root)).toHaveLength(2);
+  });
+
   it("keeps showing the marks kept by the path when their folder can't be moved (a file open in it, on Windows)", async () => {
     await write('a.ts', 'one');
     await new ReviewStore(root, async () => undefined).mark(workspace, ['a.ts']);
     const [byPath] = await readdir(root);
-    const unmovable = new ReviewStore(root, knownGuid, async () => {
-      throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
-    });
+    const unmovable = new ReviewStore(root, knownGuid, { ...DISK_FOLDERS, move: refused('rename') });
 
     expect(await unmovable.marks(workspace)).toEqual([{ path: 'a.ts', state: 'reviewed', hasSnapshot: true }]);
     expect(await readdir(root)).toEqual([byPath]);
