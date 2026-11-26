@@ -1,3 +1,6 @@
+import type { RecentCommentsOffer } from '@shared/domain/recentComments';
+import { recentCommentLabel } from '../../lib/comment';
+
 /** A button of the check-in description's footer: Recent comments, or the change requests to apply with their count. */
 export type DescriptionFooterButton = { kind: 'recentComments'; tip: string } | { kind: 'changeRequests'; tip: string; count: number; label: string };
 
@@ -14,6 +17,19 @@ export function descriptionFooterButtons({ recentComments, changeRequests }: { r
       ? [{ kind: 'changeRequests' as const, tip: 'Change requests to apply', count: changeRequests, label: `${changeRequests} change ${changeRequests === 1 ? 'request' : 'requests'} to apply` }]
       : []),
   ];
+}
+
+/** An item of the Recent comments menu: a comment to pick, or what the menu waits for, disabled. */
+export interface RecentCommentsMenuItem {
+  label: string;
+  comment?: string;
+  disabled: boolean;
+}
+
+/** The Recent comments menu's items (`RecentCommentsOffer`): each comment by its first line, or what it waits for. */
+export function recentCommentsMenuItems({ comments, waiting }: RecentCommentsOffer): RecentCommentsMenuItem[] {
+  if (waiting !== null) return [{ label: waiting, disabled: true }];
+  return comments.map((comment) => ({ label: recentCommentLabel(comment), comment, disabled: false }));
 }
 
 /**

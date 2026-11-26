@@ -167,8 +167,9 @@ workspaces, never another repository's: a comment often names what only makes se
 `br:/main/task`, a change request applied). They're kept in the settings by the repository's GUID
 (`recentCommentsByRepository`; ARCHITECTURE.md "Settings survive renames"), so every workspace of a repository shares
 them and a rename made anywhere keeps them, the newest first, `MAX_RECENT_COMMENTS` each. The GUID is read as the
-menu first opens (`recentCommentsOffer` shows its button while any comment is kept, and the menu says "Loading…"
-meanwhile, or that they couldn't be loaded), not as Changes shows; a check-in
+menu first opens (`recentCommentsOffer` shows its button while any comment is kept, anywhere, and the menu says
+"Loading…" meanwhile, that they couldn't be loaded, or that the repository has none, so an open menu never vanishes;
+`recentCommentsMenuItems`), not as Changes shows; a check-in
 puts its comment first (`rememberComment` in `checkinOperations`, the repository read from the workspace's info
 Changes already has). The main process applies it to what it holds (`settings.rememberRecentComment`,
 `SettingsStore.rememberRecentComment`, `withRecentComment`), as it does the recent workspaces and branches: a window

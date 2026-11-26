@@ -17,7 +17,7 @@ import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type C
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { DescriptionFooter } from './DescriptionFooter';
-import { descriptionFooterButtons, descriptionHeightWith } from './descriptionFooterButtons';
+import { descriptionFooterButtons, descriptionHeightWith, recentCommentsMenuItems } from './descriptionFooterButtons';
 import { useBranchChangeRequests } from '../codeReviews/changeRequests/useChangeRequests';
 import { changeRequestsBranch, notYetNamed } from '../codeReviews/changeRequests/changeRequests';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
@@ -176,8 +176,7 @@ export function CheckinPanel({
             footer={
               <DescriptionFooter
                 buttons={footerButtons}
-                recentComments={recentComments.comments}
-                recentCommentsWaiting={recentComments.waiting}
+                recentComments={recentCommentsMenuItems(recentComments)}
                 onRecentCommentsOpen={onRecentCommentsOpen}
                 onRecentComment={(pick) => {
                   onMessageChange(pick.parts);
