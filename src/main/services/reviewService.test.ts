@@ -56,4 +56,31 @@ describe('reviewModeKey', () => {
     expect(await service.reviewModeKey(workspacePlace('/work'))).toBe('/work');
     expect(await service.reviewModeKey(repositoryPlace('game@acme@cloud'))).toBe('repository:game@acme@cloud');
   });
+
+  it("keeps it by the workspace's path when its GUID can't be read", async () => {
+    const { service } = review({ getworkspacefrompath: cmFails('The workspace is busy') });
+
+    expect(await service.reviewModeKey(workspacePlace('/work'))).toBe('/work');
+  });
+});
+
+describe('setReviewMode', () => {
+  it('turns review mode on by the GUID, from the stored list, and says the offer was taken', async () => {
+    const { service, settings } = review({ getworkspacefrompath: WORKSPACE_NAMES }, ['/other']);
+
+    const saved = await service.setReviewMode(workspacePlace('/work'), true);
+    expect(saved).toMatchObject({ reviewModeWorkspaces: ['/other', WORKSPACE_GUID], reviewModeHintDone: true });
+    expect(settings.get()).toEqual(saved);
+  });
+
+  it('moves what was kept by the path and turns it off in one write: the path never comes back', async () => {
+    const { service, settings } = review({ getworkspacefrompath: WORKSPACE_NAMES }, ['/work', '/other']);
+    const writes: unknown[] = [];
+    const update = settings.update.bind(settings);
+    settings.update = (changes) => (writes.push(changes), update(changes));
+
+    await service.setReviewMode(workspacePlace('/work'), false);
+    expect(settings.get().reviewModeWorkspaces).toEqual(['/other']);
+    expect(writes).toEqual([{ reviewModeWorkspaces: ['/other'] }]);
+  });
 });
