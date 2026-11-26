@@ -210,7 +210,9 @@ What the app keeps for a repository is kept by its GUID (ARCHITECTURE.md "Settin
   `cm` takes the name for, under its new name or an old one, inside a workspace or out (`repositoryIdOf`). Changeset
   0 is in every repository and its tree is the root alone, so it prints one record; a branch (`br:/main`) can be
   renamed, and a loaded changeset's root prints a record per entry. A name no repository goes by fails ("The
-  specified repository couldn't be found"). `RepositoryGuids` finds that id in the listing, so the old name costs one
+  specified repository couldn't be found", matched in each language `cm` speaks: `REPOSITORY_NOT_FOUND`) and answers
+  unknown; any other failure (a server out of reach, a sign-in) fails the lookup, which is asked again next time.
+  `RepositoryGuids` finds that id in the listing, so the old name costs one
   `cm ls` per session.
 
 ## Unity organizations

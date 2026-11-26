@@ -216,7 +216,8 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
-  without any. The server of the window's place is checked as
+  without any (one exception, which nothing waits for: a repository window reopened at launch lists its server to
+  follow a rename, ARCHITECTURE.md "Settings survive renames"). The server of the window's place is checked as
   it opens and as the window comes forward, `cm checkconnection <server>` (`accounts.checkSession`,
   `useWindowSessionCheck`; at most once every ten minutes per server app-wide, docs/features/accounts.md "Keeping
   sessions alive"): a workspace's once its info names it, a repository's explored without one from its spec

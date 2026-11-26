@@ -33,7 +33,8 @@ interface FormerName {
  * and `cm` still takes that name (the server keeps it as an alias until another repository takes it). So a name the
  * listing doesn't hold may be one a rename left behind: one `cm ls` reads the id of the repository `cm` takes it for
  * (`repositoryIdOf`), which the listing holds with its GUID. What it finds is kept for the session (`formerNames`),
- * below what a listing holds, so a repository that takes the name later is found by it.
+ * and trusted only while a fresh listing doesn't show the name: a repository that takes the name later, here
+ * (`added`) or anywhere, is found by it once the server is listed again.
  */
 export class RepositoryGuids {
   /**
@@ -87,10 +88,16 @@ export class RepositoryGuids {
     return (await this.listedGuidOf(server, name)) ?? this.formerNameGuidOf(server, name);
   }
 
-  /** The GUID a listing, or the lookup of a name a rename left behind, already taught for `name`, without asking `cm`. */
+  /**
+   * The GUID a listing, or the lookup of a name a rename left behind, already taught for `name`, without asking `cm`:
+   * a name a rename left behind only while the listing is fresh, as another repository may have taken it since.
+   */
   knownGuidOf(server: string, name: string): RepositoryGuid | undefined {
     const key = serverKey(server);
-    return this.byServer.get(key)?.guids.get(name.toLowerCase()) ?? this.formerNames.get(key)?.get(name.toLowerCase())?.guid;
+    const known = this.byServer.get(key);
+    const listed = known?.guids.get(name.toLowerCase());
+    if (listed || !known || this.now() - known.listedAt >= REPOSITORY_LISTING_FRESH_MS) return listed;
+    return this.formerNames.get(key)?.get(name.toLowerCase())?.guid;
   }
 
   /**
@@ -110,7 +117,8 @@ export class RepositoryGuids {
 
   /**
    * A repository was created or restored on `server` here: the next lookup of a name no listing taught lists the server
-   * again, however recent the last listing, so the repository just made is found.
+   * again, however recent the last listing, so the repository just made is found, under a name a rename left behind
+   * too.
    */
   added(server: string): void {
     const known = this.byServer.get(serverKey(server));
@@ -156,14 +164,14 @@ export class RepositoryGuids {
   }
 
   /**
-   * The GUID of the repository `cm` takes a name no listing holds for, by its id: one `cm ls` for the lookups asking at
-   * once, whose answer is kept for the session when it finds one, and for a minute when it finds none.
+   * The GUID of the repository `cm` takes a name a fresh listing doesn't hold for, by its id: one `cm ls` for the
+   * lookups asking at once, whose answer is kept for the session when it finds one, and for a minute when it finds none.
    */
   private async formerNameGuidOf(server: string, name: string): Promise<RepositoryGuid | undefined> {
     const key = serverKey(server);
     const lowerName = name.toLowerCase();
     const lookedUp = this.formerNamesOf(key).get(lowerName);
-    if (lookedUp && this.now() - lookedUp.at < REPOSITORY_LISTING_FRESH_MS) return lookedUp.guid;
+    if (lookedUp && (lookedUp.guid || this.now() - lookedUp.at < REPOSITORY_LISTING_FRESH_MS)) return lookedUp.guid;
     const lookupKey = `${key}\n${lowerName}`;
     const running = this.lookingUpFormerNames.get(lookupKey);
     if (running) return running;
@@ -203,5 +211,7 @@ export class RepositoryGuids {
       ids.set(id, guid);
     }
     this.byServer.set(key, { guids, names, ids, listedAt: this.now() });
+    // A name a rename left behind that a repository goes by now is that repository's.
+    for (const name of guids.keys()) this.formerNames.get(key)?.delete(name);
   }
 }

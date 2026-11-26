@@ -9,7 +9,7 @@ import { replaceFileSync } from '../files/replaceFileSync';
 export type StoredConnection = Omit<TrackerConnection, 'credential'>;
 
 /** A binding as it is kept: by the repository's GUID, or by its spec when made before (`BindingKeptBySpec`). */
-type StoredBinding = BindingKeptBySpec;
+type StoredBinding = RepositoryTrackerBinding | BindingKeptBySpec;
 
 interface StoredTrackers {
   connections: StoredConnection[];

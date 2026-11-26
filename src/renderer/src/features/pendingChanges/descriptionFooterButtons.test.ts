@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { DESCRIPTION_FOOTER_HEIGHT, descriptionFooterButtons, descriptionHeightWith } from './descriptionFooterButtons';
+import { DESCRIPTION_FOOTER_HEIGHT, descriptionFooterButtons, descriptionHeightWith, recentCommentsMenuItems } from './descriptionFooterButtons';
+
+describe('recentCommentsMenuItems', () => {
+  it('lists each comment by its first line, to pick', () => {
+    expect(recentCommentsMenuItems({ offered: true, comments: ['Fix the jump\n\nIt was too high', 'Tune cs:4207'], waiting: null })).toEqual([
+      { label: 'Fix the jump', comment: 'Fix the jump\n\nIt was too high', disabled: false },
+      { label: 'Tune cs:4207', comment: 'Tune cs:4207', disabled: false },
+    ]);
+  });
+
+  it('shows what the menu waits for, disabled, in place of the comments', () => {
+    expect(recentCommentsMenuItems({ offered: true, comments: [], waiting: 'Loading…' })).toEqual([{ label: 'Loading…', disabled: true }]);
+  });
+});
 
 describe('descriptionFooterButtons', () => {
   it('shows Recent comments while there are some, then the change requests to apply with their count', () => {

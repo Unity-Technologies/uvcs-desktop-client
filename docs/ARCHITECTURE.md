@@ -355,8 +355,9 @@ id would cost the same `cm find branch` as its GUID, read only in review mode.
   takes that name (the server keeps it as an alias until another repository takes it). A name the listing doesn't
   hold is looked up by the id of the repository `cm` takes it for: one `cm ls` of changeset 0's root
   (`repositoryIdOf`), whose `{repid}` the listing holds with the GUID. The old name is kept for the session
-  (`RepositoryGuids` `formerNames`; a rename made here keeps it at once), below what a listing holds; a name no
-  repository goes by is asked again after a minute. Details: architecture/cm-output.md "A repository's GUID".
+  (`RepositoryGuids` `formerNames`; a rename made here keeps it at once), and trusted only while a fresh listing
+  doesn't show the name, so a repository created under it later, here or elsewhere, takes it once the server is listed
+  again (at once for one created here: `added`); a name no repository goes by is asked again after a minute. Details: architecture/cm-output.md "A repository's GUID".
 - **The main process resolves, the renderer asks once.** A window reads its repository's GUID by its spec
   (`repositories.guidOf`; `repositoryGuidQuery`, `useRepositoryGuid`), once per repository, never on focus, and only
   where something kept is needed: the Branch Explorer and Sync as they show, the issue tracker only when some
@@ -373,8 +374,8 @@ id would cost the same `cm find branch` as its GUID, read only in review mode.
   type (`RepositoryGuid`), so a spec can't be passed where a GUID is kept.
 - **A spec kept for later use** (the sync remote, a repository window reopened at launch) is kept with its GUID, and
   followed to the name the repository goes by now (`RepositoryGuids.specNow`, `repositories.specNow`) from the same
-  listing. A repository window reopened at launch lists its server once, after the window shows, which nothing waits
-  for (`WorkspaceWindows.followRename`).
+  listing. A repository window reopened at launch lists its server once as it reopens, beside the window's first
+  reads, which nothing waits for (`WorkspaceWindows.followRename`).
 - **What each setting is kept by** is written in `settingsIdentity.ts` (`APP_SETTINGS_IDENTITY`,
   `REPOSITORY_SETTINGS_IDENTITY`, `SERVER_SETTINGS_IDENTITY`), one line per setting, which the type checker asks for
   when a setting is added. A path or a name is kept only where nothing stable exists, and its line says why: the
@@ -443,8 +444,8 @@ that started it, until it finishes. Details: architecture/main-process.md "Windo
 
 The first frame is the window's final screen, themed, its data asked for before the first render; the first `cm`
 reads start as the main module loads, before Electron is ready (`readFirstScreenAhead`). Only the app's own `cm` not
-set up yet gates the first screen, and no server is asked before it shows (a repository window reopened at launch
-lists its server once after: "Settings survive renames"). Measure with `scripts/perf/startup.mjs`. The
+set up yet gates the first screen, and nothing waits for a server (a repository window reopened at launch lists its
+server once as it reopens, which nothing waits for: "Settings survive renames"). Measure with `scripts/perf/startup.mjs`. The
 steps in order, and what was tried and dropped: architecture/main-process.md "Start-up".
 
 ## Renderer
