@@ -1,14 +1,6 @@
 import { REPOSITORY_LISTING_FRESH_MS, repositorySpecParts, serverKey, type RepositoryListing } from '@shared/domain/repository';
 import type { RepositoryGuid } from '@shared/domain/stableIds';
 
-/**
- * A listing this recent answers a repository it doesn't hold as unknown instead of listing again: the repository was
- * just looked for, and a lookup of a name nobody can see (a typo in a link, a repository the user has no access to)
- * lists its server once a minute at most. A listing that failed this recently answers a lookup with its failure, so
- * windows asking again (each view mounting) don't list a server out of reach each time.
- */
-const FRESH_LISTING_MS = REPOSITORY_LISTING_FRESH_MS;
-
 /** How `RepositoryGuids` asks `cm`: `listRepositories` and `repositoryIdOf`, and the clock. */
 export interface RepositoryReads {
   list(server: string): Promise<RepositoryListing>;
@@ -30,6 +22,12 @@ interface FormerName {
  * server goes through here (`list`, the home screen's too) and teaches it the server's names, and a name it doesn't know
  * lists the server again once: a repository renamed or created since. A GUID never changes, so nothing else expires.
  * Each listing replaces the server's names whole.
+ *
+ * A listing younger than `REPOSITORY_LISTING_FRESH_MS` answers a repository it doesn't hold as unknown instead of
+ * listing again: the repository was just looked for, and a lookup of a name nobody can see (a typo in a link, a
+ * repository the user has no access to) lists its server once a minute at most. A listing that failed this recently
+ * answers a lookup with its failure, so windows asking again (each view mounting) don't list a server out of reach
+ * each time.
  *
  * A workspace keeps naming its repository by the name it had when the workspace was made, whatever renames came since,
  * and `cm` still takes that name (the server keeps it as an alias until another repository takes it). So a name the
@@ -105,7 +103,7 @@ export class RepositoryGuids {
     const key = serverKey(server);
     const known = this.byServer.get(key);
     const name = known?.names.get(guid);
-    if (name !== undefined || (known && this.now() - known.listedAt < FRESH_LISTING_MS)) return name;
+    if (name !== undefined || (known && this.now() - known.listedAt < REPOSITORY_LISTING_FRESH_MS)) return name;
     await this.listToLookUp(server);
     return this.byServer.get(key)?.names.get(guid);
   }
@@ -152,7 +150,7 @@ export class RepositoryGuids {
     const key = serverKey(server);
     const known = this.byServer.get(key);
     const guid = known?.guids.get(name.toLowerCase());
-    if (guid || (known && this.now() - known.listedAt < FRESH_LISTING_MS)) return guid;
+    if (guid || (known && this.now() - known.listedAt < REPOSITORY_LISTING_FRESH_MS)) return guid;
     await this.listToLookUp(server);
     return this.byServer.get(key)?.guids.get(name.toLowerCase());
   }
@@ -165,7 +163,7 @@ export class RepositoryGuids {
     const key = serverKey(server);
     const lowerName = name.toLowerCase();
     const lookedUp = this.formerNamesOf(key).get(lowerName);
-    if (lookedUp && this.now() - lookedUp.at < FRESH_LISTING_MS) return lookedUp.guid;
+    if (lookedUp && this.now() - lookedUp.at < REPOSITORY_LISTING_FRESH_MS) return lookedUp.guid;
     const lookupKey = `${key}\n${lowerName}`;
     const running = this.lookingUpFormerNames.get(lookupKey);
     if (running) return running;
@@ -190,7 +188,7 @@ export class RepositoryGuids {
   /** Lists the server for a lookup, unless its last listing failed within a minute: that failure answers it then. */
   private async listToLookUp(server: string): Promise<void> {
     const failure = this.failed.get(serverKey(server));
-    if (failure && this.now() - failure.at < FRESH_LISTING_MS) throw failure.error;
+    if (failure && this.now() - failure.at < REPOSITORY_LISTING_FRESH_MS) throw failure.error;
     await this.list(server);
   }
 
