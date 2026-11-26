@@ -58,7 +58,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   "Remove <tool>" for the user's own, which removes it everywhere with the rows that open in it, this one too, and
   closes the dialog; saved with the rule, `argsToSave`), or for UnityYAMLMerge (whose arguments are
   fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" (a select: "Newest installed (6000.5.0f1)", then each installed
-  version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Its menus scroll when long (ARCHITECTURE.md "Long menus scroll"). Save stays off until a rule has a
+  version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Its menus scroll when long (docs/architecture/renderer.md "Long menus scroll"). Save stays off until a rule has a
   file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
   it but "Choose another app…", to add a program, which shows and saves at once, before the list holds it
   (`withAddedTools`; `savedDraft` keeps an id picked as it is). Binary files have no rows: no tool opens them.
@@ -146,18 +146,18 @@ task (below). One preview, one way to resolve, one button.
 The page is a preview until "Complete merge" (into the workspace) or "Merge into <branch>" (into a server branch, the
 branch's last name). Its header is one row: a "Preview" pill (its
 tooltip: nothing is written until then), the title fitted as a whole (`fitMergeTitle`: the words stay, the branches give
-way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "Long names"), the changesets it combines
+way from their middle; it keeps that room in a narrow window, docs/architecture/lists.md "Long names"), the changesets it combines
 ("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 resolved · 5 to decide", "7 conflicts to
 decide" before any is resolved, `planProgress`; merged automatically counts as resolved; the full summary in its
 tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
 holds the changeset comment (`Merge from <source>`) and the button.
-The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in three groups,
+The list (`MergeItemList`) is every list of changed files (docs/architecture/lists.md "Lists of changed files") in three groups,
 "Directory conflicts", "File conflicts" then "Changes to apply" (`mergeItemGroups`), each by path, directory
 conflicts first as each one decided can move, remove or add file conflicts. Each conflict group counts its conflicts
 resolved instead of all it holds ("1 of 3", what is left to decide in its tooltip: `mergeGroupProgress`). The list has
 the filter (the "!" chip for conflicts,
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
-every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
+every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (docs/architecture/lists.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
 entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (what the file opens in, `useFileMergers`, UnityYAMLMerge included; disabled while files resolve one by one) and "Resolve with ▸" every other way, opening it there this once (`otherMergers`: every other tool, and UnityYAMLMerge on Unity YAML; none while files resolve one by one), Keep yours,
 incoming or base (where it has one), Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
@@ -173,7 +173,7 @@ panel's choices, Keep both under the name it was given, else the one the panel s
 ("Directory conflicts" below). A directory conflict holding another directory conflict (a folder added on both sides, a file
 in it added on both) is its folder's row in a tree: selecting that row selects the conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
-(ARCHITECTURE.md "Folders once"). A Unity asset's `.meta` among the changes to apply is listed with it; a conflict never
+(docs/architecture/lists.md "Folders once"). A Unity asset's `.meta` among the changes to apply is listed with it; a conflict never
 is, the asset's nor its meta's (`pairMergeMetas`): each is a decision with its own panel. The page starts on the
 first item that needs the user in the order the list shows (`startingItem`), past the file conflicts that merge by
 themselves: while a file before it is still loading, which may merge by itself, the page shows a spinner and waits
@@ -417,7 +417,7 @@ away; its shortcuts and Back wait until it shows again (`usePageShown`). The sid
 (`MergeInProgressItem`: "Merge /main/task", a dot, "In progress: Merge /main/task into your workspace" in its tooltip,
 `mergeInProgressWords`), which shows the merge again over the view shown (`returnToMerge`), closing the pages that
 view showed. It belongs to no view: the view it was opened over keeps only the pages under it when the user goes to
-another view (ARCHITECTURE.md "Views keep their place").
+another view (docs/architecture/renderer.md "Views keep their place").
 
 - Only Close merge (the page's ✕, `CloseMergeButton`, `closeMergeAsked`, confirmed) drops it. Completing it, or the
   page finding nothing it can do (nothing to merge, pending changes in the way), settles it (`mergeSettled`,

@@ -64,7 +64,7 @@ export function favoriteButtonLabel(name: string, favorite: boolean): string {
   return favorite ? `Remove ${name} from favorites` : `Add ${name} to favorites`;
 }
 
-/** Every list's filter rule (docs/ARCHITECTURE.md "Filters"), on the name shown, which `HighlightQuery` marks. */
+/** Every list's filter rule (docs/architecture/lists.md "Filters"), on the name shown, which `HighlightQuery` marks. */
 function matchesFilter(server: string, filter: string): boolean {
   return !canBeFavorite(server) || matchesWordFilter([describeServer(server).label], filter);
 }

@@ -11,7 +11,7 @@ interface AttributesDetailsSectionProps {
 }
 
 /**
- * An object's attributes in a details panel, as every panel shows them (docs/ARCHITECTURE.md "List and details"): a
+ * An object's attributes in a details panel, as every panel shows them (docs/architecture/lists.md "List and details"): a
  * titled section with Add at its right while there's an attribute to add, and a card under it: a placeholder while the
  * values are read, the chips, or "No attributes" (`attributesSectionOf`).
  */

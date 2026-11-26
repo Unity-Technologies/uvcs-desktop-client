@@ -112,7 +112,7 @@ export interface MenuWord {
 const word = (group: MenuGroup, icon: Icon, label?: string, danger?: true): MenuWord => ({ group, icon, label, danger });
 
 /**
- * The vocabulary of every object's menu (docs/ARCHITECTURE.md, Menus): one concept, one id, one icon, one wording and
+ * The vocabulary of every object's menu (docs/architecture/renderer.md, Menus): one concept, one id, one icon, one wording and
  * one place, whatever the object and wherever its menu shows. Entries made from it (`menuAction`, `menuSubmenu`) carry
  * their group, so `groupedMenu` puts them in the grammar's order.
  */

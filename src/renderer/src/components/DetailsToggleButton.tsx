@@ -9,7 +9,7 @@ import styles from './DetailsToggleButton.module.css';
 import { detailsHidden, useDetailsPaneStore } from './detailsPaneStore';
 
 /**
- * Hides a view's details panel, or shows it again: last in the header of every view with details (ARCHITECTURE.md
+ * Hides a view's details panel, or shows it again: last in the header of every view with details (docs/architecture/lists.md
  * "List and details"), over the panel it folds. Its key is the view's `ListWithDetails` `detailsKey`; `noun` names what
  * the panel holds where it isn't an object's details (a review's comments), and `icon` draws it then (a comment's
  * bubbles say more than a panel's edge), with `count` beside it in a bubble, what the panel has waiting (comments still open).

@@ -8,7 +8,7 @@ import { PrintedWorkspacePaths } from './printedWorkspacePaths';
  * split them unambiguously. Its options first, so a command line reads as `status --controlledchanged … --machinereadable …`.
  *
  * `--compact`: without it, `cm status` asks the server for the head of the branch, for a header it doesn't print
- * (ARCHITECTURE.md "`cm status` asks the server for its header").
+ * (docs/architecture/cm-output.md "`cm status` asks the server for its header").
  */
 export function statusRecordsArgs(...options: string[]): string[] {
   return ['status', ...options, '--machinereadable', '--compact', `--fieldseparator=${FIELD_SEPARATOR}`, `--endlineseparator=${RECORD_SEPARATOR}`];

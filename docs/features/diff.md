@@ -4,7 +4,7 @@ Everything a text or image diff does (`features/diff`, `features/review`), which
 their own doc: `model-diff.md`.
 
 A Unity asset's `.meta` is listed with it; the `.meta` button in the diff's toolbar shows the meta's diff
-(ARCHITECTURE.md "Lists of changed files", "A Unity asset with its `.meta`"). A place asking for the meta (a review going to a comment
+(docs/architecture/lists.md "Lists of changed files", "A Unity asset with its `.meta`"). A place asking for the meta (a review going to a comment
 on it, `DiffFocusRequest`) gets its asset's row with the meta shown (`pairedEntryAt`, as a link's `pairedFocus`), and
 a place's mark on the meta shows on its asset's row, so a review's "Commented" keeps it (`withMetaMarks`: "1 comment on
 its .meta").
@@ -218,7 +218,7 @@ before this change…" (`canRevertFromDiff`): its older side is another item. Su
 
 ## Dates
 
-A diff's list sorts by date (docs/ARCHITECTURE.md, "One sort, chosen") from `{date}` in `DIFF_FORMAT`, read with the
+A diff's list sorts by date (docs/architecture/lists.md, "One sort, chosen") from `{date}` in `DIFF_FORMAT`, read with the
 rest of `cm diff` (`diffCommand`, `--dateformat=o`, the round-trip format `cm find` uses too): no other command, no
 extra cost on the server. `{date}` is when the revision `{revid}` names was made, so only an item the change gave a new
 revision is dated by it (`madeARevision`, `DiffEntry.date`): an added file, a content change, a moved file that changed
@@ -491,7 +491,7 @@ none to step through (an image, a model, a binary, identical versions) keeps the
 the list shows them, never on to a folder (private, deleted or moved), which has no diff (`fileRowKeys`, Changes' too),
 though a folder's `.meta` diff shown in Changes steps on from the folder's place (`FileStepsOptions.rowOrder`); in a
 tree, those in a closed folder are skipped. With only folders pending, Changes selects the first of them
-(`firstChangeKeyOf`). The list itself, its order, layout and groups, are every list of changed files' (ARCHITECTURE.md
+(`firstChangeKeyOf`). The list itself, its order, layout and groups, are every list of changed files' (docs/architecture/lists.md
 "Lists of changed files"); a folder or a status group selected in it shows how many changes it holds instead of a diff.
 The stepping itself (the position, the keys, the arrival from a file beside it) is `useStepNavigation`, given the steps
 and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the merge page steps through conflicts
@@ -704,7 +704,7 @@ so: "Full screen" names the OS's.
   the button) keeps it where it still shows, normally the code, so ⌥↓ and the arrows work at once; from nowhere (a step
   to another file left it on the page) or a button a click focused, the code takes it (`focusGoesToDiffOnCollapse`),
   never the list it had before. A click on the button leaves it there. The app moving focus draws no ring (`focusAs`,
-  ARCHITECTURE.md "Focus").
+  docs/architecture/renderer.md "Focus").
 - **Keys of what is out of sight** never act on it unseen (`shortcutWhileExpanded`, `runWhileDiffExpanded`): ⌘↩ gives
   the window back, then checks in (an empty summary takes the caret); Toggle Sidebar only gives the window back, the
   sidebar showing as it was; Go to file acts, the file picked showing in the diff, as choosing another file does;

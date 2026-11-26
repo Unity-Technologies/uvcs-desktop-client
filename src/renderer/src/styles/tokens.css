@@ -37,7 +37,7 @@
   --row-height: 30px;
   --control-height: 28px;
   --topbar-height: 52px;
-  /* The top bar's pills (`ToolbarControl`), clear of its edges (ARCHITECTURE.md "Top bar"). */
+  /* The top bar's pills (`ToolbarControl`), clear of its edges (docs/architecture/renderer.md "Top bar"). */
   --topbar-control-height: 40px;
   /* What the Windows caption buttons take at the window's top right (they overlay the page there); 0 elsewhere. */
   --caption-buttons-width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));

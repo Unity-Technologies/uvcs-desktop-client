@@ -1,7 +1,7 @@
 import type { SincePreset } from './sincePresets';
 
 /**
- * What an empty list read within a time range suggests (ARCHITECTURE.md "Counts and empty lists"): a longer range,
+ * What an empty list read within a time range suggests (docs/architecture/lists.md "Counts and empty lists"): a longer range,
  * as the filters only look through what the range read. Nothing past "Any time".
  */
 export function longerRangeHint(since: SincePreset, filtering: boolean): string | undefined {

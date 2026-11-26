@@ -122,11 +122,11 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   check-in.
 - **A changelist at a time**: grouped by changelists, a changelist's menu (`changelistMenu`) offers "Check in this
   changelist" and "Shelve this changelist", which ready the panel rather than run (`prepareChangelistCheckin`): its
-  changes checked alone, with what they need outside it (`neededWith`), and every filter cleared, "Unreviewed" too, so all of them show and go in (ARCHITECTURE.md
+  changes checked alone, with what they need outside it (`neededWith`), and every filter cleared, "Unreviewed" too, so all of them show and go in (docs/architecture/lists.md
   "Filters": a check-in takes what the filters show), the panel in that mode (Changes holds it, `PendingChangesPanes`,
   so it is back to Check in each time Changes shows, as after choosing Shelve with the caret), its description as the
   comment unless the user wrote one (a comment another changelist's description filled counts as none; one filled from a
-  description since edited counts as the user's), and the caret at the end of the summary (ARCHITECTURE.md "Focus": a
+  description since edited counts as the user's), and the caret at the end of the summary (docs/architecture/renderer.md "Focus": a
   menu leaves the caret where its action put it). What is checked is the prepared changelist's paths
   (`PreparedChangelist` in the draft, read by `includedBy`), not exclusions: a change that appears meanwhile (an editor
   saving, a new `.meta`) stays out, and checking files by hand adds or takes them there. While it lasts, a quiet

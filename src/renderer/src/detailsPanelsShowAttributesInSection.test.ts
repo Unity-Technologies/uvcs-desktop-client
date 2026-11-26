@@ -12,7 +12,7 @@ const sourcesRendering = (component: string): string[] =>
 
 /**
  * Every details panel shows an object's attributes the same way, in a titled section under its heading
- * (`AttributesDetailsSection`, docs/ARCHITECTURE.md "List and details"), never as chips in its header. Only the review
+ * (`AttributesDetailsSection`, docs/architecture/lists.md "List and details"), never as chips in its header. Only the review
  * page's rail, which isn't a details panel, frames the same section its own way (`BranchAttributesSection`).
  */
 describe('details panels', () => {

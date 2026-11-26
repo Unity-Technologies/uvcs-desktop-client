@@ -157,7 +157,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
   most once (`BranchNamesCache`). The palette reads only the newest `NEWEST_CODE_REVIEWS` (`reviewSummariesQuery`);
   the branch chips read the reviews of the branches shown, in blocks (merge-requests.md "Reading the branches'
   reviews"). The palette finds an older review by its title (`cm find review … like`) or its number,
-  typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; ARCHITECTURE.md "Prefixes").
+  typed alone or after `cr:` (one `cm find review "where id = N"` once typing pauses; docs/architecture/renderer.md "Prefixes").
 
 ## The review's page
 
@@ -250,7 +250,7 @@ The list is the **Merge requests** view, merge requests and code reviews togethe
 - **Going to a thread** (`threadPick`): a click on an Open entry, or the page opened at a thread ("Show in
   conversation", from the code), makes that thread the current one (`pickThread`, `pickOnFocus`). Its card is brought
   into view (`pickedBehaviorOf`, `placeInView`): from Open it glides, the page opened at it jumps at once, and either way
-  its card lands a fifth down the viewport, even when already on screen (ARCHITECTURE.md "Going to a thing"). It goes
+  its card lands a fifth down the viewport, even when already on screen (docs/architecture/renderer.md "Going to a thing"). It goes
   there once the conversation is laid out for good (`conversationLaidOut`: read, and the review's changesets settled,
   as they group the entries into rounds and move the threads below). It's unfolded, lit for a moment
   and ringed in the accent until another is gone to, as a thread selected in the code is (`threadMarkOf`: the card's
@@ -780,7 +780,7 @@ read (`useReviewConversation`): no other `cm` read, but the earlier versions of 
   shows each time the dialog opens: the review's own setting doesn't hide it there, nor does hiding it there change it.
   It shows the thread as the conversation has it now (`liveThreadOf`: a reply made in it shows, a
   thread deleted is gone; the page's own read, never read again as it opens: `SHOWN_BY_THE_PAGE`), takes the step keys
-  while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/ARCHITECTURE.md "Keyboard"), and
+  while the diff behind it waits (`keysReach`, the dialog marked `STEP_FRAME`, docs/architecture/renderer.md "Keyboard"), and
   closes if the window goes to another place, view or page: what its files' menus and lines open (History, Annotate)
   then shows, not behind it (`navigatedSince`). A dialog rather than a mode of the file's diff, so the review's diff
   stays as it was: "Changes since this comment" did that in the diff itself (its older side swapped, a "Since comment"
