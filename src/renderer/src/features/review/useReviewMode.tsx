@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { placeId, type Place } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { ReviewBar } from './ReviewBar';
 import { ReviewModeHint } from './ReviewModeHint';
-import { announceReviewMode, setReviewMode } from './reviewModeSetting';
+import { announceReviewMode, setReviewMode, useReviewModeOn } from './reviewModeSetting';
 import { hasMark, needsReview, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatusOf } from './reviewStatus';
 
 /** What a list needs for review marks: whether they show, where each item stands, and the way to mark it. */
@@ -36,8 +36,8 @@ interface ReviewModeOptions<T> {
 
 /** Review marks on a list of files, shared by every list that shows diffs: what's reviewed, what changed since, and the filter for what's left. */
 export function useReviewMode<T>({ place, items, statusOf: storedStatusOf, setReviewed, offer = false }: ReviewModeOptions<T>): ReviewMode<T> {
-  const { reviewModeWorkspaces, reviewModeHintDone } = useSettings();
-  const on = reviewModeWorkspaces.includes(placeId(place));
+  const { reviewModeHintDone } = useSettings();
+  const on = useReviewModeOn(place);
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false);
   // Kept while nothing they depend on changes, so lists of thousands of files work them out again only then.
   const statusOf = useMemo(() => shownStatusOf(storedStatusOf, on), [on, storedStatusOf]);
