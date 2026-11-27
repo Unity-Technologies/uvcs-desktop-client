@@ -62,6 +62,11 @@ function keyName(key: string, mac: boolean): string {
   return name ?? (key.length === 1 ? key.toUpperCase() : capitalize(key));
 }
 
+/** A key with no ⌘, Ctrl or Alt (`/`, `n`, F7): typing it in a text field types it, so it binds where nothing is typed. */
+export function isPlainKey(shortcut: string): boolean {
+  return !shortcut.split('+').slice(0, -1).some((modifier) => modifier !== 'shift');
+}
+
 /** Whether the shortcut modifier is held: ⌘ on macOS, Ctrl elsewhere. */
 export function isModPressed(event: Pick<KeyboardEvent | MouseEvent, 'metaKey' | 'ctrlKey'>, mac = isMac): boolean {
   return mac ? event.metaKey : event.ctrlKey;

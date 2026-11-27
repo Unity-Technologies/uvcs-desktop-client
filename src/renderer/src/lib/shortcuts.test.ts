@@ -1,6 +1,6 @@
 import '../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { formatShortcut, matchesShortcut, pressedShortcut, sharingModifiers } from './shortcuts';
+import { formatShortcut, isPlainKey, matchesShortcut, pressedShortcut, sharingModifiers } from './shortcuts';
 
 function press(key: string, code: string, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers } as KeyboardEvent;
@@ -134,5 +134,16 @@ describe('pressedShortcut', () => {
       [press('Escape', 'Escape'), true],
     ];
     for (const [event, mac] of presses) expect(matchesShortcut(event, pressedShortcut(event, mac)!, mac)).toBe(true);
+  });
+});
+
+describe('isPlainKey', () => {
+  it('is a key a text field would type: no ⌘, Ctrl or Alt, Shift or not', () => {
+    expect(isPlainKey('/')).toBe(true);
+    expect(isPlainKey('shift+n')).toBe(true);
+    expect(isPlainKey('f7')).toBe(true);
+    expect(isPlainKey('mod+f')).toBe(false);
+    expect(isPlainKey('alt+down')).toBe(false);
+    expect(isPlainKey('ctrl+g')).toBe(false);
   });
 });

@@ -5,8 +5,8 @@ import type { MenuEntry } from '../../lib/actions';
 import type { SelectionState } from '../../lib/selection';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
-import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
-import { matchesShortcut } from '../../lib/shortcuts';
+import { alternativeKeys } from '../../lib/shortcutRegistry';
+import { isPlainKey, matchesShortcut } from '../../lib/shortcuts';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
@@ -102,8 +102,8 @@ export function FileTreeTable({
   ];
 
   const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow, moveBy: (step: number) => void): void => {
-    // ⌘F is the view's, anywhere in it; the tree adds the plain key.
-    if (onGoToFile && hotkeys('filesGoToFile').some((key) => key !== hotkey('filesGoToFile') && matchesShortcut(event.nativeEvent, key))) {
+    // ⌘P and ⌘F are the view's, anywhere in it; the tree adds Go to file's plain key (/), which a text field would type.
+    if (onGoToFile && alternativeKeys('goToFile').some((key) => isPlainKey(key) && matchesShortcut(event.nativeEvent, key))) {
       event.preventDefault();
       onGoToFile();
       return;

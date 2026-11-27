@@ -1,6 +1,7 @@
 import { useCallback, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import type { RepositoryPlace } from '@shared/domain/place';
-import { hotkey } from '../../lib/shortcutRegistry';
+import { alternativeKeys } from '../../lib/shortcutRegistry';
+import { isPlainKey } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
 import { repositoryFileSearchKey, repositoryFileSearchView, searchesFor, type RepositoryFileSearchView } from './repositoryFileSearch';
 import { useGoToFileCommand } from './useGoToFileCommand';
@@ -53,7 +54,8 @@ export function useRepositoryTreeSearch({ place, changesetId, name, onReveal }: 
   }, []);
   const enabled = changesetId !== null;
   useGoToFileCommand(enabled ? focus : null);
-  useShortcut(hotkey('filesGoToFile'), focus, enabled);
+  // ⌘F as well as the command's ⌘P (`alternativeKeys`).
+  useShortcut(alternativeKeys('goToFile').filter((key) => !isPlainKey(key)), focus, enabled);
 
   const setQuery = (next: string): void => {
     setQueryState(next);

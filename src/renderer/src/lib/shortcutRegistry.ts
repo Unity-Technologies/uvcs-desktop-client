@@ -14,6 +14,14 @@ export function hotkey(id: ShortcutId): string | undefined {
   return hotkeys(id)[0];
 }
 
+/**
+ * A shortcut's keys after its binding: the ones its command doesn't run (a command runs on one key), which the view
+ * binds itself.
+ */
+export function alternativeKeys(id: ShortcutId): readonly string[] {
+  return hotkeys(id).slice(1);
+}
+
 /** Every key of a shortcut, the binding first. */
 export function hotkeys(id: ShortcutId): readonly string[] {
   return useKeymapStore.getState().keymap[id];

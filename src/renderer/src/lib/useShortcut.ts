@@ -7,13 +7,13 @@ import { PlaceCoveredContext } from './placeCovered';
 import { ViewShownContext } from './viewShown';
 
 /**
- * Runs `handler` when `shortcut` is pressed anywhere in the window, unless `enabled` is false, a modal dialog is open,
+ * Runs `handler` when `shortcut` (or one of its keys) is pressed anywhere in the window, unless `enabled` is false, a modal dialog is open,
  * the view it's in is kept mounted but hidden (`ViewShownContext`), or the sign-in screen covers it
  * (`PlaceCoveredContext`); with `whileTyping` false, not in a text field
  * either, where the keys edit the text (`keyTakenByText`). Its caller renders again when a person changes a shortcut
  * (`useKeymap`), so a `hotkey()` it passes binds the new key.
  */
-export function useShortcut(shortcut: string | undefined, handler: () => void, enabled = true, { whileTyping = true }: { whileTyping?: boolean } = {}): void {
+export function useShortcut(shortcut: string | readonly string[] | undefined, handler: () => void, enabled = true, { whileTyping = true }: { whileTyping?: boolean } = {}): void {
   useKeymap();
   const latestHandler = useRef(handler);
   latestHandler.current = handler;
@@ -23,17 +23,20 @@ export function useShortcut(shortcut: string | undefined, handler: () => void, e
   const viewShown = useContext(ViewShownContext);
   const covered = useContext(PlaceCoveredContext);
   const listens = enabled && viewShown && !covered;
+  // One text for the effect's dependencies: a list of keys is a new array on every render.
+  const keysOf = typeof shortcut === 'string' ? shortcut : (shortcut ?? []).join('\n');
 
   useEffect(() => {
-    if (!shortcut || !listens) return;
+    const keys = keysOf.split('\n').filter(Boolean);
+    if (keys.length === 0 || !listens) return;
 
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (!matchesShortcut(event, shortcut) || !windowShortcutMayRun(event)) return;
+      if (!keys.some((key) => matchesShortcut(event, key)) || !windowShortcutMayRun(event)) return;
       if (!latestWhileTyping.current && keyTakenByText(event)) return;
       event.preventDefault();
       latestHandler.current();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [shortcut, listens]);
+  }, [keysOf, listens]);
 }

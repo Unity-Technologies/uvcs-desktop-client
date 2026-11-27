@@ -78,7 +78,8 @@ export const SHORTCUTS = {
   switchBranch: { area: 'General', label: 'Switch branch', keys: ['mod+shift+w'], commandId: 'branch.switch', customizable: true },
   newBranch: { area: 'General', label: 'New branch', keys: ['mod+b'], commandId: 'branch.new', customizable: true },
   mergeFromBranch: { area: 'General', label: 'Merge from branch', keys: ['mod+shift+m'], commandId: 'merge.fromBranch', customizable: true },
-  goToFile: { area: 'Files', label: 'Go to file', keys: ['mod+p'], customizable: true },
+  // ⌘P as in other editors; ⌘F and / where the legacy client finds files (`alternativeKeys`, the tree adding the plain one).
+  goToFile: { area: 'Files', label: 'Go to file', keys: ['mod+p', 'mod+f', '/'], customizable: true },
   openWorkspace: { area: 'General', label: 'Open another workspace', keys: ['mod+shift+o'], commandId: 'workspace.open', customizable: true },
   newWindow: { area: 'General', label: 'New window', keys: ['mod+n'], commandId: 'app.newWindow', customizable: true },
   dropInNewWindow: { area: 'General', label: 'Open a folder dropped on the window in a new window (hold while dropping)', keys: ['shift'], fixed: 'shared' },
@@ -207,7 +208,6 @@ export const SHORTCUTS = {
   cutItems: { area: 'Files', label: 'Cut, to move into another folder', keys: ['mod+x'], fixed: 'shared' },
   pasteItems: { area: 'Files', label: 'Move the cut items into the selected folder', keys: ['mod+v'], fixed: 'shared' },
   cancelCut: { area: 'Files', label: 'Cancel the cut', keys: ['escape'], fixed: 'shared' },
-  filesGoToFile: { area: 'Files', label: 'Go to file, as the legacy client finds files', keys: ['mod+f', '/'], fixed: 'shared' },
   fileViewer: { area: 'Files', label: "Into the selected file's content, or back to the tree", keys: ['f6'], customizable: true },
   leaveFileViewer: { area: 'Files', label: "Back to the tree from the file's content", keys: ['escape'], fixed: 'shared' },
 

@@ -1,7 +1,7 @@
 import '../testing/fakeWindow';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setCustomShortcuts, useKeymapStore } from './keymapStore';
-import { hotkey, hotkeys } from './shortcutRegistry';
+import { alternativeKeys, hotkey, hotkeys } from './shortcutRegistry';
 
 afterEach(() => setCustomShortcuts({}));
 
@@ -21,5 +21,11 @@ describe('keymapStore', () => {
     const keymap = useKeymapStore.getState().keymap;
     setCustomShortcuts({ newBranch: ['mod+shift+b'] });
     expect(useKeymapStore.getState().keymap).toBe(keymap);
+  });
+
+  it("gives a view the keys after a shortcut's binding, which its command doesn't run, and none once a person picks one", () => {
+    expect(alternativeKeys('goToFile')).toEqual(['mod+f', '/']);
+    setCustomShortcuts({ goToFile: ['mod+shift+j'] });
+    expect(alternativeKeys('goToFile')).toEqual([]);
   });
 });

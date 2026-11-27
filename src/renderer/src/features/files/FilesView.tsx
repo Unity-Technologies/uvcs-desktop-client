@@ -39,7 +39,8 @@ import { useCutPasteCommands } from './useCutPasteCommands';
 import { useFilesItemLinks } from './useFilesItemLinks';
 import { useTreeListings } from './useTreeListings';
 import { singleSelection } from '../../lib/selection';
-import { hotkey } from '../../lib/shortcutRegistry';
+import { alternativeKeys, hotkey } from '../../lib/shortcutRegistry';
+import { isPlainKey } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
 import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
 import { showsChooseDownloadsButton } from '../partialWorkspace/workspaceDownloads';
@@ -88,8 +89,8 @@ export function FilesView() {
     [workspacePath],
   );
   useFileCommands(workspacePath, selectedItems, pendingIndex, locks, openGoToFile);
-  // Where the legacy client finds files; the tree adds its plain key.
-  useShortcut(hotkey('filesGoToFile'), () => openGoToFile());
+  // ⌘F, where the legacy client finds files: Go to file's command runs its binding (⌘P), the tree its plain key (/).
+  useShortcut(alternativeKeys('goToFile').filter((key) => !isPlainKey(key)), () => openGoToFile());
   useCutPasteCommands(workspacePath, selectedItems);
   const cutItems = useCutItems(workspacePath);
   const cutPaths = useMemo(() => new Set(cutItems.map((item) => item.path)), [cutItems]);

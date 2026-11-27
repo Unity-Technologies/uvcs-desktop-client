@@ -32,7 +32,8 @@ changeset (docs/features/explore-repository.md "Files").
 
 This is a workspace's Files; a repository explored without a workspace, and Browse repository, search the server's
 tree instead (docs/features/explore-repository.md). One way to find a file, Go to file (⌘P anywhere; in Files also ⌘F or Ctrl+F, where the legacy
-client finds files, and / from the tree: `filesGoToFile`; the header's search button): a fuzzy search (`fuzzyIndex`)
+client finds files, and / from the tree: `goToFile`, its command running ⌘P and the view the rest, `alternativeKeys`;
+the header's search button): a fuzzy search (`fuzzyIndex`)
 over every path on disk (`useWorkspacePaths`, read once, no `cm`), its results as the tree's rows. The one picked is
 revealed in the tree, its folders expanded, and selected with its diff. A reveal (Go to file, the palette's Show in
 Files, a new, renamed or moved item) is taken once, by the Files view of the workspace it was asked in
