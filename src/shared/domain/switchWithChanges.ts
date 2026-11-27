@@ -26,10 +26,10 @@ export type BringDisabledReason = 'label' | 'shelve' | 'otherRepository';
 export type LeaveDisabledReason = 'shelveSource';
 
 /**
- * Why a partial workspace can't switch to a target: `cm partial switch` only takes a branch of its own repository.
- * The target's kind names what was refused: a changeset, a label or a shelve, or a branch of another repository.
+ * Why a partial workspace can't switch to a target: `cm partial switch` only takes a branch or a changeset of its own
+ * repository. The target's kind names what was refused: a label or a shelve, or anything of another repository.
  */
-export type PartialSwitchDisabledReason = Exclude<SelectorKind, 'branch'> | 'otherRepository';
+export type PartialSwitchDisabledReason = Exclude<SelectorKind, 'branch' | 'changeset'> | 'otherRepository';
 
 /** What the app knows about the workspace before switching it, to decide what to offer. */
 export interface SwitchPreflight {

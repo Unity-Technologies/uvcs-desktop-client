@@ -55,13 +55,20 @@ describe('partialSwitchDisabledReason', () => {
     expect(partialSwitchDisabledReason('/main/t3', 'game')).toBeUndefined();
   });
 
-  it('refuses a changeset, a label and a shelve, each for its own reason', () => {
-    expect(partialSwitchDisabledReason('cs:12', 'game')).toBe('changeset');
+  it('lets a partial workspace switch to a changeset of its own repository', () => {
+    expect(partialSwitchDisabledReason('cs:12', 'game')).toBeUndefined();
+    expect(partialSwitchDisabledReason('cs:12@game@local', 'game')).toBeUndefined();
+  });
+
+  it('refuses a label and a shelve, each for its own reason', () => {
     expect(partialSwitchDisabledReason('lb:v1', 'game')).toBe('label');
     expect(partialSwitchDisabledReason('sh:4', 'game')).toBe('shelve');
   });
 
-  it('refuses a branch of another repository', () => {
+  it('refuses a branch or a changeset of another repository', () => {
     expect(partialSwitchDisabledReason('br:/main@other@local', 'game')).toBe('otherRepository');
+    expect(partialSwitchDisabledReason('cs:12@other@local', 'game')).toBe('otherRepository');
+    expect(partialSwitchDisabledReason('lb:v1@other@local', 'game')).toBe('otherRepository');
+    expect(partialSwitchDisabledReason('sh:4@other@local', 'game')).toBe('otherRepository');
   });
 });

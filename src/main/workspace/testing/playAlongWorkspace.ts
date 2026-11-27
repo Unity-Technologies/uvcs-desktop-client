@@ -28,6 +28,8 @@ export interface WorkspaceScenario {
   branch?: string;
   /** The workspace is on this shelve instead of a branch. */
   onShelve?: number;
+  /** The workspace is on this changeset instead of a branch. */
+  onChangeset?: number;
   /** Pending changes: path → the codes `cm status` prints (`CH`, `AD`, `CO`, `CO+CH`). */
   pending?: Record<string, string>;
   /** The pending changes are a merge from this changeset, still to check in. */
@@ -219,7 +221,11 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
 
   const fake = fakeCmClient({
     'status --header --xml': () =>
-      scenario.onShelve ? statusHeader(String(scenario.onShelve), { type: 'Shelve', changeset: -scenario.onShelve }) : statusHeader(branch),
+      scenario.onShelve
+        ? statusHeader(String(scenario.onShelve), { type: 'Shelve', changeset: -scenario.onShelve })
+        : scenario.onChangeset
+          ? statusHeader(String(scenario.onChangeset), { type: 'Changeset', changeset: scenario.onChangeset })
+          : statusHeader(branch),
     getworkspacefrompath: WORKSPACE_NAMES,
     'find branch': findBranch,
     'find shelve': () =>

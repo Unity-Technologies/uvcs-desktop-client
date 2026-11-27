@@ -47,4 +47,8 @@ describe('switchCommand', () => {
   it('switches a partial workspace with cm partial switch, which prints the partial update progress', () => {
     expect(switchCommand('br:/main/task', 'partial')).toEqual({ args: ['partial', 'switch', 'br:/main/task', '--noinput'], readProgress: readPartialUpdateProgress });
   });
+
+  it('switches a partial workspace to a changeset with cm partial switch too', () => {
+    expect(switchCommand('cs:12', 'partial')).toEqual({ args: ['partial', 'switch', 'cs:12', '--noinput'], readProgress: readPartialUpdateProgress });
+  });
 });

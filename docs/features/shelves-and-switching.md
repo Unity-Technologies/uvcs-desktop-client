@@ -73,15 +73,13 @@ and checked in with `cm partial`: `updateCommand`, `switchCommand` (`cm/updateAr
 command by kind, everywhere the app updates, switches or checks in (Incoming, the switch with its pending changes,
 the update that shelves blocking changes, Changes, merges). Standard and dynamic workspaces keep `cm update`,
 `cm switch` and `cm checkin`. `cm partial update` skips the files that conflict with local changes and updates the
-rest, rather than stopping. `cm partial switch` only takes a branch of the workspace's own repository, so
+rest, rather than stopping. `cm partial switch` takes a branch or a changeset of the workspace's own repository, and
+updates only what the workspace loads (its `--configure` takes only a branch, which the app never passes). So
 `switchWithChanges` refuses any other target before touching anything (`partialSwitchDisabledReason`, one reason per
-kind of target, each with its message in `PARTIAL_REFUSED`): a changeset ("A partial workspace can't switch to a
-changeset yet."), a label, a shelve, or a branch of another repository. A changeset is "yet": the Gluon client keeps a
-partial workspace on a changeset by setting its selector and updating only what it loads, which no `cm` command does
-so far. `cm switch` and `cm setselector` to a changeset download everything and make the workspace standard, and
-`cm partial update --changeset` moves the files but leaves the workspace on its branch, so the next update undoes it.
-Each refusal ends with the way out: download the whole branch first, which makes the workspace standard
-(partial-workspaces.md, "Making a partial workspace standard").
+kind of target, each worded by `partialRefusal`): a label, a shelve, or anything of another repository. Each refusal
+ends with the way out: download the whole branch first, which makes the workspace standard (partial-workspaces.md,
+"Making a partial workspace standard"). That is offered only on a branch, so a workspace on a changeset is told to
+switch to a branch first.
 
 A partial workspace refuses `cm shelveset create` ("The workspace is in Gluon format"), so every shelve made in one
 (Shelve in Changes, and the shelves the switch and the update make) uses `cm partial shelveset create --applychanged`
@@ -100,7 +98,7 @@ output):
 - **On a branch**, it has no one changeset: each folder may be at another changeset of the branch (`cm partial
   update` of one path). Incoming lists the items the branch head changes rather than changesets
   (docs/features/incoming.md "A partial workspace"), and no branch is made from the workspace's changeset.
-- **On a changeset**, as the official Gluon client leaves one, everything it loads is at that changeset:
+- **On a changeset**, as a switch to a changeset or the official Gluon client leaves one, everything it loads is at that changeset:
   `loadedChangeset` is its number, which the picker shows and everything keyed on it works from as on a standard
   workspace's (a new branch from the workspace, the Branch Explorer's starting point, `downloadTreePoint`).
 - **On a label**, the label's changeset holds it, but `cm` doesn't print it: no changeset, as on a branch.
