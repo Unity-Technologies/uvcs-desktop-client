@@ -953,7 +953,7 @@ button.earlierTag:hover {
 /*
  * The line and the earlier version's tag, alone in the code's band, with no path to share a baseline with: centered on
  * the fold toggle, as the pill is, in the pill's font and line height, so their words sit on its words' line. In the
- * monospace font, centered, "line 12" sat higher than the pill's words, by as much as the font's ascent tells apart.
+ * monospace font, centered, "line 12" sat about 2px above the pill's words: the two fonts' ascents differ.
  */
 .thread[data-in-code] .headerStart > .writtenPlace,
 .thread[data-in-code] .earlierTag {
