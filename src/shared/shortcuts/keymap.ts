@@ -2,11 +2,12 @@
  * The keys every shortcut takes: the registry's (`SHORTCUTS`), with the keys a person gave the ones they changed in
  * Settings ▸ Keyboard (`AppSettings.customShortcuts`). docs/features/keyboard-shortcuts.md holds the rules.
  */
-import { SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition, type ShortcutId } from './shortcutRegistry';
+import { SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutArea, type ShortcutDefinition, type ShortcutId } from './shortcutRegistry';
 
 /**
- * The keys a person gave shortcuts, by shortcut id: only the ones they changed, each with the one key it takes now, or
- * none (no shortcut). Written as the registry writes keys, for the OS of the machine that keeps them.
+ * The keys a person gave shortcuts, by shortcut id: only the ones they changed, each with the keys it takes now (the
+ * one they pressed, or those left after another shortcut took one of its keys), or none (no shortcut). Written as the
+ * registry writes keys, for the OS of the machine that keeps them.
  */
 export type CustomShortcuts = Readonly<Record<string, readonly string[]>>;
 
@@ -21,7 +22,8 @@ const VIEW_POSITIONS = 14;
 /**
  * Every shortcut's keys. A shortcut a person changed takes their keys (when it can still change, and they're still
  * keys it may take); every other one the registry's, but for the keys a person gave a shortcut it would clash with:
- * a key the app gives a shortcut in a later version never takes one a person chose.
+ * a key the app gives a shortcut that can change, in a later version, never takes one a person chose. One that can't
+ * change keeps its keys, and the person's choice that clashes with it is dropped.
  */
 export function keymapOf(custom: CustomShortcuts, mac: boolean): Keymap {
   const chosen = chosenKeys(custom, mac);
@@ -37,26 +39,48 @@ function chosenKeys(custom: CustomShortcuts, mac: boolean): Map<ShortcutId, read
   for (const id of IDS) {
     const keys = custom[id];
     if (!isCustomizable(id) || !keys) continue;
-    if (keys.every((key) => keyProblem(id, key, mac) === undefined)) chosen.set(id, keys.map(canonicalKey));
+    if (keys.every((key) => keyProblem(id, key, mac) === undefined && !takenByFixed(id, key, mac))) chosen.set(id, keys.map(canonicalKey));
   }
   return chosen;
 }
 
 function takenByChoice(id: ShortcutId, key: string, chosen: ReadonlyMap<ShortcutId, readonly string[]>): boolean {
+  if (!isCustomizable(id)) return false;
   const pressed = canonicalKey(key);
   return [...chosen].some(([other, keys]) => other !== id && keys.includes(pressed) && clash(id, other));
 }
 
+function takenByFixed(id: ShortcutId, key: string, mac: boolean): boolean {
+  const pressed = canonicalKey(key);
+  return IDS.some((other) => other !== id && !isCustomizable(other) && clash(id, other) && shortcutKeys(SHORTCUTS[other], mac).some((taken) => canonicalKey(taken) === pressed));
+}
+
 /**
- * Whether two shortcuts would both run on one key: one of the whole window (General) and any other, or two of one
- * area (a view binds its keys while it shows). A comment field's keys win inside a focused comment field, and only
- * there, so they clash only among themselves.
+ * Whether two shortcuts would both run on one key: one of the whole window (General) and any other, or two of areas
+ * a screen shows together (`SHOWN_TOGETHER`), since each binds its keys while it shows. A comment field's keys win
+ * inside a focused comment field, and only there, so they clash only among themselves.
  */
 export function clash(a: ShortcutId, b: ShortcutId): boolean {
   const first: ShortcutDefinition = SHORTCUTS[a];
   const second: ShortcutDefinition = SHORTCUTS[b];
   if ((first.scope === 'commentField') !== (second.scope === 'commentField')) return false;
-  return first.area === second.area || isWindowWide(a) || isWindowWide(b);
+  return shownTogether(first.area, second.area) || isWindowWide(a) || isWindowWide(b);
+}
+
+/**
+ * The areas each screen shows at once: a view with its list, the diff or annotation beside it, and the diff's text.
+ * Lists, Diff and Text are bound inside many views, so their keys meet those of each view they show in.
+ */
+const SHOWN_TOGETHER: readonly (readonly ShortcutArea[])[] = [
+  ['Changes', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
+  ['Files', 'Lists', 'Diff', 'Text', 'Annotate', 'Image diff', 'Model diff'],
+  ['History', 'Lists', 'Diff', 'Text', 'Annotate', 'Image diff', 'Model diff'],
+  ['Merge', 'Lists', 'Diff', 'Text'],
+  ['Branch Explorer', 'Lists'],
+];
+
+function shownTogether(first: ShortcutArea, second: ShortcutArea): boolean {
+  return first === second || SHOWN_TOGETHER.some((screen) => screen.includes(first) && screen.includes(second));
 }
 
 /**
@@ -88,7 +112,7 @@ export type KeyChoice =
 export function keyChoice(id: ShortcutId, key: string, keymap: Keymap, mac: boolean): KeyChoice {
   const problem = keyProblem(id, key, mac);
   if (problem) return { kind: 'refused', reason: problem };
-  if (keymap[id].length === 1 && canonicalKey(keymap[id][0]!) === canonicalKey(key)) return { kind: 'unchanged' };
+  if (keymap[id].some((taken) => canonicalKey(taken) === canonicalKey(key))) return { kind: 'unchanged' };
   const { clashing, elsewhere } = otherShortcutsOn(id, key, keymap);
   const fixed = clashing.find((other) => !isCustomizable(other));
   if (fixed) return { kind: 'refused', reason: `${SHORTCUTS[fixed].label} (${SHORTCUTS[fixed].area}) takes it, and can't change.` };
@@ -110,10 +134,21 @@ export function withShortcutKey(custom: CustomShortcuts, keymap: Keymap, id: Sho
   return withoutDefaults(next, mac);
 }
 
-/** The custom shortcuts without `id`'s: it takes its registry keys again. */
-export function withDefaultKeys(custom: CustomShortcuts, id: ShortcutId): CustomShortcuts {
-  const { [id]: _dropped, ...rest } = custom;
-  return rest;
+/**
+ * The shortcuts that would lose a key if `id` took its registry keys again: those a person gave one of them since,
+ * where they clash. Giving them back asks first, as pressing the key would.
+ */
+export function defaultKeysTakenFrom(id: ShortcutId, keymap: Keymap, mac: boolean): ShortcutId[] {
+  const defaults = shortcutKeys(SHORTCUTS[id], mac).map(canonicalKey);
+  return IDS.filter((other) => other !== id && isCustomizable(other) && clash(id, other) && keymap[other].some((key) => defaults.includes(canonicalKey(key))));
+}
+
+/** The custom shortcuts once `id` takes its registry keys again, taking them from the shortcuts that have them since. */
+export function withDefaultKeys(custom: CustomShortcuts, keymap: Keymap, id: ShortcutId, mac: boolean): CustomShortcuts {
+  const defaults = shortcutKeys(SHORTCUTS[id], mac).map(canonicalKey);
+  const { [id]: _dropped, ...next } = custom as Record<string, readonly string[]>;
+  for (const other of defaultKeysTakenFrom(id, keymap, mac)) next[other] = keymap[other].filter((key) => !defaults.includes(canonicalKey(key)));
+  return withoutDefaults(next, mac);
 }
 
 function withoutDefaults(custom: Record<string, readonly string[]>, mac: boolean): CustomShortcuts {
@@ -145,6 +180,9 @@ export function keyProblem(id: ShortcutId, key: string, mac: boolean): string | 
   if (!mac && (modifiers.includes('mod') || modifiers.includes('ctrl')) && modifiers.includes('alt')) {
     return 'Ctrl+Alt types characters on many keyboards.';
   }
+  if (mac && modifiers.includes('alt') && !modifiers.includes('mod') && !modifiers.includes('ctrl') && typesACharacter(parts.at(-1)!)) {
+    return '⌥ with a letter, digit or symbol types a character.';
+  }
   const commandKey = modifiers.some((modifier) => modifier !== 'shift') || /^f\d+$/.test(parts.at(-1)!);
   if (!commandKey && !takesPlainKeys(SHORTCUTS[id], mac)) return `Needs ${mac ? '⌘, ⌃ or ⌥' : 'Ctrl or Alt'}, or a function key, so it doesn't type.`;
   return undefined;
@@ -155,7 +193,15 @@ export function keyProblem(id: ShortcutId, key: string, mac: boolean): string | 
  * another such key. The others would run while a person types.
  */
 function takesPlainKeys(shortcut: ShortcutDefinition, mac: boolean): boolean {
-  return shortcutKeys(shortcut, mac).some((key) => !canonicalKey(key).split('+').slice(0, -1).some((modifier) => modifier !== 'shift'));
+  return shortcutKeys(shortcut, mac).some((key) => {
+    const parts = canonicalKey(key).split('+');
+    return !/^f\d+$/.test(parts.at(-1)!) && !parts.slice(0, -1).some((modifier) => modifier !== 'shift');
+  });
+}
+
+/** A key that types a character by itself: a letter, a digit or a symbol, not a named key (an arrow, F7, Enter). */
+function typesACharacter(key: string): boolean {
+  return [...key].length === 1 || key === 'plus' || key === 'space';
 }
 
 function viewKeys(mac: boolean): Set<string> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalKey, clash, keyChoice, keymapOf, withDefaultKeys, withShortcutKey, type CustomShortcuts } from './keymap';
+import { canonicalKey, clash, defaultKeysTakenFrom, keyChoice, keymapOf, withDefaultKeys, withShortcutKey, type CustomShortcuts } from './keymap';
 import { SHORTCUTS, shortcutKeys, type ShortcutId } from './shortcutRegistry';
 
 const MAC = true;
@@ -37,6 +37,13 @@ describe('keymapOf', () => {
     expect(keymap.settings).toEqual([]);
   });
 
+  it("drops a person's key that a shortcut that can't change takes in a later version, giving theirs back the app's keys", () => {
+    // As if ⌘C, Copy in the text, were a key a person once gave Edit the file: Copy keeps it.
+    const keymap = keymapOf({ editFile: ['mod+c'] }, MAC);
+    expect(keymap.editFile).toEqual(['mod+e']);
+    expect(keymap.textCopy).toEqual(['mod+c']);
+  });
+
   it('lets shortcuts of views of their own share a key', () => {
     // ⇧⌘T diffs or annotates a revision in History; Files is a view of its own.
     const keymap = keymapOf({ fileHistory: ['mod+shift+t'] }, MAC);
@@ -56,6 +63,15 @@ describe('clash', () => {
     expect(clash('graphMerge', 'fileHistory')).toBe(false);
   });
 
+  it('pairs the areas a screen shows together: a view, its list, its diff and the diff\'s text', () => {
+    // Changes shows a diff beside its list; Files lists its items and shows changes with the list's key.
+    expect(clash('myShelves', 'editFile')).toBe(true);
+    expect(clash('newFile', 'listDiff')).toBe(true);
+    expect(clash('editFile', 'textCopy')).toBe(true);
+    expect(clash('historyToggleView', 'annotateNextBlock')).toBe(true);
+    expect(clash('graphMerge', 'nextConflict')).toBe(false);
+  });
+
   it("keeps a comment field's keys apart from the window's, and General's keys that act where they're used", () => {
     expect(clash('commentBold', 'newBranch')).toBe(false);
     expect(clash('saveComment', 'checkin')).toBe(false);
@@ -69,8 +85,16 @@ describe('keyChoice', () => {
     expect(keyChoice('newBranch', 'mod+shift+b', keymap, MAC)).toEqual({ kind: 'allowed', takenFrom: [], elsewhere: [] });
   });
 
-  it('says a shortcut already has the key pressed', () => {
+  it('says a shortcut already has the key pressed, its binding or another', () => {
     expect(keyChoice('newBranch', 'mod+b', keymap, MAC)).toEqual({ kind: 'unchanged' });
+    expect(keyChoice('commandPalette', 'mod+k', keymap, MAC)).toEqual({ kind: 'unchanged' });
+    expect(keyChoice('commandPalette', 'mod+shift+p', keymap, MAC)).toEqual({ kind: 'unchanged' });
+  });
+
+  it('asks before taking a key from a shortcut of an area shown on the same screen, and refuses one that can\'t change', () => {
+    expect(keyChoice('myShelves', 'mod+e', keymap, MAC)).toEqual({ kind: 'allowed', takenFrom: ['editFile'], elsewhere: ['historyEnterPane'] });
+    expect(keyChoice('newFile', 'mod+d', keymap, MAC)).toMatchObject({ kind: 'allowed', takenFrom: ['listDiff'] });
+    expect(keyChoice('editFile', 'mod+c', keymap, MAC)).toMatchObject({ kind: 'refused' });
   });
 
   it('takes a key from the shortcuts it clashes with that can change, and names those elsewhere that keep it', () => {
@@ -100,6 +124,18 @@ describe('keyChoice', () => {
     expect(keyChoice('newBranch', 'f8', keymap, MAC).kind).toBe('allowed');
     expect(keyChoice('nextComment', 'b', keymap, MAC).kind).toBe('allowed');
   });
+
+  it('refuses a plain key for a shortcut whose only plain key is a function key, as it runs while typing', () => {
+    expect(keyChoice('nextChange', 'j', keymap, MAC)).toMatchObject({ kind: 'refused' });
+    expect(keyChoice('nextChange', 'f8', keymap, MAC).kind).toBe('allowed');
+  });
+
+  it('refuses ⌥ with a letter, a digit or a symbol alone on macOS, which types a character there', () => {
+    expect(keyChoice('newBranch', 'alt+l', keymap, MAC)).toEqual({ kind: 'refused', reason: '⌥ with a letter, digit or symbol types a character.' });
+    expect(keyChoice('newBranch', 'alt+shift+5', keymap, MAC).kind).toBe('refused');
+    expect(keyChoice('newBranch', 'mod+alt+l', keymap, MAC).kind).toBe('allowed');
+    expect(keyChoice('nextChangeset', 'alt+pagedown', keymap, MAC).kind).toBe('allowed');
+  });
 });
 
 describe('withShortcutKey', () => {
@@ -124,7 +160,16 @@ describe('withShortcutKey', () => {
 describe('withDefaultKeys', () => {
   it("gives a shortcut the registry's keys again", () => {
     const custom: CustomShortcuts = { newBranch: ['mod+shift+b'], commandLog: [] };
-    expect(withDefaultKeys(custom, 'newBranch')).toEqual({ commandLog: [] });
+    expect(defaultKeysTakenFrom('newBranch', keymapOf(custom, MAC), MAC)).toEqual([]);
+    expect(withDefaultKeys(custom, keymapOf(custom, MAC), 'newBranch', MAC)).toEqual({ commandLog: [] });
+  });
+
+  it('takes its keys back from the shortcut a person gave them to since, which says so first', () => {
+    // New branch took ⇧⌘W from Switch branch; giving Switch branch its keys back takes ⇧⌘W from New branch.
+    const custom: CustomShortcuts = { newBranch: ['mod+shift+w'], switchBranch: [] };
+    const keymap = keymapOf(custom, MAC);
+    expect(defaultKeysTakenFrom('switchBranch', keymap, MAC)).toEqual(['newBranch']);
+    expect(withDefaultKeys(custom, keymap, 'switchBranch', MAC)).toEqual({ newBranch: [] });
   });
 });
 
