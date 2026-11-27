@@ -8,7 +8,7 @@ import { SHORTCUTS, type ShortcutDefinition, type ShortcutId } from './shortcutR
 export function menuAccelerator(keymap: Keymap, commandId: string): string | undefined {
   const id = (Object.keys(SHORTCUTS) as ShortcutId[]).find((candidate) => (SHORTCUTS[candidate] as ShortcutDefinition).commandId === commandId);
   const key = id && keymap[id][0];
-  return key ? toAccelerator(key) : undefined;
+  return key === undefined ? undefined : toAccelerator(key);
 }
 
 const ACCELERATOR_NAMES: Readonly<Record<string, string>> = {
@@ -20,10 +20,15 @@ const ACCELERATOR_NAMES: Readonly<Record<string, string>> = {
   pagedown: 'PageDown',
 };
 
-/** A registry key (`mod+shift+e`) as an Electron accelerator (`CmdOrCtrl+Shift+E`). */
-export function toAccelerator(key: string): string {
-  return key
-    .split('+')
-    .map((part) => ACCELERATOR_NAMES[part] ?? part.charAt(0).toUpperCase() + part.slice(1))
-    .join('+');
+/** The keys Electron's accelerators name, besides the modifiers: what a person may record that a menu can't show is left out. */
+const ACCELERATOR_KEY = /^([a-z0-9]|f([1-9]|1\d|2[0-4])|[-=[\]\\;',./`]|plus|space|tab|backspace|delete|enter|escape|up|down|left|right|home|end|pageup|pagedown)$/;
+
+/**
+ * A registry key (`mod+shift+e`) as an Electron accelerator (`CmdOrCtrl+Shift+E`); none for a key no accelerator
+ * names (a letter of another alphabet, a symbol a layout types), which the menu then shows without keys.
+ */
+export function toAccelerator(key: string): string | undefined {
+  const parts = key.split('+');
+  if (!ACCELERATOR_KEY.test(parts.at(-1)!)) return undefined;
+  return parts.map((part) => ACCELERATOR_NAMES[part] ?? part.charAt(0).toUpperCase() + part.slice(1)).join('+');
 }

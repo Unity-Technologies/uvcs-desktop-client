@@ -27,5 +27,12 @@ describe('toAccelerator', () => {
     expect(toAccelerator('mod+plus')).toBe('CmdOrCtrl+Plus');
     expect(toAccelerator('f7')).toBe('F7');
     expect(toAccelerator('alt+up')).toBe('Alt+Up');
+    expect(toAccelerator('mod+[')).toBe('CmdOrCtrl+[');
+  });
+
+  it('names no key Electron has no name for, which the menu then shows without keys', () => {
+    expect(toAccelerator('mod+ñ')).toBeUndefined();
+    expect(toAccelerator('mod+÷')).toBeUndefined();
+    expect(toAccelerator('?')).toBeUndefined();
   });
 });
