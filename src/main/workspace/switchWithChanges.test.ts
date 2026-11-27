@@ -117,7 +117,7 @@ describe('switching a partial workspace', () => {
   ])('refuses %s, touching nothing, and says the way out: cm partial switch takes only a branch or a changeset', (target, message) => refuses(target, message));
 
   it.each(['br:/main@other@local', 'cs:12@other@local'])('refuses %s of another repository, touching nothing, and says the way out', (target) =>
-    refuses(target, "A partial workspace can't switch to another repository. To switch to one, download the whole branch first, from the workspace’s menu."));
+    refuses(target, "A partial workspace can't switch to a branch or a changeset of another repository. To switch to one, download the whole branch first, from the workspace’s menu."));
 
   it('on a changeset, says to switch to a branch first: only on a branch can it download the whole branch', () =>
     refuses('lb:v1', "A partial workspace can't switch to a label. To switch to one, switch to a branch, then download the whole branch from the workspace’s menu.", { onChangeset: 12 }));

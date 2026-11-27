@@ -98,7 +98,7 @@ output):
 - **On a branch**, it has no one changeset: each folder may be at another changeset of the branch (`cm partial
   update` of one path). Incoming lists the items the branch head changes rather than changesets
   (docs/features/incoming.md "A partial workspace"), and no branch is made from the workspace's changeset.
-- **On a changeset**, as a switch to a changeset leaves one, everything it loads is at that changeset:
+- **On a changeset**, as a switch to a changeset or the official Gluon client leaves one, everything it loads is at that changeset:
   `loadedChangeset` is its number, which the picker shows and everything keyed on it works from as on a standard
   workspace's (a new branch from the workspace, the Branch Explorer's starting point, `downloadTreePoint`).
 - **On a label**, the label's changeset holds it, but `cm` doesn't print it: no changeset, as on a branch.

@@ -35,7 +35,7 @@ const CANT_LEAVE_ON_WHOLE_BRANCH = "Changes can't be left on a shelve as the who
 const PARTIAL_REFUSED_TARGET: Record<PartialSwitchDisabledReason, string> = {
   label: 'a label',
   shelve: 'a shelve',
-  otherRepository: 'another repository',
+  otherRepository: 'a branch or a changeset of another repository',
 };
 
 function partialRefusal(reason: PartialSwitchDisabledReason, onBranch: boolean): string {
