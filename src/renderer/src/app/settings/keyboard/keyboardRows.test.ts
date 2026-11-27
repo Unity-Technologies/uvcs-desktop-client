@@ -100,6 +100,12 @@ describe('resetOutcome', () => {
   it('asks first when a shortcut a person gave the keys to since would lose them', () => {
     // New branch took ⇧⌘W from Switch branch; giving Switch branch its keys back takes ⇧⌘W from New branch.
     const keymap = keymapOf({ newBranch: ['mod+shift+w'], switchBranch: [] }, MAC);
-    expect(resetOutcome('switchBranch', keymap, MAC)).toEqual({ gives: false, key: 'mod+shift+w', note: { tone: 'confirm', text: 'New branch uses it.' } });
+    expect(resetOutcome('switchBranch', keymap, MAC)).toEqual({ gives: false, note: { tone: 'confirm', text: 'New branch uses its keys now.' } });
+  });
+
+  it('names every shortcut that took one of its keys', () => {
+    // Command palette came with ⌘K and ⇧⌘P: New branch took ⌘K, Go to file ⇧⌘P.
+    const keymap = keymapOf({ commandPalette: ['mod+j'], newBranch: ['mod+k'], goToFile: ['mod+shift+p'] }, MAC);
+    expect(resetOutcome('commandPalette', keymap, MAC)).toEqual({ gives: false, note: { tone: 'confirm', text: 'New branch and Go to file use its keys now.' } });
   });
 });

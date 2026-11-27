@@ -17,15 +17,10 @@ import { ShortcutKeysButton } from './ShortcutKeysButton';
 import styles from './KeyboardPane.module.css';
 
 /**
- * The key pressed for a shortcut, or the keys it came with being given back, that waits on a "Use it here" (which
- * `gives`), or the note it left.
+ * What waits on a row's "Use it here", or the note it left: a key pressed for its shortcut, or the keys it came with
+ * being given back (which the note names by the shortcuts that use them now).
  */
-interface Pressed {
-  id: ShortcutId;
-  key: string;
-  note: KeyNote;
-  gives: 'key' | 'defaults';
-}
+type Pressed = { id: ShortcutId; note: KeyNote } & ({ gives: 'key'; key: string } | { gives: 'defaults' });
 
 /**
  * Settings ▸ Keyboard: the shortcuts a person may change, found by name or by keys, each given new keys by pressing
@@ -72,7 +67,7 @@ export function KeyboardPane() {
   const onReset = (id: ShortcutId): void => {
     const outcome = resetOutcome(id, keymap, isMac);
     if (outcome.gives) giveDefaults(id);
-    else setPressed({ id, key: outcome.key, note: outcome.note, gives: 'defaults' });
+    else setPressed({ id, note: outcome.note, gives: 'defaults' });
   };
 
   const resetAll = async (): Promise<void> => {
@@ -161,7 +156,7 @@ export function KeyboardPane() {
                   )}
                   {pressed?.id === row.id && (
                     <RowNote tone={pressed.note.tone}>
-                      <Kbd keys={pressed.key} /> {pressed.note.text}
+                      <Kbd keys={pressed.gives === 'key' ? pressed.key : undefined} /> {pressed.note.text}
                       {pressed.note.tone === 'confirm' && (
                         <>
                           <NoteButton

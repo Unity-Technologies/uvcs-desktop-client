@@ -1,5 +1,5 @@
 import { canonicalKey, defaultKeysTakenFrom, isChanged, isCustomizable, type CustomShortcuts, type KeyChoice, type Keymap } from '@shared/shortcuts/keymap';
-import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, type ShortcutArea, type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
+import { SHORTCUT_AREAS, SHORTCUTS, type ShortcutArea, type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { formatShortcut, pressedShortcut, type PressedKey } from '../../../lib/shortcuts';
 
@@ -95,12 +95,10 @@ export function recordedKey(event: PressedKey, mac: boolean): RecordedKey {
 
 /**
  * What giving a shortcut its own keys back does: at once, or, when shortcuts a person gave those keys to since would
- * lose them, after asking with the key they'd lose.
+ * lose them, after asking, naming them.
  */
-export function resetOutcome(id: ShortcutId, keymap: Keymap, mac: boolean): { gives: true } | { gives: false; key: string; note: KeyNote } {
+export function resetOutcome(id: ShortcutId, keymap: Keymap, mac: boolean): { gives: true } | { gives: false; note: KeyNote } {
   const takenFrom = defaultKeysTakenFrom(id, keymap, mac);
   if (takenFrom.length === 0) return { gives: true };
-  const defaults = new Set(shortcutKeys(SHORTCUTS[id], mac).map(canonicalKey));
-  const key = keymap[takenFrom[0]!].find((taken) => defaults.has(canonicalKey(taken)))!;
-  return { gives: false, key, note: { tone: 'confirm', text: usesIt(id, takenFrom) } };
+  return { gives: false, note: { tone: 'confirm', text: `${shortcutNames(id, takenFrom)} ${takenFrom.length > 1 ? 'use' : 'uses'} its keys now.` } };
 }
