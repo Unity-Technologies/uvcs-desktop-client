@@ -67,7 +67,7 @@ names, areas or keys as the screen writes them (⇧⌘W); **Find by keys** finds
 name (`findKey`), and Settings stays open (`findTakesEscape`). A
 row's keys are a button: clicked, it records the next keys pressed (`pressedShortcut`, the inverse of
 `matchesShortcut`), Esc or leaving it stops, and the row says what happened (`pressOutcome`). Recording offers Remove
-the shortcut. A changed row's name is heavier, with a small accent dot after it, its keys take the accent color, and it has a button that gives it its keys back (`resetOutcome`), which asks
+the shortcut. A changed row's name is heavier, its keys take the accent color, and it has a button that gives it its keys back (`resetOutcome`), which asks
 first when a shortcut a person gave those keys to since would lose them; Reset all shortcuts asks first. Esc while
 recording stops it and leaves Settings open: the button is marked `TAKES_ESCAPE` (`lib/modalDialog`), which the dialog
 leaves Esc to, as Radix would otherwise close the dialog before the button sees the key. The shortcuts sheet's Change shortcuts… opens the pane.
