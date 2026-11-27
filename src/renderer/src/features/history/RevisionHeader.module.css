@@ -75,6 +75,10 @@
    dot's width past the left edge, so only dots between items show, also where it wraps. */
 .metaRow {
   overflow: hidden;
+  /* Room for a chip's or a copy button's focus ring (`--focus-ring-reach`): the clip, there for the dots, cut it on top
+     and bottom. */
+  padding-block: var(--focus-ring-reach);
+  margin-block: calc(-1 * var(--focus-ring-reach));
 }
 
 .meta {

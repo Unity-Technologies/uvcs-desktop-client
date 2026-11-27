@@ -18,10 +18,14 @@
 .title {
   display: -webkit-box;
   width: 100%;
-  margin: 0;
+  margin-inline: 0;
   overflow: hidden;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
+  /* Room for a chip's focus ring in it (`--focus-ring-reach`), which the clip cut on its first and last lines. Lines
+     wrap, so its sides need none. */
+  padding-block: var(--focus-ring-reach);
+  margin-block: calc(-1 * var(--focus-ring-reach));
 }
 
 .description {

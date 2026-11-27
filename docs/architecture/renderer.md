@@ -331,6 +331,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     quieter than the name, pale yellows as much as dark blues. Focus shows with `--focus-ring-visible`, or
     `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
+    A box that clips a control with a ring drawn outside it leaves `--focus-ring-reach` around it; the smoke test fails
+    on a ring cut off (`findClippedFocusRings`, scripts/e2e/README.md "Cut-off focus rings").
   - A translucent state tint (pressed, selected) on a control floating over content lies over `--bg-surface-raised`
     (`linear-gradient(tint, tint) var(--bg-surface-raised)`), so the picture or model behind never shows through it
     (`StageControls.module.css`).
