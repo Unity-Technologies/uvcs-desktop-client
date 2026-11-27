@@ -24,13 +24,15 @@ export interface MovedTitleMarks {
  */
 export function movedTitleMarks(path: string, oldPath: string): MovedTitleMarks {
   const change = pathChangeSegments(oldPath, path);
-  const from = movedFrom(path, oldPath);
-  // `movedFrom` is the end of the old path: positions before it were dropped with the shared folder.
-  const fromShift = oldPath.length - from.length;
+  // Each path's parts end it; the shared folder before them may be spelled in another Unicode form in each path.
   return {
-    path: changedPositions(change.new, change.folder.length),
-    from: changedPositions(change.old, change.folder.length - fromShift).filter((position) => position >= 0),
+    path: changedPositions(change.new, path.length - textOf(change.new).length),
+    from: changedPositions(change.old, movedFrom(path, oldPath).length - textOf(change.old).length),
   };
+}
+
+function textOf(parts: PathPart[]): string {
+  return parts.map((part) => part.text).join('');
 }
 
 function changedPositions(parts: PathPart[], start: number): number[] {
