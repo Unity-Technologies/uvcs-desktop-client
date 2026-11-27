@@ -8,6 +8,8 @@ import styles from './KeyboardPane.module.css';
 interface ShortcutKeysButtonProps {
   label: string;
   keys: readonly string[];
+  /** A person changed them: the caps take the accent color. */
+  changed: boolean;
   recording: boolean;
   onRecord: () => void;
   onPressed: (key: string) => void;
@@ -19,7 +21,7 @@ interface ShortcutKeysButtonProps {
  * before anything else does; Esc (which leaves Settings open: `TAKES_ESCAPE`), Tab or leaving it stops.
  */
 export const ShortcutKeysButton = forwardRef<HTMLButtonElement, ShortcutKeysButtonProps>(function ShortcutKeysButton(
-  { label, keys, recording, onRecord, onPressed, onStop },
+  { label, keys, changed, recording, onRecord, onPressed, onStop },
   ref,
 ) {
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -38,6 +40,7 @@ export const ShortcutKeysButton = forwardRef<HTMLButtonElement, ShortcutKeysButt
       type="button"
       className={styles.keysButton}
       data-recording={recording || undefined}
+      data-changed={changed || undefined}
       {...(recording && TAKES_ESCAPE)}
       aria-label={recording ? `Press the new keys for ${label}` : `Change the keys of ${label}`}
       onClick={recording ? undefined : onRecord}

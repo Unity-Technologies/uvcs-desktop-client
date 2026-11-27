@@ -52,6 +52,18 @@
   font-weight: var(--weight-medium);
 }
 
+/* A small dot after a changed shortcut's name. */
+.label[data-changed]::after {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 0 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  vertical-align: middle;
+}
+
 /* Keeps the keys of unchanged rows in line with those of changed ones, whose reset button follows them. */
 .resetSlot {
   flex: none;
@@ -83,6 +95,11 @@
 .keysButton:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+
+/* A changed shortcut's caps take the accent color; their tint follows it (`Kbd` draws with currentColor). */
+.keysButton[data-changed] {
+  color: var(--accent-text);
 }
 
 .keysButton[data-recording] {

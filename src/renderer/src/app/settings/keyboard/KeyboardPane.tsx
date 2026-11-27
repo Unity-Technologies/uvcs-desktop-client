@@ -132,6 +132,7 @@ export function KeyboardPane() {
                       }}
                       label={row.label}
                       keys={row.keys}
+                      changed={row.changed}
                       recording={recording === row.id}
                       onRecord={() => {
                         setPressed(null);
