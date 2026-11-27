@@ -63,6 +63,30 @@ describe('shortcut registry', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('says of every shortcut whether a person may change it, or why not, so Settings › Keyboard lists them all', () => {
+    const undecided = Object.entries(SHORTCUTS)
+      .filter(([, shortcut]) => ('customizable' in shortcut) === ('fixed' in shortcut))
+      .map(([id]) => id);
+    expect(undecided).toEqual([]);
+  });
+
+  it('never compares a key by hand, which a person changing it in Settings › Keyboard would never reach', () => {
+    // A key compared as `event.key === 'r'` keeps running on R after a person gives the shortcut another key: every
+    // key is matched through the registry (`hotkeys`, `matchesShortcut`). The ones left are a list's or a table's
+    // Select all and Copy with text selected, which every app shares (`fixed: 'shared'`).
+    const allowed = ['ui/table/DataTable.tsx', 'features/pendingChanges/ChangesList.tsx', 'app/commands/typingKeys.ts'];
+    const offenders = filesUnder(RENDERER, isAppSource)
+      .filter((path) => !allowed.includes(relative(RENDERER, path).split('\\').join('/')))
+      .flatMap((path) =>
+        readFileSync(path, 'utf8')
+          .split('\n')
+          .map((line, index) => ({ line, where: `${relative(RENDERER, path)}:${index + 1}` }))
+          .filter(({ line }) => /\.key(?:\.toLowerCase\(\))? === '[a-zA-Z0-9]'/.test(line))
+          .map(({ where, line }) => `${where}: ${line.trim()}`),
+      );
+    expect(offenders).toEqual([]);
+  });
+
   it('puts every shortcut in a known area', () => {
     for (const shortcut of Object.values(SHORTCUTS)) expect(SHORTCUT_AREAS).toContain(shortcut.area);
   });

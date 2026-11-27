@@ -14,7 +14,9 @@ import { Kbd } from '../../../ui/Kbd';
 import { SearchField } from '../../../ui/SearchField';
 import { saveSettings, useSettings } from '../useSettings';
 import { findKey, findTakesEscape, keyboardPaneState, keyboardRows, pressOutcome, resetOutcome, type KeyboardFilter, type KeyNote } from './keyboardRows';
+import { FixedShortcutRow } from './FixedShortcutRow';
 import { ShortcutKeysButton } from './ShortcutKeysButton';
+import { VIEWS } from '../../navigation/viewRegistry';
 import styles from './KeyboardPane.module.css';
 
 /**
@@ -86,7 +88,7 @@ export function KeyboardPane() {
     else if (pressedKey.action === 'findByName') setFindByKeys(false);
   };
 
-  const rows = keyboardRows(keymap, custom, filter, isMac);
+  const rows = keyboardRows(keymap, custom, VIEWS, filter, isMac);
   const { emptyText, resetsAll } = keyboardPaneState(rows.length, filter, custom);
 
   return (
@@ -118,7 +120,10 @@ export function KeyboardPane() {
           {rows.map(([area, areaRows]) => (
             <section key={area} className={styles.area} aria-label={area}>
               <h3 className={styles.areaHeading}>{area}</h3>
-              {areaRows.map((row) => (
+              {areaRows.map((row) =>
+                row.kind === 'fixed' ? (
+                  <FixedShortcutRow key={row.rowKey} row={row} />
+                ) : (
                 <div key={row.id} className={styles.rowBlock}>
                   <div className={styles.row}>
                     <span className={styles.label} data-changed={row.changed || undefined}>
@@ -173,7 +178,8 @@ export function KeyboardPane() {
                     </RowNote>
                   )}
                 </div>
-              ))}
+                ),
+              )}
             </section>
           ))}
         </HighlightQuery>

@@ -23,6 +23,10 @@ would keep binding the old key.
 A new shortcut can't change until it's marked, so it's never offered before every place that reads its keys follows a
 change ("Keys follow a change at once").
 
+Every shortcut says which it is: `customizable`, or `fixed` with the reason Settings ▸ Keyboard shows for it
+(`shared`, `text`, `focus`); a test fails on one that says neither, or both. And no key is compared by hand
+(`event.key === 'r'`): a test refuses it, so every key goes through the registry and follows a change.
+
 ## What the settings keep
 
 `AppSettings.customShortcuts` holds only the shortcuts a person changed, by id: each with the keys it takes now (the
@@ -67,7 +71,8 @@ Shift held while dropping or opening); those aren't window-wide.
 
 ## Settings ▸ Keyboard
 
-`KeyboardPane` lists the shortcuts that can change by area (`keyboardRows`). The field finds them by the words of their
+`KeyboardPane` lists every shortcut by area, the views' keys under Go to (`keyboardRows`): every key the app shows is
+there. The ones that can't change are quieter, with no button, and say why on hover (`FixedShortcutRow`). The field finds them by the words of their
 names, areas or keys as the screen writes them (⇧⌘W); **Find by keys**, a button beside it that stays pressed while on, finds them by pressing the keys instead; there
 Backspace empties the field, and Esc empties it, then goes back to finding by name (`findKey`), with Settings still
 open (`findTakesEscape`). A

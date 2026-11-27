@@ -1,9 +1,11 @@
 import { canonicalKey, defaultKeysTakenFrom, isChanged, isCustomizable, type CustomShortcuts, type KeyChoice, type Keymap } from '@shared/shortcuts/keymap';
-import { SHORTCUT_AREAS, SHORTCUTS, type ShortcutArea, type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
+import { SHORTCUT_AREAS, SHORTCUTS, type FixedReason, type ShortcutArea, type ShortcutDefinition, type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { matchesWordFilter } from '../../../lib/matchesAllWords';
 import { formatShortcut, pressedShortcut, type PressedKey } from '../../../lib/shortcuts';
 
-export interface KeyboardRow {
+/** A shortcut a person may change: its keys are a button that records new ones. */
+export interface ChangeableRow {
+  kind: 'changeable';
   id: ShortcutId;
   label: string;
   /** Its keys now, the binding first; none when a person removed it. */
@@ -14,27 +16,62 @@ export interface KeyboardRow {
   removable: boolean;
 }
 
+/** A shortcut that stays as it is: listed with its keys, and why it can't change (`fixed`). */
+export interface FixedRow {
+  kind: 'fixed';
+  /** Its id, or the view's for the views' keys. */
+  rowKey: string;
+  label: string;
+  keys: readonly string[];
+  why: string;
+}
+
+export type KeyboardRow = ChangeableRow | FixedRow;
+
 /** What the rows are filtered by: words of their names, areas or keys, or a key pressed (Find by keys). */
 export type KeyboardFilter = { by: 'words'; text: string } | { by: 'key'; key: string | null };
 
+const WHY_FIXED: Readonly<Record<FixedReason | 'views', string>> = {
+  shared: "Can't change: every app uses this key.",
+  text: "Can't change: it's the text editor's key.",
+  focus: "Can't change: it moves through what has the focus.",
+  views: "Can't change: it follows the order of the sidebar.",
+};
+
 /**
- * Settings ▸ Keyboard's rows, area by area in the registry's order: the shortcuts a person may change, with their keys
- * now, those the filter keeps. Areas left with none are left out.
+ * Settings ▸ Keyboard's rows, area by area in the registry's order, the views' keys under Go to: every shortcut with
+ * keys on this OS (or a person's, removed), those the filter keeps, so every key the app shows is here. Areas left
+ * with none are left out.
  */
-export function keyboardRows(keymap: Keymap, custom: CustomShortcuts, filter: KeyboardFilter, mac: boolean): [ShortcutArea, KeyboardRow[]][] {
-  const ids = (Object.keys(SHORTCUTS) as ShortcutId[]).filter(isCustomizable);
-  const rows = ids
-    .map((id): KeyboardRow & { area: ShortcutArea } => ({ id, area: SHORTCUTS[id].area, label: SHORTCUTS[id].label, keys: keymap[id], changed: isChanged(custom, id), removable: keymap[id].length > 0 }))
-    .filter((row) => kept(row, filter, mac));
-  return SHORTCUT_AREAS.map((area): [ShortcutArea, KeyboardRow[]] => [area, rows.filter((row) => row.area === area).map(({ area: _area, ...row }) => row)]).filter(
-    ([, areaRows]) => areaRows.length > 0,
+export function keyboardRows(
+  keymap: Keymap,
+  custom: CustomShortcuts,
+  views: readonly { id: string; label: string; shortcut: string }[],
+  filter: KeyboardFilter,
+  mac: boolean,
+): [ShortcutArea, KeyboardRow[]][] {
+  const rows = new Map<ShortcutArea, KeyboardRow[]>(SHORTCUT_AREAS.map((area) => [area, []]));
+  rows.set(
+    'Go to',
+    views.map((view): FixedRow => ({ kind: 'fixed', rowKey: `view:${view.id}`, label: view.label, keys: [view.shortcut], why: WHY_FIXED.views })),
   );
+  for (const id of Object.keys(SHORTCUTS) as ShortcutId[]) {
+    const shortcut: ShortcutDefinition = SHORTCUTS[id];
+    if (isCustomizable(id)) {
+      rows.get(shortcut.area)!.push({ kind: 'changeable', id, label: shortcut.label, keys: keymap[id], changed: isChanged(custom, id), removable: keymap[id].length > 0 });
+    } else if (keymap[id].length > 0) {
+      rows.get(shortcut.area)!.push({ kind: 'fixed', rowKey: id, label: shortcut.label, keys: keymap[id], why: WHY_FIXED[shortcut.fixed ?? 'shared'] });
+    }
+  }
+  return [...rows]
+    .map(([area, areaRows]): [ShortcutArea, KeyboardRow[]] => [area, areaRows.filter((row) => kept(row, area, filter, mac))])
+    .filter(([, areaRows]) => areaRows.length > 0);
 }
 
-function kept(row: KeyboardRow & { area: ShortcutArea }, filter: KeyboardFilter, mac: boolean): boolean {
+function kept(row: KeyboardRow, area: ShortcutArea, filter: KeyboardFilter, mac: boolean): boolean {
   if (filter.by === 'key') return filter.key === null || row.keys.some((key) => canonicalKey(key) === canonicalKey(filter.key!));
   const keyTexts = row.keys.map((key) => formatShortcut(key, mac).join(''));
-  return matchesWordFilter([row.label, row.area, ...keyTexts], filter.text);
+  return matchesWordFilter([row.label, area, ...keyTexts], filter.text);
 }
 
 /** What a row says after a key is pressed for it, and whether it waits for a "Use it here". */
@@ -76,7 +113,7 @@ function shortcutNames(id: ShortcutId, others: readonly ShortcutId[]): string {
 
 /** What the list says when no row is left, and whether Reset all shortcuts shows (something was changed). */
 export function keyboardPaneState(rowCount: number, filter: KeyboardFilter, custom: CustomShortcuts): { emptyText: string | null; resetsAll: boolean } {
-  const emptyText = filter.by === 'key' && filter.key !== null ? 'No shortcut you can change uses these keys.' : 'No shortcut matches.';
+  const emptyText = filter.by === 'key' && filter.key !== null ? 'No shortcut uses these keys.' : 'No shortcut matches.';
   return { emptyText: rowCount === 0 ? emptyText : null, resetsAll: Object.keys(custom).length > 0 };
 }
 

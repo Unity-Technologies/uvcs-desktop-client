@@ -1,39 +1,50 @@
 import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { keymapOf } from '@shared/shortcuts/keymap';
-import { findKey, findTakesEscape, keyboardPaneState, keyboardRows, pressOutcome, recordedKey, resetOutcome } from './keyboardRows';
+import { findKey, findTakesEscape, keyboardPaneState, keyboardRows, pressOutcome, recordedKey, resetOutcome, type KeyboardRow } from './keyboardRows';
 
 const MAC = true;
 const defaults = keymapOf({}, MAC);
 
+const VIEWS = [
+  { id: 'changes', label: 'Changes', shortcut: 'mod+1' },
+  { id: 'incoming', label: 'Incoming', shortcut: 'mod+2' },
+];
+
+const rowsOf = (sheet: ReturnType<typeof keyboardRows>) => sheet.flatMap(([, rows]) => rows);
+const nameOf = (row: KeyboardRow) => (row.kind === 'changeable' ? row.id : row.rowKey);
+
 describe('keyboardRows', () => {
-  it('lists only the shortcuts a person may change, area by area', () => {
-    const rows = keyboardRows(defaults, {}, { by: 'words', text: '' }, MAC);
-    expect(rows.map(([area]) => area)).toEqual(['General', 'Lists', 'Changes', 'Diff', 'Branch Explorer', 'Files', 'History', 'Merge', 'Image diff', 'Model diff']);
-    const general = rows.find(([area]) => area === 'General')![1];
-    expect(general.find((row) => row.id === 'newBranch')).toEqual({ id: 'newBranch', label: 'New branch', keys: ['mod+b'], changed: false, removable: true });
-    expect(rows.flatMap(([, areaRows]) => areaRows).some((row) => row.id === 'textCopy')).toBe(false);
+  it('lists every shortcut, area by area, the views under Go to: every key the app shows is here', () => {
+    const rows = keyboardRows(defaults, {}, VIEWS, { by: 'words', text: '' }, MAC);
+    expect(rows.map(([area]) => area).slice(0, 3)).toEqual(['General', 'Go to', 'Lists']);
+    const all = rowsOf(rows);
+    expect(all.find((row) => nameOf(row) === 'newBranch')).toEqual({ kind: 'changeable', id: 'newBranch', label: 'New branch', keys: ['mod+b'], changed: false, removable: true });
+    expect(all.find((row) => nameOf(row) === 'view:changes')).toMatchObject({ kind: 'fixed', keys: ['mod+1'], why: "Can't change: it follows the order of the sidebar." });
+    expect(all.find((row) => nameOf(row) === 'textCopy')).toEqual({ kind: 'fixed', rowKey: 'textCopy', label: 'Copy', keys: ['mod+c'], why: "Can't change: it's the text editor's key." });
+    // Off macOS only: the Mac has no key for it.
+    expect(all.some((row) => nameOf(row) === 'appMenu')).toBe(false);
   });
 
   it('shows the keys a person chose, and marks the shortcuts they changed', () => {
     const custom = { newBranch: ['mod+shift+b'], commandLog: [] };
-    const general = keyboardRows(keymapOf(custom, MAC), custom, { by: 'words', text: '' }, MAC)[0]![1];
-    expect(general.find((row) => row.id === 'newBranch')).toMatchObject({ keys: ['mod+shift+b'], changed: true });
-    expect(general.find((row) => row.id === 'commandLog')).toMatchObject({ keys: [], changed: true, removable: false });
+    const all = rowsOf(keyboardRows(keymapOf(custom, MAC), custom, [], { by: 'words', text: '' }, MAC));
+    expect(all.find((row) => nameOf(row) === 'newBranch')).toMatchObject({ keys: ['mod+shift+b'], changed: true });
+    expect(all.find((row) => nameOf(row) === 'commandLog')).toMatchObject({ keys: [], changed: true, removable: false });
   });
 
   it('finds shortcuts by the words of their names and areas, and by their keys as the screen writes them', () => {
-    const ids = (text: string) => keyboardRows(defaults, {}, { by: 'words', text }, MAC).flatMap(([, rows]) => rows.map((row) => row.id));
-    expect(ids('new branch')).toEqual(['newBranch']);
-    expect(ids('⇧⌘W')).toEqual(['switchBranch']);
-    expect(ids('history')).toEqual(['fileHistory', 'historyToggleView', 'historyEnterPane']);
+    const names = (text: string) => rowsOf(keyboardRows(defaults, {}, VIEWS, { by: 'words', text }, MAC)).map(nameOf);
+    expect(names('switch branch')).toEqual(['switchBranch']);
+    expect(names('⇧⌘W')).toEqual(['switchBranch']);
+    expect(names('incoming')).toContain('view:incoming');
   });
 
-  it('finds the shortcuts a key pressed runs, all of them while none is pressed yet', () => {
-    const ids = (key: string | null) => keyboardRows(defaults, {}, { by: 'key', key }, MAC).flatMap(([, rows]) => rows.map((row) => row.id));
-    expect(ids('alt+down')).toEqual(['nextChange', 'nextConflict']);
-    expect(ids('shift+mod+p')).toEqual(['commandPalette']);
-    expect(ids(null).length).toBeGreaterThan(30);
+  it('finds every shortcut a key pressed runs, those that can\'t change too, and all while none is pressed yet', () => {
+    const names = (key: string | null) => rowsOf(keyboardRows(defaults, {}, VIEWS, { by: 'key', key }, MAC)).map(nameOf);
+    expect(names('alt+down')).toEqual(['nextChange', 'annotateNextBlock', 'nextConflict']);
+    expect(names('mod+c')).toEqual(['listCopy', 'textCopy']);
+    expect(names(null).length).toBeGreaterThan(100);
   });
 });
 
@@ -71,7 +82,7 @@ describe('pressOutcome', () => {
 describe('keyboardPaneState', () => {
   it('says why the list is empty: no name matches, or no shortcut that can change uses the keys pressed', () => {
     expect(keyboardPaneState(0, { by: 'words', text: 'zzz' }, {}).emptyText).toBe('No shortcut matches.');
-    expect(keyboardPaneState(0, { by: 'key', key: 'mod+c' }, {}).emptyText).toBe('No shortcut you can change uses these keys.');
+    expect(keyboardPaneState(0, { by: 'key', key: 'mod+j' }, {}).emptyText).toBe('No shortcut uses these keys.');
     expect(keyboardPaneState(3, { by: 'words', text: '' }, {}).emptyText).toBeNull();
   });
 

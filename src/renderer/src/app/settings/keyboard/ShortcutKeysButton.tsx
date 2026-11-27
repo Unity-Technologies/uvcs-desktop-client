@@ -1,8 +1,8 @@
-import { forwardRef, Fragment, type KeyboardEvent } from 'react';
+import { forwardRef, type KeyboardEvent } from 'react';
 import { TAKES_ESCAPE } from '../../../lib/modalDialog';
 import { isMac } from '../../../lib/platform';
-import { Kbd } from '../../../ui/Kbd';
 import { recordedKey } from './keyboardRows';
+import { KeyCaps } from './KeyCaps';
 import styles from './KeyboardPane.module.css';
 
 interface ShortcutKeysButtonProps {
@@ -52,12 +52,7 @@ export const ShortcutKeysButton = forwardRef<HTMLButtonElement, ShortcutKeysButt
       ) : keys.length === 0 ? (
         <span className={styles.prompt}>None</span>
       ) : (
-        keys.map((key, index) => (
-          <Fragment key={key}>
-            {index > 0 && <span className={styles.or}>/</span>}
-            <Kbd keys={key} />
-          </Fragment>
-        ))
+        <KeyCaps keys={keys} />
       )}
     </button>
   );
