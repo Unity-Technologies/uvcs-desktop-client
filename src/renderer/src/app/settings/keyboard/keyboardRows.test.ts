@@ -9,7 +9,7 @@ const defaults = keymapOf({}, MAC);
 describe('keyboardRows', () => {
   it('lists only the shortcuts a person may change, area by area', () => {
     const rows = keyboardRows(defaults, {}, { by: 'words', text: '' }, MAC);
-    expect(rows.map(([area]) => area)).toEqual(['General', 'Lists', 'Changes', 'Diff', 'Branch Explorer', 'Files', 'History', 'Merge']);
+    expect(rows.map(([area]) => area)).toEqual(['General', 'Lists', 'Changes', 'Diff', 'Branch Explorer', 'Files', 'History', 'Merge', 'Image diff', 'Model diff']);
     const general = rows.find(([area]) => area === 'General')![1];
     expect(general.find((row) => row.id === 'newBranch')).toEqual({ id: 'newBranch', label: 'New branch', keys: ['mod+b'], changed: false, removable: true });
     expect(rows.flatMap(([, areaRows]) => areaRows).some((row) => row.id === 'textCopy')).toBe(false);
@@ -26,7 +26,7 @@ describe('keyboardRows', () => {
     const ids = (text: string) => keyboardRows(defaults, {}, { by: 'words', text }, MAC).flatMap(([, rows]) => rows.map((row) => row.id));
     expect(ids('new branch')).toEqual(['newBranch']);
     expect(ids('⇧⌘W')).toEqual(['switchBranch']);
-    expect(ids('history')).toEqual(['fileHistory', 'historyToggleView']);
+    expect(ids('history')).toEqual(['fileHistory', 'historyToggleView', 'historyEnterPane']);
   });
 
   it('finds the shortcuts a key pressed runs, all of them while none is pressed yet', () => {
@@ -116,6 +116,11 @@ describe('findKey', () => {
   it('records the keys to find, and lets Tab move on', () => {
     expect(findKey(press('ArrowDown', 'ArrowDown', { altKey: true }), null, MAC)).toEqual({ action: 'record', key: 'alt+down' });
     expect(findKey(press('Tab', 'Tab'), null, MAC)).toEqual({ action: 'leave' });
+  });
+
+  it('empties the field on Backspace, and finds ⌘⌫ as keys', () => {
+    expect(findKey(press('Backspace', 'Backspace'), 'alt+down', MAC)).toEqual({ action: 'clear' });
+    expect(findKey(press('Backspace', 'Backspace', { metaKey: true }), null, MAC)).toEqual({ action: 'record', key: 'mod+backspace' });
   });
 
   it('empties the field on Esc, then goes back to finding by name', () => {

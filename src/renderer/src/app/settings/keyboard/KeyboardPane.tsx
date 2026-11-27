@@ -97,7 +97,7 @@ export function KeyboardPane() {
           value={findByKeys ? (keyFound ? formatShortcut(keyFound).join('') : '') : text}
           onChange={(value) => (findByKeys ? setKeyFound(null) : setText(value))}
           onKeyDown={onFindKeyDown}
-          placeholder={findByKeys ? 'Press keys to find them, or Esc to find by name' : 'Find a shortcut'}
+          placeholder={findByKeys ? 'Press keys to find them' : 'Find a shortcut'}
           aria-label={findByKeys ? 'Press keys to find them' : 'Find a shortcut'}
           width="100%"
         />
@@ -105,7 +105,6 @@ export function KeyboardPane() {
           icon={<Keyboard size={14} />}
           label="Find by keys"
           aria-pressed={findByKeys}
-          variant={findByKeys ? 'secondary' : 'ghost'}
           onClick={() => {
             setFindByKeys(!findByKeys);
             setKeyFound(null);
