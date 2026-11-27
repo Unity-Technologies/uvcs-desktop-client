@@ -26,6 +26,10 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Room for a chip's focus ring in it (`--focus-ring-reach`), which the clip cut. The text is cut short where its
+     content ends, before the room. */
+  padding: var(--focus-ring-reach);
+  margin: calc(-1 * var(--focus-ring-reach));
 }
 
 .noComment {

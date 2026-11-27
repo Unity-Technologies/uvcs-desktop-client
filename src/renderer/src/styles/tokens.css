@@ -86,6 +86,10 @@
   --keyframes-lift-in: lift-in;
 
   --focus-ring-visible: 0 0 0 2px var(--focus-color);
+  /* How far that ring reaches past its control: what a box clipping a control (a text cut short, a clamped title)
+     leaves around it, a padding given back by a negative margin, so the ring shows whole. A filled control's
+     `--focus-outline`, drawn 2px out, reaches twice as far. */
+  --focus-ring-reach: 2px;
   /* For lists, rows and panes, whose outer edge a parent would clip. */
   --focus-ring-inset: inset 0 0 0 2px var(--focus-color);
   /* For panes whose content paints over an inset shadow (a canvas, a diff): outlines paint on top. Offset it by -2px.

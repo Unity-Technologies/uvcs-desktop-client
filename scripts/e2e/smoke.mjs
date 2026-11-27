@@ -13,6 +13,7 @@ import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 import { commandsByStep, duplicateReport, needsServer, readableCommandLine, readCommandLog } from '../build/duplicateServerCommands.mts';
+import { findClippedFocusRings } from './clippedFocusRings.mjs';
 import { cutOffArguments, findCutOffContent } from './cutOffContent.mjs';
 import { fakeCmExecutable } from './fakeCm/executable.mjs';
 import { createWorkspace } from './workspaceFixture.mjs';
@@ -37,6 +38,11 @@ const KNOWN_DUPLICATES = [];
  * `{ selector: '[aria-label="Timeline"]', why: 'what makes it right' }`. None today.
  */
 const CUT_OFF_ALLOWED = [];
+/**
+ * What may show a focus ring cut off by a box clipping it (`findClippedFocusRings`), each with why, as
+ * `CUT_OFF_ALLOWED` is. None today.
+ */
+const CLIPPED_RING_ALLOWED = [];
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 const VIEWPORT = { width: 1400, height: 880 };
@@ -214,6 +220,7 @@ async function step(name, run, { rereads, leave } = {}) {
     await run();
     await readsSettled();
     await nothingCutOff();
+    await focusRingsWhole();
     if (SHOTS_OF_EVERY_STEP) await screenshot(name.toLowerCase().replaceAll(' ', '-'));
     if (leave) {
       await leave();
@@ -233,6 +240,12 @@ async function step(name, run, { rereads, leave } = {}) {
 async function nothingCutOff(page = window) {
   const cutOff = await withTimeout(page.evaluate(findCutOffContent, cutOffArguments(CUT_OFF_ALLOWED, LOADING)), TIMEOUT_MS, 'the cut-off check');
   if (cutOff.length > 0) throw new Error(`Cut off where nothing scrolls (scripts/e2e/README.md "Cut-off content"):\n  ${cutOff.join('\n  ')}`);
+}
+
+/** Fails the step when a control shown in `page` would show its keyboard focus ring cut off (`findClippedFocusRings`). */
+async function focusRingsWhole(page = window) {
+  const clipped = await withTimeout(findClippedFocusRings(page, CLIPPED_RING_ALLOWED), TIMEOUT_MS, 'the focus ring check');
+  if (clipped.length > 0) throw new Error(`Focus rings cut off (scripts/e2e/README.md "Cut-off focus rings"):\n  ${clipped.join('\n  ')}`);
 }
 
 const started = Date.now();
@@ -400,6 +413,7 @@ try {
     await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).waitFor();
     await readsSettled(pageWindow);
     await nothingCutOff(pageWindow);
+    await focusRingsWhole(pageWindow);
     await pageWindow.close();
   });
   await step('Permissions', async () => {
@@ -485,6 +499,7 @@ try {
     await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
     await readsSettled(pageWindow);
     await nothingCutOff(pageWindow);
+    await focusRingsWhole(pageWindow);
     await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();

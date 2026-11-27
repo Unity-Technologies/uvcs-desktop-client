@@ -20,7 +20,7 @@ fails on any `pageerror` or `console.error`, a view whose heading doesn't show o
 only: a view left while it loaded stays mounted, hidden by its `Activity`, with its skeleton until it shows again),
 any `cm` command the fake couldn't answer, a server command while the sign-in screen covers the window, a step that
 sent the same command line twice from the same folder ("Duplicate server commands" below), content cut off where
-nothing scrolls ("Cut-off content" below), an answer to the profile pictures question that wasn't saved, and a kind of
+nothing scrolls ("Cut-off content" below), a focus ring cut off ("Cut-off focus rings" below), an answer to the profile pictures question that wasn't saved, and a kind of
 page no step showed (`PAGES`, below). Beyond those and the larger editor being on top, it asserts only that things
 appear, never pixels or copy.
 
@@ -144,6 +144,29 @@ shows enough of it to overflow.
 
 `CUT_OFF_ALLOWED` lists what may end below its box, each by a selector and why. Never add one to get a step through:
 a box cut off is a bug users see.
+
+## Cut-off focus rings
+
+The rule: after every step, every control shown that Tab reaches, in the window and in the page windows a step opens,
+in shadow roots too (the code's), shows its keyboard focus ring whole (`findClippedFocusRings`,
+`clippedFocusRings.mjs`). A ring drawn outside its control is cut where a box around it clips (`overflow` other than
+`visible`) without room for it: rows that fill a column, a header cell at a list's edge, a chip in a text cut short.
+
+It styles every control as if the keyboard had focused it, all at once, through the DevTools protocol
+(`CSS.forcePseudoState`, `:focus-visible`), and measures how far each ring reaches past its control against each box
+clipping it. Focusing them for real would run the app's focus handlers (a row selected, a thread picked). A control
+whose look doesn't change on focus, one cut by the box itself (scrolled partly away, an ellipsis), what screen readers
+alone read (`.visually-hidden`) and a text field's own text, which shows focus with its border, are left alone. Along
+an axis a box scrolls, it clips where its content ends.
+
+A control whose ring is cut draws it inside (`--focus-ring-inset`, rows and header cells), or the box clipping it
+leaves `--focus-ring-reach` around it, a padding given back by a negative margin (a meta row, a text cut short). It
+sees only what the steps show, at the smoke test's window size: a control that shows elsewhere (a comment in the
+code) or only in a narrow window (a details header's wrapped line) is checked by hand. Nor does it see a ring drawn by
+a `::after` (the code panes', a canvas's), by a wrapper's `:focus-within`, or a clip made by a `transform`, `filter`
+or `contain` that `offsetParent` doesn't report. It fails when forcing styles none of the controls shown, so a change
+in how Chromium forces `:focus-visible` can't pass every step unchecked.
+`CLIPPED_RING_ALLOWED` lists what may be cut, each by a selector and why; never add one to get a step through.
 
 ## The fake `cm` (`fakeCm/`)
 

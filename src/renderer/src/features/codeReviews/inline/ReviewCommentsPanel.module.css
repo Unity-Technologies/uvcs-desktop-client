@@ -110,6 +110,11 @@
   background: linear-gradient(var(--bg-hover), var(--bg-hover)), var(--bg-subtle);
 }
 
+/* As wide as the scrolling list, which cuts what's past its sides: the ring is drawn inside. */
+.groupHeader:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
 /* Its file's comments folded away (pointing right) or shown (down). */
 .groupChevron {
   flex: none;

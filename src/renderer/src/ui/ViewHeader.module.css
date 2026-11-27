@@ -57,4 +57,8 @@
   min-height: var(--toolbar-height);
   padding: 0 var(--space-4) var(--space-2);
   overflow-x: auto;
+  /* Scrolling sideways in a narrow window, it clips on top too: room there for its controls' focus rings
+     (`--focus-ring-reach`). */
+  padding-top: var(--focus-ring-reach);
+  margin-top: calc(-1 * var(--focus-ring-reach));
 }

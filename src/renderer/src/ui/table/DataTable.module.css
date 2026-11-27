@@ -33,6 +33,11 @@
   letter-spacing: inherit;
 }
 
+/* As tall as the header, at the list's edge, which would cut a ring drawn outside it. */
+.headerCell:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
 .headerCell.sortable:hover {
   color: var(--text-primary);
 }
