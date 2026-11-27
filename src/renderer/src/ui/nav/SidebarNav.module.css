@@ -91,6 +91,11 @@
   font-weight: var(--weight-medium);
 }
 
+/* Rows and tiles fill the column, which clips what's past its sides (`.groups`): a ring drawn outside them was cut. */
+.item:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
 .item[data-dimmed='true'] {
   background: var(--bg-selected);
 }
@@ -196,11 +201,6 @@
   height: auto;
   padding: 6px var(--tile-padding-inline);
   text-align: center;
-}
-
-/* The tiles fill the scrolling column, which would cut a ring drawn outside them. */
-.sidebar[data-rail='true'] .item:focus-visible {
-  box-shadow: var(--focus-ring-inset);
 }
 
 .sidebar[data-rail='true'] .label {
