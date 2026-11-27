@@ -47,27 +47,34 @@ export interface ShortcutDefinition {
    * no two window keys share one (`shortcutRegistry.test.ts`, `yieldsToCommentField`).
    */
   scope?: 'commentField';
+  /**
+   * A person may give it other keys (Settings ▸ Keyboard, `keymapOf`): the shortcuts that run a command. Not the keys
+   * every app shares (Esc, Enter, arrows, the text's own), nor the ones that act on what's under them (a list's, the
+   * palette's, a comment's). Every place that reads its keys reads them again when the keymap changes
+   * (docs/features/keyboard-shortcuts.md "Keys follow a change at once").
+   */
+  customizable?: true;
 }
 
 export const SHORTCUTS = {
-  commandPalette: { area: 'General', label: 'Command palette', keys: ['mod+k', 'mod+shift+p'], commandId: 'app.commandPalette' },
-  shortcuts: { area: 'General', label: 'Keyboard shortcuts', keys: ['?', 'mod+/'] },
-  settings: { area: 'General', label: 'Settings', keys: ['mod+,'], commandId: 'app.settings' },
-  back: { area: 'General', label: 'Back', keys: ['mod+['], keysOffMac: ['alt+left'] },
-  home: { area: 'General', label: 'Home', keys: ['mod+shift+h'], commandId: 'app.home' },
-  refresh: { area: 'General', label: 'Refresh', keys: ['mod+r'], commandId: 'workspace.refresh' },
-  updateWorkspace: { area: 'General', label: 'Update workspace', keys: ['mod+shift+u'] },
-  switchBranch: { area: 'General', label: 'Switch branch', keys: ['mod+shift+w'], commandId: 'branch.switch' },
-  newBranch: { area: 'General', label: 'New branch', keys: ['mod+b'], commandId: 'branch.new' },
-  mergeFromBranch: { area: 'General', label: 'Merge from branch', keys: ['mod+shift+m'], commandId: 'merge.fromBranch' },
-  goToFile: { area: 'General', label: 'Go to file', keys: ['mod+p'] },
-  openWorkspace: { area: 'General', label: 'Open another workspace', keys: ['mod+shift+o'], commandId: 'workspace.open' },
-  newWindow: { area: 'General', label: 'New window', keys: ['mod+n'], commandId: 'app.newWindow' },
+  commandPalette: { area: 'General', label: 'Command palette', keys: ['mod+k', 'mod+shift+p'], commandId: 'app.commandPalette', customizable: true },
+  shortcuts: { area: 'General', label: 'Keyboard shortcuts', keys: ['?', 'mod+/'], customizable: true },
+  settings: { area: 'General', label: 'Settings', keys: ['mod+,'], commandId: 'app.settings', customizable: true },
+  back: { area: 'General', label: 'Back', keys: ['mod+['], keysOffMac: ['alt+left'], customizable: true },
+  home: { area: 'General', label: 'Home', keys: ['mod+shift+h'], commandId: 'app.home', customizable: true },
+  refresh: { area: 'General', label: 'Refresh', keys: ['mod+r'], commandId: 'workspace.refresh', customizable: true },
+  updateWorkspace: { area: 'General', label: 'Update workspace', keys: ['mod+shift+u'], customizable: true },
+  switchBranch: { area: 'General', label: 'Switch branch', keys: ['mod+shift+w'], commandId: 'branch.switch', customizable: true },
+  newBranch: { area: 'General', label: 'New branch', keys: ['mod+b'], commandId: 'branch.new', customizable: true },
+  mergeFromBranch: { area: 'General', label: 'Merge from branch', keys: ['mod+shift+m'], commandId: 'merge.fromBranch', customizable: true },
+  goToFile: { area: 'General', label: 'Go to file', keys: ['mod+p'], customizable: true },
+  openWorkspace: { area: 'General', label: 'Open another workspace', keys: ['mod+shift+o'], commandId: 'workspace.open', customizable: true },
+  newWindow: { area: 'General', label: 'New window', keys: ['mod+n'], commandId: 'app.newWindow', customizable: true },
   dropInNewWindow: { area: 'General', label: 'Open a folder dropped on the window in a new window (hold while dropping)', keys: ['shift'] },
   workspaceInNewWindow: { area: 'General', label: 'Open the workspace in a new window, or Shift-click it (home screen, switcher, palette)', keys: ['shift+enter'] },
-  commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog' },
-  toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'], commandId: 'app.sidebar' },
-  toggleDetails: { area: 'General', label: "Hide or show the view's details panel", keys: ['mod+i'], commandId: 'view.details' },
+  commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog', customizable: true },
+  toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'], commandId: 'app.sidebar', customizable: true },
+  toggleDetails: { area: 'General', label: "Hide or show the view's details panel", keys: ['mod+i'], commandId: 'view.details', customizable: true },
   appMenu: { area: 'General', label: 'Open the menu', keys: ['f10'], offMacOnly: true },
   saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'] },
 
@@ -78,39 +85,39 @@ export const SHORTCUTS = {
   listOpen: { area: 'Lists', label: 'Open', keys: ['enter'] },
   listSelectAll: { area: 'Lists', label: 'Select all', keys: ['mod+a'] },
   rename: { area: 'Lists', label: 'Rename the selected file, branch, label or attribute', keys: ['f2'] },
-  listDiff: { area: 'Lists', label: 'Diff the selected changeset or file', keys: ['mod+d'] },
+  listDiff: { area: 'Lists', label: 'Diff the selected changeset or file', keys: ['mod+d'], customizable: true },
   listCopy: { area: 'Lists', label: "Copy the selected branch's, changeset's, label's, shelve's or review's name or number", keys: ['mod+c'] },
-  copyLink: { area: 'General', label: 'Copy a link to the page in front, else to the selected object, else to the view', keys: ['mod+shift+c'] },
+  copyLink: { area: 'General', label: 'Copy a link to the page in front, else to the selected object, else to the view', keys: ['mod+shift+c'], customizable: true },
   listContextMenu: { area: 'Lists', label: 'Actions of the selected rows', keys: ['shift+f10'] },
   listExpand: { area: 'Lists', label: 'Collapse or expand a folder', keys: ['left', 'right'] },
   rowActions: { area: 'Lists', label: 'Actions of the highlighted result (palette, switchers, Go to file)', keys: ['tab', 'shift+f10'] },
 
-  checkin: { area: 'Changes', label: 'Check in', keys: ['mod+enter'] },
+  checkin: { area: 'Changes', label: 'Check in', keys: ['mod+enter'], customizable: true },
   toggleIncluded: { area: 'Changes', label: 'Include or exclude from the check in', keys: ['space'] },
-  myShelves: { area: 'Changes', label: 'Your shelves', keys: ['mod+shift+s'] },
+  myShelves: { area: 'Changes', label: 'Your shelves', keys: ['mod+shift+s'], customizable: true },
   shelvesScope: { area: 'Changes', label: "Your shelves or everyone's, in the shelves list", keys: ['mod+shift+s'] },
   review: { area: 'Changes', label: 'Mark reviewed and go to the next file', keys: ['r'] },
   nextFile: { area: 'Changes', label: 'Next file', keys: ['j'] },
   previousFile: { area: 'Changes', label: 'Previous file', keys: ['k'] },
 
   // F7 as in other diff tools, and while typing, where the editor moves lines with ⌥↓ ⌥↑.
-  nextChange: { area: 'Diff', label: 'Next change', keys: ['alt+down', 'f7'] },
-  previousChange: { area: 'Diff', label: 'Previous change', keys: ['alt+up', 'shift+f7'] },
+  nextChange: { area: 'Diff', label: 'Next change', keys: ['alt+down', 'f7'], customizable: true },
+  previousChange: { area: 'Diff', label: 'Previous change', keys: ['alt+up', 'shift+f7'], customizable: true },
   // As Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'.
-  nextChangeset: { area: 'Diff', label: 'Next changeset of the branch', keys: ['alt+shift+down'] },
-  previousChangeset: { area: 'Diff', label: 'Previous changeset of the branch', keys: ['alt+shift+up'] },
+  nextChangeset: { area: 'Diff', label: 'Next changeset of the branch', keys: ['alt+shift+down'], customizable: true },
+  previousChangeset: { area: 'Diff', label: 'Previous changeset of the branch', keys: ['alt+shift+up'], customizable: true },
   // In a review's Changes, in the order its Comments panel lists them, across files; N as in "next", where nothing takes it.
-  nextComment: { area: 'Diff', label: "Next comment on a review's code", keys: ['n'] },
-  previousComment: { area: 'Diff', label: "Previous comment on a review's code", keys: ['shift+n'] },
-  discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'], keysOffMac: ['mod+shift+backspace'] },
+  nextComment: { area: 'Diff', label: "Next comment on a review's code", keys: ['n'], customizable: true },
+  previousComment: { area: 'Diff', label: "Previous comment on a review's code", keys: ['shift+n'], customizable: true },
+  discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'], keysOffMac: ['mod+shift+backspace'], customizable: true },
   undoDiscard: { area: 'Diff', label: 'Undo the last discard or edit', keys: ['mod+z'] },
   clearPickedLines: { area: 'Diff', label: 'Clear the picked lines', keys: ['escape'] },
-  editFile: { area: 'Diff', label: 'Type in the file', keys: ['mod+e'] },
+  editFile: { area: 'Diff', label: 'Type in the file', keys: ['mod+e'], customizable: true },
   leaveEditor: { area: 'Diff', label: 'Leave the text for the file list (edits stay)', keys: ['escape'] },
   saveFile: { area: 'Diff', label: 'Save the edits', keys: ['mod+s'] },
   // E for Expand, on every OS: no browser, desktop or the diff's editor takes it, and it stays clear of the window's
   // own full screen (⌃⌘F, F11), which is another thing. Esc leaves once nothing else takes it (`escapeCollapsesDiff`).
-  expandDiff: { area: 'Diff', label: 'Expand the diff to the whole window, or collapse it', keys: ['mod+shift+e'], commandId: 'view.expandDiff' },
+  expandDiff: { area: 'Diff', label: 'Expand the diff to the whole window, or collapse it', keys: ['mod+shift+e'], commandId: 'view.expandDiff', customizable: true },
   collapseDiff: { area: 'Diff', label: 'Collapse the expanded diff', keys: ['escape'] },
 
   // The text of a diff or a merge, as its editor (Pierre's) takes the keys; its right-click menu shows them (`codeMenu`).
@@ -162,29 +169,29 @@ export const SHORTCUTS = {
   graphPageForward: { area: 'Branch Explorer', label: 'A screen forward in time', keys: ['pagedown'] },
   graphMergeSource: { area: 'Branch Explorer', label: 'Go to the source of a merge', keys: ['[', 'alt+left'] },
   graphMergeDestination: { area: 'Branch Explorer', label: 'Go to where it was merged', keys: [']', 'alt+right'] },
-  graphBranchBase: { area: 'Branch Explorer', label: 'Go to the branch base', keys: ['p'] },
+  graphBranchBase: { area: 'Branch Explorer', label: 'Go to the branch base', keys: ['p'], customizable: true },
   graphOpen: { area: 'Branch Explorer', label: 'Diff the selected changeset or branch', keys: ['enter'] },
   graphOpenBranch: { area: 'Branch Explorer', label: 'Diff the branch of the selection', keys: ['shift+enter'] },
-  graphMerge: { area: 'Branch Explorer', label: 'Merge from the selection', keys: ['m'] },
+  graphMerge: { area: 'Branch Explorer', label: 'Merge from the selection', keys: ['m'], customizable: true },
   graphDetails: { area: 'Branch Explorer', label: 'Hide or show the details panel', keys: ['space'] },
   graphContextMenu: { area: 'Branch Explorer', label: 'Actions of the selection', keys: ['shift+f10'] },
   graphMoveBranchUp: { area: 'Branch Explorer', label: 'Move the branch up', keys: ['mod+up'] },
   graphMoveBranchDown: { area: 'Branch Explorer', label: 'Move the branch down', keys: ['mod+down'] },
   graphMoveBranchToTop: { area: 'Branch Explorer', label: 'Move the branch to the top', keys: ['mod+shift+up'] },
   graphMoveBranchToBottom: { area: 'Branch Explorer', label: 'Move the branch to the bottom', keys: ['mod+shift+down'] },
-  graphHome: { area: 'Branch Explorer', label: 'Go to the workspace', keys: ['h'] },
+  graphHome: { area: 'Branch Explorer', label: 'Go to the workspace', keys: ['h'], customizable: true },
   graphZoomIn: { area: 'Branch Explorer', label: 'Zoom in', keys: ['plus', '='] },
   graphZoomOut: { area: 'Branch Explorer', label: 'Zoom out', keys: ['-'] },
   graphFit: { area: 'Branch Explorer', label: 'Fit to window', keys: ['0'] },
   // Off macOS Alt+Shift, as Ctrl+Alt is AltGr there. From another view it opens the Branch Explorer with it shown.
-  graphTimeline: { area: 'Branch Explorer', label: 'Show or hide the timeline', keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline' },
+  graphTimeline: { area: 'Branch Explorer', label: 'Show or hide the timeline', keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline', customizable: true },
   graphClear: { area: 'Branch Explorer', label: 'Clear the selection, then the focus', keys: ['escape'] },
 
   deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'], keysOffMac: ['delete'] },
-  newFile: { area: 'Files', label: 'New file', keys: ['mod+shift+n'] },
-  newFolder: { area: 'Files', label: 'New folder', keys: ['mod+shift+d'] },
-  fileHistory: { area: 'Files', label: 'History', keys: ['mod+y'], keysOffMac: ['mod+h'] },
-  annotate: { area: 'Files', label: 'Diff or annotate the selected file', keys: ['mod+t'] },
+  newFile: { area: 'Files', label: 'New file', keys: ['mod+shift+n'], customizable: true },
+  newFolder: { area: 'Files', label: 'New folder', keys: ['mod+shift+d'], customizable: true },
+  fileHistory: { area: 'Files', label: 'History', keys: ['mod+y'], keysOffMac: ['mod+h'], customizable: true },
+  annotate: { area: 'Files', label: 'Diff or annotate the selected file', keys: ['mod+t'], customizable: true },
   cutItems: { area: 'Files', label: 'Cut, to move into another folder', keys: ['mod+x'] },
   pasteItems: { area: 'Files', label: 'Move the cut items into the selected folder', keys: ['mod+v'] },
   cancelCut: { area: 'Files', label: 'Cancel the cut', keys: ['escape'] },
@@ -192,7 +199,7 @@ export const SHORTCUTS = {
   fileViewer: { area: 'Files', label: "Into the selected file's content, or back to the tree", keys: ['f6'] },
   leaveFileViewer: { area: 'Files', label: "Back to the tree from the file's content", keys: ['escape'] },
 
-  historyToggleView: { area: 'History', label: 'Diff or annotate the revision', keys: ['mod+shift+t'] },
+  historyToggleView: { area: 'History', label: 'Diff or annotate the revision', keys: ['mod+shift+t'], customizable: true },
   historyEnterPane: { area: 'History', label: 'Into the diff or annotation', keys: ['mod+e'] },
   historyLeavePane: { area: 'History', label: 'Back to the revisions', keys: ['escape'] },
 
@@ -204,11 +211,11 @@ export const SHORTCUTS = {
   annotateBlockDetails: { area: 'Annotate', label: "The block's changeset and actions", keys: ['space'] },
   annotateLetGo: { area: 'Annotate', label: "Stop highlighting the block's changeset", keys: ['escape'] },
 
-  merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
+  merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'], customizable: true },
   // The diff's keys: a conflict is to the merge page what a change is to a diff.
-  nextConflict: { area: 'Merge', label: 'Next conflict', keys: ['alt+down', 'f7'] },
-  previousConflict: { area: 'Merge', label: 'Previous conflict', keys: ['alt+up', 'shift+f7'] },
-  resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },
+  nextConflict: { area: 'Merge', label: 'Next conflict', keys: ['alt+down', 'f7'], customizable: true },
+  previousConflict: { area: 'Merge', label: 'Previous conflict', keys: ['alt+up', 'shift+f7'], customizable: true },
+  resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'], customizable: true },
   stopResolvingInTool: { area: 'Merge', label: 'Stop resolving one by one', keys: ['escape'] },
 
   permissionAllow: { area: 'Permissions', label: 'Allow the permission', keys: ['a'] },

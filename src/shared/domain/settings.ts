@@ -1,6 +1,7 @@
 import type { UserColors } from './branchExplorerSettings';
 import type { CmChoice } from './cmRuntime';
 import { AUTO_APP, type CustomEditor } from './externalApps';
+import type { CustomShortcuts } from '../shortcuts/keymap';
 import type { Tool } from './tools';
 import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
@@ -134,6 +135,10 @@ export interface AppSettings {
   /** Programs the user runs on what they selected, from its menu's "Tools ▸" (Settings › Tools). */
   tools: Tool[];
   /**
+   * The keys a person gave shortcuts in Settings ▸ Keyboard, by shortcut id: only those they changed (`keymapOf`).
+   */
+  customShortcuts: CustomShortcuts;
+  /**
    * The zoom of every window (View > Zoom In, Zoom Out: `zoomPage`), as a Chromium zoom level: 0 at 100%, each step of
    * 1 about 20% larger (`1.2 ** level`). Saved by the app, not left to Chromium, which keys a zoom by the page's address.
    */
@@ -202,6 +207,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   terminal: AUTO_APP,
   customEditors: [],
   tools: [],
+  customShortcuts: {},
   zoomLevel: 0,
   windowBounds: null,
   pageWindowBounds: null,
