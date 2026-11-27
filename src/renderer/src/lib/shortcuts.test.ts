@@ -1,6 +1,6 @@
 import '../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { formatShortcut, matchesShortcut, sharingModifiers } from './shortcuts';
+import { formatShortcut, matchesShortcut, pressedShortcut, sharingModifiers } from './shortcuts';
 
 function press(key: string, code: string, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers } as KeyboardEvent;
@@ -100,5 +100,39 @@ describe('sharingModifiers', () => {
   it('keeps shortcuts whole when their modifiers differ, or they have none', () => {
     expect(sharingModifiers(['mod+up', 'ctrl+home'])).toEqual(['mod+up', 'ctrl+home']);
     expect(sharingModifiers(['up', 'down'])).toEqual(['up', 'down']);
+  });
+});
+
+describe('pressedShortcut', () => {
+  it('writes a press as the registry writes keys, its modifiers in order', () => {
+    expect(pressedShortcut(press('B', 'KeyB', { metaKey: true, shiftKey: true }), true)).toBe('mod+shift+b');
+    expect(pressedShortcut(press('˙', 'KeyH', { metaKey: true, altKey: true, ctrlKey: true }), true)).toBe('mod+ctrl+alt+h');
+    expect(pressedShortcut(press('F7', 'F7'), true)).toBe('f7');
+    expect(pressedShortcut(press('ArrowDown', 'ArrowDown', { altKey: true }), true)).toBe('alt+down');
+  });
+
+  it('takes Ctrl as the shortcut modifier off macOS, and no press with the Windows or Super key', () => {
+    expect(pressedShortcut(press('b', 'KeyB', { ctrlKey: true }), false)).toBe('mod+b');
+    expect(pressedShortcut(press('b', 'KeyB', { metaKey: true }), false)).toBeUndefined();
+  });
+
+  it('waits while only modifiers are held', () => {
+    expect(pressedShortcut(press('Shift', 'ShiftLeft', { shiftKey: true }), true)).toBeUndefined();
+    expect(pressedShortcut(press('Meta', 'MetaLeft', { metaKey: true }), true)).toBeUndefined();
+  });
+
+  it('writes a symbol typed with Shift by the symbol, as the matcher reads it', () => {
+    expect(pressedShortcut(press('?', 'Slash', { shiftKey: true }), true)).toBe('?');
+    expect(pressedShortcut(press('+', 'Equal', { metaKey: true, shiftKey: true }), true)).toBe('mod+plus');
+  });
+
+  it('records what the matcher then matches, on each OS and layout', () => {
+    const presses: [KeyboardEvent, boolean][] = [
+      [press('z', 'KeyY', { ctrlKey: true }), false],
+      [press('1', 'Digit1', { metaKey: true, shiftKey: true }), true],
+      [press('&', 'Digit1', { ctrlKey: true }), false],
+      [press('Escape', 'Escape'), true],
+    ];
+    for (const [event, mac] of presses) expect(matchesShortcut(event, pressedShortcut(event, mac)!, mac)).toBe(true);
   });
 });

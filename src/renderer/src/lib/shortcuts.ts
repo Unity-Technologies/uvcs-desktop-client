@@ -89,6 +89,26 @@ export function matchesShortcut(event: PressedKey, shortcut: string, mac = isMac
 
 const SHIFTED_SYMBOLS = new Set(['?', 'plus']);
 
+/** Keys that only modify another, or type nothing a shortcut can name. */
+const NOT_A_SHORTCUT_KEY = new Set(['Meta', 'Control', 'Alt', 'AltGraph', 'Shift', 'CapsLock', 'Fn', 'OS', 'Dead', 'Unidentified', 'Process']);
+
+/**
+ * The shortcut a key press makes, written as the registry writes keys (`mod+shift+k`), so `matchesShortcut` matches
+ * the same press: what Settings ▸ Keyboard records. None while only modifiers are held, nor off macOS for the Windows
+ * or Super key, which never takes part in a shortcut there.
+ */
+export function pressedShortcut(event: PressedKey, mac = isMac): string | undefined {
+  if (NOT_A_SHORTCUT_KEY.has(event.key) || (!mac && event.metaKey)) return undefined;
+  const key = normalizeKey(event);
+  const modifiers = [
+    isModPressed(event, mac) && 'mod',
+    mac && event.ctrlKey && 'ctrl',
+    event.altKey && 'alt',
+    event.shiftKey && !SHIFTED_SYMBOLS.has(key) && 'shift',
+  ].filter((modifier): modifier is string => modifier !== false);
+  return [...modifiers, key].join('+');
+}
+
 /**
  * Letters go by the character the layout types (Ctrl+Z is the key labelled Z on a German or French keyboard too),
  * or by their position where it types none (⌥ turns them into symbols on macOS; Cyrillic and other scripts); digits
