@@ -70,6 +70,26 @@ describe('clash', () => {
     expect(clash('editFile', 'textCopy')).toBe(true);
     expect(clash('historyToggleView', 'annotateNextBlock')).toBe(true);
     expect(clash('graphMerge', 'nextConflict')).toBe(false);
+    // A view shows a diff or an annotation, never both.
+    expect(clash('discardLines', 'annotateBlockDetails')).toBe(false);
+  });
+
+  it('keeps apart the shortcuts the registry gives one key on purpose, bound where the other is not', () => {
+    expect(clash('nextChange', 'nextConflict')).toBe(false);
+    expect(clash('nextChange', 'annotateNextBlock')).toBe(false);
+    expect(clash('editFile', 'historyEnterPane')).toBe(false);
+    expect(clash('myShelves', 'shelvesScope')).toBe(false);
+  });
+
+  it("never pairs a shortcut that can change with another sharing one of the app's keys, so its own keys are always free", () => {
+    const ids = Object.keys(SHORTCUTS) as ShortcutId[];
+    for (const mac of [MAC, OFF_MAC]) {
+      for (const id of ids.filter((candidate) => (SHORTCUTS[candidate] as { customizable?: true }).customizable)) {
+        const own = shortcutKeys(SHORTCUTS[id], mac).map(canonicalKey);
+        const sharing = ids.filter((other) => other !== id && clash(id, other) && shortcutKeys(SHORTCUTS[other], mac).some((key) => own.includes(canonicalKey(key))));
+        expect(sharing, `${id} ${mac ? 'on macOS' : 'off macOS'}`).toEqual([]);
+      }
+    }
   });
 
   it("keeps a comment field's keys apart from the window's, and General's keys that act where they're used", () => {
@@ -154,6 +174,17 @@ describe('withShortcutKey', () => {
 
   it('removes the shortcut', () => {
     expect(withShortcutKey({}, keymapOf({}, MAC), 'commandLog', null, MAC)).toEqual({ commandLog: [] });
+  });
+});
+
+describe('taking the keys a shortcut came with back', () => {
+  it('gives them back at once, or by pressing them, where only shortcuts bound elsewhere share them', () => {
+    const custom: CustomShortcuts = { nextChange: ['mod+j'], editFile: ['mod+shift+j'], myShelves: ['f8'] };
+    const keymap = keymapOf(custom, MAC);
+    expect(defaultKeysTakenFrom('nextChange', keymap, MAC)).toEqual([]);
+    expect(keyChoice('nextChange', 'alt+down', keymap, MAC).kind).toBe('allowed');
+    expect(keyChoice('editFile', 'mod+e', keymap, MAC).kind).toBe('allowed');
+    expect(keyChoice('myShelves', 'mod+shift+s', keymap, MAC).kind).toBe('allowed');
   });
 });
 

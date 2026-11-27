@@ -64,18 +64,32 @@ export function clash(a: ShortcutId, b: ShortcutId): boolean {
   const first: ShortcutDefinition = SHORTCUTS[a];
   const second: ShortcutDefinition = SHORTCUTS[b];
   if ((first.scope === 'commentField') !== (second.scope === 'commentField')) return false;
+  if (sharedByDesign(first, second)) return false;
   return shownTogether(first.area, second.area) || isWindowWide(a) || isWindowWide(b);
 }
 
 /**
- * The areas each screen shows at once: a view with its list, the diff or annotation beside it, and the diff's text.
- * Lists, Diff and Text are bound inside many views, so their keys meet those of each view they show in.
+ * Shortcuts the registry gives one key on purpose never run together: they're bound where the other isn't (the merge
+ * page's Next conflict and a diff's Next change, a diff's Type in the file and History's Into the diff). On either OS.
+ */
+function sharedByDesign(first: ShortcutDefinition, second: ShortcutDefinition): boolean {
+  const keysOf = (shortcut: ShortcutDefinition) => [...shortcut.keys, ...(shortcut.keysOffMac ?? [])].map(canonicalKey);
+  const secondKeys = new Set(keysOf(second));
+  return keysOf(first).some((key) => secondKeys.has(key));
+}
+
+/**
+ * The areas each screen shows at once: a view with its list, and the diff (with its text) or the annotation beside
+ * it, one or the other. Lists, Diff and Text are bound inside many views, so their keys meet those of each view they
+ * show in. The merge page steps through conflicts with keys of its own (Merge).
  */
 const SHOWN_TOGETHER: readonly (readonly ShortcutArea[])[] = [
   ['Changes', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
-  ['Files', 'Lists', 'Diff', 'Text', 'Annotate', 'Image diff', 'Model diff'],
-  ['History', 'Lists', 'Diff', 'Text', 'Annotate', 'Image diff', 'Model diff'],
-  ['Merge', 'Lists', 'Diff', 'Text'],
+  ['Files', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
+  ['Files', 'Lists', 'Annotate'],
+  ['History', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
+  ['History', 'Lists', 'Annotate'],
+  ['Merge', 'Lists', 'Text'],
   ['Branch Explorer', 'Lists'],
 ];
 
