@@ -73,7 +73,6 @@ function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
   return (
     <SplitButton
       variant="primary"
-      size="medium"
       icon={<GalleryVerticalEnd size={14} />}
       menu={menu}
       menuLabel="Resolve in another tool"

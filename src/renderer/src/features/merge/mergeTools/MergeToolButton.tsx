@@ -66,6 +66,7 @@ export function MergeToolButton({ state, actions, onEditInApp, editInAppUnavaila
     return (
       <SplitButton
         variant={variant}
+        size="small"
         icon={<FolderOpen size={13} />}
         menu={menu}
         menuLabel="More ways to resolve"
@@ -80,6 +81,7 @@ export function MergeToolButton({ state, actions, onEditInApp, editInAppUnavaila
   return (
     <SplitButton
       variant={variant}
+      size="small"
       icon={<AppWindow size={13} />}
       menu={menu}
       menuLabel="Other merge tools"

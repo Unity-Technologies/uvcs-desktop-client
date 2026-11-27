@@ -117,7 +117,6 @@ function CreateMergeRequestDialog({ place, initialSource, onClose, onCreated }: 
           <Button onClick={onClose}>Cancel</Button>
           <SplitButton
             variant="primary"
-            size="medium"
             onClick={() => void create(false)}
             loading={creating}
             disabled={problem !== undefined}
