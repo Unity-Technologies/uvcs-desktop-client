@@ -1,7 +1,7 @@
 import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { keymapOf } from '@shared/shortcuts/keymap';
-import { keyboardPaneState, keyboardRows, pressOutcome, recordedKey, resetOutcome } from './keyboardRows';
+import { findKey, findTakesEscape, keyboardPaneState, keyboardRows, pressOutcome, recordedKey, resetOutcome } from './keyboardRows';
 
 const MAC = true;
 const defaults = keymapOf({}, MAC);
@@ -107,5 +107,27 @@ describe('resetOutcome', () => {
     // Command palette came with ⌘K and ⇧⌘P: New branch took ⌘K, Go to file ⇧⌘P.
     const keymap = keymapOf({ commandPalette: ['mod+j'], newBranch: ['mod+k'], goToFile: ['mod+shift+p'] }, MAC);
     expect(resetOutcome('commandPalette', keymap, MAC)).toEqual({ gives: false, note: { tone: 'confirm', text: 'New branch and Go to file use its keys now.' } });
+  });
+});
+
+describe('findKey', () => {
+  const press = (key: string, code: string, modifiers: Partial<KeyboardEvent> = {}) => ({ key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers });
+
+  it('records the keys to find, and lets Tab move on', () => {
+    expect(findKey(press('ArrowDown', 'ArrowDown', { altKey: true }), null, MAC)).toEqual({ action: 'record', key: 'alt+down' });
+    expect(findKey(press('Tab', 'Tab'), null, MAC)).toEqual({ action: 'leave' });
+  });
+
+  it('empties the field on Esc, then goes back to finding by name', () => {
+    expect(findKey(press('Escape', 'Escape'), 'alt+down', MAC)).toEqual({ action: 'clear' });
+    expect(findKey(press('Escape', 'Escape'), null, MAC)).toEqual({ action: 'findByName' });
+  });
+});
+
+describe('findTakesEscape', () => {
+  it('keeps Esc in the field while it finds by keys or has words, so Settings stays open', () => {
+    expect(findTakesEscape({ by: 'key', key: null })).toBe(true);
+    expect(findTakesEscape({ by: 'words', text: 'branch' })).toBe(true);
+    expect(findTakesEscape({ by: 'words', text: '' })).toBe(false);
   });
 });

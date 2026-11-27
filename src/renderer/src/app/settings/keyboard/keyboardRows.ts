@@ -102,3 +102,20 @@ export function resetOutcome(id: ShortcutId, keymap: Keymap, mac: boolean): { gi
   if (takenFrom.length === 0) return { gives: true };
   return { gives: false, note: { tone: 'confirm', text: `${shortcutNames(id, takenFrom)} ${takenFrom.length > 1 ? 'use' : 'uses'} its keys now.` } };
 }
+
+/**
+ * What a key pressed in the find field does while it finds by keys: it's recorded as the keys to find; Esc empties
+ * the field, then goes back to finding by name, never closing Settings (`findTakesEscape`); Tab moves on.
+ */
+export type FindKey = { action: 'record'; key: string } | { action: 'clear' } | { action: 'findByName' } | { action: 'leave' } | { action: 'wait' };
+
+export function findKey(event: PressedKey, keyFound: string | null, mac: boolean): FindKey {
+  const pressed = recordedKey(event, mac);
+  if (pressed.action === 'stop') return keyFound === null ? { action: 'findByName' } : { action: 'clear' };
+  return pressed;
+}
+
+/** Whether Esc in the find field is its own, not the dialog's: while it finds by keys, or has words to clear. */
+export function findTakesEscape(filter: KeyboardFilter): boolean {
+  return filter.by === 'key' || filter.text !== '';
+}

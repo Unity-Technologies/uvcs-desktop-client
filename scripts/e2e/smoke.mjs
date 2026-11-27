@@ -496,7 +496,7 @@ try {
     await window.getByRole('dialog', { name: 'Settings' }).getByRole('radio', { name: /^Dark/ }).click();
     await window.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
   });
-  await step('Settings › Keyboard: Esc stops recording keys and leaves Settings open', async () => {
+  await step('Settings › Keyboard: Esc stops recording keys, leaves Find by keys and never closes Settings', async () => {
     // Radix closes a dialog on Esc before the focused element sees it, unless that element takes Esc (`TAKES_ESCAPE`).
     const settings = window.getByRole('dialog', { name: 'Settings' });
     await settings.getByRole('button', { name: 'Keyboard' }).click();
@@ -504,6 +504,12 @@ try {
     await settings.getByRole('button', { name: 'Press the new keys for New branch' }).waitFor({ timeout: TIMEOUT_MS });
     await window.keyboard.press('Escape');
     await settings.getByRole('button', { name: 'Change the keys of New branch' }).waitFor({ timeout: TIMEOUT_MS });
+    // Esc in Find by keys empties the field, then goes back to finding by name, Settings still open.
+    await settings.getByRole('button', { name: 'Find by keys' }).click();
+    await window.keyboard.press('Alt+ArrowDown');
+    await window.keyboard.press('Escape');
+    await window.keyboard.press('Escape');
+    await settings.getByRole('textbox', { name: 'Find a shortcut' }).waitFor({ timeout: TIMEOUT_MS });
   });
   await step('Settings › Issue tracker, with none connected', async () => {
     // Its empty state reads only the app's own file: no tracker is reached, and no keychain is asked.

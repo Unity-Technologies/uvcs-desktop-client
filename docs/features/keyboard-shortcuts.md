@@ -63,7 +63,8 @@ Shift held while dropping or opening); those aren't window-wide.
 ## Settings ▸ Keyboard
 
 `KeyboardPane` lists the shortcuts that can change by area (`keyboardRows`). The field finds them by the words of their
-names, areas or keys as the screen writes them (⇧⌘W); **Find by keys** finds them by pressing the keys instead. A
+names, areas or keys as the screen writes them (⇧⌘W); **Find by keys** finds them by pressing the keys instead; there Esc empties the field, then goes back to finding by
+name (`findKey`), and Settings stays open (`findTakesEscape`). A
 row's keys are a button: clicked, it records the next keys pressed (`pressedShortcut`, the inverse of
 `matchesShortcut`), Esc or leaving it stops, and the row says what happened (`pressOutcome`). Recording offers Remove
 the shortcut. A changed row's name is heavier and has a button that gives it its keys back (`resetOutcome`), which asks

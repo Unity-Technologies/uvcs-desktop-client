@@ -3,6 +3,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { keyChoice, withDefaultKeys, withShortcutKey, type CustomShortcuts } from '@shared/shortcuts/keymap';
 import type { ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { useKeymap } from '../../../lib/keymapStore';
+import { TAKES_ESCAPE } from '../../../lib/modalDialog';
 import { isMac } from '../../../lib/platform';
 import { formatShortcut } from '../../../lib/shortcuts';
 import { Button } from '../../../ui/Button';
@@ -12,7 +13,7 @@ import { IconButton } from '../../../ui/IconButton';
 import { Kbd } from '../../../ui/Kbd';
 import { SearchField } from '../../../ui/SearchField';
 import { saveSettings, useSettings } from '../useSettings';
-import { keyboardPaneState, keyboardRows, pressOutcome, recordedKey, resetOutcome, type KeyboardFilter, type KeyNote } from './keyboardRows';
+import { findKey, findTakesEscape, keyboardPaneState, keyboardRows, pressOutcome, resetOutcome, type KeyboardFilter, type KeyNote } from './keyboardRows';
 import { ShortcutKeysButton } from './ShortcutKeysButton';
 import styles from './KeyboardPane.module.css';
 
@@ -77,10 +78,12 @@ export function KeyboardPane() {
 
   const onFindKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (!findByKeys) return;
-    const pressedKey = recordedKey(event.nativeEvent, isMac);
-    if (pressedKey.action === 'leave' || pressedKey.action === 'stop') return;
+    const pressedKey = findKey(event.nativeEvent, keyFound, isMac);
+    if (pressedKey.action === 'leave') return;
     event.preventDefault();
     if (pressedKey.action === 'record') setKeyFound(pressedKey.key);
+    else if (pressedKey.action === 'clear') setKeyFound(null);
+    else if (pressedKey.action === 'findByName') setFindByKeys(false);
   };
 
   const rows = keyboardRows(keymap, custom, filter, isMac);
@@ -88,14 +91,14 @@ export function KeyboardPane() {
 
   return (
     <div className={styles.pane}>
-      <div className={styles.find}>
+      <div className={styles.find} {...(findTakesEscape(filter) && TAKES_ESCAPE)}>
         <SearchField
           ref={findField}
           value={findByKeys ? (keyFound ? formatShortcut(keyFound).join('') : '') : text}
           onChange={(value) => (findByKeys ? setKeyFound(null) : setText(value))}
           onKeyDown={onFindKeyDown}
-          placeholder={findByKeys ? 'Press keys to find what they do' : 'Find a shortcut'}
-          aria-label={findByKeys ? 'Press keys to find what they do' : 'Find a shortcut'}
+          placeholder={findByKeys ? 'Press keys to find them, or Esc to find by name' : 'Find a shortcut'}
+          aria-label={findByKeys ? 'Press keys to find them' : 'Find a shortcut'}
           width="100%"
         />
         <IconButton
