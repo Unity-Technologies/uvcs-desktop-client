@@ -1,0 +1,157 @@
+/* The find bar stays on top while the shortcuts scroll under it. */
+.pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+
+.find {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  /* Room for the keys buttons' focus rings, which the scrolling would cut. */
+  margin: -3px;
+  padding: 3px;
+  overflow-y: auto;
+}
+
+.area + .area {
+  margin-top: var(--space-4);
+}
+
+.areaHeading {
+  margin: 0 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.label[data-changed] {
+  font-weight: var(--weight-medium);
+}
+
+/* Keeps the keys of unchanged rows in line with those of changed ones, whose reset button follows them. */
+.resetSlot {
+  flex: none;
+  width: 24px;
+}
+
+.keysButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 96px;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.keysButton:hover {
+  border-color: var(--border-default);
+  background: var(--bg-hover);
+}
+
+.keysButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.keysButton[data-recording] {
+  justify-content: center;
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.prompt {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.keysButton[data-recording] .prompt {
+  color: var(--accent-text);
+}
+
+.or {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.note[data-tone='problem'] {
+  color: var(--danger-text);
+}
+
+.note[data-tone='confirm'] {
+  color: var(--caution-text);
+}
+
+.noteButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.noteButton:hover {
+  text-decoration: underline;
+}
+
+.noteButton:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.none {
+  margin: var(--space-4) 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.footer {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+}

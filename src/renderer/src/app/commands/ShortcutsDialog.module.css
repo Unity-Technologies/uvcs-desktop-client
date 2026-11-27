@@ -44,3 +44,8 @@
   color: var(--text-tertiary);
   font-size: var(--text-xs);
 }
+
+/* At the footer's start, apart from Done. */
+.change {
+  margin-right: auto;
+}

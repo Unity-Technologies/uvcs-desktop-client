@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
-import { isMac } from '../../lib/platform';
-import { SHORTCUTS, type ShortcutArea } from '@shared/shortcuts/shortcutRegistry';
+import type { ShortcutArea } from '@shared/shortcuts/shortcutRegistry';
+import { useKeymap } from '../../lib/keymapStore';
+import { openSettingsDialogAt } from '../settings/SettingsDialog';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
@@ -26,10 +27,26 @@ export function openShortcutsDialog(): void {
 }
 
 function ShortcutsDialog({ onClose }: { onClose: () => void }) {
+  const keymap = useKeymap();
+  const changeShortcuts = (): void => {
+    onClose();
+    openSettingsDialogAt('keyboard');
+  };
+  const footer = (
+    <>
+      <Button className={styles.change} onClick={changeShortcuts}>
+        Change shortcuts…
+      </Button>
+      <Button variant="primary" onClick={onClose} autoFocus>
+        Done
+      </Button>
+    </>
+  );
+
   return (
-    <Dialog title="Keyboard shortcuts" width={820} onClose={onClose} footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
+    <Dialog title="Keyboard shortcuts" width={820} onClose={onClose} footer={footer}>
       <div className={styles.columns}>
-        {shortcutSheet(VIEWS, Object.values(SHORTCUTS), isMac).map(([area, rows]) => (
+        {shortcutSheet(VIEWS, keymap).map(([area, rows]) => (
           <section key={area} aria-labelledby={headingId(area)}>
             <h2 id={headingId(area)} className={styles.heading}>
               {area}
