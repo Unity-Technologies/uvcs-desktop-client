@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import '../../testing/fakeWindow';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setCustomShortcuts } from '../../lib/keymapStore';
 import type { KeyboardEvent } from 'react';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
 import { wholeList } from '../../lib/itemRange';
@@ -30,13 +32,21 @@ function reviewList(marks: Record<string, ReviewStatus | null>, rows: Row[] = Ob
 }
 
 const key = (key: string, modifiers: Partial<Record<'metaKey' | 'ctrlKey' | 'altKey' | 'shiftKey', boolean>> = {}) =>
-  ({ key, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers }) as KeyboardEvent;
+  ({ key, code: `Key${key.toUpperCase()}`, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers }) as KeyboardEvent;
+
+afterEach(() => setCustomShortcuts({}));
 
 describe('R on a list of files', () => {
   it('is R alone, not a shortcut holding it', () => {
     expect(isReviewKey(key('r'))).toBe(true);
     expect(isReviewKey(key('r', { metaKey: true }))).toBe(false);
     expect(isReviewKey(key('R', { shiftKey: true }))).toBe(false);
+  });
+
+  it('is the key a person gave it instead, once they changed it', () => {
+    setCustomShortcuts({ review: ['m'] });
+    expect(isReviewKey(key('m'))).toBe(true);
+    expect(isReviewKey(key('r'))).toBe(false);
   });
 
   it('marks the file and moves on to the next, so a review goes R, R, R down the list', () => {

@@ -1,5 +1,6 @@
 import { Pencil } from 'lucide-react';
 import { useMemo, useRef } from 'react';
+import { useKeymap } from '../../lib/keymapStore';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useCommands, type Command } from './commandStore';
 
@@ -10,6 +11,7 @@ import { useCommands, type Command } from './commandStore';
 export function useRenameCommand<T>(group: string, noun: string, target: T | undefined, rename: (target: T) => void): void {
   const latestRename = useRef(rename);
   latestRename.current = rename;
+  const keymap = useKeymap();
 
   useCommands(
     useMemo<Command[]>(
@@ -24,7 +26,7 @@ export function useRenameCommand<T>(group: string, noun: string, target: T | und
           run: () => target !== undefined && latestRename.current(target),
         },
       ],
-      [group, noun, target],
+      [keymap, group, noun, target],
     ),
   );
 }

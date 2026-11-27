@@ -8,12 +8,17 @@ rejects a shortcut written anywhere else (`lib/shortcutRegistry.test.ts`). The s
 ## Which shortcuts can change
 
 Only the ones marked `customizable` in the registry: the shortcuts that run a command (New branch, Refresh, Next
-change, Merge). The others stay as they are:
+change, Mark reviewed, Rename, Merge, the Branch Explorer's moves and zoom, the image and model viewers' zoom, framing
+and comments). The others stay as they are:
 
-- the keys every app shares: Esc, Enter, the arrows, Home and End, Space;
+- the keys every app shares: Esc, Enter, the arrows, Home and End, Space, and the clipboard's;
 - the text's own keys (the Text area), which its editor keeps;
-- keys that act on what's under them: a list's, the palette's, a comment's formatting, the model and image viewers';
+- keys that move through what's under them: a list's selection, the palette's, the graph's walk, a 3D model's flight,
+  a comment's formatting;
 - the views' keys, ⌘1 to ⌘9, which follow the sidebar's order (`viewShortcut`).
+
+A key a shortcut can change is always read from the registry: never compared by hand (`event.key === 'r'`), which
+would keep binding the old key.
 
 A new shortcut can't change until it's marked, so it's never offered before every place that reads its keys follows a
 change ("Keys follow a change at once").
@@ -63,8 +68,9 @@ Shift held while dropping or opening); those aren't window-wide.
 ## Settings ▸ Keyboard
 
 `KeyboardPane` lists the shortcuts that can change by area (`keyboardRows`). The field finds them by the words of their
-names, areas or keys as the screen writes them (⇧⌘W); **Find by keys** finds them by pressing the keys instead; there Esc empties the field, then goes back to finding by
-name (`findKey`), and Settings stays open (`findTakesEscape`). A
+names, areas or keys as the screen writes them (⇧⌘W); **Find by keys**, a button beside it that stays pressed while on, finds them by pressing the keys instead; there
+Backspace empties the field, and Esc empties it, then goes back to finding by name (`findKey`), with Settings still
+open (`findTakesEscape`). A
 row's keys are a button: clicked, it records the next keys pressed (`pressedShortcut`, the inverse of
 `matchesShortcut`), Esc or leaving it stops, and the row says what happened (`pressOutcome`). Recording offers Remove
 the shortcut. A changed row's name is heavier, its keys take the accent color, and it has a button that gives it its keys back (`resetOutcome`), which asks
