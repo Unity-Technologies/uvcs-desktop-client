@@ -39,15 +39,18 @@ import { openChooseDownloads } from '../partialWorkspace/ChooseDownloadsDialog';
 import { choosesDownloadsFor } from '../partialWorkspace/workspaceDownloads';
 import { hotkey } from '../../lib/shortcutRegistry';
 
-export const FILE_SHORTCUTS = {
-  rename: hotkey('rename'),
-  delete: hotkey('deleteFile'),
-  newFile: hotkey('newFile'),
-  newFolder: hotkey('newFolder'),
-  history: hotkey('fileHistory'),
-  annotate: hotkey('annotate'),
-  showChanges: hotkey('listDiff'),
-};
+/** The keys of a file's actions, read when its menu or commands are built: a person may change some of them. */
+export function fileShortcuts() {
+  return {
+    rename: hotkey('rename'),
+    delete: hotkey('deleteFile'),
+    newFile: hotkey('newFile'),
+    newFolder: hotkey('newFolder'),
+    history: hotkey('fileHistory'),
+    annotate: hotkey('annotate'),
+    showChanges: hotkey('listDiff'),
+  };
+}
 
 /**
  * The file shown beside the tree as `view`, its diff or its annotations, and selected in the tree: from Go to file's
@@ -93,6 +96,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
 
   const single = items.length === 1 ? items[0]! : null;
   const lock = single ? locks.get(single.path) : undefined;
+  const keys = fileShortcuts();
   const { privateItems, checkoutCandidates, checkinable, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const views = single && itemViews(single, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
@@ -115,13 +119,13 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkoutItems(workspacePath, checkoutCandidates)),
     checkinable.length > 0 && menuAction('checkin', () => void checkinItems(workspacePath, checkinable, pendingChanges.changes), { label: 'Check in…' }),
     unloadedXlink && menuAction('loadXlink', () => void loadXlinkFiles(workspacePath, unloadedXlink.path)),
-    single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
-    single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
+    single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: keys.newFile }),
+    single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: keys.newFolder }),
     xlinkDirectory !== null && menuAction('newXlink', () => createXlink(workspacePath, xlinkDirectory)),
     single && choosesDownloads && menuAction('chooseDownloads', () => openChooseDownloads(workspacePath, single.path)),
-    single && views?.changes && menuAction('changes', () => showSelected(workspacePath, single.path, 'diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
-    single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
-    single && views?.annotate && menuAction('annotate', () => showSelected(workspacePath, single.path, 'annotate'), { shortcut: FILE_SHORTCUTS.annotate }),
+    single && views?.changes && menuAction('changes', () => showSelected(workspacePath, single.path, 'diff'), { shortcut: keys.showChanges }),
+    single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: keys.history }),
+    single && views?.annotate && menuAction('annotate', () => showSelected(workspacePath, single.path, 'annotate'), { shortcut: keys.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     toolsSubmenu(workspacePlace(workspacePath), items.map((item) => toolSubject.item(absolutePath(workspacePath, item.path)))),
@@ -129,7 +133,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     !hasRoot && cutAction(workspacePath, items),
     itemCopySubmenu(workspacePath, items.map((item) => item.path), single ? itemLinkText(workspacePath, single) : null),
     pasteAction(workspacePath, items),
-    single && !hasRoot && menuAction('rename', () => void renameItem(workspacePath, single), { shortcut: FILE_SHORTCUTS.rename }),
+    single && !hasRoot && menuAction('rename', () => void renameItem(workspacePath, single), { shortcut: keys.rename }),
     editedXlink && menuAction('editXlink', () => void editXlink(workspacePath, editedXlink, isAdded(pendingChanges, editedXlink.path))),
     typedFiles.length > 0 &&
       menuSubmenu('revisionType', [
@@ -142,6 +146,6 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       menuAction('undo', () => void undoChanges(workspacePath, undoable), {
         label: undoable.length === 1 ? 'Undo changes…' : `Undo ${undoable.length} changes…`,
       }),
-    !hasRoot && menuAction('delete', () => void deleteItems(workspacePath, items), { shortcut: FILE_SHORTCUTS.delete }),
+    !hasRoot && menuAction('delete', () => void deleteItems(workspacePath, items), { shortcut: keys.delete }),
   ]);
 }

@@ -50,6 +50,19 @@ describe('shortcut registry', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('never keeps the keys of a shortcut a person may change in a constant read once, as its module loads', () => {
+    const customizable = Object.entries(SHORTCUTS).filter(([, shortcut]) => (shortcut as ShortcutDefinition).customizable).map(([id]) => id);
+    const offenders = filesUnder(RENDERER, isAppSource)
+      .map((path) => ({ path, text: readFileSync(path, 'utf8') }))
+      .filter(({ text }) => /\bhotkeys?\(/.test(text))
+      .flatMap(({ path, text }) =>
+        moduleConstants(text)
+          .filter(({ initializer }) => readsKeysOf(initializer, customizable))
+          .map(({ line }) => `${relative(RENDERER, path)}:${line}`),
+      );
+    expect(offenders).toEqual([]);
+  });
+
   it('puts every shortcut in a known area', () => {
     for (const shortcut of Object.values(SHORTCUTS)) expect(SHORTCUT_AREAS).toContain(shortcut.area);
   });
@@ -161,6 +174,20 @@ function memosIn(text: string): { line: number; body: string; deps: string }[] {
     const open = match.index + match[0].length - 1;
     const body = text.slice(open, closingBracket(text, open) + 1);
     return { line: text.slice(0, match.index).split('\n').length, body, deps: body.slice(body.lastIndexOf('[')) };
+  });
+}
+
+/**
+ * Each constant a module declares at its top level with a value (not a function): its line and what it's set to,
+ * up to the next line at the top level.
+ */
+function moduleConstants(text: string): { line: number; initializer: string }[] {
+  const lines = text.split('\n');
+  return lines.flatMap((line, index) => {
+    const declared = /^(?:export )?const \w+(?::[^=]+)? = (.*)$/.exec(line);
+    if (!declared || /^(?:\([^)]*\)|\w+) =>|^function\b|^async\b/.test(declared[1]!)) return [];
+    const end = lines.findIndex((next, nextIndex) => nextIndex > index && /^\S/.test(next));
+    return [{ line: index + 1, initializer: lines.slice(index, end === -1 ? undefined : end).join('\n') }];
   });
 }
 
