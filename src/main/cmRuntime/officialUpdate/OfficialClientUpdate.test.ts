@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -56,10 +56,12 @@ interface Setup {
   operationRuns?: boolean;
   /** False in a development build, sharing the folder with the packaged app: a drop deletes nothing. */
   discardDeletes?: boolean;
+  /** The folder an earlier launch downloaded into; a new one by default. */
+  folder?: string;
 }
 
-async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694', operationRuns = false, discardDeletes = true }: Setup = {}) {
-  const folder = join(await mkdtemp(join(tmpdir(), 'official-update-')), 'update');
+async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694', operationRuns = false, discardDeletes = true, folder: earlierFolder }: Setup = {}) {
+  const folder = earlierFolder ?? join(await mkdtemp(join(tmpdir(), 'official-update-')), 'update');
   const calls: string[] = [];
   const states: (OfficialUpdate | null)[] = [];
   const tools: OfficialUpdateTools = {
@@ -150,6 +152,48 @@ describe('OfficialClientUpdate', () => {
     expect(await update.install({ path: '/Applications/PlasticSCM.app/Contents/MacOS/cm', version: '11.0.16.9000' }, FLOOR)).toBe(true);
     const zip = join(folder, 'unity-vcs-11.0.16.10694-cloud-macos-arm64.pkg.zip');
     expect(calls).toEqual([`unpack ${zip}`, `check ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')}`, 'hold cm', `run ${join(`${zip}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg')} 11.0.16.10694`, 'read version', 'resume cm']);
+  });
+
+  describe("the macOS package an earlier launch unpacked", () => {
+    const MAC_INSTALLED: InstalledCm = { path: '/Applications/PlasticSCM.app/Contents/MacOS/cm', version: '11.0.16.9000' };
+    const macSite = () => {
+      const site = fakeSite();
+      const fetch: Fetch = (url, init) => site.fetch(url.includes('/for/cloud/macos-arm64') ? LOOKUP : url, init);
+      return { fetch, requests: site.requests };
+    };
+    const zipIn = (folder: string) => join(folder, 'unity-vcs-11.0.16.10694-cloud-macos-arm64.pkg.zip');
+    const packageIn = (folder: string) => join(`${zipIn(folder)}.unpacked`, 'unity-vcs-osx-arm64-11.0.16.10694.pkg');
+
+    // Installer.app, left open by an earlier launch, still reads that package: replacing it under it ends the install
+    // with "There was no software found to install".
+    it('is kept as it is, never unpacked again under an Installer.app that may still have it open', async () => {
+      const first = await setup({ site: macSite(), platform: 'macos-arm64' });
+      await first.update.prepare(MAC_INSTALLED, FLOOR);
+      await writeFile(packageIn(first.folder), 'the package Installer.app has open');
+      const next = await setup({ site: macSite(), platform: 'macos-arm64', folder: first.folder });
+      await next.update.prepare(MAC_INSTALLED, FLOOR);
+      expect(await next.update.install(MAC_INSTALLED, FLOOR)).toBe(true);
+      expect(next.calls).toEqual([`check ${packageIn(first.folder)}`, 'hold cm', `run ${packageIn(first.folder)} 11.0.16.10694`, 'read version', 'resume cm']);
+    });
+
+    it('is unpacked again when that launch stopped partway through unpacking it', async () => {
+      const first = await setup({ site: macSite(), platform: 'macos-arm64' });
+      await first.update.prepare(MAC_INSTALLED, FLOOR);
+      await rm(`${zipIn(first.folder)}.unpacked`, { recursive: true });
+      await mkdir(`${zipIn(first.folder)}.unpacking`);
+      const next = await setup({ site: macSite(), platform: 'macos-arm64', folder: first.folder });
+      expect(await next.update.install(MAC_INSTALLED, FLOOR)).toBe(true);
+      expect(next.calls[0]).toBe(`unpack ${zipIn(first.folder)}`);
+    });
+
+    it('is unpacked again when its package is gone', async () => {
+      const first = await setup({ site: macSite(), platform: 'macos-arm64' });
+      await first.update.prepare(MAC_INSTALLED, FLOOR);
+      await rm(packageIn(first.folder));
+      const next = await setup({ site: macSite(), platform: 'macos-arm64', folder: first.folder });
+      expect(await next.update.install(MAC_INSTALLED, FLOOR)).toBe(true);
+      expect(next.calls[0]).toBe(`unpack ${zipIn(first.folder)}`);
+    });
   });
 
   describe('fails, saying why, once the user asked', () => {
