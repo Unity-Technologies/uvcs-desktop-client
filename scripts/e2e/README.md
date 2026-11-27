@@ -161,7 +161,11 @@ an axis a box scrolls, it clips where its content ends.
 
 A control whose ring is cut draws it inside (`--focus-ring-inset`, rows and header cells), or the box clipping it
 leaves `--focus-ring-reach` around it, a padding given back by a negative margin (a meta row, a text cut short). It
-sees only what the steps show: a control that shows elsewhere (a comment in the code) is checked by hand.
+sees only what the steps show, at the smoke test's window size: a control that shows elsewhere (a comment in the
+code) or only in a narrow window (a details header's wrapped line) is checked by hand. Nor does it see a ring drawn by
+a `::after` (the code panes', a canvas's), by a wrapper's `:focus-within`, or a clip made by a `transform`, `filter`
+or `contain` that `offsetParent` doesn't report. It fails when forcing styles none of the controls shown, so a change
+in how Chromium forces `:focus-visible` can't pass every step unchecked.
 `CLIPPED_RING_ALLOWED` lists what may be cut, each by a selector and why; never add one to get a step through.
 
 ## The fake `cm` (`fakeCm/`)

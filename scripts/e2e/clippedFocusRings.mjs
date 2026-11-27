@@ -1,7 +1,7 @@
 // What the smoke test checks after every step (scripts/e2e/README.md "Cut-off focus rings"): the keyboard's focus ring
 // around every control shown is whole. A ring drawn outside its control (`--focus-ring-visible`, an outline) is cut
 // where a box around it clips (`overflow` other than `visible`) and doesn't leave room for it: the sidebar's rows and
-// the fold button of a review comment in the code once showed rings cut on a side. Rows and panes draw theirs inside
+// the fold button of a review comment in the code showed rings cut on a side. Rows and panes draw theirs inside
 // (`--focus-ring-inset`, docs/architecture/renderer.md "Focus"), which nothing clips.
 //
 // Each control is styled as if the keyboard had focused it (`CSS.forcePseudoState`, `:focus-visible`), all at once:
@@ -107,26 +107,23 @@ function measureRings({ allowed, tolerance }) {
   };
 
   const found = [];
-  for (const element of document.querySelectorAll('[data-ring-probe]')) found.push(...cutsOf(element));
+  let ringed = 0;
   // Shadow roots (the code's, Pierre's) hold controls too.
-  const shadowHosts = [];
-  const collectHosts = (root) => {
+  const visit = (root) => {
     for (const element of root.querySelectorAll('*')) {
-      if (element.shadowRoot) {
-        shadowHosts.push(element.shadowRoot);
-        collectHosts(element.shadowRoot);
-      }
+      if (element.shadowRoot) visit(element.shadowRoot);
+      if (element.hasAttribute('data-ring-probe')) found.push(...cutsOf(element));
     }
   };
-  collectHosts(document);
-  for (const root of shadowHosts) for (const element of root.querySelectorAll('[data-ring-probe]')) found.push(...cutsOf(element));
-  return found;
+  visit(document);
+  return { found, ringed };
 
   function cutsOf(element) {
     if (allowed && element.closest(allowed)) return [];
     const style = getComputedStyle(element);
     const focused = `${style.boxShadow}|${style.outlineStyle}|${style.outlineWidth}|${style.outlineOffset}`;
     if (focused === element.ringProbeAtRest) return [];
+    ringed += 1;
     const reach = ringReach(style);
     if (Object.values(reach).every((distance) => distance <= 0)) return [];
     const box = element.getBoundingClientRect();
@@ -200,8 +197,12 @@ export async function findClippedFocusRings(page, allowed) {
     const { root } = await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
     const ids = markedNodeIds(root);
     // A control the app took away meanwhile (a toast gone) is no longer shown: its node is unknown, and it's left out.
-    await Promise.allSettled(ids.map((nodeId) => cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['focus-visible'] })));
-    const found = await page.evaluate(measureRings, { allowed: allowed.map(({ selector }) => selector).join(', '), tolerance: TOLERANCE_PX });
+    const forced = await Promise.allSettled(ids.map((nodeId) => cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['focus-visible'] })));
+    const { found, ringed } = await page.evaluate(measureRings, { allowed: allowed.map(({ selector }) => selector).join(', '), tolerance: TOLERANCE_PX });
+    // Forcing that styles nothing would pass every step having checked nothing: a window shows some control with a ring.
+    if (!forced.some(({ status }) => status === 'fulfilled') || ringed === 0) {
+      throw new Error(`the focus ring check styled none of the ${ids.length} controls shown as focused: CSS.forcePseudoState no longer works as it did`);
+    }
     await Promise.allSettled(ids.map((nodeId) => cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] })));
     return found;
   } finally {
