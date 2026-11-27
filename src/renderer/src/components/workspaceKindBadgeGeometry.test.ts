@@ -12,7 +12,11 @@ describe('the workspace kind badge geometry', () => {
     expect(BADGE_DISC.radius + BADGE_DISC.rim / 2).toBeLessThanOrEqual(BADGE_VIEW_BOX / 2);
   });
 
-  it('keeps the glyph inside the rim', () => {
-    expect(BADGE_GLYPH.x).toBeGreaterThanOrEqual(BADGE_DISC.center - BADGE_DISC.radius + BADGE_DISC.rim / 2);
+  it('keeps the whole glyph inside the rim, on both axes', () => {
+    const inner = BADGE_DISC.radius - BADGE_DISC.rim / 2;
+    for (const start of [BADGE_GLYPH.x, BADGE_GLYPH.y]) {
+      expect(start).toBeGreaterThanOrEqual(BADGE_DISC.center - inner);
+      expect(start + BADGE_GLYPH.size).toBeLessThanOrEqual(BADGE_DISC.center + inner);
+    }
   });
 });
