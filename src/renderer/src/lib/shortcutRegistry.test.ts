@@ -7,7 +7,6 @@ import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition } from '@shared/shortcuts/shortcutRegistry';
 
 const RENDERER = join(__dirname, '..');
-const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');
 
 /** Shortcuts written as literals: a modifier chord anywhere, or any key given to a shortcut prop, field or hook. */
 const LITERAL_SHORTCUT = [
@@ -49,22 +48,6 @@ describe('shortcut registry', () => {
           .map(({ line }) => `${relative(RENDERER, path)}:${line}`),
       );
     expect(offenders).toEqual([]);
-  });
-
-  it('shows the native menu accelerators of the keys the renderer binds', () => {
-    // One accelerator for every OS, or one per OS where their keys differ (`isMac ? '…' : '…'`).
-    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', (?:'([^']+)'|isMac \? '([^']+)' : '([^']+)')[,)]/g)];
-    expect(items.length).toBeGreaterThan(0);
-    expect(items.some(([, , , onMac]) => onMac !== undefined)).toBe(true);
-    for (const [, commandId, everywhere, onMac, offMac] of items) {
-      const shortcut = Object.values(SHORTCUTS).find((candidate) => 'commandId' in candidate && candidate.commandId === commandId);
-      expect(shortcut, commandId).toBeDefined();
-      for (const mac of [true, false]) {
-        // As the source writes it: a backslash key is escaped there.
-        const accelerator = (everywhere ?? (mac ? onMac : offMac))!.replaceAll('\\\\', '\\');
-        expect(toAccelerator(shortcutKeys(shortcut!, mac)[0]!), commandId).toBe(accelerator);
-      }
-    }
   });
 
   it('puts every shortcut in a known area', () => {
@@ -192,12 +175,4 @@ function closingBracket(text: string, open: number): number {
 
 function readsKeysOf(body: string, ids: readonly string[]): boolean {
   return [...body.matchAll(/\bhotkeys?\('(\w+)'\)/g)].some(([, id]) => ids.includes(id!));
-}
-
-function toAccelerator(shortcut: string): string {
-  const names: Record<string, string> = { mod: 'CmdOrCtrl', shift: 'Shift', alt: 'Alt', ctrl: 'Ctrl' };
-  return shortcut
-    .split('+')
-    .map((key) => names[key] ?? key.toUpperCase())
-    .join('+');
 }

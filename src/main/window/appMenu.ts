@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import type { CmRuntime } from '../cmRuntime/CmRuntime';
+import { keymapOf } from '@shared/shortcuts/keymap';
 import { windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import { coalesced } from '../system/coalesced';
@@ -52,18 +53,24 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
 /**
  * The menu bar's installer: it lists the windows, so it installs it again when they open, close, get focus or change
  * title, once for each burst of such changes (opening a window focuses it and sets its title: a build takes 3-5 ms).
- * The first window opening installs it first. `settings` keeps the zoom its View menu sets (`zoomPage`).
+ * The first window opening installs it first; a shortcut a person changes (Settings ▸ Keyboard) installs it again, as
+ * its items show their command's keys. `settings` keeps the zoom its View menu sets (`zoomPage`).
  */
-export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: Pick<SettingsStore, 'update'>): () => void {
-  return coalesced(() => installAppMenu(windows, updates, logFile, cmRuntime, settings));
+export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: MenuSettings): () => void {
+  const install = coalesced(() => installAppMenu(windows, updates, logFile, cmRuntime, settings));
+  settings.onChanged((_settings, changes) => 'customShortcuts' in changes && app.isReady() && install());
+  return install;
 }
 
+type MenuSettings = Pick<SettingsStore, 'get' | 'update' | 'onChanged'>;
+
 /** `logFile` is the log file Help ▸ Show Log Files shows (`appLog`); `cmRuntime` the `cm` Show Command Line Client shows. */
-function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: Pick<SettingsStore, 'update'>): void {
+function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates, logFile: string, cmRuntime: Pick<CmRuntime, 'revealCm'>, settings: MenuSettings): void {
   const template = appMenuTemplate({
     platform: process.platform,
     isPackaged: app.isPackaged,
     commandItem,
+    keymap: keymapOf(settings.get().customShortcuts, process.platform === 'darwin'),
     windowItems: windowItems(windows),
     newWindow: () => windows.open(),
     openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
