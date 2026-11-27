@@ -68,5 +68,7 @@ describe('partialSwitchDisabledReason', () => {
   it('refuses a branch or a changeset of another repository', () => {
     expect(partialSwitchDisabledReason('br:/main@other@local', 'game')).toBe('otherRepository');
     expect(partialSwitchDisabledReason('cs:12@other@local', 'game')).toBe('otherRepository');
+    expect(partialSwitchDisabledReason('lb:v1@other@local', 'game')).toBe('otherRepository');
+    expect(partialSwitchDisabledReason('sh:4@other@local', 'game')).toBe('otherRepository');
   });
 });
