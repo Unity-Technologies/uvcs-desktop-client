@@ -44,9 +44,10 @@ textarea {
 }
 
 /* Text fields show focus with their own border (see Field.module.css); borderless ones, such as
-   the search box of a popover, only need the caret. */
+   the search box of a popover, only need the caret. A comment editor's text (CodeMirror's) is a field's too. */
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+[contenteditable='true']:focus-visible {
   box-shadow: none;
 }
 
