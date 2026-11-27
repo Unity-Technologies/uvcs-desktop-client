@@ -48,7 +48,7 @@ export function LeftChangesBanner() {
         <strong className={styles.title}>{leftChangesTitle(newest)}</strong>
         <span className={styles.detail}>{leftChangesDetail(newest)}</span>
       </div>
-      <SplitButton variant="primary" loading={busy} menu={menu} menuLabel="More options" onClick={() => void run(() => restoreLeftChanges(workspacePath, newest))}>
+      <SplitButton variant="primary" size="small" loading={busy} menu={menu} menuLabel="More options" onClick={() => void run(() => restoreLeftChanges(workspacePath, newest))}>
         Restore
       </SplitButton>
     </div>

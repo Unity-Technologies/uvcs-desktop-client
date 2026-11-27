@@ -28,7 +28,7 @@ interface SplitButtonProps {
 }
 
 /** A button doing the usual thing, with the alternatives behind a caret joined to it. */
-export function SplitButton({ children, onClick, menu, menuLabel, variant = 'secondary', size = 'small', icon, loading, flat, disabled, mainDisabled, tip, tipSub, shortcut }: SplitButtonProps) {
+export function SplitButton({ children, onClick, menu, menuLabel, variant = 'secondary', size, icon, loading, flat, disabled, mainDisabled, tip, tipSub, shortcut }: SplitButtonProps) {
   return (
     <div className={styles.split}>
       {/* aria-disabled rather than disabled, so hovering still shows the tooltip saying why it can't be used. */}
