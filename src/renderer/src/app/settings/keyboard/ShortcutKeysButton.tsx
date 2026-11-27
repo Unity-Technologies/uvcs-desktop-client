@@ -1,6 +1,8 @@
 import { forwardRef, Fragment, type KeyboardEvent } from 'react';
-import { pressedShortcut } from '../../../lib/shortcuts';
+import { TAKES_ESCAPE } from '../../../lib/modalDialog';
+import { isMac } from '../../../lib/platform';
 import { Kbd } from '../../../ui/Kbd';
+import { recordedKey } from './keyboardRows';
 import styles from './KeyboardPane.module.css';
 
 interface ShortcutKeysButtonProps {
@@ -13,8 +15,8 @@ interface ShortcutKeysButtonProps {
 }
 
 /**
- * A shortcut's keys, as a button that records new ones: clicked, it takes the next keys pressed (`pressedShortcut`)
- * before anything else does; Esc, Tab or leaving it stops.
+ * A shortcut's keys, as a button that records new ones: clicked, it takes the next keys pressed (`recordedKey`)
+ * before anything else does; Esc (which leaves Settings open: `TAKES_ESCAPE`), Tab or leaving it stops.
  */
 export const ShortcutKeysButton = forwardRef<HTMLButtonElement, ShortcutKeysButtonProps>(function ShortcutKeysButton(
   { label, keys, recording, onRecord, onPressed, onStop },
@@ -22,12 +24,12 @@ export const ShortcutKeysButton = forwardRef<HTMLButtonElement, ShortcutKeysButt
 ) {
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
     if (!recording) return;
-    if (event.key === 'Tab') return onStop();
+    const pressed = recordedKey(event.nativeEvent, isMac);
+    if (pressed.action === 'leave') return onStop();
     event.preventDefault();
     event.stopPropagation();
-    if (event.key === 'Escape') return onStop();
-    const key = pressedShortcut(event.nativeEvent);
-    if (key) onPressed(key);
+    if (pressed.action === 'stop') onStop();
+    else if (pressed.action === 'record') onPressed(pressed.key);
   };
 
   return (
@@ -36,6 +38,7 @@ export const ShortcutKeysButton = forwardRef<HTMLButtonElement, ShortcutKeysButt
       type="button"
       className={styles.keysButton}
       data-recording={recording || undefined}
+      {...(recording && TAKES_ESCAPE)}
       aria-label={recording ? `Press the new keys for ${label}` : `Change the keys of ${label}`}
       onClick={recording ? undefined : onRecord}
       onKeyDown={onKeyDown}

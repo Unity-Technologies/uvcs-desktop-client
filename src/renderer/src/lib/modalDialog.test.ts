@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isInModalDialog, isModalDialogOpen, keysReach, windowShortcutMayRun } from './modalDialog';
+import { escapeTakenBy, isInModalDialog, isModalDialogOpen, keysReach, windowShortcutMayRun } from './modalDialog';
 
 /** A document holding the elements matching the given selectors. */
 const documentWith = (...present: string[]) => ({ querySelector: (selector: string) => (present.includes(selector) ? ({} as Element) : null) });
@@ -44,5 +44,18 @@ describe('keysReach', () => {
     expect(keysReach(within, dialog)).toBe(true);
     expect(keysReach(outside, dialog)).toBe(false);
     expect(keysReach(null, dialog)).toBe(false);
+  });
+});
+
+describe('escapeTakenBy', () => {
+  const element = (takes: boolean) => ({ closest: (selector: string) => (takes && selector === '[data-takes-escape]' ? {} : null) }) as unknown as Element;
+
+  it('leaves Esc to an element that takes it itself, so its dialog stays open', () => {
+    expect(escapeTakenBy(element(true))).toBe(true);
+  });
+
+  it('leaves Esc to the dialog anywhere else', () => {
+    expect(escapeTakenBy(element(false))).toBe(false);
+    expect(escapeTakenBy(null)).toBe(false);
   });
 });
