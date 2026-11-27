@@ -36,4 +36,22 @@ describe('movedTitleMarks', () => {
   it('marks only what a move out of a folder removed', () => {
     expect(movedTitleMarks('app.ts', 'src/app.ts')).toEqual({ path: [], from: [0, 1, 2, 3] });
   });
+
+  it('marks both whole paths when they share no folder', () => {
+    expect(movedTitleMarks('b/y.ts', 'a/x.ts')).toEqual({ path: [0, 1, 2, 3, 4, 5], from: [0, 1, 2, 3, 4, 5] });
+  });
+
+  it('marks the names of a rename at the top of the workspace or under the root', () => {
+    expect(movedTitleMarks('b.ts', 'a.ts')).toEqual({ path: [0, 1, 2, 3], from: [0, 1, 2, 3] });
+    expect(movedTitleMarks('/b.ts', '/a.ts')).toEqual({ path: [1, 2, 3, 4], from: [0, 1, 2, 3] });
+    expect(movedTitleMarks('/root/b.ts', '/root/a.ts')).toEqual({ path: [6, 7, 8, 9], from: [0, 1, 2, 3] });
+  });
+
+  it('marks the old name when the shared folder is spelled in another Unicode form in each path', () => {
+    const oldPath = 'Café/x.ts';
+    const path = 'Café/y.ts';
+    const marks = movedTitleMarks(path, oldPath);
+    expect(marked(path, marks.path)).toBe('y.ts');
+    expect(marked(movedFrom(path, oldPath), marks.from)).toBe('x.ts');
+  });
 });
