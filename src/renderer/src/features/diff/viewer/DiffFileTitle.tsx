@@ -12,25 +12,46 @@ interface DiffFileTitleProps {
 }
 
 /**
- * The file a diff shows, in its header: its status, its path and, moved, where it came from ("from old.ts"). The path
- * and the M show the whole move on hover; what it changed is tinted in both, as there (`movedTitleMarks`, `PathMoveLines`).
+ * The file a diff shows, in its header: its status and its path. A moved file reads as its hover does, where it was
+ * first and where it is after ("from old.ts to src/new.ts"), what the move changed tinted in each (`movedTitleMarks`,
+ * `PathMoveLines`). The path and the M show the whole move on hover.
  */
 export function DiffFileTitle({ status, path, oldPath }: DiffFileTitleProps) {
   const marks = oldPath !== undefined ? movedTitleMarks(path, oldPath) : undefined;
+  const pathLabel = (
+    <PathLabel
+      path={path}
+      oldPath={oldPath}
+      fitContent={oldPath !== undefined}
+      moveMarks={marks && { positions: marks.path, tint: 'added' }}
+    />
+  );
   return (
     <>
       <span className={styles.status}>
         <ItemStatusMark status={status} move={oldPath !== undefined ? { from: oldPath, to: path } : undefined} />
       </span>
       <span className={styles.paths}>
-        <PathLabel path={path} oldPath={oldPath} fitContent={oldPath !== undefined} moveMarks={marks && { positions: marks.path, tint: 'added' }} />
-        {oldPath !== undefined && (
-          <span className={styles.from}>
-            from
-            <span className={styles.fromPath}>
-              <PathLabel path={movedFrom(path, oldPath)} fitContent tooltip={false} moveMarks={marks && { positions: marks.from, tint: 'removed' }} />
+        {oldPath === undefined ? (
+          pathLabel
+        ) : (
+          <>
+            <span className={styles.moveEnd}>
+              from
+              <span className={styles.movePath}>
+                <PathLabel
+                  path={movedFrom(path, oldPath)}
+                  fitContent
+                  tooltip={false}
+                  moveMarks={marks && { positions: marks.from, tint: 'removed' }}
+                />
+              </span>
             </span>
-          </span>
+            <span className={styles.moveEnd}>
+              to
+              <span className={styles.movePath}>{pathLabel}</span>
+            </span>
+          </>
         )}
       </span>
     </>

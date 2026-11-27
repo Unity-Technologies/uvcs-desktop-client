@@ -1,7 +1,7 @@
 import { pathChangeSegments, type PathPart } from '../../../lib/pathChangeSegments';
 
 /**
- * Where a moved file came from, as its diff's header says it after the path: the old name alone when the file stayed
+ * Where a moved file came from, as its diff's header says it before the path: the old name alone when the file stayed
  * in its folder (a rename), the old path when it changed folders.
  */
 export function movedFrom(path: string, oldPath: string): string {
