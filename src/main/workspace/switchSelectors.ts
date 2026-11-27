@@ -44,10 +44,10 @@ export function leaveDisabledReason(source: WorkspaceSelector): LeaveDisabledRea
   return source.kind === 'shelve' ? 'shelveSource' : undefined;
 }
 
-/** A partial workspace switches only to a branch of its own repository: `cm partial switch` takes nothing else. */
+/** A partial workspace switches only to a branch or a changeset of its own repository: `cm partial switch` takes nothing else. */
 export function partialSwitchDisabledReason(targetSpec: string, workspaceRepositoryName: string): PartialSwitchDisabledReason | undefined {
   const { selector, repositoryName } = parseSelectorSpec(targetSpec);
-  if (selector.kind !== 'branch') return selector.kind;
   if (repositoryName && repositoryName !== workspaceRepositoryName) return 'otherRepository';
+  if (selector.kind === 'label' || selector.kind === 'shelve') return selector.kind;
   return undefined;
 }

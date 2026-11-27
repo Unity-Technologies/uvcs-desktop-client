@@ -28,15 +28,22 @@ const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
 const ALREADY_WHOLE = 'This workspace already has the whole branch.';
 const CANT_LEAVE_ON_WHOLE_BRANCH = "Changes can't be left on a shelve as the whole branch downloads. Bring them along, or undo them.";
-// A changeset is "yet": the official Gluon client keeps a partial workspace on one, which `cm partial switch` can't do
-// so far (docs/features/shelves-and-switching.md). It takes neither a label, a shelve nor another repository's branch.
-// Each refusal ends with the way out: downloading the whole branch (`downloadWholeBranch`) makes the workspace standard.
-const PARTIAL_REFUSED: Record<PartialSwitchDisabledReason, string> = {
-  changeset: "A partial workspace can't switch to a changeset yet. To switch to one, download the whole branch first, from the workspace’s menu.",
-  label: "A partial workspace can't switch to a label. To switch to one, download the whole branch first, from the workspace’s menu.",
-  shelve: "A partial workspace can't switch to a shelve. To switch to one, download the whole branch first, from the workspace’s menu.",
-  otherRepository: "A partial workspace can't switch to a branch of another repository. To switch to one, download the whole branch first, from the workspace’s menu.",
+// `cm partial switch` takes a branch or a changeset of the workspace's repository, and neither a label, a shelve nor
+// anything of another repository (docs/features/shelves-and-switching.md). Each refusal ends with the way out:
+// downloading the whole branch (`downloadWholeBranch`) makes the workspace standard, and the workspace's menu offers
+// it only on a branch (`downloadsWholeBranch`), so a workspace on a changeset is told to switch to a branch first.
+const PARTIAL_REFUSED_TARGET: Record<PartialSwitchDisabledReason, string> = {
+  label: 'a label',
+  shelve: 'a shelve',
+  otherRepository: 'another repository',
 };
+
+function partialRefusal(reason: PartialSwitchDisabledReason, onBranch: boolean): string {
+  const wayOut = onBranch
+    ? 'download the whole branch first, from the workspace’s menu.'
+    : 'switch to a branch, then download the whole branch from the workspace’s menu.';
+  return `A partial workspace can't switch to ${PARTIAL_REFUSED_TARGET[reason]}. To switch to one, ${wayOut}`;
+}
 
 export interface SwitchDependencies extends ShelveFlowDependencies {
   /** Whether to restore changes left on the target as the switch arrives (`restoreLeftChangesAutomatically`). */
@@ -100,7 +107,7 @@ type SwitchingWorkspace = WorkspaceIdentity & { kind: WorkspaceKind; switchesAs:
 function assertPartialCanSwitch(kind: WorkspaceKind, targetSpec: string, workspace: WorkspaceIdentity): void {
   if (kind !== 'partial') return;
   const reason = partialSwitchDisabledReason(targetSpec, workspace.repositoryName);
-  if (reason) throw new Error(PARTIAL_REFUSED[reason]);
+  if (reason) throw new Error(partialRefusal(reason, workspace.selector.kind === 'branch'));
 }
 
 async function switchFrom(

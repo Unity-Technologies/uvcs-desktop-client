@@ -51,7 +51,7 @@ export function partialUpdateCommands(paths: readonly string[]): ProgressingComm
 }
 
 /**
- * Switches the workspace to `targetSpec`: `cm partial switch` in a partial workspace, which only switches to branches.
+ * Switches the workspace to `targetSpec`: `cm partial switch` in a partial workspace, which only switches to a branch or a changeset.
  * A standard switch of a partial workspace makes it standard (`downloadWholeBranch` asks it with `kind` 'standard').
  */
 export function switchCommand(targetSpec: string, kind: WorkspaceKind): ProgressingCommand {

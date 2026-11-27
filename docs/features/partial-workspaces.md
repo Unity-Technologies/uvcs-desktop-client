@@ -131,11 +131,11 @@ picks the update command, refreshes as after any update (`isAffectedByCheckinOrU
 
 ## Making a partial workspace standard
 
-**Download the whole branch…** makes a partial workspace standard, so it can switch to a changeset, label, shelve or
+**Download the whole branch…** makes a partial workspace standard, so it can switch to a label, a shelve or
 another repository, and merge. It's offered on a partial workspace on a branch (`downloadsWholeBranch`): the current
 workspace pill's menu (`currentWorkspaceMenu`, the `downloadWholeBranch` action) and the command palette
 (`useWorkspaceCommands`, `workspace.downloadWholeBranch`). A switch the partial workspace refuses says to download the
-whole branch first (`PARTIAL_REFUSED` in `switchWithChanges.ts`), so the way back is named where it's needed.
+whole branch first (`partialRefusal` in `switchWithChanges.ts`), so the way back is named where it's needed.
 
 `cm` has no command to convert a workspace back, and `cm update` refuses a partial workspace with checkouts: a standard
 `cm switch` to the branch the workspace is on downloads everything it holds and makes it standard
@@ -175,7 +175,7 @@ label first, as a repository with no workspace does (`newLabel`, `labelsWorkspac
 workspace's own. Files offers no New xlink… (`newXlinkDirectoryOf`): `cm partial checkin` refuses a new xlink,
 whatever it points to, even downloaded first, and `cm checkin` refuses a partial workspace; an xlink already checked
 in, and downloaded, is edited and checked in there as anywhere. It downloads an xlink whole, as a file, when Choose
-what to download… picks it, so Files offers no Load its files on an xlink there (`unloadedXlinkOf`). A switch to a changeset, a label or a shelve stays offered and
+what to download… picks it, so Files offers no Load its files on an xlink there (`unloadedXlinkOf`). A switch to a label or a shelve stays offered and
 says to download the whole branch first ("Making a partial workspace standard").
 
 ## Staying partial
