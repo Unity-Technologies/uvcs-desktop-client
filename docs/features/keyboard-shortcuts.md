@@ -39,7 +39,10 @@ person who changed nothing keeps nothing, and a later version's new default keys
 Two shortcuts clash (`clash`) when one key would run both: one of the whole window (General) and any other, or two of
 areas one screen shows together (`SHOWN_TOGETHER`), since each binds its keys while it shows. Lists, Diff and Text are
 bound inside many views (Changes shows a diff beside its list, and the diff's text), so their keys meet those of every
-view they show in; a new view that shows them joins that table. A comment field's keys take effect only inside a focused
+view they show in; a new view that shows them joins that table. A view shows a diff or an annotation, never both, so
+each is a row of its own. Shortcuts the registry gives one key on purpose never clash (`sharedByDesign`): they're
+bound where the other isn't (Next change in a diff and Next conflict on the merge page, ⌥↓ both), so a shortcut's own
+keys are always free to take back; a test holds it for every shortcut that can change. A comment field's keys take effect only inside a focused
 comment field, so they clash only among themselves. General lists a few keys used where they act (saving a comment,
 Shift held while dropping or opening); those aren't window-wide.
 
@@ -51,6 +54,8 @@ Shift held while dropping or opening); those aren't window-wide.
   character there, @ on a German Mac), a key a shortcut that can't change uses, or a key with no ⌘, ⌃, ⌥ (Ctrl or
   Alt) or function key for a shortcut whose own keys all have one or are function keys, since typing would run it (the
   step keys run while typing in the diff: F7 is one of them);
+- **unchanged** when it's one of the shortcut's keys already: a shortcut with two keys keeps both (Remove the shortcut,
+  then press one, to keep only it);
 - **allowed after asking**, when shortcuts it clashes with use the key: "Switch branch uses it." with Use it here, which
   takes the key from them (they keep their other keys);
 - **allowed**, saying which shortcuts of other views use it too, when there are any.
