@@ -321,24 +321,44 @@ export class OfficialClientUpdate {
     return release;
   }
 
-  /** Empties the folder of anything but this installer and its partial download: an older version's, left behind. */
+  /**
+   * Empties the folder of anything but this installer, its partial download and its unpacked package: an older
+   * version's, left behind, or an unpack cut short.
+   */
   private async keepOnly(name: string): Promise<void> {
     const { folder } = this.options;
     await mkdir(folder, { recursive: true });
+    const kept = new Set([name, `${name}.partial`, `${name}.unpacked`]);
     for (const entry of await readdir(folder)) {
-      if (entry !== name && entry !== `${name}.partial`) await rm(join(folder, entry), { recursive: true, force: true });
+      if (!kept.has(entry)) await rm(join(folder, entry), { recursive: true, force: true });
     }
   }
 
-  /** The `.pkg` the macOS installer's zip holds, unpacked next to it: exactly one, or it isn't the installer. */
+  /**
+   * The `.pkg` the macOS installer's zip holds, unpacked next to it: exactly one, or it isn't the installer. One an
+   * earlier try unpacked is kept as it is: Installer.app, which outlives the app, may still have it open, and a package
+   * replaced under it ends the install with "there was no software found to install". It's unpacked into a folder of
+   * its own first and renamed once whole, so a kept one is never an unpack cut short.
+   */
   private async unpackedPackage(zip: string): Promise<string> {
     const destination = `${zip}.unpacked`;
+    const kept = await this.packagesIn(destination);
+    if (kept.length === 1) return kept[0]!;
+    const unpacking = `${zip}.unpacking`;
     await rm(destination, { recursive: true, force: true });
-    await mkdir(destination);
-    await this.options.tools.unpack(zip, destination);
-    const packages = (await readdir(destination)).filter((entry) => entry.endsWith('.pkg'));
-    if (packages.length !== 1) throw new OfficialUpdateError('notSigned', `${zip} holds ${packages.length} installer packages, not one`);
-    return join(destination, packages[0]!);
+    await rm(unpacking, { recursive: true, force: true });
+    await mkdir(unpacking);
+    await this.options.tools.unpack(zip, unpacking);
+    await rename(unpacking, destination);
+    const unpacked = await this.packagesIn(destination);
+    if (unpacked.length !== 1) throw new OfficialUpdateError('notSigned', `${zip} holds ${unpacked.length} installer packages, not one`);
+    return unpacked[0]!;
+  }
+
+  /** The `.pkg`s in `folder`; none when there's no folder. */
+  private async packagesIn(folder: string): Promise<string[]> {
+    const entries = await readdir(folder).catch(() => []);
+    return entries.filter((entry) => entry.endsWith('.pkg')).map((entry) => join(folder, entry));
   }
 
   private reportProgress(version: string, receivedBytes: number, totalBytes: number | null): void {
