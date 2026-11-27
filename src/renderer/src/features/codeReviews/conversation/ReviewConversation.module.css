@@ -942,17 +942,24 @@ button.earlierTag:hover {
   gap: 6px;
   min-width: 0;
   /*
-   * Its clip reaches 4px past it on every side, given back by the margin: the fold toggle's own -4px (lining its
-   * chevron up with the text under it) and its focus ring were cut off.
+   * Its clip reaches 6px past it on every side, given back by the margin: room for the fold toggle's own -4px (lining
+   * its chevron up with the text under it) and its 2px focus ring around it, which the clip cut off.
    */
-  margin: -4px;
-  padding: 4px;
+  margin: -6px;
+  padding: 6px;
   overflow: hidden;
 }
 
-/* Alone in the code's band, no path to share a baseline with: centered on the fold toggle, as the pill is. */
-.thread[data-in-code] .headerStart > .writtenPlace {
+/*
+ * The line and the earlier version's tag, alone in the code's band, with no path to share a baseline with: centered on
+ * the fold toggle, as the pill is, in the pill's font and line height, so their words sit on its words' line. In the
+ * monospace font, centered, "line 12" sat about 2px above the pill's words: the two fonts' ascents differ.
+ */
+.thread[data-in-code] .headerStart > .writtenPlace,
+.thread[data-in-code] .earlierTag {
   align-self: center;
+  font-family: var(--font-ui);
+  line-height: 18px;
 }
 
 .thread[data-in-code] .earlierTag {
