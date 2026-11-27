@@ -1,7 +1,7 @@
 import '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { keymapOf } from '@shared/shortcuts/keymap';
-import { keyboardRows, pressOutcome } from './keyboardRows';
+import { keyboardPaneState, keyboardRows, pressOutcome, recordedKey, resetOutcome } from './keyboardRows';
 
 const MAC = true;
 const defaults = keymapOf({}, MAC);
@@ -11,7 +11,7 @@ describe('keyboardRows', () => {
     const rows = keyboardRows(defaults, {}, { by: 'words', text: '' }, MAC);
     expect(rows.map(([area]) => area)).toEqual(['General', 'Lists', 'Changes', 'Diff', 'Branch Explorer', 'Files', 'History', 'Merge']);
     const general = rows.find(([area]) => area === 'General')![1];
-    expect(general.find((row) => row.id === 'newBranch')).toEqual({ id: 'newBranch', label: 'New branch', keys: ['mod+b'], changed: false });
+    expect(general.find((row) => row.id === 'newBranch')).toEqual({ id: 'newBranch', label: 'New branch', keys: ['mod+b'], changed: false, removable: true });
     expect(rows.flatMap(([, areaRows]) => areaRows).some((row) => row.id === 'textCopy')).toBe(false);
   });
 
@@ -19,7 +19,7 @@ describe('keyboardRows', () => {
     const custom = { newBranch: ['mod+shift+b'], commandLog: [] };
     const general = keyboardRows(keymapOf(custom, MAC), custom, { by: 'words', text: '' }, MAC)[0]![1];
     expect(general.find((row) => row.id === 'newBranch')).toMatchObject({ keys: ['mod+shift+b'], changed: true });
-    expect(general.find((row) => row.id === 'commandLog')).toMatchObject({ keys: [], changed: true });
+    expect(general.find((row) => row.id === 'commandLog')).toMatchObject({ keys: [], changed: true, removable: false });
   });
 
   it('finds shortcuts by the words of their names and areas, and by their keys as the screen writes them', () => {
@@ -65,5 +65,41 @@ describe('pressOutcome', () => {
       note: { tone: 'info', text: 'Diff or annotate the revision (History) uses it too, in another view.' },
       keepsRecording: false,
     });
+  });
+});
+
+describe('keyboardPaneState', () => {
+  it('says why the list is empty: no name matches, or no shortcut that can change uses the keys pressed', () => {
+    expect(keyboardPaneState(0, { by: 'words', text: 'zzz' }, {}).emptyText).toBe('No shortcut matches.');
+    expect(keyboardPaneState(0, { by: 'key', key: 'mod+c' }, {}).emptyText).toBe('No shortcut you can change uses these keys.');
+    expect(keyboardPaneState(3, { by: 'words', text: '' }, {}).emptyText).toBeNull();
+  });
+
+  it('offers to reset all shortcuts once one was changed', () => {
+    expect(keyboardPaneState(3, { by: 'words', text: '' }, {}).resetsAll).toBe(false);
+    expect(keyboardPaneState(3, { by: 'words', text: '' }, { commandLog: [] }).resetsAll).toBe(true);
+  });
+});
+
+describe('recordedKey', () => {
+  const press = (key: string, code: string, modifiers: Partial<KeyboardEvent> = {}) => ({ key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers });
+
+  it('records a shortcut, waits while only modifiers are held, stops on Esc and lets Tab move on', () => {
+    expect(recordedKey(press('b', 'KeyB', { metaKey: true }), MAC)).toEqual({ action: 'record', key: 'mod+b' });
+    expect(recordedKey(press('Meta', 'MetaLeft', { metaKey: true }), MAC)).toEqual({ action: 'wait' });
+    expect(recordedKey(press('Escape', 'Escape'), MAC)).toEqual({ action: 'stop' });
+    expect(recordedKey(press('Tab', 'Tab'), MAC)).toEqual({ action: 'leave' });
+  });
+});
+
+describe('resetOutcome', () => {
+  it('gives a shortcut its own keys back at once while no other shortcut took them', () => {
+    expect(resetOutcome('newBranch', keymapOf({ newBranch: ['mod+shift+b'] }, MAC), MAC)).toEqual({ gives: true });
+  });
+
+  it('asks first when a shortcut a person gave the keys to since would lose them', () => {
+    // New branch took ⇧⌘W from Switch branch; giving Switch branch its keys back takes ⇧⌘W from New branch.
+    const keymap = keymapOf({ newBranch: ['mod+shift+w'], switchBranch: [] }, MAC);
+    expect(resetOutcome('switchBranch', keymap, MAC)).toEqual({ gives: false, key: 'mod+shift+w', note: { tone: 'confirm', text: 'New branch uses it.' } });
   });
 });

@@ -4,7 +4,7 @@ import { keyChoice, withDefaultKeys, withShortcutKey, type CustomShortcuts } fro
 import type { ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { useKeymap } from '../../../lib/keymapStore';
 import { isMac } from '../../../lib/platform';
-import { formatShortcut, pressedShortcut } from '../../../lib/shortcuts';
+import { formatShortcut } from '../../../lib/shortcuts';
 import { Button } from '../../../ui/Button';
 import { confirm } from '../../../ui/dialog/confirm';
 import { Highlight, HighlightQuery } from '../../../ui/Highlight';
@@ -12,15 +12,19 @@ import { IconButton } from '../../../ui/IconButton';
 import { Kbd } from '../../../ui/Kbd';
 import { SearchField } from '../../../ui/SearchField';
 import { saveSettings, useSettings } from '../useSettings';
-import { keyboardRows, pressOutcome, type KeyboardFilter, type KeyNote } from './keyboardRows';
+import { keyboardPaneState, keyboardRows, pressOutcome, recordedKey, resetOutcome, type KeyboardFilter, type KeyNote } from './keyboardRows';
 import { ShortcutKeysButton } from './ShortcutKeysButton';
 import styles from './KeyboardPane.module.css';
 
-/** The key pressed for a shortcut that waits on a "Use it here", or the note it left. */
+/**
+ * The key pressed for a shortcut, or the keys it came with being given back, that waits on a "Use it here" (which
+ * `gives`), or the note it left.
+ */
 interface Pressed {
   id: ShortcutId;
   key: string;
   note: KeyNote;
+  gives: 'key' | 'defaults';
 }
 
 /**
@@ -49,6 +53,7 @@ export function KeyboardPane() {
   const give = (id: ShortcutId, key: string | null): void => {
     void save(withShortcutKey(custom, keymap, id, key, isMac));
     setRecording(null);
+    setPressed(null);
     keysButtons.current.get(id)?.focus();
   };
 
@@ -56,7 +61,18 @@ export function KeyboardPane() {
     const outcome = pressOutcome(id, keyChoice(id, key, keymap, isMac));
     if (outcome.gives) give(id, key);
     else if (!outcome.keepsRecording) setRecording(null);
-    setPressed(outcome.note && { id, key, note: outcome.note });
+    setPressed(outcome.note && { id, key, note: outcome.note, gives: 'key' });
+  };
+
+  const giveDefaults = (id: ShortcutId): void => {
+    void save(withDefaultKeys(custom, keymap, id, isMac));
+    setPressed(null);
+  };
+
+  const onReset = (id: ShortcutId): void => {
+    const outcome = resetOutcome(id, keymap, isMac);
+    if (outcome.gives) giveDefaults(id);
+    else setPressed({ id, key: outcome.key, note: outcome.note, gives: 'defaults' });
   };
 
   const resetAll = async (): Promise<void> => {
@@ -65,20 +81,22 @@ export function KeyboardPane() {
   };
 
   const onFindKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
-    if (!findByKeys || event.key === 'Tab' || event.key === 'Escape') return;
+    if (!findByKeys) return;
+    const pressedKey = recordedKey(event.nativeEvent, isMac);
+    if (pressedKey.action === 'leave' || pressedKey.action === 'stop') return;
     event.preventDefault();
-    const key = pressedShortcut(event.nativeEvent);
-    if (key) setKeyFound(key);
+    if (pressedKey.action === 'record') setKeyFound(pressedKey.key);
   };
 
   const rows = keyboardRows(keymap, custom, filter, isMac);
+  const { emptyText, resetsAll } = keyboardPaneState(rows.length, filter, custom);
 
   return (
     <div className={styles.pane}>
       <div className={styles.find}>
         <SearchField
           ref={findField}
-          value={findByKeys ? (keyFound ? formatShortcut(keyFound).join(isMac ? '' : ' ') : '') : text}
+          value={findByKeys ? (keyFound ? formatShortcut(keyFound).join('') : '') : text}
           onChange={(value) => (findByKeys ? setKeyFound(null) : setText(value))}
           onKeyDown={onFindKeyDown}
           placeholder={findByKeys ? 'Press keys to find what they do' : 'Find a shortcut'}
@@ -129,10 +147,7 @@ export function KeyboardPane() {
                         size="small"
                         icon={<RotateCcw size={12} />}
                         label="Use the keys it came with"
-                        onClick={() => {
-                          setPressed(null);
-                          void save(withDefaultKeys(custom, row.id));
-                        }}
+                        onClick={() => onReset(row.id)}
                       />
                     ) : (
                       <span className={styles.resetSlot} />
@@ -141,7 +156,7 @@ export function KeyboardPane() {
                   {recording === row.id && !pressed && (
                     <RowNote tone="info">
                       Esc to cancel.
-                      {row.keys.length > 0 && <NoteButton onClick={() => give(row.id, null)}>Remove the shortcut</NoteButton>}
+                      {row.removable && <NoteButton onClick={() => give(row.id, null)}>Remove the shortcut</NoteButton>}
                     </RowNote>
                   )}
                   {pressed?.id === row.id && (
@@ -150,10 +165,7 @@ export function KeyboardPane() {
                       {pressed.note.tone === 'confirm' && (
                         <>
                           <NoteButton
-                            onClick={() => {
-                              give(row.id, pressed.key);
-                              setPressed(null);
-                            }}
+                            onClick={() => (pressed.gives === 'key' ? give(row.id, pressed.key) : giveDefaults(row.id))}
                           >
                             Use it here
                           </NoteButton>
@@ -167,10 +179,10 @@ export function KeyboardPane() {
             </section>
           ))}
         </HighlightQuery>
-        {rows.length === 0 && <p className={styles.none}>{findByKeys && keyFound ? 'No shortcut takes these keys.' : 'No shortcut matches.'}</p>}
+        {emptyText && <p className={styles.none}>{emptyText}</p>}
       </div>
 
-      {Object.keys(custom).length > 0 && (
+      {resetsAll && (
         <div className={styles.footer}>
           <Button size="small" onClick={() => void resetAll()}>
             Reset all shortcuts
