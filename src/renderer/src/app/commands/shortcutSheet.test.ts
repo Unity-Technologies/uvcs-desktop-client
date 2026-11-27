@@ -36,4 +36,11 @@ describe('shortcutSheet', () => {
     expect(rowOf(sheet, 'New branch')).toEqual({ label: 'New branch', keys: ['mod+shift+b'] });
     expect(rowOf(sheet, 'Command log')).toBeUndefined();
   });
+
+  it('keeps the shortcuts whose names, areas or keys hold the words, or that take the key pressed', () => {
+    const labels = (filter: Parameters<typeof shortcutSheet>[2]) => shortcutSheet(views, keymapOf({}, true), filter, true).flatMap(([, rows]) => rows.map((row) => row.label));
+    expect(labels({ by: 'words', text: 'switch branch' })).toEqual(['Switch branch']);
+    expect(labels({ by: 'words', text: 'incoming' })).toContain('Incoming');
+    expect(labels({ by: 'key', key: 'mod+shift+w' })).toEqual(['Switch branch']);
+  });
 });

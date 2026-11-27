@@ -1,21 +1,20 @@
-import { Keyboard, RotateCcw } from 'lucide-react';
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { RotateCcw } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
 import { keyChoice, withDefaultKeys, withShortcutKey, type CustomShortcuts } from '@shared/shortcuts/keymap';
 import type { ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { useKeymap } from '../../../lib/keymapStore';
-import { TAKES_ESCAPE } from '../../../lib/modalDialog';
 import { isMac } from '../../../lib/platform';
-import { formatShortcut } from '../../../lib/shortcuts';
 import { Button } from '../../../ui/Button';
 import { confirm } from '../../../ui/dialog/confirm';
 import { Highlight, HighlightQuery } from '../../../ui/Highlight';
 import { IconButton } from '../../../ui/IconButton';
 import { Kbd } from '../../../ui/Kbd';
-import { SearchField } from '../../../ui/SearchField';
 import { saveSettings, useSettings } from '../useSettings';
-import { findKey, findTakesEscape, keyboardPaneState, keyboardRows, pressOutcome, resetOutcome, type KeyboardFilter, type KeyNote } from './keyboardRows';
+import { keyboardPaneState, keyboardRows, pressOutcome, resetOutcome, type KeyNote } from './keyboardRows';
 import { FixedShortcutRow } from './FixedShortcutRow';
+import { ShortcutFindBar } from './ShortcutFindBar';
 import { ShortcutKeysButton } from './ShortcutKeysButton';
+import { useShortcutFind } from './useShortcutFind';
 import { VIEWS } from '../../navigation/viewRegistry';
 import styles from './KeyboardPane.module.css';
 
@@ -32,15 +31,11 @@ type Pressed = { id: ShortcutId; note: KeyNote } & ({ gives: 'key'; key: string 
 export function KeyboardPane() {
   const { customShortcuts: custom } = useSettings();
   const keymap = useKeymap();
-  const [text, setText] = useState('');
-  const [findByKeys, setFindByKeys] = useState(false);
-  const [keyFound, setKeyFound] = useState<string | null>(null);
+  const find = useShortcutFind();
   const [recording, setRecording] = useState<ShortcutId | null>(null);
   const [pressed, setPressed] = useState<Pressed | null>(null);
   const keysButtons = useRef(new Map<ShortcutId, HTMLButtonElement>());
-  const findField = useRef<HTMLInputElement>(null);
-
-  const filter: KeyboardFilter = findByKeys ? { by: 'key', key: keyFound } : { by: 'words', text };
+  const { filter } = find;
   const save = (changed: CustomShortcuts): Promise<void> => saveSettings({ customShortcuts: changed });
 
   const stopRecording = (): void => {
@@ -78,45 +73,15 @@ export function KeyboardPane() {
     if (reset) void save({});
   };
 
-  const onFindKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
-    if (!findByKeys) return;
-    const pressedKey = findKey(event.nativeEvent, keyFound, isMac);
-    if (pressedKey.action === 'leave') return;
-    event.preventDefault();
-    if (pressedKey.action === 'record') setKeyFound(pressedKey.key);
-    else if (pressedKey.action === 'clear') setKeyFound(null);
-    else if (pressedKey.action === 'findByName') setFindByKeys(false);
-  };
-
   const rows = keyboardRows(keymap, custom, VIEWS, filter, isMac);
   const { emptyText, resetsAll } = keyboardPaneState(rows.length, filter, custom);
 
   return (
     <div className={styles.pane}>
-      <div className={styles.find} {...(findTakesEscape(filter) && TAKES_ESCAPE)}>
-        <SearchField
-          ref={findField}
-          value={findByKeys ? (keyFound ? formatShortcut(keyFound).join('') : '') : text}
-          onChange={(value) => (findByKeys ? setKeyFound(null) : setText(value))}
-          onKeyDown={onFindKeyDown}
-          placeholder={findByKeys ? 'Press keys to find them' : 'Find a shortcut'}
-          aria-label={findByKeys ? 'Press keys to find them' : 'Find a shortcut'}
-          width="100%"
-        />
-        <IconButton
-          icon={<Keyboard size={14} />}
-          label="Find by keys"
-          aria-pressed={findByKeys}
-          onClick={() => {
-            setFindByKeys(!findByKeys);
-            setKeyFound(null);
-            findField.current?.focus();
-          }}
-        />
-      </div>
+      <ShortcutFindBar find={find} />
 
       <div className={styles.list}>
-        <HighlightQuery query={findByKeys ? '' : text}>
+        <HighlightQuery query={find.highlight}>
           {rows.map(([area, areaRows]) => (
             <section key={area} className={styles.area} aria-label={area}>
               <h3 className={styles.areaHeading}>{area}</h3>

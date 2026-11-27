@@ -7,13 +7,6 @@
   min-height: 0;
 }
 
-.find {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .list {
   flex: 1;
   min-height: 0;

@@ -1,6 +1,11 @@
 import { Fragment } from 'react';
 import type { ShortcutArea } from '@shared/shortcuts/shortcutRegistry';
 import { useKeymap } from '../../lib/keymapStore';
+import { isMac } from '../../lib/platform';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { keyboardPaneState } from '../settings/keyboard/keyboardRows';
+import { ShortcutFindBar } from '../settings/keyboard/ShortcutFindBar';
+import { useShortcutFind } from '../settings/keyboard/useShortcutFind';
 import { openSettingsDialogAt } from '../settings/SettingsDialog';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -28,6 +33,9 @@ export function openShortcutsDialog(): void {
 
 function ShortcutsDialog({ onClose }: { onClose: () => void }) {
   const keymap = useKeymap();
+  const find = useShortcutFind();
+  const sheet = shortcutSheet(VIEWS, keymap, find.filter, isMac);
+  const { emptyText } = keyboardPaneState(sheet.length, find.filter, {});
   const changeShortcuts = (): void => {
     onClose();
     openSettingsDialogAt('keyboard');
@@ -37,7 +45,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
       <Button className={styles.change} onClick={changeShortcuts}>
         Change shortcuts…
       </Button>
-      <Button variant="primary" onClick={onClose} autoFocus>
+      <Button variant="primary" onClick={onClose}>
         Done
       </Button>
     </>
@@ -45,30 +53,38 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog title="Keyboard shortcuts" width={820} onClose={onClose} footer={footer}>
-      <div className={styles.columns}>
-        {shortcutSheet(VIEWS, keymap).map(([area, rows]) => (
-          <section key={area} aria-labelledby={headingId(area)}>
-            <h2 id={headingId(area)} className={styles.heading}>
-              {area}
-            </h2>
-            <dl className={styles.list}>
-              {rows.map((row) => (
-                <div key={row.label} className={styles.row}>
-                  <dt>{row.label}</dt>
-                  <dd className={styles.keys}>
-                    {row.keys.map((key, index) => (
-                      <Fragment key={key}>
-                        {index > 0 && <span className={styles.or}>/</span>}
-                        <Kbd keys={key} />
-                      </Fragment>
-                    ))}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
+      <div className={styles.findBar}>
+        <ShortcutFindBar find={find} autoFocus />
       </div>
+      {emptyText && <p className={styles.none}>{emptyText}</p>}
+      <HighlightQuery query={find.highlight}>
+        <div className={styles.columns}>
+          {sheet.map(([area, rows]) => (
+            <section key={area} aria-labelledby={headingId(area)}>
+              <h2 id={headingId(area)} className={styles.heading}>
+                {area}
+              </h2>
+              <dl className={styles.list}>
+                {rows.map((row) => (
+                  <div key={row.label} className={styles.row}>
+                    <dt>
+                      <Highlight text={row.label} />
+                    </dt>
+                    <dd className={styles.keys}>
+                      {row.keys.map((key, index) => (
+                        <Fragment key={key}>
+                          {index > 0 && <span className={styles.or}>/</span>}
+                          <Kbd keys={key} />
+                        </Fragment>
+                      ))}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+      </HighlightQuery>
     </Dialog>
   );
 }

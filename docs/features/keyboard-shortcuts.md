@@ -81,7 +81,8 @@ row's keys are a button: clicked, it records the next keys pressed (`pressedShor
 the shortcut. A changed row's name is heavier, its keys take the accent color, and it has a button that gives it its keys back (`resetOutcome`), which asks
 first when a shortcut a person gave those keys to since would lose them; Reset all shortcuts asks first. Esc while
 recording stops it and leaves Settings open: the button is marked `TAKES_ESCAPE` (`lib/modalDialog`), which the dialog
-leaves Esc to, as Radix would otherwise close the dialog before the button sees the key. The shortcuts sheet's Change shortcuts… opens the pane.
+leaves Esc to, as Radix would otherwise close the dialog before the button sees the key. The shortcuts sheet finds shortcuts the same way (`ShortcutFindBar`, `useShortcutFind`, `matchesFilter`), and its
+Change shortcuts… opens the pane.
 
 While Settings is open, no window shortcut runs (the dialog is modal), so recording a key never runs its old command.
 Keys the OS or the menu bar's roles take first (⌘Q, ⌘W) still do what they do; they're the ones `keyProblem` refuses.

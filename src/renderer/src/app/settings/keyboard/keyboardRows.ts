@@ -64,14 +64,18 @@ export function keyboardRows(
     }
   }
   return [...rows]
-    .map(([area, areaRows]): [ShortcutArea, KeyboardRow[]] => [area, areaRows.filter((row) => kept(row, area, filter, mac))])
+    .map(([area, areaRows]): [ShortcutArea, KeyboardRow[]] => [area, areaRows.filter((row) => matchesFilter(row.label, area, row.keys, filter, mac))])
     .filter(([, areaRows]) => areaRows.length > 0);
 }
 
-function kept(row: KeyboardRow, area: ShortcutArea, filter: KeyboardFilter, mac: boolean): boolean {
-  if (filter.by === 'key') return filter.key === null || row.keys.some((key) => canonicalKey(key) === canonicalKey(filter.key!));
-  const keyTexts = row.keys.map((key) => formatShortcut(key, mac).join(''));
-  return matchesWordFilter([row.label, area, ...keyTexts], filter.text);
+/**
+ * Whether a shortcut is one the filter keeps: one of its keys is the key pressed, or the words are in its name, its
+ * area or its keys as the screen writes them (⇧⌘W). Settings ▸ Keyboard's and the shortcuts sheet's.
+ */
+export function matchesFilter(label: string, area: string, keys: readonly string[], filter: KeyboardFilter, mac: boolean): boolean {
+  if (filter.by === 'key') return filter.key === null || keys.some((key) => canonicalKey(key) === canonicalKey(filter.key!));
+  const keyTexts = keys.map((key) => formatShortcut(key, mac).join(''));
+  return matchesWordFilter([label, area, ...keyTexts], filter.text);
 }
 
 /** What a row says after a key is pressed for it, and whether it waits for a "Use it here". */
