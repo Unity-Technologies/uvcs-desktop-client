@@ -1,6 +1,6 @@
 import { matchesShortcut, type PressedKey } from '../../../lib/shortcuts';
 import { isMac } from '../../../lib/platform';
-import { SHORTCUTS, shortcutKeys, type ShortcutId } from '../../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys, type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import type { MarkRange, WordMarksByLine } from './wordMarkRows';
 

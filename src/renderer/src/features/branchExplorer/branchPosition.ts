@@ -1,5 +1,6 @@
 import type { Action } from '../../lib/actions';
-import { hotkey, type ShortcutId } from '../../lib/shortcutRegistry';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { confirm } from '../../ui/dialog/confirm';
 import type { BranchPins } from '@shared/domain/branchExplorerSettings';
 import type { RepositoryGuid } from '@shared/domain/stableIds';

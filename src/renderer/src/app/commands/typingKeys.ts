@@ -1,6 +1,6 @@
 import { isMac } from '../../lib/platform';
 import { isModPressed, matchesShortcut, type PressedKey } from '../../lib/shortcuts';
-import { SHORTCUTS, shortcutKeys, type ShortcutDefinition } from '../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys, type ShortcutDefinition } from '@shared/shortcuts/shortcutRegistry';
 
 /** Keys that edit the text whatever the modifiers: ⌘⌫ deletes to the start of the line, ⌥⌫ and Ctrl+Backspace a word. */
 const EDITING_KEYS = new Set(['Backspace', 'Delete']);

@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { create } from 'zustand';
 import { isInFront } from '../lib/inFront';
 import { focusMain } from '../lib/mainFocus';
-import type { ShortcutId } from '../lib/shortcutRegistry';
+import type { ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import {
   collapsesWithHost,
   expandableDiffInFront,

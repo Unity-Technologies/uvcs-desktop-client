@@ -283,7 +283,7 @@ test joins that list.
   messages say what happened and what to do next. All of it is written with the `writing-for-people` skill, then the
   `humanizer` skill (see "Written for people", in Principles).
 - **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
-  `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
+  `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `shared/shortcuts/shortcutRegistry.ts`.
   Colors, motion and focus only through `styles/tokens.css`.
 - **Links (`uvcs://`)**: what a user looks at and would share can be linked to: an object, a page, a view, a file and
   its lines (docs/features/deep-links.md holds the grammar, how links open and where they're copied). A change that adds

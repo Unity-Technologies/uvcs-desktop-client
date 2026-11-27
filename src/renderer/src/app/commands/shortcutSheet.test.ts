@@ -1,6 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import type { ShortcutDefinition } from '../../lib/shortcutRegistry';
+import type { ShortcutDefinition } from '@shared/shortcuts/shortcutRegistry';
 import { shortcutSheet } from './shortcutSheet';
 
 const views = [

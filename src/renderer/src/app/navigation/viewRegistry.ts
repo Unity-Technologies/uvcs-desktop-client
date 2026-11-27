@@ -32,7 +32,7 @@ import { usePendingChangesBadge } from '../../features/pendingChanges/usePending
 import type { Icon } from '../../lib/actions';
 import type { NavBadge } from '../../ui/nav/navBadgeText';
 import { isMac } from '../../lib/platform';
-import { viewShortcut } from '../../lib/shortcutRegistry';
+import { viewShortcut } from '@shared/shortcuts/shortcutRegistry';
 import type { Place } from '@shared/domain/place';
 import { showsView, type ViewId } from './views';
 

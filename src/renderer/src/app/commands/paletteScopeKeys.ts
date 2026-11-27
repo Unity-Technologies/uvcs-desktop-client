@@ -1,6 +1,6 @@
 import { isMac } from '../../lib/platform';
 import { matchesShortcut, type PressedKey } from '../../lib/shortcuts';
-import { SHORTCUTS, shortcutKeys } from '../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys } from '@shared/shortcuts/shortcutRegistry';
 
 /** The step a key takes through the palette's scope chips (`paletteScope`): the next one, the one before, or none. */
 export function scopeStepOf(event: PressedKey, mac = isMac): 1 | -1 | null {

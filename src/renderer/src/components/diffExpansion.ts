@@ -5,7 +5,7 @@
  * `diffExpansionStore` holds it for the window.
  */
 import type { FocusMover } from '../lib/focusRing';
-import type { ShortcutId } from '../lib/shortcutRegistry';
+import type { ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 
 /** Where the window's navigation stands: the view, and how many pages are open over it. */
 export interface NavigationSpot {

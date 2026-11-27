@@ -108,7 +108,7 @@ Specs: `permissionSpec` (`repserver:local`, `rep:game@local`, `br:/main@game@loc
 - **Keyboard first**: the members list and the grid are one Tab stop each; ↑ ↓ move, ← → step through the choices,
   A, D and I pick one (each choice's tooltip shows its key: a hint line under the grid didn't say what the keys
   applied to, and keys inside the choices crowded them), Shift+F10 opens the active permission's overrides menu, the remove shortcut removes the
-  member's entry, ⌘↵ saves (`lib/shortcutRegistry.ts`, area
+  member's entry, ⌘↵ saves (`shared/shortcuts/shortcutRegistry.ts`, area
   Permissions; bound in the dialog, as a modal dialog keeps window shortcuts off).
 - Adding a member (`pickMember`) searches the server's users and groups, All users and Owner first; its entry starts
   empty, following what's above, and the bulk buttons (Inherit all, Allow all, Deny all, on the permissions shown)

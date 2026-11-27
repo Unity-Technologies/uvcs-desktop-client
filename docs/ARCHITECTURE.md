@@ -478,7 +478,7 @@ The conventions every view follows, in full in architecture/renderer.md and arch
 - **Data and refresh**: TanStack Query, keys under `queryKeys.inPlace` (`inWorkspace`). Views refresh on events, never
   on a timer but the incoming check; `runOperation` for long operations, `runAction` for quick ones.
 - **Menus, actions, keyboard, focus**: one grammar for every object's menu (`lib/menuGroups`); menus and the palette
-  share `Action`/`MenuEntry`; every shortcut is in `lib/shortcutRegistry.ts`; the list a view works on carries
+  share `Action`/`MenuEntry`; every shortcut is in `shared/shortcuts/shortcutRegistry.ts`; the list a view works on carries
   `MAIN_FOCUS`.
 - **Lists**: one filter rule for every list, `ListWithDetails`, big lists render only the rows in view, long names fit,
   lists of changed files read and work the same everywhere: architecture/lists.md.

@@ -1,6 +1,6 @@
 import type { EditorState } from '@codemirror/state';
 import { matchesShortcut, type PressedKey } from '../../lib/shortcuts';
-import { SHORTCUTS, shortcutKeys } from '../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys } from '@shared/shortcuts/shortcutRegistry';
 
 /**
  * Focus mode (docs/features/rich-comments.md, "Writing"): a comment of many lines grows into a large editor over

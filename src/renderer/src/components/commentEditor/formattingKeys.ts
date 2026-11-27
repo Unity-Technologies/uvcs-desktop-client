@@ -1,5 +1,5 @@
 import { matchesShortcut, type PressedKey } from '../../lib/shortcuts';
-import { SHORTCUTS, shortcutKeys } from '../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys } from '@shared/shortcuts/shortcutRegistry';
 import { FORMAT_ACTIONS } from './formatActions';
 import type { FormatCommandId } from './formatCommands';
 

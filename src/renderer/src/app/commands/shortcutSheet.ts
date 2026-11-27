@@ -1,4 +1,4 @@
-import { SHORTCUT_AREAS, shortcutKeys, type ShortcutArea, type ShortcutDefinition } from '../../lib/shortcutRegistry';
+import { SHORTCUT_AREAS, shortcutKeys, type ShortcutArea, type ShortcutDefinition } from '@shared/shortcuts/shortcutRegistry';
 
 export interface SheetRow {
   label: string;

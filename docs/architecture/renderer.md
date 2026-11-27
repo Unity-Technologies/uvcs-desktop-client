@@ -235,7 +235,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   context, not for going to it.
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
-- **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
+- **Keyboard**: every shortcut is declared in `shared/shortcuts/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
   (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
   get ⌘1… in sidebar order (`viewShortcut`; past the ninth ⌥⌘1… on macOS, whose ⇧⌘3–5 take screenshots). Window
   shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`); the one

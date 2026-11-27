@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
-import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition } from './shortcutRegistry';
+import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition } from '@shared/shortcuts/shortcutRegistry';
 
 const RENDERER = join(__dirname, '..');
 const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');

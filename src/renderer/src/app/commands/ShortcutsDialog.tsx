@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { isMac } from '../../lib/platform';
-import { SHORTCUTS, type ShortcutArea } from '../../lib/shortcutRegistry';
+import { SHORTCUTS, type ShortcutArea } from '@shared/shortcuts/shortcutRegistry';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';

@@ -1,6 +1,6 @@
 import { resolveEditorCommandFromKeyboardEvent, type EditorCommand, type EditorKeymap, type EditorShortcut } from '@pierre/diffs/edit';
 import { isMac } from '../../../lib/platform';
-import { SHORTCUTS, shortcutKeys, type ShortcutId } from '../../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys, type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 
 /** The editor commands that open a search, by the registry's keys for them, so the keys the menus and the sheet show open it. */
 const SEARCH_COMMANDS: Record<'find' | 'replace', { registryId: ShortcutId; command: EditorCommand }> = {

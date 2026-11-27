@@ -1,5 +1,6 @@
 import { isMac } from '../../../../lib/platform';
-import { hotkeys, type ShortcutId } from '../../../../lib/shortcutRegistry';
+import { hotkeys } from '../../../../lib/shortcutRegistry';
+import { type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { matchesShortcut, type PressedKey } from '../../../../lib/shortcuts';
 import type { FlyMove } from './orbitCamera';
 
