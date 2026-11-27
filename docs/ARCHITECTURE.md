@@ -51,6 +51,7 @@ Each feature area's own rules live in `docs/features/`:
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
 | `features/cm-runtime.md`                | The `cm` the app runs: the installed one first, the pin as the floor (`cm-version.json`, `cm:bump`), the app's own store and setup, the setup and update screens, updates that bring their `cm`, Settings' choice |
 | `features/accounts.md`                  | Accounts and sign-in: how profiles make accounts (a Unity account per user, one per server), Home's account switcher, Settings › Accounts; sign-in state, one per server: how `cm` says a server needs a sign-in, the gate that keeps commands from it, keeping sessions alive, the sign-in screen, operations refused and offered again |
+| `features/keyboard-shortcuts.md`        | Keyboard shortcuts: which can change, Settings › Keyboard, clashes and refused keys, keys a person chose against later defaults, how every key follows a change |
 
 ## How a request flows
 
