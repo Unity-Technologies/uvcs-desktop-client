@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { isMac } from '../../../lib/platform';
+import { formatShortcut } from '../../../lib/shortcuts';
 import { findKey, type KeyboardFilter } from './keyboardRows';
 
 /** Finding shortcuts by the words of their names, or by pressing their keys (Find by keys): the state and its keys. */
@@ -8,11 +9,13 @@ export interface ShortcutFind {
   /** The words to highlight in the rows: none while finding by keys. */
   highlight: string;
   findByKeys: boolean;
-  text: string;
-  keyFound: string | null;
+  /** What the field shows: the words, or the keys pressed as the screen writes them. */
+  fieldValue: string;
+  /** The field's placeholder, which is also its name. */
+  placeholder: string;
   fieldRef: RefObject<HTMLInputElement | null>;
-  setText: (text: string) => void;
-  clearKey: () => void;
+  /** The field's text changed: new words, or, while finding by keys, the keys cleared. */
+  onFieldChange: (value: string) => void;
   toggleFindByKeys: () => void;
   onFieldKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
 }
@@ -38,11 +41,10 @@ export function useShortcutFind(): ShortcutFind {
     filter: findByKeys ? { by: 'key', key: keyFound } : { by: 'words', text },
     highlight: findByKeys ? '' : text,
     findByKeys,
-    text,
-    keyFound,
+    fieldValue: findByKeys ? (keyFound ? formatShortcut(keyFound).join('') : '') : text,
+    placeholder: findByKeys ? 'Press keys to find them' : 'Find a shortcut',
     fieldRef,
-    setText,
-    clearKey: () => setKeyFound(null),
+    onFieldChange: (value) => (findByKeys ? setKeyFound(null) : setText(value)),
     toggleFindByKeys: () => {
       setFindByKeys(!findByKeys);
       setKeyFound(null);

@@ -196,7 +196,7 @@ export const SHORTCUTS = {
   graphZoomOut: { area: 'Branch Explorer', label: 'Zoom out', keys: ['-'], customizable: true },
   graphFit: { area: 'Branch Explorer', label: 'Fit to window', keys: ['0'], customizable: true },
   // Off macOS Alt+Shift, as Ctrl+Alt is AltGr there. From another view it opens the Branch Explorer with it shown.
-  graphTimeline: { area: 'General', label: 'Show or hide the timeline', keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline', customizable: true },
+  graphTimeline: { area: 'General', label: "Show or hide the Branch Explorer's timeline", keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline', customizable: true },
   graphClear: { area: 'Branch Explorer', label: 'Clear the selection, then the focus', keys: ['escape'], fixed: 'shared' },
 
   deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'], keysOffMac: ['delete'], customizable: true },

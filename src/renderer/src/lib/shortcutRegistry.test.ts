@@ -72,30 +72,32 @@ describe('shortcut registry', () => {
 
   it('never compares a key by hand, which a person changing it in Settings › Keyboard would never reach', () => {
     // A key compared as `event.key === 'r'` keeps running on R after a person gives the shortcut another key: every
-    // key is matched through the registry (`hotkeys`, `matchesShortcut`). The ones left are a list's or a table's
-    // Select all and Copy with text selected, which every app shares (`fixed: 'shared'`).
-    const allowed = ['ui/table/DataTable.tsx', 'features/pendingChanges/ChangesList.tsx', 'app/commands/typingKeys.ts'];
-    const offenders = filesUnder(RENDERER, isAppSource)
-      .filter((path) => !allowed.includes(relative(RENDERER, path).split('\\').join('/')))
-      .flatMap((path) =>
-        readFileSync(path, 'utf8')
-          .split('\n')
-          .map((line, index) => ({ line, where: `${relative(RENDERER, path)}:${index + 1}` }))
-          .filter(({ line }) => /\.key(?:\.toLowerCase\(\))? === '[a-zA-Z0-9]'/.test(line))
-          .map(({ where, line }) => `${where}: ${line.trim()}`),
-      );
+    // key is matched through the registry (`hotkeys`, `matchesShortcut`). The lines left are Select all in a list or a
+    // table, and Copy with text selected, which every app shares (`fixed: 'shared'`).
+    const allowed = [
+      "} else if (event.key === 'a' && isModPressed(event)) {",
+      "return selectedText !== '' && isModPressed(event, mac) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'c';",
+    ];
+    const offenders = filesUnder(RENDERER, isAppSource).flatMap((path) =>
+      readFileSync(path, 'utf8')
+        .split('\n')
+        .map((line, index) => ({ line: line.trim(), where: `${relative(RENDERER, path)}:${index + 1}` }))
+        .filter(({ line }) => /\.key(?:\.toLowerCase\(\))? === '[a-zA-Z0-9]'/.test(line) && !allowed.includes(line))
+        .map(({ where, line }) => `${where}: ${line}`),
+    );
     expect(offenders).toEqual([]);
   });
 
-  it('reads every shortcut a person may change through the registry somewhere, so a change reaches it', () => {
+  it('binds every shortcut a person may change through the registry, by its id, so a change reaches it', () => {
     // A key matched by hand, or from a table of letters, would show the new key in Settings › Keyboard and still run
-    // on the old one: a shortcut that can change is named by its id where it binds (`hotkey('id')`, `shortcutId: 'id'`).
+    // on the old one. The forms that bind by id: `hotkey('id')`, `hotkeys('id')`, `matchesAny(event, 'id')`,
+    // `shortcutId: 'id'`, a step's `{ next: 'id', previous: 'id' }` (`StepShortcuts`), and tables of `['id', action]`.
     const sources = filesUnder(RENDERER, isAppSource).map((path) => readFileSync(path, 'utf8')).join('\n');
-    const unread = Object.entries(SHORTCUTS)
+    const unbound = Object.entries(SHORTCUTS)
       .filter(([, shortcut]) => (shortcut as ShortcutDefinition).customizable)
       .map(([id]) => id)
-      .filter((id) => !sources.includes(`'${id}'`));
-    expect(unread).toEqual([]);
+      .filter((id) => !new RegExp(`(?:hotkeys?\\(|matchesAny\\([^,]+, |shortcutId: |(?:next|previous): |\\[\\s*)'${id}'`).test(sources));
+    expect(unbound).toEqual([]);
   });
 
   it('puts every shortcut in a known area', () => {

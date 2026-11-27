@@ -3,7 +3,7 @@ import type { ShortcutArea } from '@shared/shortcuts/shortcutRegistry';
 import { useKeymap } from '../../lib/keymapStore';
 import { isMac } from '../../lib/platform';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
-import { keyboardPaneState } from '../settings/keyboard/keyboardRows';
+import { emptyTextOf } from '../settings/keyboard/keyboardRows';
 import { ShortcutFindBar } from '../settings/keyboard/ShortcutFindBar';
 import { useShortcutFind } from '../settings/keyboard/useShortcutFind';
 import { openSettingsDialogAt } from '../settings/SettingsDialog';
@@ -35,7 +35,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
   const keymap = useKeymap();
   const find = useShortcutFind();
   const sheet = shortcutSheet(VIEWS, keymap, find.filter, isMac);
-  const { emptyText } = keyboardPaneState(sheet.length, find.filter, {});
+  const emptyText = emptyTextOf(sheet.length, find.filter);
   const changeShortcuts = (): void => {
     onClose();
     openSettingsDialogAt('keyboard');

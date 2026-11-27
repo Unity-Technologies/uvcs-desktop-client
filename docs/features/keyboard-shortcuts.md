@@ -12,13 +12,10 @@ change, Mark reviewed, Rename, Merge, the Branch Explorer's moves and zoom, the 
 and comments). The others stay as they are:
 
 - the keys every app shares: Esc, Enter, the arrows, Home and End, Space, and the clipboard's;
-- the text's own keys (the Text area), which its editor keeps;
-- keys that move through what's under them: a list's selection, the palette's, the graph's walk, a 3D model's flight,
-  a comment's formatting;
+- the text's own keys (the Text area), which its editor keeps, and a comment's formatting;
+- keys that move through, or act on, what has the focus: a list's selection, the palette's, the graph's walk, a 3D
+  model's flight, a permission's choice;
 - the views' keys, ⌘1 to ⌘9, which follow the sidebar's order (`viewShortcut`).
-
-A key a shortcut can change is always read from the registry: never compared by hand (`event.key === 'r'`), which
-would keep binding the old key.
 
 A new shortcut can't change until it's marked, so it's never offered before every place that reads its keys follows a
 change ("Keys follow a change at once").

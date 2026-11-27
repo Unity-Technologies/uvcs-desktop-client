@@ -34,7 +34,7 @@ export type KeyboardFilter = { by: 'words'; text: string } | { by: 'key'; key: s
 const WHY_FIXED: Readonly<Record<FixedReason | 'views', string>> = {
   shared: "Can't change: every app uses this key.",
   text: "Can't change: it's the text editor's key.",
-  focus: "Can't change: it moves through what has the focus.",
+  focus: "Can't change: it acts on what has the keyboard focus.",
   views: "Can't change: it follows the order of the sidebar.",
 };
 
@@ -115,10 +115,15 @@ function shortcutNames(id: ShortcutId, others: readonly ShortcutId[]): string {
   return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0]!;
 }
 
+/** What the list says when no row is left: Settings ▸ Keyboard's and the shortcuts sheet's. */
+export function emptyTextOf(rowCount: number, filter: KeyboardFilter): string | null {
+  if (rowCount > 0) return null;
+  return filter.by === 'key' && filter.key !== null ? 'No shortcut uses these keys.' : 'No shortcut matches.';
+}
+
 /** What the list says when no row is left, and whether Reset all shortcuts shows (something was changed). */
 export function keyboardPaneState(rowCount: number, filter: KeyboardFilter, custom: CustomShortcuts): { emptyText: string | null; resetsAll: boolean } {
-  const emptyText = filter.by === 'key' && filter.key !== null ? 'No shortcut uses these keys.' : 'No shortcut matches.';
-  return { emptyText: rowCount === 0 ? emptyText : null, resetsAll: Object.keys(custom).length > 0 };
+  return { emptyText: emptyTextOf(rowCount, filter), resetsAll: Object.keys(custom).length > 0 };
 }
 
 /**

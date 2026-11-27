@@ -16,8 +16,8 @@ export interface SheetRow {
 export function shortcutSheet(
   views: readonly { label: string; shortcut: string }[],
   keymap: Keymap,
-  filter: KeyboardFilter = { by: 'words', text: '' },
-  mac = false,
+  filter: KeyboardFilter,
+  mac: boolean,
 ): [ShortcutArea, SheetRow[]][] {
   const rows = new Map<ShortcutArea, SheetRow[]>(SHORTCUT_AREAS.map((area) => [area, []]));
   rows.set(
