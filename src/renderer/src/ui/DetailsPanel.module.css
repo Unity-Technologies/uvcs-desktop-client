@@ -107,10 +107,10 @@
 
 .metaRow {
   overflow: hidden;
-  /* Room for a chip's or a copy button's focus ring (`--focus-ring-reach`): the clip, there for the dots, cut it on top
-     and bottom. */
-  padding-block: var(--focus-ring-reach);
-  margin-block: calc(-1 * var(--focus-ring-reach));
+  /* Room for a chip's or a copy button's focus ring (`--focus-ring-reach`), which the clip, there for the dots, cut. On
+     the left it uncovers that much of a line's first dot box, whose dot sits at its middle, out of sight. */
+  padding: var(--focus-ring-reach);
+  margin: calc(-1 * var(--focus-ring-reach));
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
