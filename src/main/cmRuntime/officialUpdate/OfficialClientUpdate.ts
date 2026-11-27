@@ -336,29 +336,29 @@ export class OfficialClientUpdate {
 
   /**
    * The `.pkg` the macOS installer's zip holds, unpacked next to it: exactly one, or it isn't the installer. One an
-   * earlier launch unpacked is kept as it is: Installer.app, which outlives the app, may still have it open, and
-   * replacing it under Installer.app ends its install with "There was no software found to install". It's unpacked into
-   * a folder of its own first and renamed once whole, so a kept one is never an unpack cut short.
+   * earlier try unpacked is kept as it is: Installer.app, which outlives the app, may still have it open, and a package
+   * replaced under it ends the install with "there was no software found to install". It's unpacked into a folder of
+   * its own first and renamed once whole, so a kept one is never an unpack cut short.
    */
   private async unpackedPackage(zip: string): Promise<string> {
     const destination = `${zip}.unpacked`;
-    const kept = await this.onlyPackageIn(destination);
-    if (kept) return kept;
+    const kept = await this.packagesIn(destination);
+    if (kept.length === 1) return kept[0]!;
     const unpacking = `${zip}.unpacking`;
     await rm(destination, { recursive: true, force: true });
     await rm(unpacking, { recursive: true, force: true });
     await mkdir(unpacking);
     await this.options.tools.unpack(zip, unpacking);
     await rename(unpacking, destination);
-    const unpacked = await this.onlyPackageIn(destination);
-    if (!unpacked) throw new OfficialUpdateError('notSigned', `${zip} doesn't hold exactly one installer package`);
-    return unpacked;
+    const unpacked = await this.packagesIn(destination);
+    if (unpacked.length !== 1) throw new OfficialUpdateError('notSigned', `${zip} holds ${unpacked.length} installer packages, not one`);
+    return unpacked[0]!;
   }
 
-  /** The one `.pkg` in `folder`; null when there's none, more than one, or no folder. */
-  private async onlyPackageIn(folder: string): Promise<string | null> {
-    const packages = (await readdir(folder).catch(() => [])).filter((entry) => entry.endsWith('.pkg'));
-    return packages.length === 1 ? join(folder, packages[0]!) : null;
+  /** The `.pkg`s in `folder`; none when there's no folder. */
+  private async packagesIn(folder: string): Promise<string[]> {
+    const entries = await readdir(folder).catch(() => []);
+    return entries.filter((entry) => entry.endsWith('.pkg')).map((entry) => join(folder, entry));
   }
 
   private reportProgress(version: string, receivedBytes: number, totalBytes: number | null): void {
