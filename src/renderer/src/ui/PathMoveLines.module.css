@@ -28,7 +28,8 @@
   color: var(--text-secondary);
 }
 
-/* A tint drawn around the text rather than padding it, so the parts measure as `fitPathParts` measures them. */
+/* A tint drawn around the text rather than padding it, so the parts measure as `fitPathParts` measures them. The
+   diff header tints a move the same way (`Highlight`'s `.match[data-tint]`). */
 .changed {
   border-radius: 2px;
   box-shadow: 0 0 0 1px var(--mark-tint);
