@@ -58,9 +58,11 @@ interface Setup {
   discardDeletes?: boolean;
   /** The folder an earlier launch downloaded into; a new one by default. */
   folder?: string;
+  /** tar stops partway: the package is written, then it fails. */
+  unpackStops?: boolean;
 }
 
-async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694', operationRuns = false, discardDeletes = true, folder: earlierFolder }: Setup = {}) {
+async function setup({ site = fakeSite(), platform = 'windows', verdict = { trusted: true }, outcome = { kind: 'ended', exitCode: 0 }, versionAfter = '11.0.16.10694', operationRuns = false, discardDeletes = true, folder: earlierFolder, unpackStops = false }: Setup = {}) {
   const folder = earlierFolder ?? join(await mkdtemp(join(tmpdir(), 'official-update-')), 'update');
   const calls: string[] = [];
   const states: (OfficialUpdate | null)[] = [];
@@ -70,6 +72,7 @@ async function setup({ site = fakeSite(), platform = 'windows', verdict = { trus
     unpack: async (archive, destination) => {
       calls.push(`unpack ${archive}`);
       await writeFile(join(destination, 'unity-vcs-osx-arm64-11.0.16.10694.pkg'), 'pkg');
+      if (unpackStops) throw new Error('tar exited with 1: truncated input');
     },
     linuxUpdateCommand: async (cmPath) => `sudo apt-get update && sudo apt-get install --only-upgrade plasticscm-cloud # ${cmPath}`,
   };
@@ -177,10 +180,8 @@ describe('OfficialClientUpdate', () => {
     });
 
     it('is unpacked again when that launch stopped partway through unpacking it', async () => {
-      const first = await setup({ site: macSite(), platform: 'macos-arm64' });
-      await first.update.prepare(MAC_INSTALLED, FLOOR);
-      await rm(`${zipIn(first.folder)}.unpacked`, { recursive: true });
-      await mkdir(`${zipIn(first.folder)}.unpacking`);
+      const first = await setup({ site: macSite(), platform: 'macos-arm64', unpackStops: true });
+      expect(await first.update.install(MAC_INSTALLED, FLOOR)).toBe(false);
       const next = await setup({ site: macSite(), platform: 'macos-arm64', folder: first.folder });
       expect(await next.update.install(MAC_INSTALLED, FLOOR)).toBe(true);
       expect(next.calls[0]).toBe(`unpack ${zipIn(first.folder)}`);
