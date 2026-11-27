@@ -10,21 +10,23 @@
   overflow: hidden;
 }
 
-/* Quieter than the path: where the file was is context, not what the diff shows. */
-.from {
+/* A moved file's two ends, "from <where it was>" then "to <where it is>", as its hover says them: the words quiet, the
+   paths in the text's color so their tints read. Each end shrinks with its path when the header is narrow. */
+.moveEnd {
   display: flex;
   flex: 0 1 auto;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
   color: var(--text-tertiary);
   white-space: nowrap;
 }
 
-.fromPath {
+.movePath {
   display: flex;
   flex: 0 1 auto;
   min-width: 0;
+  color: var(--text-primary);
 }
 
 /* A moved file that changed shows its C and its M together. */

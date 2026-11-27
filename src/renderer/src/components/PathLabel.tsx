@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { textMeasurer } from '../lib/measureText';
 import { fitPath, fittedPathWidth, positionsInTrimmed } from '../lib/trimToFit';
 import { wordMatchPositions } from '../lib/textMatchRanges';
-import { Highlight, useHighlightQuery } from '../ui/Highlight';
+import { Highlight, useHighlightQuery, type MarkTint } from '../ui/Highlight';
 import { moveTipAttributes } from '../ui/tipAttributes';
 import styles from './PathLabel.module.css';
 
@@ -18,6 +18,8 @@ interface PathLabelProps {
    * the whole path (the name alone with `nameOnly`) before it's cut to fit, so a cut path marks what made it match.
    */
   matches?: readonly number[];
+  /** Positions in `path` a move changed, tinted in the diff's colors instead of the filter's matches (a diff's header). */
+  moveMarks?: { positions: readonly number[]; tint: MarkTint };
   /**
    * As wide as the whole path (up to its container) and no narrower than the name, where the container wraps the
    * label rather than sizing it.
@@ -39,7 +41,7 @@ interface PathLabelProps {
  * stays whole. The cut is measured rather than left to CSS `text-overflow`, which would cut the name first; a name too
  * long on its own is cut from its middle (`fitPath`, `trimFolderToFit`).
  */
-export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fitContent, maxWidth, tooltip = true }: PathLabelProps) {
+export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, moveMarks, fitContent, maxWidth, tooltip = true }: PathLabelProps) {
   const nameStart = path.lastIndexOf('/') + 1;
   const name = path.slice(nameStart);
   const directory = nameOnly ? '' : path.slice(0, nameStart);
@@ -70,7 +72,8 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
   }, [directory, name, fitContent, maxWidth]);
 
   const query = useHighlightQuery();
-  const positions = matches ?? (nameOnly ? wordMatchPositions(name, query).map((position) => position + nameStart) : wordMatchPositions(path, query));
+  const tint = moveMarks?.tint;
+  const positions = moveMarks?.positions ?? matches ?? (nameOnly ? wordMatchPositions(name, query).map((position) => position + nameStart) : wordMatchPositions(path, query));
   const trimmed = shown.folder !== directory || shown.name !== name;
   const nameMatches = positions.filter((position) => position >= nameStart).map((position) => position - nameStart);
   const move = tooltip && oldPath ? { from: oldPath, to: path } : undefined;
@@ -86,11 +89,11 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
     >
       {shown.folder && (
         <span className={styles.directory}>
-          <Highlight text={shown.folder} positions={positionsInTrimmed(directory, shown.folder, positions.filter((position) => position < nameStart))} />
+          <Highlight text={shown.folder} positions={positionsInTrimmed(directory, shown.folder, positions.filter((position) => position < nameStart))} tint={tint} />
         </span>
       )}
       <span className={styles.name} data-strikethrough={strikethrough}>
-        <Highlight text={shown.name} positions={positionsInTrimmed(name, shown.name, nameMatches)} />
+        <Highlight text={shown.name} positions={positionsInTrimmed(name, shown.name, nameMatches)} tint={tint} />
       </span>
     </span>
   );

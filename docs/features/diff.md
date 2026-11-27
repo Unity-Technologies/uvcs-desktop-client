@@ -28,6 +28,10 @@ the files and the diff stay in sight. A short comment shows whole, with no link.
 the target, so another changeset folds its own comment afresh. Indented lines in a comment (commands pasted in) read as
 code, one per line (`parseMarkdown`).
 
+Over each file, its title (`DiffFileTitle`) names its status and its path. A moved or renamed file reads as its
+hover does (`PathMoveLines`): "from" where it was, then "to" where it is, what the move changed tinted red in the old
+path and green in the new (`movedTitleMarks`); a rename within its folder names only the old name (`movedFrom`).
+
 ## A branch's diff
 
 A branch's diff shows what the branch brings to its parent, as a pull request does: `cm diff br:<branch>
