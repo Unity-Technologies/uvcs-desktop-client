@@ -13,6 +13,7 @@ import { placeLinkTo } from './linkTo';
 import { useSelectedObjectLink } from './selectedObjectLink';
 import { hasLinkToCopy, linkToCopy } from './shownLink';
 import { shownFileNow } from './useShownFile';
+import { useKeymap } from '../../lib/keymapStore';
 
 /**
  * "Copy link" (⇧⌘C, the palette): a link to what is in front, as a browser's address bar has one
@@ -28,6 +29,7 @@ export function useCopyLinkCommand(): void {
   const shownOfOtherRepository = useShownRevision((state) => state.shown?.otherRepository === true);
   const hasLink = hasLinkToCopy({ top, hasSelectedObject, view, shownOfOtherRepository });
 
+  const keymap = useKeymap();
   useCommands(
     useMemo<Command[]>(
       () => [
@@ -42,7 +44,7 @@ export function useCopyLinkCommand(): void {
           run: () => void copyLinkNow(place, top, view),
         },
       ],
-      [hasLink, place, top, view],
+      [keymap, hasLink, place, top, view],
     ),
   );
 }

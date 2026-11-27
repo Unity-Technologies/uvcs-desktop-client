@@ -44,3 +44,20 @@
   color: var(--text-tertiary);
   font-size: var(--text-xs);
 }
+
+/* At the footer's start, apart from Done. */
+.change {
+  margin-right: auto;
+}
+
+/* The find bar stays above the columns, as wide as the field reads well. */
+.findBar {
+  max-width: 420px;
+  margin-bottom: var(--space-4);
+}
+
+.none {
+  margin: var(--space-4) 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}

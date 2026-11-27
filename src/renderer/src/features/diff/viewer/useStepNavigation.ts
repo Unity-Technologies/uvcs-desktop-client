@@ -1,7 +1,8 @@
 import { useCallback, useContext, useEffect, useRef, useState, type RefObject } from 'react';
 import { keysReach } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
-import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
+import { hotkeys } from '../../../lib/shortcutRegistry';
+import { type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { openingStep, shownChange } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { applyPress, pressGoal, takesKept, type PressEffect, type PressHolder, type PressSpot } from './pressRouting';

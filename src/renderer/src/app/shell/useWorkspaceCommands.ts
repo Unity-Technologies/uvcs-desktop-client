@@ -12,6 +12,7 @@ import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
 import { downloadWholeBranch, updateUnlessUpToDate } from './workspaceOperations';
+import { useKeymap } from '../../lib/keymapStore';
 
 /** Commands only a workspace has, beside every place's (`usePlaceCommands`): its files on disk, updating them, choosing which it downloads (`choosesDownloads`) and downloading the whole branch (`downloadsWholeBranch`). */
 export function useWorkspaceCommands(): void {
@@ -26,6 +27,7 @@ export function useWorkspaceCommands(): void {
   const editor = defaultEditor(apps);
   const terminal = defaultTerminal(apps);
 
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(
     () => [
       {
@@ -115,7 +117,7 @@ export function useWorkspaceCommands(): void {
         run: () => copyWorkspacePath(workspacePath),
       },
     ],
-    [workspacePath, offersDownloads, offersWholeBranch, selector, autoRefresh, updateSettings, editor, terminal],
+    [keymap, workspacePath, offersDownloads, offersWholeBranch, selector, autoRefresh, updateSettings, editor, terminal],
   );
 
   useCommands(commands);

@@ -1,6 +1,8 @@
 import type { KeyboardEvent } from 'react';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
 import { someIn } from '../../lib/itemRange';
+import { hotkeys } from '../../lib/shortcutRegistry';
+import { matchesShortcut } from '../../lib/shortcuts';
 import type { ListReview } from './useReviewMode';
 import { needsReview, reviewableOf, shouldMarkReviewed, type ReviewStatusOf } from './reviewStatus';
 
@@ -11,9 +13,9 @@ export interface ReviewKeyList<T> {
   moveBy: (step: number) => void;
 }
 
-/** R, alone, on a list of files. */
+/** The key that marks files reviewed (R, or the one a person gave it), on a list of files. */
 export function isReviewKey(event: KeyboardEvent): boolean {
-  return event.key === 'r' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+  return hotkeys('review').some((key) => matchesShortcut(event, key));
 }
 
 /**

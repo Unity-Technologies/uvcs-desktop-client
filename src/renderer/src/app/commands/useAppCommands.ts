@@ -5,7 +5,7 @@ import { openAboutDialog } from '../about/AboutDialog';
 import { askAndOpenLink } from '../links/askAndOpenLink';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { checkForUpdates } from '../updates/updateStore';
-import { SIDEBAR_SHORTCUT, toggleSidebar, useSidebarCollapsed } from '../shell/sidebarStore';
+import { toggleSidebar, useSidebarCollapsed } from '../shell/sidebarStore';
 import { useCommandPalette } from './commandPaletteStore';
 import { useCommands, type Command } from './commandStore';
 import { fileListViewCommands } from './fileListViewCommands';
@@ -14,11 +14,13 @@ import { runWhileDiffExpanded } from '../../components/diffExpansionStore';
 import { openShortcutsDialog } from './ShortcutsDialog';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
+import { useKeymap } from '../../lib/keymapStore';
 
 /** Commands available everywhere, including the home screen. */
 export function useAppCommands(): void {
   const rail = useSidebarCollapsed();
   const fileListView = useFileListViewStore();
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(
     () => [
       { id: 'app.settings', group: 'App', label: 'Settings', icon: Settings, shortcut: hotkey('settings'), run: openSettingsDialog },
@@ -44,7 +46,7 @@ export function useAppCommands(): void {
         label: rail ? 'Expand sidebar' : 'Collapse sidebar',
         icon: PanelLeft,
         keywords: ['rail', 'collapse', 'expand', 'navigation'],
-        shortcut: SIDEBAR_SHORTCUT,
+        shortcut: hotkey('toggleSidebar'),
         // While a diff is expanded, it only gives the window back: the sidebar the user asked for shows as it was.
         run: () => runWhileDiffExpanded('toggleSidebar', toggleSidebar),
       },
@@ -76,7 +78,7 @@ export function useAppCommands(): void {
       },
       ...fileListViewCommands(fileListView, fileListView),
     ],
-    [rail, fileListView],
+    [keymap, rail, fileListView],
   );
   useCommands(commands);
   // The sheet's other key (⌘/): a command runs from one key.

@@ -1,4 +1,4 @@
-import { AppWindow, CircleDot, FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users, Wrench } from 'lucide-react';
+import { AppWindow, CircleDot, FileDiff, GitCommitVertical, GitMerge, HardDrive, Keyboard, Palette, Users, Wrench } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -9,16 +9,18 @@ import { AppearancePane } from './AppearancePane';
 import { AppsPane } from './AppsPane';
 import { CheckinPane } from './CheckinPane';
 import { IssueTrackerPane } from './issueTrackers/IssueTrackerPane';
+import { KeyboardPane } from './keyboard/KeyboardPane';
 import { MergeToolsPane } from './MergeToolsPane';
 import { PendingChangesPane } from './PendingChangesPane';
 import { ToolsPane } from './ToolsPane';
 import { WorkspacesPane } from './WorkspacesPane';
 import styles from './SettingsDialog.module.css';
 
-export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'apps' | 'merge' | 'tools' | 'workspaces' | 'issueTracker' | 'accounts';
+export type SettingsSection = 'appearance' | 'keyboard' | 'pendingChanges' | 'checkin' | 'apps' | 'merge' | 'tools' | 'workspaces' | 'issueTracker' | 'accounts';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: 'appearance', label: 'Appearance', icon: <Palette size={15} /> },
+  { id: 'keyboard', label: 'Keyboard', icon: <Keyboard size={15} /> },
   { id: 'pendingChanges', label: 'Pending changes', icon: <FileDiff size={15} /> },
   { id: 'checkin', label: 'Check in', icon: <GitCommitVertical size={15} /> },
   { id: 'apps', label: 'Apps', icon: <AppWindow size={15} /> },
@@ -50,6 +52,7 @@ function SettingsDialog({ initialSection, onClose }: { initialSection: SettingsS
         </nav>
         <div className={styles.pane}>
           {section === 'appearance' && <AppearancePane />}
+          {section === 'keyboard' && <KeyboardPane />}
           {section === 'pendingChanges' && <PendingChangesPane />}
           {section === 'checkin' && <CheckinPane />}
           {section === 'apps' && <AppsPane />}

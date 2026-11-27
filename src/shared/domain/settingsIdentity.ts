@@ -71,6 +71,7 @@ export const APP_SETTINGS_IDENTITY: { readonly [Setting in keyof AppSettings]: S
   terminal: 'namesNoObject',
   customEditors: 'namesNoObject',
   tools: 'namesNoObject',
+  customShortcuts: 'namesNoObject',
   zoomLevel: 'namesNoObject',
   windowBounds: 'namesNoObject',
   pageWindowBounds: 'namesNoObject',

@@ -1,7 +1,8 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { workspacePlace } from '@shared/domain/place';
-import { hotkey, SHORTCUTS } from '../../lib/shortcutRegistry';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { SHORTCUTS } from '@shared/shortcuts/shortcutRegistry';
 import { menuCommandTarget } from '../commands/useMenuCommands';
 import { pageWindowCommands } from './usePageWindowCommands';
 

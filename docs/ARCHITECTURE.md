@@ -51,6 +51,7 @@ Each feature area's own rules live in `docs/features/`:
 | `features/partial-workspaces.md`        | Partial workspaces: creating one empty, choosing what to download (`cm partial configure`), updates and merges that keep it partial |
 | `features/cm-runtime.md`                | The `cm` the app runs: the installed one first, the pin as the floor (`cm-version.json`, `cm:bump`), the app's own store and setup, the setup and update screens, updates that bring their `cm`, Settings' choice |
 | `features/accounts.md`                  | Accounts and sign-in: how profiles make accounts (a Unity account per user, one per server), Home's account switcher, Settings › Accounts; sign-in state, one per server: how `cm` says a server needs a sign-in, the gate that keeps commands from it, keeping sessions alive, the sign-in screen, operations refused and offered again |
+| `features/keyboard-shortcuts.md`        | Keyboard shortcuts: which can change, Settings › Keyboard, clashes and refused keys, keys a person chose against later defaults, how every key follows a change |
 
 ## How a request flows
 
@@ -478,7 +479,7 @@ The conventions every view follows, in full in architecture/renderer.md and arch
 - **Data and refresh**: TanStack Query, keys under `queryKeys.inPlace` (`inWorkspace`). Views refresh on events, never
   on a timer but the incoming check; `runOperation` for long operations, `runAction` for quick ones.
 - **Menus, actions, keyboard, focus**: one grammar for every object's menu (`lib/menuGroups`); menus and the palette
-  share `Action`/`MenuEntry`; every shortcut is in `lib/shortcutRegistry.ts`; the list a view works on carries
+  share `Action`/`MenuEntry`; every shortcut is in `shared/shortcuts/shortcutRegistry.ts`; the list a view works on carries
   `MAIN_FOCUS`.
 - **Lists**: one filter rule for every list, `ListWithDetails`, big lists render only the rows in view, long names fit,
   lists of changed files read and work the same everywhere: architecture/lists.md.

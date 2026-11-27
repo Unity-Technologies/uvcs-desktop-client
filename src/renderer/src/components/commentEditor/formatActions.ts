@@ -1,5 +1,5 @@
 import { Bold, Code, Italic, Link, List, ListOrdered, ListTodo, SquareCode, TextQuote, type LucideIcon } from 'lucide-react';
-import type { ShortcutId } from '../../lib/shortcutRegistry';
+import type { ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import type { FormatCommandId } from './formatCommands';
 import { StrikethroughIcon } from './StrikethroughIcon';
 

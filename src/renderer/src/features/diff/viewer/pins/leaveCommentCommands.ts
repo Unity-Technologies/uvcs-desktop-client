@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import type { Command } from '../../../../app/commands/commandStore';
-import { hotkey, SHORTCUTS, type ShortcutId } from '../../../../lib/shortcutRegistry';
+import { hotkey } from '../../../../lib/shortcutRegistry';
+import { SHORTCUTS, type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { leaveCommentCommandOf, type LeaveCommentCommand, type StageCommenting } from './stageCommenting';
 
 /** The stage's Esc in the registry: its key, and its area ("Image diff", "Model diff") as the palette's group. */

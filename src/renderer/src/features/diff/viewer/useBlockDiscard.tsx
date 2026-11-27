@@ -109,12 +109,12 @@ export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod,
   const onKeyDown = (event: KeyboardEvent): void => {
     // Keys the editor took (⌘Z and Esc while typing) are its own.
     if (!enabled || event.defaultPrevented) return;
-    const handlers: [string, () => void][] = [
+    const handlers: [string | undefined, () => void][] = [
       [hotkey('discardLines'), () => void discarding.discard(picked?.lines ?? [])],
       [hotkey('undoDiscard'), () => onUndo?.()],
       [hotkey('clearPickedLines'), pick.drop],
     ];
-    const handler = handlers.find(([shortcut]) => matchesShortcut(event.nativeEvent, shortcut));
+    const handler = handlers.find(([shortcut]) => shortcut !== undefined && matchesShortcut(event.nativeEvent, shortcut));
     if (!handler || (handler[0] === hotkey('clearPickedLines') && !picked)) return;
     event.preventDefault();
     handler[1]();

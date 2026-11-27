@@ -5,7 +5,7 @@
  * `diffExpansionStore` holds it for the window.
  */
 import type { FocusMover } from '../lib/focusRing';
-import type { ShortcutId } from '../lib/shortcutRegistry';
+import type { ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 
 /** Where the window's navigation stands: the view, and how many pages are open over it. */
 export interface NavigationSpot {
@@ -138,7 +138,7 @@ const WHILE_EXPANDED: Partial<Record<ShortcutId, ShortcutWhileExpanded>> = {
   toggleSidebar: 'collapseOnly',
   // Incoming's update bar is out of sight: Esc collapses the diff, and never stops a resolve run unseen.
   stopResolvingInTool: 'off',
-  // Go to file (`filesGoToFile`, `goToFile`) acts: the file picked shows in the diff, as choosing another file does.
+  // Go to file (`goToFile`) acts: the file picked shows in the diff, as choosing another file does.
 };
 
 /**

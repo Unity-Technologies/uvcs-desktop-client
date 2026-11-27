@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 
-import { SHORTCUTS, shortcutKeys, viewShortcut } from '../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys, viewShortcut } from '@shared/shortcuts/shortcutRegistry';
 import { VIEWS } from './viewRegistry';
 
 describe('views', () => {

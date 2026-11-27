@@ -1,5 +1,6 @@
 import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
+import { keymapOf } from '@shared/shortcuts/keymap';
 import { appMenuTemplate, shownAccelerator, type AppMenuContext } from './appMenuTemplate';
 import type { PageZoomChange } from './pageZoom';
 
@@ -8,6 +9,7 @@ function templateOn(platform: NodeJS.Platform, links: Partial<AppMenuContext> = 
     platform,
     isPackaged: true,
     commandItem: (label, commandId, accelerator) => ({ id: commandId, label, accelerator }),
+    keymap: keymapOf({}, platform === 'darwin'),
     windowItems: [{ label: 'Home', type: 'checkbox' }],
     newWindow: () => {},
     openDocumentation: () => {},
@@ -135,6 +137,12 @@ describe('appMenuTemplate', () => {
       { id: 'merge.fromBranch', label: 'Merge from Branch…', accelerator: 'CmdOrCtrl+Shift+M' },
       { id: 'merge.toBranch', label: 'Merge Current Branch into…', accelerator: undefined },
     ]);
+  });
+
+  it('shows the keys a person gave the commands, and none where they removed one', () => {
+    const items = submenuOf(templateOn('darwin', { keymap: keymapOf({ newBranch: ['mod+shift+b'], switchBranch: [] }, true) }).find((menu) => menu.label === 'Branch')!);
+    expect(items.find((item) => item.id === 'branch.new')?.accelerator).toBe('CmdOrCtrl+Shift+B');
+    expect(items.find((item) => item.id === 'branch.switch')?.accelerator).toBeUndefined();
   });
 
   it('closes the window from File everywhere', () => {

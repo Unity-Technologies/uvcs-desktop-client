@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { Page } from '../navigation/pages';
 import { viewDefinition } from '../navigation/viewRegistry';
 import type { ViewId } from '../navigation/views';
+import { useKeymap } from '../../lib/keymapStore';
 import { ViewShownContext } from '../../lib/viewShown';
 import { PageFrame } from './PageFrame';
 import { viewLayerShown } from './viewLayer';
@@ -18,9 +19,11 @@ interface KeptViewProps {
 /**
  * A view of the place with the page on top of it, mounted whether shown or not (`mountedViews`): hidden, in an
  * `Activity`, it keeps all it shows as the user left it while its effects stop. Memoized, so the hidden ones don't
- * render again as the view shown moves.
+ * render again as the view shown moves; they do when a person changes a shortcut (`useKeymap`), so the keys they show
+ * and bind are the new ones.
  */
 export const KeptView = memo(function KeptView({ view, pages, drawsTop }: KeptViewProps) {
+  useKeymap();
   const View = viewDefinition(view).component;
   const top = pages.at(-1);
   const listShown = viewLayerShown(top);

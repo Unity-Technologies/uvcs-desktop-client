@@ -4,10 +4,9 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
-import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition } from './shortcutRegistry';
+import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition } from '@shared/shortcuts/shortcutRegistry';
 
 const RENDERER = join(__dirname, '..');
-const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');
 
 /** Shortcuts written as literals: a modifier chord anywhere, or any key given to a shortcut prop, field or hook. */
 const LITERAL_SHORTCUT = [
@@ -37,20 +36,68 @@ describe('shortcut registry', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('shows the native menu accelerators of the keys the renderer binds', () => {
-    // One accelerator for every OS, or one per OS where their keys differ (`isMac ? '…' : '…'`).
-    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', (?:'([^']+)'|isMac \? '([^']+)' : '([^']+)')[,)]/g)];
-    expect(items.length).toBeGreaterThan(0);
-    expect(items.some(([, , , onMac]) => onMac !== undefined)).toBe(true);
-    for (const [, commandId, everywhere, onMac, offMac] of items) {
-      const shortcut = Object.values(SHORTCUTS).find((candidate) => 'commandId' in candidate && candidate.commandId === commandId);
-      expect(shortcut, commandId).toBeDefined();
-      for (const mac of [true, false]) {
-        // As the source writes it: a backslash key is escaped there.
-        const accelerator = (everywhere ?? (mac ? onMac : offMac))!.replaceAll('\\\\', '\\');
-        expect(toAccelerator(shortcutKeys(shortcut!, mac)[0]!), commandId).toBe(accelerator);
-      }
-    }
+  it('reads the keys of a shortcut a person may change again in every memo, when the keymap changes', () => {
+    // A memo that keeps `hotkey('newBranch')` keeps the old key after a change unless it depends on `useKeymap()`.
+    const customizable = Object.entries(SHORTCUTS).filter(([, shortcut]) => (shortcut as ShortcutDefinition).customizable).map(([id]) => id);
+    const offenders = filesUnder(RENDERER, isAppSource)
+      .map((path) => ({ path, text: readFileSync(path, 'utf8') }))
+      .filter(({ text }) => /\buse(Memo|Callback)\b/.test(text) && /\bhotkeys?\(/.test(text))
+      .flatMap(({ path, text }) =>
+        memosIn(text)
+          .filter(({ body, deps }) => readsKeysOf(body, customizable) && !/\bkeymap\b/.test(deps))
+          .map(({ line }) => `${relative(RENDERER, path)}:${line}`),
+      );
+    expect(offenders).toEqual([]);
+  });
+
+  it('never keeps the keys of a shortcut a person may change in a constant read once, as its module loads', () => {
+    const customizable = Object.entries(SHORTCUTS).filter(([, shortcut]) => (shortcut as ShortcutDefinition).customizable).map(([id]) => id);
+    const offenders = filesUnder(RENDERER, isAppSource)
+      .map((path) => ({ path, text: readFileSync(path, 'utf8') }))
+      .filter(({ text }) => /\bhotkeys?\(/.test(text))
+      .flatMap(({ path, text }) =>
+        moduleConstants(text)
+          .filter(({ initializer }) => readsKeysOf(initializer, customizable))
+          .map(({ line }) => `${relative(RENDERER, path)}:${line}`),
+      );
+    expect(offenders).toEqual([]);
+  });
+
+  it('says of every shortcut whether a person may change it, or why not, so Settings › Keyboard lists them all', () => {
+    const undecided = Object.entries(SHORTCUTS)
+      .filter(([, shortcut]) => ('customizable' in shortcut) === ('fixed' in shortcut))
+      .map(([id]) => id);
+    expect(undecided).toEqual([]);
+  });
+
+  it('never compares a key by hand, which a person changing it in Settings › Keyboard would never reach', () => {
+    // A key compared as `event.key === 'r'` keeps running on R after a person gives the shortcut another key: every
+    // key is matched through the registry (`hotkeys`, `matchesShortcut`). The lines left are Select all in a list or a
+    // table, and Copy with text selected, which every app shares (`fixed: 'shared'`).
+    const allowed = [
+      "} else if (event.key === 'a' && isModPressed(event)) {",
+      "return selectedText !== '' && isModPressed(event, mac) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'c';",
+    ];
+    const offenders = filesUnder(RENDERER, isAppSource).flatMap((path) =>
+      readFileSync(path, 'utf8')
+        .split('\n')
+        .map((line, index) => ({ line: line.trim(), where: `${relative(RENDERER, path)}:${index + 1}` }))
+        .filter(({ line }) => /\.key(?:\.toLowerCase\(\))? === '[a-zA-Z0-9]'/.test(line) && !allowed.includes(line))
+        .map(({ where, line }) => `${where}: ${line}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('binds every shortcut a person may change through the registry, by its id, so a change reaches it', () => {
+    // A key matched by hand, or from a table of letters, would show the new key in Settings › Keyboard and still run
+    // on the old one. The forms that bind by id: `hotkey('id')`, `hotkeys('id')`, `matchesAny(event, 'id')`,
+    // `shortcutId: 'id'`, a step's `{ next: 'id', previous: 'id' }` (`StepShortcuts`), and tables of `['id', action]`.
+    const sources = filesUnder(RENDERER, isAppSource).map((path) => readFileSync(path, 'utf8')).join('\n');
+    const unbound = Object.entries(SHORTCUTS)
+      .filter(([, shortcut]) => (shortcut as ShortcutDefinition).customizable)
+      .map(([id]) => id)
+      .filter((id) => !new RegExp(`(?:hotkeys?\\(|matchesAny\\([^,]+, |shortcutId: |(?:next|previous): |\\[\\s*)'${id}'`).test(sources));
+    expect(unbound).toEqual([]);
   });
 
   it('puts every shortcut in a known area', () => {
@@ -60,7 +107,7 @@ describe('shortcut registry', () => {
   it('gives global shortcuts and views distinct keys', () => {
     for (const mac of [true, false]) {
       const global = Object.values(SHORTCUTS)
-        .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
+        .filter((shortcut) => shortcut.area === 'General')
         .flatMap((shortcut) => shortcutKeys(shortcut, mac));
       const views = Array.from({ length: 14 }, (_, position) => viewShortcut(position, mac));
       const keys = [...global, ...views];
@@ -72,7 +119,7 @@ describe('shortcut registry', () => {
     for (const mac of [true, false]) {
       const global = new Set(
         Object.values(SHORTCUTS)
-          .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
+          .filter((shortcut) => shortcut.area === 'General')
           .flatMap((shortcut) => shortcutKeys(shortcut, mac)),
       );
       const sharing = Object.entries(SHORTCUTS)
@@ -84,7 +131,9 @@ describe('shortcut registry', () => {
     }
     expect(SHORTCUTS.commentLink.keys).toEqual(['mod+shift+u']);
     expect(SHORTCUTS.commentCode.keys).toEqual(['mod+shift+c']);
-    for (const shortcut of Object.values(SHORTCUTS).filter((candidate) => candidate.area === 'Comments')) expect((shortcut as ShortcutDefinition).scope).toBe('commentField');
+    // Saving the comment is the field's own key too, bound by the field (`focusMode`, the composers), so it takes no scope.
+    const formatting = Object.entries(SHORTCUTS).filter(([id, candidate]) => candidate.area === 'Comments' && id !== 'saveComment');
+    for (const [, shortcut] of formatting) expect((shortcut as ShortcutDefinition).scope).toBe('commentField');
   });
 
   it('writes keys the formatter and matcher understand', () => {
@@ -158,10 +207,38 @@ describe('viewShortcut', () => {
   });
 });
 
-function toAccelerator(shortcut: string): string {
-  const names: Record<string, string> = { mod: 'CmdOrCtrl', shift: 'Shift', alt: 'Alt', ctrl: 'Ctrl' };
-  return shortcut
-    .split('+')
-    .map((key) => names[key] ?? key.toUpperCase())
-    .join('+');
+/** Each `useMemo(…)` and `useCallback(…)` of a source: its line, its body and its dependencies (the last array). */
+function memosIn(text: string): { line: number; body: string; deps: string }[] {
+  return [...text.matchAll(/\buse(?:Memo|Callback)(?:<[^>]*>)?\(/g)].map((match) => {
+    const open = match.index + match[0].length - 1;
+    const body = text.slice(open, closingBracket(text, open) + 1);
+    return { line: text.slice(0, match.index).split('\n').length, body, deps: body.slice(body.lastIndexOf('[')) };
+  });
+}
+
+/**
+ * Each constant a module declares at its top level with a value (not a function): its line and what it's set to,
+ * up to the next line at the top level.
+ */
+function moduleConstants(text: string): { line: number; initializer: string }[] {
+  const lines = text.split('\n');
+  return lines.flatMap((line, index) => {
+    const declared = /^(?:export )?const \w+(?::[^=]+)? = (.*)$/.exec(line);
+    if (!declared || /^(?:\([^)]*\)|\w+) =>|^function\b|^async\b/.test(declared[1]!)) return [];
+    const end = lines.findIndex((next, nextIndex) => nextIndex > index && /^\S/.test(next));
+    return [{ line: index + 1, initializer: lines.slice(index, end === -1 ? undefined : end).join('\n') }];
+  });
+}
+
+function closingBracket(text: string, open: number): number {
+  let depth = 0;
+  for (let index = open; index < text.length; index++) {
+    if ('([{'.includes(text[index]!)) depth++;
+    else if (')]}'.includes(text[index]!) && --depth === 0) return index;
+  }
+  return text.length - 1;
+}
+
+function readsKeysOf(body: string, ids: readonly string[]): boolean {
+  return [...body.matchAll(/\bhotkeys?\('(\w+)'\)/g)].some(([, id]) => ids.includes(id!));
 }

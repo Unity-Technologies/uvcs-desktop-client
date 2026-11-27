@@ -1,6 +1,17 @@
 /** Marks the app's modal dialogs (spread on `ui/dialog/Dialog`'s content): while one is open, the window waits. */
 export const MODAL_DIALOG = { 'data-modal-dialog': '' } as const;
 
+/**
+ * Marks an element that takes Esc itself while it has the focus (a shortcut's keys being recorded), so the dialog
+ * around it stays open: Radix closes a dialog on Esc before the element's own handler sees it.
+ */
+export const TAKES_ESCAPE = { 'data-takes-escape': '' } as const;
+
+/** Whether Esc pressed on `target` belongs to it, not to the dialog it's in (`TAKES_ESCAPE`). */
+export function escapeTakenBy(target: EventTarget | Pick<Element, 'closest'> | null): boolean {
+  return target !== null && 'closest' in target && target.closest('[data-takes-escape]') !== null;
+}
+
 type Root = Pick<ParentNode, 'querySelector'>;
 
 /** Whether an element is inside one of the app's modal dialogs. */

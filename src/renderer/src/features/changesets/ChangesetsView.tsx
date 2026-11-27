@@ -46,6 +46,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { changesetCopyTexts } from './changesetMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
+import { useKeymap } from '../../lib/keymapStore';
 
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 const ownerOf = (changeset: Changeset): string => changeset.owner;
@@ -83,6 +84,7 @@ export function ChangesetsView() {
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
   const menuContext = { place, workspaceKind: workspace?.kind, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
 
+  const keymap = useKeymap();
   useCommands(
     useMemo<Command[]>(
       () => [
@@ -95,7 +97,7 @@ export function ChangesetsView() {
           run: () => (selected.length === 2 ? openRangeDiff(...sortedPair(selected)) : openChangesetDiff(selected[0]!)),
         },
       ],
-      [selected],
+      [keymap, selected],
     ),
   );
 

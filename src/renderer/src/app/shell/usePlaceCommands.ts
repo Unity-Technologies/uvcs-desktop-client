@@ -20,6 +20,7 @@ import { useSession } from '../workspace/sessionStore';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { usePlace } from '../workspace/useWorkspace';
 import { useCommandLogStore } from './commandLogStore';
+import { useKeymap } from '../../lib/keymapStore';
 
 const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
   { theme: 'system', label: 'Use system theme', icon: Monitor },
@@ -44,6 +45,7 @@ export function usePlaceCommands(): void {
   const inBranchExplorer = useNavigation((state) => state.view === 'branchExplorer' && state.pages.length === 0);
   const timeline = useMemo(() => timelineToggle(timelineShown, inBranchExplorer), [timelineShown, inBranchExplorer]);
 
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(
     () => [
       ...viewCommands(viewsOf(place), navigation.returnToView),
@@ -129,7 +131,7 @@ export function usePlaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [place, goHome, openWorkspace, theme, reviewing, commandLogOpen, timeline, updateSettings],
+    [keymap, place, goHome, openWorkspace, theme, reviewing, commandLogOpen, timeline, updateSettings],
   );
 
   useCommands(commands);

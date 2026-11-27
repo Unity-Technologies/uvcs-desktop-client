@@ -6,10 +6,12 @@ import { viewCommands } from '../commands/viewCommands';
 import { navigation } from '../navigation/navigationStore';
 import { VIEWS } from '../navigation/viewRegistry';
 import { usePlace } from '../workspace/useWorkspace';
+import { useKeymap } from '../../lib/keymapStore';
 
 export function usePageWindowCommands(): void {
   const place = usePlace();
-  useCommands(useMemo(() => pageWindowCommands(place), [place]));
+  const keymap = useKeymap();
+  useCommands(useMemo(() => pageWindowCommands(place), [keymap, place]));
 }
 
 /**

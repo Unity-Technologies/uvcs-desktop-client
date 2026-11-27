@@ -2,6 +2,7 @@ import { GitBranch, GitBranchPlus } from 'lucide-react';
 import { useMemo } from 'react';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { useCommands, type Command } from '../../app/commands/commandStore';
+import { useKeymap } from '../../lib/keymapStore';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useBranchSwitcher } from './branchSwitcherStore';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
@@ -9,6 +10,7 @@ import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 /** The palette's Switch branch… (opening the branch switcher) and New branch… (from what the workspace has loaded). */
 export function useBranchCommands(workspace: WorkspaceInfo | undefined): void {
   const setOpen = useBranchSwitcher((state) => state.setOpen);
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(
     () => [
       {
@@ -29,7 +31,7 @@ export function useBranchCommands(workspace: WorkspaceInfo | undefined): void {
         run: () => workspace && newBranchFromWorkspace(workspace),
       },
     ],
-    [setOpen, workspace],
+    [keymap, setOpen, workspace],
   );
   useCommands(commands);
 }

@@ -3,7 +3,7 @@ import type { Shelve } from '@shared/domain/shelve';
 import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
-import { hotkey } from '../../lib/shortcutRegistry';
+import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { Button } from '../../ui/Button';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -63,7 +63,7 @@ export function MyShelvesList({ workspacePath, scope, onScopeChange, recent, onD
   }, [scope]);
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (matchesShortcut(event.nativeEvent, hotkey('shelvesScope'))) {
+    if (hotkeys('shelvesScope').some((key) => matchesShortcut(event.nativeEvent, key))) {
       // Not the window's ⇧⌘S, which opens the list on the user's own.
       event.preventDefault();
       event.stopPropagation();

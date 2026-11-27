@@ -1,7 +1,7 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { InsideDialog } from './insideDialog';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
-import { MODAL_DIALOG } from '../../lib/modalDialog';
+import { escapeTakenBy, MODAL_DIALOG } from '../../lib/modalDialog';
 import styles from './Dialog.module.css';
 
 interface DialogProps {
@@ -43,6 +43,7 @@ export function Dialog({ icon, eyebrow, title, description, headerAction, width,
             aria-describedby={undefined}
             {...marks}
             {...MODAL_DIALOG}
+            onEscapeKeyDown={(event) => escapeTakenBy(event.target) && event.preventDefault()}
           >
             <form onSubmit={submit} style={{ display: 'contents' }}>
               <div className={styles.header} data-icon={icon ? true : undefined}>

@@ -1,6 +1,7 @@
 import type { KeyboardEvent, RefObject } from 'react';
 import { spec } from '@shared/domain/specs';
-import { hotkey, hotkeys, type ShortcutId } from '../../lib/shortcutRegistry';
+import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
+import { type ShortcutId } from '@shared/shortcuts/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { isTextEntry } from '../../lib/textEntry';
 import { BRANCH_MOVES, moveBranches, type BranchPositions } from './branchPosition';

@@ -6,6 +6,7 @@ import { useCommands, type Command } from '../commands/commandStore';
 import { queryClient } from '../queryClient';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
+import { useKeymap } from '../../lib/keymapStore';
 
 /**
  * The home screen's commands. They take the ids of the workspace's own, so Home (⇧⌘H), File › Open Workspace… (⇧⌘O),
@@ -13,6 +14,7 @@ import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
  * again, and a link to the repositories shown (`homeLink`).
  */
 export function useHomeCommands(open: (path: string) => void, goHome: () => void, link: string | null): void {
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(
     () => [
       { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: goHome },
@@ -51,7 +53,7 @@ export function useHomeCommands(open: (path: string) => void, goHome: () => void
         run: () => link && copyToClipboard(link, 'Link'),
       },
     ],
-    [open, goHome, link],
+    [keymap, open, goHome, link],
   );
   useCommands(commands);
 }

@@ -92,7 +92,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   const onKeyDown = (event: KeyboardEvent): void => {
     codeMenu.onKeyDown(event);
     if (event.defaultPrevented || event.target !== event.currentTarget) return;
-    const handlers: [string, () => void][] = [
+    const handlers: [string | undefined, () => void][] = [
       // Before Esc leaves the pane: only while something is picked.
       ...(picked !== -1 ? ([[hotkey('annotateLetGo'), () => setPicked(-1)]] as [string, () => void][]) : []),
       [hotkey('annotateNextBlock'), () => walk(1)],
@@ -102,7 +102,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
       [hotkey('annotateShowRevision'), () => showRevision(picked)],
       [hotkey('annotateBlockDetails'), () => picked !== -1 && cardState.toggle(picked)],
     ];
-    const handler = handlers.find(([shortcut]) => matchesShortcut(event.nativeEvent, shortcut));
+    const handler = handlers.find(([shortcut]) => shortcut !== undefined && matchesShortcut(event.nativeEvent, shortcut));
     if (!handler) return;
     event.preventDefault();
     handler[1]();

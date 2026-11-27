@@ -54,7 +54,7 @@ file, whatever its length). While something is typed its results take the tree's
 (`RepositoryTreeSearchResults`); the tree stays mounted behind them, its folders and selection as they were. A pick
 shows the item in the tree and clears the query: Files asks its reveal (`requestReveal`), Browse repository reopens
 the tree on it (`browseOpening`, the tree remounted by `reveals`). ⌘P (Ctrl+P off Mac), ⌘F (Ctrl+F), `/` in the tree
-(`filesGoToFile`) and the palette's "Go to file…" bring the keyboard to the field, greyed until the changeset to search
+(`goToFile`'s keys) and the palette's "Go to file…" bring the keyboard to the field, greyed until the changeset to search
 is known. Enter picks only results that answer what is typed (`repositoryFileSearchKey`). Files searches the head of the branch it shows, Browse
 repository the changeset it shows. Choose what to download searches the same way (docs/features/partial-workspaces.md).
 
