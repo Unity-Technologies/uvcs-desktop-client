@@ -87,6 +87,17 @@ describe('shortcut registry', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('reads every shortcut a person may change through the registry somewhere, so a change reaches it', () => {
+    // A key matched by hand, or from a table of letters, would show the new key in Settings › Keyboard and still run
+    // on the old one: a shortcut that can change is named by its id where it binds (`hotkey('id')`, `shortcutId: 'id'`).
+    const sources = filesUnder(RENDERER, isAppSource).map((path) => readFileSync(path, 'utf8')).join('\n');
+    const unread = Object.entries(SHORTCUTS)
+      .filter(([, shortcut]) => (shortcut as ShortcutDefinition).customizable)
+      .map(([id]) => id)
+      .filter((id) => !sources.includes(`'${id}'`));
+    expect(unread).toEqual([]);
+  });
+
   it('puts every shortcut in a known area', () => {
     for (const shortcut of Object.values(SHORTCUTS)) expect(SHORTCUT_AREAS).toContain(shortcut.area);
   });
@@ -94,7 +105,7 @@ describe('shortcut registry', () => {
   it('gives global shortcuts and views distinct keys', () => {
     for (const mac of [true, false]) {
       const global = Object.values(SHORTCUTS)
-        .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
+        .filter((shortcut) => shortcut.area === 'General')
         .flatMap((shortcut) => shortcutKeys(shortcut, mac));
       const views = Array.from({ length: 14 }, (_, position) => viewShortcut(position, mac));
       const keys = [...global, ...views];
@@ -106,7 +117,7 @@ describe('shortcut registry', () => {
     for (const mac of [true, false]) {
       const global = new Set(
         Object.values(SHORTCUTS)
-          .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
+          .filter((shortcut) => shortcut.area === 'General')
           .flatMap((shortcut) => shortcutKeys(shortcut, mac)),
       );
       const sharing = Object.entries(SHORTCUTS)
@@ -118,7 +129,9 @@ describe('shortcut registry', () => {
     }
     expect(SHORTCUTS.commentLink.keys).toEqual(['mod+shift+u']);
     expect(SHORTCUTS.commentCode.keys).toEqual(['mod+shift+c']);
-    for (const shortcut of Object.values(SHORTCUTS).filter((candidate) => candidate.area === 'Comments')) expect((shortcut as ShortcutDefinition).scope).toBe('commentField');
+    // Saving the comment is the field's own key too, bound by the field (`focusMode`, the composers), so it takes no scope.
+    const formatting = Object.entries(SHORTCUTS).filter(([id, candidate]) => candidate.area === 'Comments' && id !== 'saveComment');
+    for (const [, shortcut] of formatting) expect((shortcut as ShortcutDefinition).scope).toBe('commentField');
   });
 
   it('writes keys the formatter and matcher understand', () => {

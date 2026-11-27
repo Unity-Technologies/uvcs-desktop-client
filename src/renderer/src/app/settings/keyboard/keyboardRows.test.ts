@@ -117,7 +117,7 @@ describe('resetOutcome', () => {
   it('names every shortcut that took one of its keys', () => {
     // Command palette came with ⌘K and ⇧⌘P: New branch took ⌘K, Go to file ⇧⌘P.
     const keymap = keymapOf({ commandPalette: ['mod+j'], newBranch: ['mod+k'], goToFile: ['mod+shift+p'] }, MAC);
-    expect(resetOutcome('commandPalette', keymap, MAC)).toEqual({ gives: false, note: { tone: 'confirm', text: 'New branch and Go to file use its keys now.' } });
+    expect(resetOutcome('commandPalette', keymap, MAC)).toEqual({ gives: false, note: { tone: 'confirm', text: 'New branch and Go to file (Files) use its keys now.' } });
   });
 });
 

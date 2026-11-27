@@ -27,6 +27,11 @@ Every shortcut says which it is: `customizable`, or `fixed` with the reason Sett
 (`shared`, `text`, `focus`); a test fails on one that says neither, or both. And no key is compared by hand
 (`event.key === 'r'`): a test refuses it, so every key goes through the registry and follows a change.
 
+A shortcut's area is where a person meets it: General when it works anywhere in the window (the Timeline's key opens
+the Branch Explorer from any view), a view's name only when it works in that view alone (Go to file is Files'), and
+an area of its own when it works across views (Review: R and the review's comments, in Changes, a diff page and a code
+review). A changeable shortcut is named by its id where it binds; a test fails on one no source names.
+
 ## What the settings keep
 
 `AppSettings.customShortcuts` holds only the shortcuts a person changed, by id: each with the keys it takes now (the
@@ -52,8 +57,8 @@ view they show in; a new view that shows them joins that table. A view shows a d
 each is a row of its own. Shortcuts the registry gives one key on purpose never clash (`sharedByDesign`): they're
 bound where the other isn't (Next change in a diff and Next conflict on the merge page, ⌥↓ both), so a shortcut's own
 keys are always free to take back; a test holds it for every shortcut that can change. A comment field's keys take effect only inside a focused
-comment field, so they clash only among themselves. General lists a few keys used where they act (saving a comment,
-Shift held while dropping or opening); those aren't window-wide.
+comment field, so they clash only among themselves. General lists two keys used where they act (Shift
+held while dropping or opening); those aren't window-wide.
 
 `keyChoice` decides what a key pressed for a shortcut does:
 

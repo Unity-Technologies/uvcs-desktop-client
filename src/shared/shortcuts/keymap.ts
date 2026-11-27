@@ -84,7 +84,9 @@ function sharedByDesign(first: ShortcutDefinition, second: ShortcutDefinition): 
  * show in. The merge page steps through conflicts with keys of its own (Merge).
  */
 const SHOWN_TOGETHER: readonly (readonly ShortcutArea[])[] = [
-  ['Changes', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
+  ['Changes', 'Review', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
+  // A diff page: a branch's, a changeset's, a code review's Changes.
+  ['Review', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
   ['Files', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
   ['Files', 'Lists', 'Annotate'],
   ['History', 'Lists', 'Diff', 'Text', 'Image diff', 'Model diff'],
@@ -99,9 +101,9 @@ function shownTogether(first: ShortcutArea, second: ShortcutArea): boolean {
 
 /**
  * General's shortcuts run from anywhere in the window, but for the ones General lists that act where they're used:
- * saving the comment being written, and Shift held while dropping a folder or opening a workspace.
+ * Shift held while dropping a folder or opening a workspace.
  */
-const BOUND_WHERE_USED: readonly ShortcutId[] = ['saveComment', 'dropInNewWindow', 'workspaceInNewWindow'];
+const BOUND_WHERE_USED: readonly ShortcutId[] = ['dropInNewWindow', 'workspaceInNewWindow'];
 
 function isWindowWide(id: ShortcutId): boolean {
   return SHORTCUTS[id].area === 'General' && !BOUND_WHERE_USED.includes(id);

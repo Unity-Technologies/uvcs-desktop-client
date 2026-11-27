@@ -14,6 +14,7 @@ export const SHORTCUT_AREAS = [
   'Go to',
   'Lists',
   'Changes',
+  'Review',
   'Diff',
   'Text',
   'Comments',
@@ -77,7 +78,7 @@ export const SHORTCUTS = {
   switchBranch: { area: 'General', label: 'Switch branch', keys: ['mod+shift+w'], commandId: 'branch.switch', customizable: true },
   newBranch: { area: 'General', label: 'New branch', keys: ['mod+b'], commandId: 'branch.new', customizable: true },
   mergeFromBranch: { area: 'General', label: 'Merge from branch', keys: ['mod+shift+m'], commandId: 'merge.fromBranch', customizable: true },
-  goToFile: { area: 'General', label: 'Go to file', keys: ['mod+p'], customizable: true },
+  goToFile: { area: 'Files', label: 'Go to file', keys: ['mod+p'], customizable: true },
   openWorkspace: { area: 'General', label: 'Open another workspace', keys: ['mod+shift+o'], commandId: 'workspace.open', customizable: true },
   newWindow: { area: 'General', label: 'New window', keys: ['mod+n'], commandId: 'app.newWindow', customizable: true },
   dropInNewWindow: { area: 'General', label: 'Open a folder dropped on the window in a new window (hold while dropping)', keys: ['shift'], fixed: 'shared' },
@@ -86,7 +87,7 @@ export const SHORTCUTS = {
   toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'], commandId: 'app.sidebar', customizable: true },
   toggleDetails: { area: 'General', label: "Hide or show the view's details panel", keys: ['mod+i'], commandId: 'view.details', customizable: true },
   appMenu: { area: 'General', label: 'Open the menu', keys: ['f10'], offMacOnly: true, fixed: 'shared' },
-  saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'], fixed: 'shared' },
+  saveComment: { area: 'Comments', label: 'Save an edited comment', keys: ['mod+enter'], fixed: 'shared' },
 
   listFilter: { area: 'Lists', label: "Filter the view's list (/ from outside a text field)", keys: ['mod+f', '/'], fixed: 'shared' },
   listMove: { area: 'Lists', label: 'Move the selection', keys: ['up', 'down'], fixed: 'focus' },
@@ -102,7 +103,7 @@ export const SHORTCUTS = {
   listExpand: { area: 'Lists', label: 'Collapse or expand a folder', keys: ['left', 'right'], fixed: 'focus' },
   rowActions: { area: 'Lists', label: 'Actions of the highlighted result (palette, switchers, Go to file)', keys: ['tab', 'shift+f10'], fixed: 'shared' },
   // Any list of files a review can mark (Changes, a diff's, a code review's): `isReviewKey`.
-  review: { area: 'Lists', label: 'Mark reviewed and go to the next file', keys: ['r'], customizable: true },
+  review: { area: 'Review', label: 'Mark reviewed and go to the next file', keys: ['r'], customizable: true },
 
   checkin: { area: 'Changes', label: 'Check in', keys: ['mod+enter'], customizable: true },
   toggleIncluded: { area: 'Changes', label: 'Include or exclude from the check in', keys: ['space'], fixed: 'shared' },
@@ -118,8 +119,8 @@ export const SHORTCUTS = {
   nextChangeset: { area: 'Diff', label: 'Next changeset of the branch', keys: ['alt+shift+down'], customizable: true },
   previousChangeset: { area: 'Diff', label: 'Previous changeset of the branch', keys: ['alt+shift+up'], customizable: true },
   // In a review's Changes, in the order its Comments panel lists them, across files; N as in "next", where nothing takes it.
-  nextComment: { area: 'Diff', label: "Next comment on a review's code", keys: ['n'], customizable: true },
-  previousComment: { area: 'Diff', label: "Previous comment on a review's code", keys: ['shift+n'], customizable: true },
+  nextComment: { area: 'Review', label: "Next comment on a review's code", keys: ['n'], customizable: true },
+  previousComment: { area: 'Review', label: "Previous comment on a review's code", keys: ['shift+n'], customizable: true },
   discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'], keysOffMac: ['mod+shift+backspace'], customizable: true },
   undoDiscard: { area: 'Diff', label: 'Undo the last discard or edit', keys: ['mod+z'], fixed: 'shared' },
   clearPickedLines: { area: 'Diff', label: 'Clear the picked lines', keys: ['escape'], fixed: 'shared' },
@@ -195,7 +196,7 @@ export const SHORTCUTS = {
   graphZoomOut: { area: 'Branch Explorer', label: 'Zoom out', keys: ['-'], customizable: true },
   graphFit: { area: 'Branch Explorer', label: 'Fit to window', keys: ['0'], customizable: true },
   // Off macOS Alt+Shift, as Ctrl+Alt is AltGr there. From another view it opens the Branch Explorer with it shown.
-  graphTimeline: { area: 'Branch Explorer', label: 'Show or hide the timeline', keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline', customizable: true },
+  graphTimeline: { area: 'General', label: 'Show or hide the timeline', keys: ['mod+alt+t'], keysOffMac: ['alt+shift+t'], commandId: 'branchExplorer.timeline', customizable: true },
   graphClear: { area: 'Branch Explorer', label: 'Clear the selection, then the focus', keys: ['escape'], fixed: 'shared' },
 
   deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'], keysOffMac: ['delete'], customizable: true },
