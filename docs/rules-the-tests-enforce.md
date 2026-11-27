@@ -15,7 +15,7 @@ A new static test joins this list.
 | `main/cm/commandOutputs.test.ts`, `testing/fakeCmClient.test.ts` | no list is read as one string; every command says how it's read (`COMMAND_OUTPUTS`) |
 | `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
 | `renderer/src/rendererTiers.test.ts`                      | `lib/` and `ui/` never import the tiers above them                |
-| `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; memos re-read changed keys; no Ctrl+Alt off Mac |
+| `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; memos re-read changed keys, no module constant keeps one; no Ctrl+Alt off Mac |
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
