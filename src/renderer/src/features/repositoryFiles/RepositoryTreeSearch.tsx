@@ -1,5 +1,5 @@
 import { SearchField } from '../../ui/SearchField';
-import { GO_TO_FILE_SHORTCUT } from '../files/useFileCommands';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { RepositoryFileSearchList } from './RepositoryFileSearchList';
 import type { RepositoryTreeSearch } from './useRepositoryTreeSearch';
 import styles from './RepositoryTreeSearch.module.css';
@@ -16,7 +16,7 @@ export function RepositoryTreeSearchField({ search }: { search: RepositoryTreeSe
       aria-label="Find files and folders by name"
       aria-controls={search.searching ? search.resultsId : undefined}
       placeholder="Find files and folders by name"
-      tip={{ text: 'Go to file', shortcut: GO_TO_FILE_SHORTCUT }}
+      tip={{ text: 'Go to file', shortcut: hotkey('goToFile') }}
       width={280}
     />
   );

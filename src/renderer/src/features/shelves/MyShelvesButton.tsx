@@ -12,6 +12,7 @@ import { MyShelvesList } from './MyShelvesList';
 import { SHELVES_SINCE, type ShelvesScope } from './shelvesScope';
 import { useMyShelves } from './useMyShelves';
 import styles from './MyShelvesButton.module.css';
+import { useKeymap } from '../../lib/keymapStore';
 
 /**
  * "3 shelves" in the Changes header: the user's recent shelves (changes shelved away, left by a switch, or kept as a
@@ -55,6 +56,7 @@ export function MyShelvesButton() {
 }
 
 function useShelvesCommands(available: boolean, openOn: (scope: ShelvesScope) => void): void {
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(
     () => [
       {
@@ -76,7 +78,7 @@ function useShelvesCommands(available: boolean, openOn: (scope: ShelvesScope) =>
         run: () => openOn('everyone'),
       },
     ],
-    [available, openOn],
+    [keymap, available, openOn],
   );
   useCommands(commands);
 }

@@ -256,6 +256,9 @@ export const SHORTCUTS = {
 
 export type ShortcutId = keyof typeof SHORTCUTS;
 
+/** The shortcuts a person may give other keys, or none (`customizable`). */
+export type CustomizableShortcutId = { [Id in ShortcutId]: (typeof SHORTCUTS)[Id] extends { customizable: true } ? Id : never }[ShortcutId];
+
 /** Every key of a shortcut on macOS (`mac`) or elsewhere, the binding first; none where it doesn't exist. */
 export function shortcutKeys(shortcut: ShortcutDefinition, mac: boolean): readonly string[] {
   if (mac) return shortcut.offMacOnly ? [] : shortcut.keys;

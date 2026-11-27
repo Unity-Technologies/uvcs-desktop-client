@@ -34,7 +34,7 @@ import { ancestorsOf, buildFileTreeRows } from './fileTreeRows';
 import { goToFile } from './GoToFileDialog';
 import { ItemDetailsPane } from './ItemDetailsPane';
 import { itemStatus, PendingChangesIndex } from './itemStatus';
-import { GO_TO_FILE_SHORTCUT, useFileCommands } from './useFileCommands';
+import { useFileCommands } from './useFileCommands';
 import { useCutPasteCommands } from './useCutPasteCommands';
 import { useFilesItemLinks } from './useFilesItemLinks';
 import { useTreeListings } from './useTreeListings';
@@ -106,7 +106,7 @@ export function FilesView() {
       subtitle={workspacePath}
       actions={
         <>
-          <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={() => openGoToFile()} />
+          <IconButton icon={<Search size={14} />} label="Go to file" shortcut={hotkey('goToFile')} onClick={() => openGoToFile()} />
           {showsChooseDownloadsButton(workspace?.kind) && (
             // Labeled, not an icon: in a partial workspace choosing what to download is how its files get there.
             <Button icon={<FolderDown size={14} />} onClick={() => openChooseDownloads(workspacePath)}>

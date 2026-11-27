@@ -8,6 +8,7 @@ import { formatShortcut, matchesShortcut } from '../../lib/shortcuts';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { allCommands, useCommands, type Command } from '../commands/commandStore';
 import { useNavigation } from '../navigation/navigationStore';
+import { useKeymap } from '../../lib/keymapStore';
 
 /**
  * Expand Diff in a window showing a place's views and pages, or one page (a page window): its command (⇧⌘E, View ▸
@@ -18,6 +19,7 @@ export function useDiffExpansion(): void {
   const expanded = useDiffExpanded();
   const diffInFront = useDiffInFront();
   const words = expandDiffWords(expanded, formatShortcut(hotkey('collapseDiff')).join(''));
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(
     () => [
       {
@@ -31,7 +33,7 @@ export function useDiffExpansion(): void {
         run: () => toggleDiffExpanded('keyboard'),
       },
     ],
-    [expanded, diffInFront, words.label],
+    [keymap, expanded, diffInFront, words.label],
   );
   useCommands(commands);
 

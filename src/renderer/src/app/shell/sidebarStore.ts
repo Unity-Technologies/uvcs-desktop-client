@@ -1,12 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { hotkey } from '../../lib/shortcutRegistry';
 
 /** Below this window width the sidebar folds into its rail of tiles, so the lists keep their room. */
 const NARROW_WINDOW = '(max-width: 999px)';
-
-export const SIDEBAR_SHORTCUT = hotkey('toggleSidebar');
 
 interface SidebarStore {
   /** The choice for wide windows, remembered across sessions. */

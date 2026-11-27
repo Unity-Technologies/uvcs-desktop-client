@@ -13,7 +13,7 @@ import { shownFileNow, shownFileWithLines } from './useShownFile';
  * lines' menu, whose toast teaches the shortcut.
  */
 export function copyPageLink(place: Place, page: Page): Promise<void> {
-  return copyTarget(place, pageLinkTarget(page, shownFileNow(page)), nextTimeHint(formatShortcut(hotkey('copyLink'))));
+  return copyTarget(place, pageLinkTarget(page, shownFileNow(page)), copyLinkHint());
 }
 
 /**
@@ -35,7 +35,13 @@ export function copyPageObjectLink(place: Place, page: Page): Promise<void> {
  * where ⇧⌘C copies the same, the lines selected (`teachesShortcut`).
  */
 export function copyLinesLink(place: Place, target: LinkTarget | null, teachesShortcut = true): Promise<void> {
-  return copyTarget(place, target, teachesShortcut ? nextTimeHint(formatShortcut(hotkey('copyLink'))) : undefined);
+  return copyTarget(place, target, teachesShortcut ? copyLinkHint() : undefined);
+}
+
+/** The toast's hint of the key that copies the link, while it has one. */
+function copyLinkHint(): string | undefined {
+  const key = hotkey('copyLink');
+  return key && nextTimeHint(formatShortcut(key));
 }
 
 async function copyTarget(place: Place, target: LinkTarget | null, hint?: string): Promise<void> {

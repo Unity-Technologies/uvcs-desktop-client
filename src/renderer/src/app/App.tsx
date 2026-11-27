@@ -24,6 +24,8 @@ import { useIssueTrackersFromMain } from '../components/issues/useIssueTrackers'
 import { useTheme } from './settings/useTheme';
 import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
+import { useCustomShortcuts } from './settings/useCustomShortcuts';
+import { useKeymap } from '../lib/keymapStore';
 import { CmSetupScreen } from './cmSetup/CmSetupScreen';
 import { isSettingUpCm, loadCmRuntimeStatus, useCmRuntimeStore } from './cmSetup/cmRuntimeStore';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
@@ -40,6 +42,8 @@ import { useRequestedPlace } from './workspace/useRequestedPlace';
 import { PlaceScreen } from './workspace/PlaceScreen';
 
 export function App() {
+  // The whole window renders again when a person changes a shortcut, so every key it shows and binds is the new one.
+  useKeymap();
   const settingUpCm = useCmRuntimeStore((state) => isSettingUpCm(state.status));
   useEffect(() => void loadCmRuntimeStatus(), []);
   return (
@@ -67,6 +71,7 @@ export function App() {
 function Root() {
   useTheme();
   useGravatarSetting();
+  useCustomShortcuts();
   useSettingsFromOtherWindows();
   useIssueTrackersFromMain();
   useServerSessionsFromMain();

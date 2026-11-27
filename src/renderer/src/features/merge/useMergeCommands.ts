@@ -11,6 +11,7 @@ import { pickBranch } from '../branches/BranchPickerDialog';
 import { applyShelve } from '../shelves/shelveOperations';
 import { mergeCommandsOffered, type MergeCommandId } from './mergeCommandsOffered';
 import { openMerge } from './mergeOperations';
+import { useKeymap } from '../../lib/keymapStore';
 
 /**
  * Palette commands to start any kind of merge, and to apply a shelve; a partial workspace has no merge into the
@@ -23,6 +24,7 @@ export function useMergeCommands(): void {
   const place = usePlace();
   const workspaceKind = workspace?.kind;
 
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(() => {
     const all: Record<MergeCommandId, Command> = {
       'merge.fromBranch': {
@@ -82,7 +84,7 @@ export function useMergeCommands(): void {
       },
     };
     return mergeCommandsOffered({ place, workspaceKind }).map((id) => all[id]);
-  }, [currentBranch, workspacePath, place, workspaceKind]);
+  }, [keymap, currentBranch, workspacePath, place, workspaceKind]);
 
   useCommands(commands);
 }

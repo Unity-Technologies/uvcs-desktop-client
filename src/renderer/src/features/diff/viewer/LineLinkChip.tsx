@@ -14,7 +14,7 @@ interface LineLinkChipProps {
   layout: CodeLayout;
   /** What it copies, for its tooltip: "Copy link to lines 40–52 of Player.cs". */
   label: string;
-  shortcut: string;
+  shortcut: string | undefined;
   onCopy: () => void;
 }
 

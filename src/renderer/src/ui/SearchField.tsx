@@ -12,7 +12,7 @@ interface SearchFieldProps extends Pick<InputHTMLAttributes<HTMLInputElement>, '
   /** Keys the field doesn't handle, e.g. ↓ to move into the list it filters. */
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   /** A tooltip naming the shortcut that comes to the field. */
-  tip?: { text: string; shortcut: string };
+  tip?: { text: string; shortcut: string | undefined };
   /** Drawn as a popover's search bar, across its top with a rule under it, rather than as a bordered field. */
   bare?: boolean;
 }

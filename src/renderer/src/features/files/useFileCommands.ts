@@ -15,8 +15,8 @@ import { showFileView, toggleAnnotated } from './filesViewStore';
 import { showInLocks } from '../locks/showInLocks';
 import type { PendingLocks } from '../pendingChanges/locks/pendingLocks';
 import { hotkey } from '../../lib/shortcutRegistry';
+import { useKeymap } from '../../lib/keymapStore';
 
-export const GO_TO_FILE_SHORTCUT = hotkey('goToFile');
 
 const NO_VIEWS: ItemViews = { history: false, annotate: false, changes: false };
 
@@ -28,6 +28,7 @@ export function useFileCommands(
   locks: PendingLocks,
   onGoToFile: () => void,
 ): void {
+  const keymap = useKeymap();
   const commands = useMemo<Command[]>(() => {
     const single = selected.length === 1 ? selected[0]! : undefined;
     const lock = single && locks.get(single.path);
@@ -37,7 +38,7 @@ export function useFileCommands(
     const checkinable = filesCheckinChanges(selected, pendingChanges.changes);
 
     return [
-      { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: () => onGoToFile() },
+      { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: hotkey('goToFile'), run: () => onGoToFile() },
       {
         id: 'files.browseRepository',
         group: 'Files',
@@ -124,7 +125,7 @@ export function useFileCommands(
         run: () => lock && showInLocks(workspacePath, lock),
       },
     ];
-  }, [workspacePath, selected, pendingChanges, locks, onGoToFile]);
+  }, [keymap, workspacePath, selected, pendingChanges, locks, onGoToFile]);
 
   useCommands(commands);
 }

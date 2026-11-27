@@ -37,6 +37,20 @@ describe('shortcut registry', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('reads the keys of a shortcut a person may change again in every memo, when the keymap changes', () => {
+    // A memo that keeps `hotkey('newBranch')` keeps the old key after a change unless it depends on `useKeymap()`.
+    const customizable = Object.entries(SHORTCUTS).filter(([, shortcut]) => (shortcut as ShortcutDefinition).customizable).map(([id]) => id);
+    const offenders = filesUnder(RENDERER, isAppSource)
+      .map((path) => ({ path, text: readFileSync(path, 'utf8') }))
+      .filter(({ text }) => /\buse(Memo|Callback)\b/.test(text) && /\bhotkeys?\(/.test(text))
+      .flatMap(({ path, text }) =>
+        memosIn(text)
+          .filter(({ body, deps }) => readsKeysOf(body, customizable) && !/\bkeymap\b/.test(deps))
+          .map(({ line }) => `${relative(RENDERER, path)}:${line}`),
+      );
+    expect(offenders).toEqual([]);
+  });
+
   it('shows the native menu accelerators of the keys the renderer binds', () => {
     // One accelerator for every OS, or one per OS where their keys differ (`isMac ? '…' : '…'`).
     const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', (?:'([^']+)'|isMac \? '([^']+)' : '([^']+)')[,)]/g)];
@@ -157,6 +171,28 @@ describe('viewShortcut', () => {
     expect(Array.from({ length: 12 }, (_, position) => viewShortcut(position, false))).toEqual([...first, 'mod+shift+1', 'mod+shift+2', 'mod+shift+3']);
   });
 });
+
+/** Each `useMemo(…)` and `useCallback(…)` of a source: its line, its body and its dependencies (the last array). */
+function memosIn(text: string): { line: number; body: string; deps: string }[] {
+  return [...text.matchAll(/\buse(?:Memo|Callback)(?:<[^>]*>)?\(/g)].map((match) => {
+    const open = match.index + match[0].length - 1;
+    const body = text.slice(open, closingBracket(text, open) + 1);
+    return { line: text.slice(0, match.index).split('\n').length, body, deps: body.slice(body.lastIndexOf('[')) };
+  });
+}
+
+function closingBracket(text: string, open: number): number {
+  let depth = 0;
+  for (let index = open; index < text.length; index++) {
+    if ('([{'.includes(text[index]!)) depth++;
+    else if (')]}'.includes(text[index]!) && --depth === 0) return index;
+  }
+  return text.length - 1;
+}
+
+function readsKeysOf(body: string, ids: readonly string[]): boolean {
+  return [...body.matchAll(/\bhotkeys?\('(\w+)'\)/g)].some(([, id]) => ids.includes(id!));
+}
 
 function toAccelerator(shortcut: string): string {
   const names: Record<string, string> = { mod: 'CmdOrCtrl', shift: 'Shift', alt: 'Alt', ctrl: 'Ctrl' };
