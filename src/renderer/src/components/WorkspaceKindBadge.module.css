@@ -1,37 +1,30 @@
 /*
  * Overlaps the avatar's bottom-right corner: the accent's glyph on a disc of the raised surface (white in the light
- * theme), ringed and lifted so it reads on any row or card behind it.
+ * theme), ringed and lifted so it reads on any row or card behind it. The disc and its ring are drawn in the badge's
+ * SVG, not with a border, so the glyph is centered in the same coordinates (`workspaceKindBadgeGeometry`).
  */
 .badge {
   position: absolute;
   right: -5px;
   bottom: -5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 16px;
   height: 16px;
-  border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
-  background: var(--bg-surface-raised);
   box-shadow: var(--shadow-sm);
   color: var(--accent-text);
+  overflow: visible;
 }
 
-.icon {
-  width: 11px;
-  height: 11px;
+.disc {
+  fill: var(--bg-surface-raised);
+  stroke: var(--border-default);
 }
 
-/* Smaller on the switcher's and the sidebar's avatars, so it never hides the initial. */
+/* Smaller on the switcher's and the sidebar's avatars, so it never hides the initial. The SVG scales as one. */
 .badge[data-compact='true'] {
   right: -4px;
   bottom: -4px;
   width: 13px;
   height: 13px;
-}
-
-.badge[data-compact='true'] .icon {
-  width: 9px;
-  height: 9px;
 }
